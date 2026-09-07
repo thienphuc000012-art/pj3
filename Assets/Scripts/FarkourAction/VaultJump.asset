@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: adecc60755a579948b97fad078768bb7, type: 3}
+  m_Name: VaultJump
+  m_EditorClassIdentifier: Assembly-CSharp::NewFakourAction
+  animationName: jump1
+  barrierTag: Barrier
+  minimumHeight: 0.7
+  maximumHeight: 1.1
+  lookAtObstacle: 1
+  parkourActionDelay: 0
+  allowTargetMatching: 1
+  compareBodyPart: 4
+  compareStartTime: 0.12
+  compareEndTime: 0.31
+  comparePositionWeight: {x: 0, y: 1, z: 1}
