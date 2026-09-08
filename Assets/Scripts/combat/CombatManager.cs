@@ -424,7 +424,16 @@ public class CombatManager : MonoBehaviour
 
                 foreach (var ally in targets)
                 {
-                    if (actionToUse.isHeal) ally.Heal(rawDamage > 0 ? rawDamage : actionToUse.power); // Hồi máu có thể tận dụng power hoặc scale nếu muốn
+                    if (actionToUse.isHeal)
+                    {
+                        int hpBefore = ally.currentHP;
+                        int healAmount = rawDamage > 0 ? rawDamage : actionToUse.power;
+                        ally.Heal(healAmount);
+
+                        // Tính lượng máu thực sự được hồi (tránh trường hợp hồi lố maxHP)
+                        int actualHeal = ally.currentHP - hpBefore;
+                        AdvancedUIManager.Instance.ShowDamageText(ally.transform, actualHeal, false, true);
+                    }
                     if (actionToUse.buffStat != ActionData.BuffStat.None)
                     {
                         ally.AddBuff(actionToUse.buffStat, actionToUse.buffAmount, actionToUse.buffDuration);
@@ -438,7 +447,12 @@ public class CombatManager : MonoBehaviour
 
                 foreach (var enemy in targets)
                 {
+                    int hpBefore = enemy.currentHP; // Lưu HP trước khi nhận sát thương
                     enemy.TakeDamage(rawDamage, false);
+                    int actualDamageTaken = hpBefore - enemy.currentHP; // Lượng máu thực sự bị trừ
+
+                    // --- THÊM UI SÁT THƯƠNG LÊN KẺ ĐỊCH ---
+                    AdvancedUIManager.Instance.ShowDamageText(enemy.transform, actualDamageTaken, isCrit, false);
                 }
                 Debug.Log($"[Tấn Công] {attacker.unitName} dùng {actionToUse.actionName} gây {rawDamage} DMG.");
             }
@@ -450,12 +464,20 @@ public class CombatManager : MonoBehaviour
 
             foreach (var ally in targets)
             {
+                int hpBefore = ally.currentHP; // Lưu HP trước khi nhận sát thương
                 ally.TakeDamage(rawDamage, parried);
+                int actualDamageTaken = hpBefore - ally.currentHP; // Lượng máu thực sự bị trừ
+
+                // --- THÊM UI SÁT THƯƠNG LÊN PLAYER (Nếu không Parry thành công) ---
+                if (!parried)
+                {
+                    AdvancedUIManager.Instance.ShowDamageText(ally.transform, actualDamageTaken, isCrit, false);
+                }
             }
             Debug.Log($"[Enemy Đánh] {attacker.unitName} gây {rawDamage} DMG. (Parry: {parried})");
             ParrySystem.Instance.ResetParryState();
         }
-    }
+        }
 
     private void PlayVFX(BattleUnit attacker, BattleUnit target, ActionData action)
     {

@@ -37,7 +37,10 @@ public class AdvancedUIManager : MonoBehaviour
     [Header("Parry UI")]
     public GameObject parryTextObject;
     public Vector3 parryTextOffset = new Vector3(0, -1f, 0); // Giữ nguyên độ cao (Y)
-    public float parryHorizontalOffset = 1.5f; // Thêm biến này để chỉnh độ lệch sang trái/phải
+    public float parryHorizontalOffset = 1.5f;
+    [Header("Damage Text UI")]
+    public GameObject damageTextPrefab; // Prefab chứa TextMeshProUGUI (có thể thêm component animation bay lên)
+    public Transform damageTextContainer; // Panel/Canvas để chứa các text sát thương
     void Awake()
     {
         Instance = this;
@@ -240,6 +243,45 @@ public class AdvancedUIManager : MonoBehaviour
             parryTextObject.SetActive(false);
         }
     }
+    public void ShowDamageText(Transform targetTransform, int amount, bool isCrit, bool isHeal = false)
+    {
+        if (damageTextPrefab == null || targetTransform == null) return;
+
+        // Giảm biên độ random để sát thương hiện gom lại gần nhau hơn
+        float randomX = Random.Range(-0.4f, 0.4f);
+        float randomY = Random.Range(0f, 0.5f);
+        Vector3 randomOffset = new Vector3(randomX, randomY, 0);
+
+        // Giảm độ cao cơ sở (từ 1.5f xuống 0.8f) để gần người mục tiêu hơn
+        Vector3 worldPos = targetTransform.position + Vector3.up * 0.8f + randomOffset;
+
+        if (Camera.main != null)
+        {
+            Vector3 screenPos = Camera.main.WorldToScreenPoint(worldPos);
+
+            // Tạo text tại vị trí container
+            GameObject damageObj = Instantiate(damageTextPrefab, screenPos, Quaternion.identity, damageTextContainer != null ? damageTextContainer : transform);
+
+            TextMeshProUGUI txt = damageObj.GetComponent<TextMeshProUGUI>();
+            if (txt != null)
+            {
+                if (isHeal)
+                {
+                    txt.text = $"+{amount}";
+                    txt.color = Color.green;
+                }
+                else
+                {
+                    txt.text = amount.ToString();
+                    txt.color = isCrit ? new Color(1f, 0.5f, 0f) : Color.white; // Màu cam nếu chí mạng, trắng nếu đánh thường
+                    if (isCrit) txt.fontSize *= 1.3f; // Phóng to chữ nếu chí mạng
+                }
+            }
+
+            // Tự động hủy UI sau 1 giây
+            Destroy(damageObj, 1f);
+        }
+    }
 }
 
 [System.Serializable]
@@ -280,4 +322,5 @@ public class PartyHUDUnit
             hpText.text = shield > 0 ? $"{current}/{max} <color=white>[+{shield}]</color>" : $"{current} / {max}";
         }
     }
+
 }
