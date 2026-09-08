@@ -184,15 +184,8 @@ public class AdvancedUIManager : MonoBehaviour
     {
         if (targetNameText != null)
         {
-            if (string.IsNullOrEmpty(targetName))
-            {
-                targetNameText.gameObject.SetActive(false);
-            }
-            else
-            {
-                targetNameText.gameObject.SetActive(true);
-                targetNameText.text = $"Target: {targetName}";
-            }
+            // Tắt hoàn toàn Text hiển thị tên mục tiêu
+            targetNameText.gameObject.SetActive(false);
         }
     }
     // --- CHỨC NĂNG PARRY UI ---

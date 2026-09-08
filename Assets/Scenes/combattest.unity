@@ -6067,7 +6067,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4545140334807992944, guid: 1f080cff37e59784f9797e18c4f7c0cd, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: -1.87
       objectReference: {fileID: 0}
     - target: {fileID: 4545140334807992944, guid: 1f080cff37e59784f9797e18c4f7c0cd, type: 3}
       propertyPath: m_LocalPosition.y
@@ -8396,7 +8396,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4545140334807992944, guid: 1f080cff37e59784f9797e18c4f7c0cd, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 2
+      value: 3.52
       objectReference: {fileID: 0}
     - target: {fileID: 4545140334807992944, guid: 1f080cff37e59784f9797e18c4f7c0cd, type: 3}
       propertyPath: m_LocalPosition.y
@@ -9116,11 +9116,11 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 571507836}
         m_TargetAssemblyTypeName: CombatManager, Assembly-CSharp
-        m_MethodName: OnActionSelected
-        m_Mode: 2
+        m_MethodName: OnAttackClicked
+        m_Mode: 1
         m_Arguments:
-          m_ObjectArgument: {fileID: 11400000, guid: fcb0cc7c27be4104a89d579861c52117, type: 2}
-          m_ObjectArgumentAssemblyTypeName: ActionData, Assembly-CSharp
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 
@@ -10903,7 +10903,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4545140334807992944, guid: 1f080cff37e59784f9797e18c4f7c0cd, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: 0.82
       objectReference: {fileID: 0}
     - target: {fileID: 4545140334807992944, guid: 1f080cff37e59784f9797e18c4f7c0cd, type: 3}
       propertyPath: m_LocalPosition.y
@@ -11327,12 +11327,8 @@ MonoBehaviour:
   baseAtk: 10
   baseDef: 5
   baseCrit: 10
-  defaultAttack: {fileID: 11400000, guid: fcb0cc7c27be4104a89d579861c52117, type: 2}
-  characterSkills:
-  - {fileID: 11400000, guid: 35516c7356841a44bbed0f08b30e40d9, type: 2}
-  - {fileID: 11400000, guid: e8dbd2482ab38d84687f031f56b141df, type: 2}
-  - {fileID: 11400000, guid: 687fee65e17fe374abdddeacc3671564, type: 2}
-  - {fileID: 11400000, guid: bfae87a977bf73f4c86d8a2fcf86b009, type: 2}
+  defaultAttack: {fileID: 11400000, guid: f4fd381b02d00ab45a17df37683eadaa, type: 2}
+  characterSkills: []
   speed: 15
   unitPortrait: {fileID: 21300000, guid: 82361fa11de5cc34386d1b5565ad8f5a, type: 3}
   isPlayer: 0

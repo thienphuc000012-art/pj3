@@ -12,11 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 532a234c595fb3944bb8626c21ed8968, type: 3}
   m_Name: enemy1
   m_EditorClassIdentifier: Assembly-CSharp::ActionData
-  actionName: AttackData
+  actionName: swordcombo
   icon: {fileID: 21300000, guid: 9e6500fc01bf01c4cbaf2b4d41a95c8c, type: 3}
   type: 0
   power: 10
+  damageMultiplier: 1
   isHeal: 0
-  animationTriggerName: Bite
+  animationTriggerName: swordcombo
   isFriendlyAction: 0
+  isAoE: 0
+  buffStat: 0
+  buffAmount: 0
+  buffDuration: 0
   isMelee: 1
+  vfxType: 0
+  vfxPrefab: {fileID: 0}
+  vfxSpeed: 15
+  castVfxPrefab: {fileID: 0}
+  hitVfxPrefab: {fileID: 0}

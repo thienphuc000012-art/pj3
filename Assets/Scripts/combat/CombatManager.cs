@@ -60,7 +60,66 @@ public class CombatManager : MonoBehaviour
 
         DetermineTurnOrder();
     }
+    void Update()
+    {
+        // 1 tương ứng với nút Chuột Phải
+        if (Input.GetMouseButtonDown(1))
+        {
+            CancelCurrentAction();
+        }
+    }
+    private void CancelCurrentAction()
+    {
+        // Chỉ cho phép hủy khi đang ở lượt của người chơi (tránh hủy nhầm lúc đang Executing)
+        if (state != CombatState.PlayerTurn) return;
 
+        // TRƯỜNG HỢP 1: Đã bấm Attack hoặc đã chọn 1 Skill cụ thể (đang chờ click quái/đồng đội)
+        if (selectedAction != null)
+        {
+            Debug.Log("[Hủy] Hủy chọn mục tiêu, quay lại Menu chính.");
+
+            // Xóa hành động đã chọn
+            selectedAction = null;
+            isSelectingBuffTarget = false;
+
+            // Reset lại UI mục tiêu về kẻ địch mặc định
+            currentTarget = enemyParty.FirstOrDefault(e => e.currentHP > 0);
+            if (currentTarget != null)
+            {
+                AdvancedUIManager.Instance.UpdateTargetUI(currentTarget.unitName);
+            }
+            else
+            {
+                AdvancedUIManager.Instance.UpdateTargetUI("");
+            }
+
+            // Hiện lại Menu chính, ẩn SubMenu, reset hiệu ứng Idle
+            AdvancedUIManager.Instance.ShowActionMenu(true);
+            if (AdvancedUIManager.Instance.subMenuPanel != null)
+            {
+                AdvancedUIManager.Instance.subMenuPanel.SetActive(false);
+            }
+
+            currentOpenMenu = OpenMenuType.None;
+            ResetMenuAnimations();
+
+            return; // Đã xử lý xong quay lui, thoát hàm
+        }
+
+        // TRƯỜNG HỢP 2: Mới chỉ mở Menu Skills hoặc Items lên xem (chưa chọn skill nào)
+        if (currentOpenMenu != OpenMenuType.None)
+        {
+            Debug.Log($"[Hủy] Đóng menu {currentOpenMenu}");
+
+            currentOpenMenu = OpenMenuType.None;
+            ResetMenuAnimations();
+
+            if (AdvancedUIManager.Instance.subMenuPanel != null)
+            {
+                AdvancedUIManager.Instance.subMenuPanel.SetActive(false);
+            }
+        }
+    }
     void SetupPositions()
     {
         for (int i = 0; i < playerParty.Count; i++)
@@ -147,16 +206,18 @@ public class CombatManager : MonoBehaviour
             StartCoroutine(EnemyAICore());
         }
     }
-    public void OnAttackClicked()
+   public void OnAttackClicked()
     {
         if (state != CombatState.PlayerTurn) return;
 
         ResetMenuAnimations();
         currentOpenMenu = OpenMenuType.None;
 
+        // Thiết lập hành động hiện tại là đánh thường và nhắm vào kẻ địch
         isSelectingBuffTarget = false;
         selectedAction = currentActiveUnit.defaultAttack;
 
+        // Tìm một kẻ địch mặc định đang còn sống để hiển thị tên lên UI
         if (currentTarget == null || currentTarget.currentHP <= 0 || currentTarget.isPlayer)
         {
             currentTarget = enemyParty.FirstOrDefault(e => e.currentHP > 0);
@@ -165,17 +226,18 @@ public class CombatManager : MonoBehaviour
         if (currentTarget != null)
         {
             AdvancedUIManager.Instance.UpdateTargetUI(currentTarget.unitName);
-            Debug.Log($"[Hành động] Người chơi {currentActiveUnit.unitName} tấn công mục tiêu: {currentTarget.unitName}");
-
+            Debug.Log($"[Chọn Đánh Thường] Hãy click vào kẻ địch trên màn hình để tấn công.");
+            
+            // Ẩn Menu hành động đi
             AdvancedUIManager.Instance.ShowActionMenu(false);
-            OnActionSelected(selectedAction);
+            
+            // QUAN TRỌNG: Đã xóa dòng gọi OnActionSelected() ở đây để chờ người chơi click!
         }
         else
         {
             Debug.LogWarning("[Lỗi] Không còn kẻ địch nào sống sót!");
         }
     }
-
     public void OnSkillsClicked()
     {
         if (state != CombatState.PlayerTurn) return;
