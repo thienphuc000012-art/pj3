@@ -3151,6 +3151,24 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WeaponEquipController
   hipSword: {fileID: 1144932252}
   handSword: {fileID: 410252084}
+--- !u!114 &444026043
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 444026032}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 379b699e49a18514bb5d4160b4415579, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AutoBlink
+  skinnedMeshRenderer: {fileID: 898278114}
+  blinkLeftName: eyeBlinkLeft
+  blinkRightName: eyeBlinkRight
+  minBlinkInterval: 1
+  maxBlinkInterval: 3
+  blinkDuration: 0.1
 --- !u!1 &455352057
 GameObject:
   m_ObjectHideFlags: 0
@@ -4205,6 +4223,11 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!137 &898278114 stripped
+SkinnedMeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 887302980844040072, guid: 1f080cff37e59784f9797e18c4f7c0cd, type: 3}
+  m_PrefabInstance: {fileID: 1196265780}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &899439757
 GameObject:
   m_ObjectHideFlags: 0
@@ -5897,6 +5920,30 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 887302980844040072, guid: 1f080cff37e59784f9797e18c4f7c0cd, type: 3}
+      propertyPath: 'm_BlendShapeWeights.Array.data[4]'
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 887302980844040072, guid: 1f080cff37e59784f9797e18c4f7c0cd, type: 3}
+      propertyPath: 'm_BlendShapeWeights.Array.data[5]'
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 887302980844040072, guid: 1f080cff37e59784f9797e18c4f7c0cd, type: 3}
+      propertyPath: 'm_BlendShapeWeights.Array.data[6]'
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 887302980844040072, guid: 1f080cff37e59784f9797e18c4f7c0cd, type: 3}
+      propertyPath: 'm_BlendShapeWeights.Array.data[8]'
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 887302980844040072, guid: 1f080cff37e59784f9797e18c4f7c0cd, type: 3}
+      propertyPath: 'm_BlendShapeWeights.Array.data[9]'
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 887302980844040072, guid: 1f080cff37e59784f9797e18c4f7c0cd, type: 3}
+      propertyPath: 'm_BlendShapeWeights.Array.data[18]'
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 887302980844040072, guid: 1f080cff37e59784f9797e18c4f7c0cd, type: 3}
       propertyPath: 'm_BlendShapeWeights.Array.data[31]'
       value: 0
       objectReference: {fileID: 0}
@@ -6707,6 +6754,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 3771841246725116106, guid: 1f080cff37e59784f9797e18c4f7c0cd, type: 3}
       insertIndex: -1
       addedObject: {fileID: 444026042}
+    - targetCorrespondingSourceObject: {fileID: 3771841246725116106, guid: 1f080cff37e59784f9797e18c4f7c0cd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 444026043}
   m_SourcePrefab: {fileID: 100100000, guid: 1f080cff37e59784f9797e18c4f7c0cd, type: 3}
 --- !u!1 &1210273041
 GameObject:
