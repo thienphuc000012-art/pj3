@@ -8,10 +8,10 @@ public class ActionData : ScriptableObject
     public enum ActionType { Attack, Skill, Item }
     public ActionType type;
 
-    public int power; // Sát thương cố định hoặc giá trị cơ bản của skill
+    public int power;
 
     [Header("Damage Scaling")]
-    public float damageMultiplier = 1f; // Hệ số nhân sát thương theo chỉ số tấn công của nhân vật (Ví dụ: 1.0 = 100% ATK, 1.5 = 150% ATK)
+    public float damageMultiplier = 1f;
 
     public bool isHeal;
     public string animationTriggerName = "Attack";
@@ -19,6 +19,12 @@ public class ActionData : ScriptableObject
 
     [Header("Targeting")]
     public bool isAoE;
+    public bool isSelfOnly;
+
+    // --- BIẾN MỚI DÀNH CHO HỆ THỐNG STAIN ---
+    [Header("Resource Cost")]
+    [Tooltip("Dương (+) là hồi Stain, Âm (-) là tốn Stain. (Vd: Attack = 1, Skill = -1)")]
+    public int stainChange = 0;
 
     public enum BuffStat { None, Atk, Def, Crit, Shield }
     [Header("Buff & Shield Settings")]

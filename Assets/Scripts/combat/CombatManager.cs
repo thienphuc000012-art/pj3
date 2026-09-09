@@ -34,13 +34,13 @@ public class CombatManager : MonoBehaviour
     private ActionData selectedAction;
 
     [Header("Melee Attack Positions (Scene Slots)")]
-    public Transform[] playerMeleeSlots; // Vị trí dành cho Quái nhảy tới áp sát Player
-    public Transform[] enemyMeleeSlots;  // Vị trí dành cho Player nhảy tới áp sát Quái
+    public Transform[] playerMeleeSlots;
+    public Transform[] enemyMeleeSlots;
 
     [HideInInspector] public bool isSelectingBuffTarget = false;
-    private bool isTransitioningTurn = false;
+    [HideInInspector] public bool isSelectingSelfOnly = false;
 
-    // --- BIẾN MỚI: Cờ đánh dấu Anim tấn công đã xong chưa ---
+    private bool isTransitioningTurn = false;
     [HideInInspector] public bool isAttackAnimationFinished = false;
 
     private OpenMenuType currentOpenMenu = OpenMenuType.None;
@@ -52,6 +52,10 @@ public class CombatManager : MonoBehaviour
         state = CombatState.Start;
         SetupPositions();
 
+        // --- MỚI: Khởi đầu Game với Full Stain ---
+        currentStains = maxStains;
+        AdvancedUIManager.Instance.UpdateStainsUI(currentStains, 0);
+
         if (enemyParty.Count > 0 && enemyParty[0] != null)
         {
             AdvancedUIManager.Instance.RegisterEnemyHP(enemyParty[0]);
@@ -60,29 +64,80 @@ public class CombatManager : MonoBehaviour
 
         DetermineTurnOrder();
     }
+
     void Update()
     {
-        // 1 tương ứng với nút Chuột Phải
+        if (state != CombatState.PlayerTurn) return;
+
         if (Input.GetMouseButtonDown(1))
         {
             CancelCurrentAction();
         }
-    }
-    private void CancelCurrentAction()
-    {
-        // Chỉ cho phép hủy khi đang ở lượt của người chơi (tránh hủy nhầm lúc đang Executing)
-        if (state != CombatState.PlayerTurn) return;
 
-        // TRƯỜNG HỢP 1: Đã bấm Attack hoặc đã chọn 1 Skill cụ thể (đang chờ click quái/đồng đội)
         if (selectedAction != null)
         {
-            Debug.Log("[Hủy] Hủy chọn mục tiêu, quay lại Menu chính.");
+            if (!isSelectingSelfOnly)
+            {
+                if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow))
+                {
+                    CycleTarget(-1);
+                }
+                else if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow))
+                {
+                    CycleTarget(1);
+                }
+            }
 
-            // Xóa hành động đã chọn
+            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Space))
+            {
+                ConfirmSelectedTarget();
+            }
+        }
+    }
+
+    private void CycleTarget(int direction)
+    {
+        List<BattleUnit> validTargets = isSelectingBuffTarget ?
+            playerParty.Where(u => u.currentHP > 0).ToList() :
+            enemyParty.Where(u => u.currentHP > 0).ToList();
+
+        if (validTargets.Count == 0) return;
+
+        int currentIndex = validTargets.IndexOf(currentTarget);
+        if (currentIndex == -1) currentIndex = 0;
+
+        currentIndex += direction;
+        if (currentIndex < 0) currentIndex = validTargets.Count - 1;
+        else if (currentIndex >= validTargets.Count) currentIndex = 0;
+
+        currentTarget = validTargets[currentIndex];
+
+        AdvancedUIManager.Instance.UpdateTargetUI(currentTarget.unitName);
+        CameraManager.Instance.SwitchToTargetCam(currentTarget);
+    }
+
+    public void ConfirmSelectedTarget()
+    {
+        if (currentTarget == null || selectedAction == null) return;
+        CameraManager.Instance.ResetTargetCam();
+        OnActionSelected(selectedAction);
+    }
+
+    private void CancelCurrentAction()
+    {
+        if (state != CombatState.PlayerTurn) return;
+
+        if (selectedAction != null)
+        {
+            CameraManager.Instance.ResetTargetCam();
+
             selectedAction = null;
             isSelectingBuffTarget = false;
+            isSelectingSelfOnly = false;
 
-            // Reset lại UI mục tiêu về kẻ địch mặc định
+            // Xóa hiệu ứng xem trước (Preview) mờ mờ trên thanh Stain
+            AdvancedUIManager.Instance.UpdateStainsUI(currentStains, 0);
+
             currentTarget = enemyParty.FirstOrDefault(e => e.currentHP > 0);
             if (currentTarget != null)
             {
@@ -93,7 +148,6 @@ public class CombatManager : MonoBehaviour
                 AdvancedUIManager.Instance.UpdateTargetUI("");
             }
 
-            // Hiện lại Menu chính, ẩn SubMenu, reset hiệu ứng Idle
             AdvancedUIManager.Instance.ShowActionMenu(true);
             if (AdvancedUIManager.Instance.subMenuPanel != null)
             {
@@ -103,23 +157,18 @@ public class CombatManager : MonoBehaviour
             currentOpenMenu = OpenMenuType.None;
             ResetMenuAnimations();
 
-            return; // Đã xử lý xong quay lui, thoát hàm
+            return;
         }
 
-        // TRƯỜNG HỢP 2: Mới chỉ mở Menu Skills hoặc Items lên xem (chưa chọn skill nào)
         if (currentOpenMenu != OpenMenuType.None)
         {
-            Debug.Log($"[Hủy] Đóng menu {currentOpenMenu}");
-
             currentOpenMenu = OpenMenuType.None;
             ResetMenuAnimations();
-
             if (AdvancedUIManager.Instance.subMenuPanel != null)
-            {
                 AdvancedUIManager.Instance.subMenuPanel.SetActive(false);
-            }
         }
     }
+
     void SetupPositions()
     {
         for (int i = 0; i < playerParty.Count; i++)
@@ -142,8 +191,6 @@ public class CombatManager : MonoBehaviour
 
     public void DetermineTurnOrder()
     {
-        // --- TICK GIẢM THỜI GIAN BUFF KHI BẮT ĐẦU MỘT VÒNG MỚI (NEW WAVE) ---
-        // Chỉ chạy tick nếu đây không phải là lượt khởi tạo đầu tiên của trận đấu (tránh trừ ngay turn 1)
         if (state != CombatState.Start)
         {
             foreach (var unit in playerParty.Concat(enemyParty).Where(u => u != null && u.currentHP > 0))
@@ -178,16 +225,19 @@ public class CombatManager : MonoBehaviour
         isTransitioningTurn = false;
         selectedAction = null;
         isSelectingBuffTarget = false;
+        isSelectingSelfOnly = false;
         currentTarget = null;
         currentOpenMenu = OpenMenuType.None;
         AdvancedUIManager.Instance.UpdateTargetUI("");
+
+        // Đảm bảo clear UI preview của turn trước
+        AdvancedUIManager.Instance.UpdateStainsUI(currentStains, 0);
 
         if (enemyParty.All(e => e.currentHP <= 0)) { state = CombatState.Won; Debug.Log("WIN!"); return; }
         if (playerParty.All(p => p.currentHP <= 0)) { state = CombatState.Lost; Debug.Log("LOSE!"); return; }
 
         currentActiveUnit = allUnitsTimeline[currentTimelineIndex];
 
-        // Reset các hiệu ứng menu cũ
         ResetMenuAnimations();
 
         if (currentActiveUnit.isPlayer)
@@ -206,18 +256,26 @@ public class CombatManager : MonoBehaviour
             StartCoroutine(EnemyAICore());
         }
     }
-   public void OnAttackClicked()
+
+    public void OnAttackClicked()
     {
         if (state != CombatState.PlayerTurn) return;
 
+        ActionData attackAction = currentActiveUnit.defaultAttack;
+
+        // KIỂM TRA: Đề phòng trường hợp Action đánh thường bị set là tốn năng lượng
+        if (attackAction != null && currentStains + attackAction.stainChange < 0)
+        {
+            Debug.LogWarning("[Hệ thống] Không đủ Stain để thực hiện Attack!");
+            return;
+        }
+
         ResetMenuAnimations();
         currentOpenMenu = OpenMenuType.None;
-
-        // Thiết lập hành động hiện tại là đánh thường và nhắm vào kẻ địch
         isSelectingBuffTarget = false;
-        selectedAction = currentActiveUnit.defaultAttack;
+        isSelectingSelfOnly = false;
+        selectedAction = attackAction;
 
-        // Tìm một kẻ địch mặc định đang còn sống để hiển thị tên lên UI
         if (currentTarget == null || currentTarget.currentHP <= 0 || currentTarget.isPlayer)
         {
             currentTarget = enemyParty.FirstOrDefault(e => e.currentHP > 0);
@@ -226,18 +284,17 @@ public class CombatManager : MonoBehaviour
         if (currentTarget != null)
         {
             AdvancedUIManager.Instance.UpdateTargetUI(currentTarget.unitName);
-            Debug.Log($"[Chọn Đánh Thường] Hãy click vào kẻ địch trên màn hình để tấn công.");
-            
-            // Ẩn Menu hành động đi
             AdvancedUIManager.Instance.ShowActionMenu(false);
-            
-            // QUAN TRỌNG: Đã xóa dòng gọi OnActionSelected() ở đây để chờ người chơi click!
-        }
-        else
-        {
-            Debug.LogWarning("[Lỗi] Không còn kẻ địch nào sống sót!");
+            CameraManager.Instance.SwitchToTargetCam(currentTarget);
+
+            // --- BẬT HIỆU ỨNG XEM TRƯỚC LÊN UI ---
+            if (selectedAction != null)
+            {
+                AdvancedUIManager.Instance.UpdateStainsUI(currentStains, selectedAction.stainChange);
+            }
         }
     }
+
     public void OnSkillsClicked()
     {
         if (state != CombatState.PlayerTurn) return;
@@ -247,13 +304,13 @@ public class CombatManager : MonoBehaviour
             currentOpenMenu = OpenMenuType.None;
             ResetMenuAnimations();
             AdvancedUIManager.Instance.subMenuPanel.SetActive(false);
-            Debug.Log($"[Hành động] Đóng Menu Kỹ năng");
             return;
         }
 
         currentOpenMenu = OpenMenuType.Skills;
         selectedAction = null;
         isSelectingBuffTarget = false;
+        isSelectingSelfOnly = false;
 
         ResetMenuAnimations();
         if (currentActiveUnit != null && currentActiveUnit.animator != null)
@@ -261,7 +318,6 @@ public class CombatManager : MonoBehaviour
             currentActiveUnit.animator.SetBool("IsSkillIdle", true);
         }
 
-        Debug.Log($"[Hành động] Người chơi {currentActiveUnit.unitName} mở Menu Kỹ năng (Skills)");
         AdvancedUIManager.Instance.PopulateSubMenu(currentActiveUnit.characterSkills);
     }
 
@@ -274,13 +330,13 @@ public class CombatManager : MonoBehaviour
             currentOpenMenu = OpenMenuType.None;
             ResetMenuAnimations();
             AdvancedUIManager.Instance.subMenuPanel.SetActive(false);
-            Debug.Log($"[Hành động] Đóng Túi đồ");
             return;
         }
 
         currentOpenMenu = OpenMenuType.Items;
         selectedAction = null;
         isSelectingBuffTarget = false;
+        isSelectingSelfOnly = false;
 
         ResetMenuAnimations();
         if (currentActiveUnit != null && currentActiveUnit.animator != null)
@@ -288,7 +344,6 @@ public class CombatManager : MonoBehaviour
             currentActiveUnit.animator.SetBool("IsItemIdle", true);
         }
 
-        Debug.Log($"[Hành động] Người chơi {currentActiveUnit.unitName} mở Túi đồ (Items)");
         AdvancedUIManager.Instance.PopulateSubMenu(inventoryItems);
     }
 
@@ -296,24 +351,38 @@ public class CombatManager : MonoBehaviour
     {
         if (state != CombatState.PlayerTurn) return;
 
-        selectedAction = skillAction;
-        isSelectingBuffTarget = skillAction.isFriendlyAction;
+        // --- KIỂM TRA ĐỦ ĐIỀU KIỆN STAIN ---
+        if (currentStains + skillAction.stainChange < 0)
+        {
+            Debug.LogWarning($"[Hệ thống] Không đủ Stain để sử dụng {skillAction.actionName}!");
+            return; // Khóa không cho chọn Skill nếu không đủ
+        }
 
-        if (isSelectingBuffTarget)
+        selectedAction = skillAction;
+        isSelectingSelfOnly = skillAction.isSelfOnly;
+        isSelectingBuffTarget = skillAction.isFriendlyAction || isSelectingSelfOnly;
+
+        if (isSelectingSelfOnly)
         {
             currentTarget = currentActiveUnit;
-            Debug.Log($"[Chọn Skill Buff] {skillAction.actionName} - Đang nhắm vào bản thân.");
+        }
+        else if (isSelectingBuffTarget)
+        {
+            currentTarget = currentActiveUnit;
         }
         else
         {
             currentTarget = enemyParty.FirstOrDefault(e => e.currentHP > 0);
-            Debug.Log($"[Chọn Skill Tấn Công] {skillAction.actionName} - Hãy click vào kẻ địch trên màn hình.");
         }
 
         if (currentTarget != null)
         {
             AdvancedUIManager.Instance.UpdateTargetUI(currentTarget.unitName);
+            CameraManager.Instance.SwitchToTargetCam(currentTarget);
         }
+
+        // --- BẬT HIỆU ỨNG XEM TRƯỚC LÊN UI ---
+        AdvancedUIManager.Instance.UpdateStainsUI(currentStains, skillAction.stainChange);
 
         AdvancedUIManager.Instance.ShowActionMenu(false);
     }
@@ -324,12 +393,6 @@ public class CombatManager : MonoBehaviour
         currentOpenMenu = OpenMenuType.None;
 
         ResetMenuAnimations();
-
-        if (action != null)
-        {
-            Debug.Log($"[Hành động] {currentActiveUnit.unitName} THỰC THI {action.type}: '{action.actionName}' lên {currentTarget?.unitName}");
-        }
-
         AdvancedUIManager.Instance.ShowActionMenu(false);
         AdvancedUIManager.Instance.UpdateTargetUI("");
 
@@ -341,15 +404,12 @@ public class CombatManager : MonoBehaviour
         if (currentTarget != null && selectedAction != null)
         {
             currentTarget.Heal(selectedAction.power);
-            Debug.Log($"[Buff Thành Công] {currentActiveUnit.unitName} hồi {selectedAction.power} HP cho {currentTarget.unitName}");
         }
-
         EndCurrentTurn();
     }
 
     System.Collections.IEnumerator EnemyAICore()
     {
-        Debug.Log($"[AI] Quái {currentActiveUnit.unitName} đang suy nghĩ...");
         yield return new WaitForSeconds(0.5f);
 
         List<BattleUnit> livePlayers = playerParty.Where(p => p.currentHP > 0).ToList();
@@ -358,24 +418,20 @@ public class CombatManager : MonoBehaviour
         currentTarget = livePlayers[Random.Range(0, livePlayers.Count)];
         selectedAction = currentActiveUnit.defaultAttack != null ? currentActiveUnit.defaultAttack : currentActiveUnit.characterSkills.FirstOrDefault();
 
-        Debug.Log($"[AI] Quái {currentActiveUnit.unitName} quyết định TẤN CÔNG {currentTarget.unitName}!");
         CameraManager.Instance.SwitchToTargetHitCam(currentTarget);
 
         yield return new WaitForSeconds(0.5f);
 
         StartCoroutine(ExecuteActionRoutine(currentActiveUnit, currentTarget, selectedAction));
     }
+
     public Vector3 GetMeleeAttackPosition(BattleUnit attacker, BattleUnit target)
     {
         if (target == null) return attacker.transform.position;
 
-        // 1. Tính hướng từ Attacker nhìn về Target
         Vector3 directionToTarget = (target.transform.position - attacker.transform.position).normalized;
-
-        // 2. Vị trí dừng lại = Vị trí Target trừ đi một khoảng offset (1.6m trước mặt Target)
         float stopDistance = 1.6f;
         Vector3 attackPosition = target.transform.position - (directionToTarget * stopDistance);
-
         return attackPosition;
     }
 
@@ -383,41 +439,35 @@ public class CombatManager : MonoBehaviour
     {
         state = CombatState.Executing;
 
-        if (action != null && action.type == ActionData.ActionType.Skill)
-            AddStain(1);
+        // --- ÁP DỤNG TRỪ/CỘNG STAIN THỰC SỰ LÚC BẮT ĐẦU ANIMATION (Chỉ tính Player) ---
+        if (action != null && attacker.isPlayer)
+        {
+            AddStain(action.stainChange);
+        }
 
-        // Lưu vị trí ban đầu chuẩn xác của nhân vật
         Vector3 originalPosition = attacker.transform.position;
         isAttackAnimationFinished = false;
 
-        // Tắt Root Motion để Animator không tự làm xê dịch Transform
         if (attacker.animator != null)
         {
             attacker.animator.applyRootMotion = false;
         }
 
-        // --- TRƯỜNG HỢP 1: CẬN CHIẾN (MELEE) ---
         if (action != null && action.isMelee && target != null && !action.isFriendlyAction && !action.isHeal)
         {
-            // 1. Lấy vị trí áp sát chính xác dựa trên Target hiện tại
             Vector3 attackPosition = GetMeleeAttackPosition(attacker, target);
 
-            // 2. Nhảy tới vị trí mục tiêu
             attacker.animator.Play("JumpForward");
             yield return StartCoroutine(MoveToPosition(attacker.transform, attackPosition, 0.35f));
 
-            // 3. Thực hiện Animation Tấn công
             string animTrigger = !string.IsNullOrEmpty(action.animationTriggerName) ? action.animationTriggerName : "Attack";
             attacker.animator.SetTrigger(animTrigger);
 
-            // Chờ Animation đánh xong (Animation Event gửi cờ isAttackAnimationFinished = true)
             yield return new WaitUntil(() => isAttackAnimationFinished);
 
-            // 4. Nhảy về đúng vị trí ban đầu (Thời gian 0.35s khớp với lượt đi)
             attacker.animator.Play("JumpBack");
             yield return StartCoroutine(MoveToPosition(attacker.transform, originalPosition, 0.35f));
         }
-        // --- TRƯỜNG HỢP 2: ĐÁNH XA / BUFF ---
         else
         {
             string animTrigger = action != null ? action.animationTriggerName : "Attack";
@@ -426,7 +476,6 @@ public class CombatManager : MonoBehaviour
             yield return new WaitUntil(() => isAttackAnimationFinished);
         }
 
-        // 5. Khôi phục vị trí tuyệt đối và đưa Animator về Idle
         attacker.transform.position = originalPosition;
 
         if (attacker.animator != null)
@@ -436,6 +485,7 @@ public class CombatManager : MonoBehaviour
 
         EndCurrentTurn();
     }
+
     private IEnumerator MoveToPosition(Transform unitTransform, Vector3 targetPos, float duration)
     {
         Vector3 startPos = unitTransform.position;
@@ -453,29 +503,21 @@ public class CombatManager : MonoBehaviour
 
     public void ApplyDamageFromAnimation(BattleUnit attacker)
     {
-        // 1. Lấy action đang thực thi
         ActionData actionToUse = selectedAction != null ? selectedAction : attacker.defaultAttack;
         if (actionToUse == null) return;
 
-        // 2. Tính toán tổng chỉ số tấn công (Base ATK + Buff ATK)
         int totalAtk = attacker.baseAtk + attacker.GetBuffValue(ActionData.BuffStat.Atk);
-
-        // 3. Công thức tính sát thương riêng biệt scale theo kỹ năng:
-        // Công thức: (ATK tổng * Hệ số scale của skill) + Power cố định của skill
         float calculatedDamage = (totalAtk * actionToUse.damageMultiplier) + actionToUse.power;
         int rawDamage = Mathf.RoundToInt(calculatedDamage);
 
-        // 4. Tính toán chí mạng (Crit)
         int critChance = attacker.baseCrit + attacker.GetBuffValue(ActionData.BuffStat.Crit);
         bool isCrit = UnityEngine.Random.Range(0, 100) < critChance;
 
         if (isCrit && !actionToUse.isFriendlyAction)
         {
-            rawDamage = Mathf.RoundToInt(rawDamage * 1.5f); // Chí mạng nhân 1.5 lần sát thương
-            Debug.Log($"<color=orange>CHÍ MẠNG!</color>");
+            rawDamage = Mathf.RoundToInt(rawDamage * 1.5f);
         }
 
-        // 5. Thực thi gây sát thương hoặc hiệu ứng
         if (attacker.isPlayer)
         {
             if (currentTarget == null) return;
@@ -492,73 +534,63 @@ public class CombatManager : MonoBehaviour
                         int healAmount = rawDamage > 0 ? rawDamage : actionToUse.power;
                         ally.Heal(healAmount);
 
-                        // Tính lượng máu thực sự được hồi (tránh trường hợp hồi lố maxHP)
                         int actualHeal = ally.currentHP - hpBefore;
                         AdvancedUIManager.Instance.ShowDamageText(ally.transform, actualHeal, false, true);
                     }
                     if (actionToUse.buffStat != ActionData.BuffStat.None)
                     {
                         ally.AddBuff(actionToUse.buffStat, actionToUse.buffAmount, actionToUse.buffDuration);
-                        Debug.Log($"[Buff] {attacker.unitName} tăng {actionToUse.buffStat} cho {ally.unitName} ({actionToUse.buffDuration} wave).");
                     }
                 }
             }
-            else // Tấn công kẻ địch
+            else
             {
                 List<BattleUnit> targets = actionToUse.isAoE ? enemyParty.Where(u => u.currentHP > 0).ToList() : new List<BattleUnit> { currentTarget };
 
                 foreach (var enemy in targets)
                 {
-                    int hpBefore = enemy.currentHP; // Lưu HP trước khi nhận sát thương
+                    int hpBefore = enemy.currentHP;
                     enemy.TakeDamage(rawDamage, false);
-                    int actualDamageTaken = hpBefore - enemy.currentHP; // Lượng máu thực sự bị trừ
+                    int actualDamageTaken = hpBefore - enemy.currentHP;
 
-                    // --- THÊM UI SÁT THƯƠNG LÊN KẺ ĐỊCH ---
                     AdvancedUIManager.Instance.ShowDamageText(enemy.transform, actualDamageTaken, isCrit, false);
                 }
-                Debug.Log($"[Tấn Công] {attacker.unitName} dùng {actionToUse.actionName} gây {rawDamage} DMG.");
             }
         }
-        else // Enemy tấn công Player
+        else
         {
             bool parried = ParrySystem.Instance.parrySuccessful;
             List<BattleUnit> targets = actionToUse.isAoE ? playerParty.Where(u => u.currentHP > 0).ToList() : new List<BattleUnit> { currentTarget };
 
             foreach (var ally in targets)
             {
-                int hpBefore = ally.currentHP; // Lưu HP trước khi nhận sát thương
+                int hpBefore = ally.currentHP;
                 ally.TakeDamage(rawDamage, parried);
-                int actualDamageTaken = hpBefore - ally.currentHP; // Lượng máu thực sự bị trừ
+                int actualDamageTaken = hpBefore - ally.currentHP;
 
-                // --- THÊM UI SÁT THƯƠNG LÊN PLAYER (Nếu không Parry thành công) ---
                 if (!parried)
                 {
                     AdvancedUIManager.Instance.ShowDamageText(ally.transform, actualDamageTaken, isCrit, false);
                 }
             }
-            Debug.Log($"[Enemy Đánh] {attacker.unitName} gây {rawDamage} DMG. (Parry: {parried})");
             ParrySystem.Instance.ResetParryState();
         }
-        }
+    }
 
     private void PlayVFX(BattleUnit attacker, BattleUnit target, ActionData action)
     {
         if (action.vfxPrefab == null || target == null) return;
 
-        // --- GOM DANH SÁCH MỤC TIÊU ---
         List<BattleUnit> targetList = new List<BattleUnit>();
         if (action.isAoE)
         {
-            // Nếu là AoE, lấy list toàn bộ phe tương ứng đang còn sống
             targetList = (action.isFriendlyAction || action.isHeal) ? playerParty : enemyParty;
         }
         else
         {
-            // Nếu đơn mục tiêu, chỉ ép target vào list
             targetList.Add(target);
         }
 
-        // --- SPAWN VFX CHO TỪNG NGƯỜI TRONG LIST ---
         if (action.vfxType == ActionData.VfxType.SpawnAtTarget)
         {
             foreach (var u in targetList.Where(u => u.currentHP > 0))
@@ -590,29 +622,23 @@ public class CombatManager : MonoBehaviour
                         Destroy(script);
                     }
                 }
-
-                // Chạy Coroutine bắn ra nhiều tia/cầu lửa cùng lúc tới các mục tiêu
                 StartCoroutine(MoveVFXRoutine(vfx, targetPos, action.vfxSpeed, action.hitVfxPrefab));
             }
         }
     }
-    // --- HÀM MỚI: TẠO VFX TRÊN TAY ---
+
     public void PlayCastVFXFromAnimation(BattleUnit attacker)
     {
         ActionData currentAction = attacker.isPlayer ? selectedAction : (selectedAction != null ? selectedAction : attacker.defaultAttack);
 
         if (currentAction != null && currentAction.castVfxPrefab != null)
         {
-            // Tìm vị trí tay
             Transform spawnPoint = attacker.handTransform != null ? attacker.handTransform : attacker.transform;
-
-            // Instantiate làm con của tay (spawnPoint) để di chuyển theo animation giống ActivateCharacterEffect của RFX4
             GameObject castVfx = Instantiate(currentAction.castVfxPrefab, spawnPoint.position, spawnPoint.rotation, spawnPoint);
-
-            // RFX4 thường tự hủy dựa trên EffectSettings, nhưng dự phòng hủy sau 1.5s
             Destroy(castVfx, 1.5f);
         }
     }
+
     public void PlayVFXFromAnimation(BattleUnit attacker)
     {
         ActionData currentAction = attacker.isPlayer ? selectedAction : (selectedAction != null ? selectedAction : attacker.defaultAttack);
@@ -621,8 +647,7 @@ public class CombatManager : MonoBehaviour
             PlayVFX(attacker, currentTarget, currentAction);
         }
     }
-  
-    // --- CẬP NHẬT: Nhận thêm tham số hitPrefab ---
+
     private IEnumerator MoveVFXRoutine(GameObject vfx, Vector3 targetPos, float speed, GameObject hitPrefab)
     {
         while (vfx != null && Vector3.Distance(vfx.transform.position, targetPos) > 0.1f)
@@ -637,16 +662,13 @@ public class CombatManager : MonoBehaviour
             Destroy(vfx);
         }
 
-        // --- SPAWN HIỆU ỨNG NỔ TẠI ĐÂY KHI ĐÃ ĐẾN NƠI ---
         if (hitPrefab != null)
         {
-            // Tạo hiệu ứng nổ tại vị trí kẻ địch (targetPos)
             GameObject hitVfx = Instantiate(hitPrefab, targetPos, Quaternion.identity);
-
-            // Xóa hiệu ứng nổ sau 2 giây (có thể tùy chỉnh lại nếu VFX nổ dài hơn)
             Destroy(hitVfx, 2f);
         }
     }
+
     public void EndCurrentTurn()
     {
         if (isTransitioningTurn) return;
@@ -658,7 +680,7 @@ public class CombatManager : MonoBehaviour
 
         if (currentTimelineIndex >= allUnitsTimeline.Count)
         {
-            DetermineTurnOrder(); // Khi chạy hết hàng đợi, tự động bắt đầu vòng mới và trừ duration ở đây!
+            DetermineTurnOrder();
         }
         else
         {
@@ -672,6 +694,12 @@ public class CombatManager : MonoBehaviour
 
         if (newTarget != null && newTarget.currentHP > 0)
         {
+            if (isSelectingSelfOnly && newTarget != currentActiveUnit)
+            {
+                Debug.LogWarning("[Chọn mục tiêu] Skill này chỉ có thể buff cho bản thân!");
+                return;
+            }
+
             if (isSelectingBuffTarget && !newTarget.isPlayer) return;
             if (!isSelectingBuffTarget && newTarget.isPlayer) return;
 
@@ -680,7 +708,7 @@ public class CombatManager : MonoBehaviour
 
             if (selectedAction != null)
             {
-                OnActionSelected(selectedAction);
+                ConfirmSelectedTarget();
             }
         }
     }
@@ -688,6 +716,8 @@ public class CombatManager : MonoBehaviour
     public void AddStain(int amount)
     {
         currentStains = Mathf.Clamp(currentStains + amount, 0, maxStains);
-        AdvancedUIManager.Instance.UpdateStainsUI(currentStains);
+
+        // Khi cộng trừ Stain thật sự, cập nhật lại UI không có tham số preview
+        AdvancedUIManager.Instance.UpdateStainsUI(currentStains, 0);
     }
 }

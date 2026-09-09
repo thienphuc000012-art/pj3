@@ -18,6 +18,10 @@ public class AdvancedUIManager : MonoBehaviour
     [Header("Stains UI")]
     public Image[] stainIcons;
 
+    // --- LƯU TRỮ TRẠNG THÁI STAIN ĐỂ UPDATE ANIMATION ---
+    private int currentStainsForUI = 0;
+    private int currentPreviewChange = 0;
+
     [Header("Turn Order UI (Left Bar)")]
     public Transform turnOrderContainer;
     public GameObject portraitPrefab;
@@ -36,22 +40,58 @@ public class AdvancedUIManager : MonoBehaviour
     public TextMeshProUGUI targetNameText;
     [Header("Parry UI")]
     public GameObject parryTextObject;
-    public Vector3 parryTextOffset = new Vector3(0, -1f, 0); // Giữ nguyên độ cao (Y)
+    public Vector3 parryTextOffset = new Vector3(0, -1f, 0);
     public float parryHorizontalOffset = 1.5f;
     [Header("Damage Text UI")]
-    public GameObject damageTextPrefab; // Prefab chứa TextMeshProUGUI (có thể thêm component animation bay lên)
-    public Transform damageTextContainer; // Panel/Canvas để chứa các text sát thương
+    public GameObject damageTextPrefab;
+    public Transform damageTextContainer;
+
     void Awake()
     {
         Instance = this;
     }
 
-    // Đã xóa nội dung của Update() vì chúng ta không cần UI bay theo nhân vật 3D nữa.
+    void Update()
+    {
+        // --- TẠO HIỆU ỨNG CHỚP NHÁY (BLINK) CHO STAIN UI MỖI FRAME ---
+        if (stainIcons == null) return;
 
-    // Vẫn giữ tên hàm này để CombatManager gọi không bị lỗi báo đỏ, nhưng không làm gì cả
+        // Giảm blinkSpeed từ 4f xuống 1.5f để nhịp chớp chậm và mượt hơn
+        float blinkSpeed = 1f;
+        float blinkAlpha = Mathf.PingPong(Time.time * blinkSpeed, 0.6f) + 0.2f;
+
+        for (int i = 0; i < stainIcons.Length; i++)
+        {
+            if (stainIcons[i] == null) continue;
+
+            if (i < currentStainsForUI)
+            {
+                if (currentPreviewChange < 0 && i >= currentStainsForUI + currentPreviewChange)
+                {
+                    stainIcons[i].color = new Color(1f, 0.3f, 0.3f, blinkAlpha);
+                }
+                else
+                {
+                    stainIcons[i].color = Color.white;
+                }
+            }
+            else
+            {
+                if (currentPreviewChange > 0 && i < currentStainsForUI + currentPreviewChange)
+                {
+                    stainIcons[i].color = new Color(1f, 1f, 1f, blinkAlpha);
+                }
+                else
+                {
+                    stainIcons[i].color = new Color(1f, 1f, 1f, 0.2f);
+                }
+            }
+        }
+    }
+
     public void PositionActionMenu(Transform target)
     {
-        // Không còn gán vị trí nữa, UI sẽ đứng yên ở nơi bạn xếp trong Canvas
+        // Không còn gán vị trí nữa, UI sẽ đứng yên
     }
 
     public void ShowActionMenu(bool isShow)
@@ -81,16 +121,11 @@ public class AdvancedUIManager : MonoBehaviour
         }
     }
 
-    public void UpdateStainsUI(int currentAmount)
+    // --- HÀM CẬP NHẬT TRẠNG THÁI STAIN (Không set màu trực tiếp nữa mà lưu biến để Update xử lý blink) ---
+    public void UpdateStainsUI(int currentAmount, int previewChange = 0)
     {
-        if (stainIcons == null) return;
-        for (int i = 0; i < stainIcons.Length; i++)
-        {
-            if (stainIcons[i] != null)
-            {
-                stainIcons[i].color = i < currentAmount ? Color.white : new Color(1, 1, 1, 0.2f);
-            }
-        }
+        currentStainsForUI = currentAmount;
+        currentPreviewChange = previewChange;
     }
 
     public void UpdateTurnOrderUI(List<BattleUnit> units)
@@ -147,7 +182,6 @@ public class AdvancedUIManager : MonoBehaviour
     }
 
     // --- QUẢN LÝ HP BAR CHO ENEMY VÀ PARTY ---
-
     public void RegisterEnemyHP(BattleUnit enemy)
     {
         if (enemy == null) return;
@@ -158,6 +192,7 @@ public class AdvancedUIManager : MonoBehaviour
         enemy.OnStatsChanged += UpdateEnemyHPUISafe;
         UpdateEnemyHPUISafe(enemy.currentHP, enemy.maxHP, enemy.GetTotalShield());
     }
+
     void UpdateEnemyHPUISafe(int current, int max, int shield)
     {
         if (enemyHpFill != null) enemyHpFill.fillAmount = (float)current / max;
@@ -180,14 +215,15 @@ public class AdvancedUIManager : MonoBehaviour
             }
         }
     }
+
     public void UpdateTargetUI(string targetName)
     {
         if (targetNameText != null)
         {
-            // Tắt hoàn toàn Text hiển thị tên mục tiêu
             targetNameText.gameObject.SetActive(false);
         }
     }
+
     // --- CHỨC NĂNG PARRY UI ---
     public void ShowParryText(Transform targetTransform)
     {
@@ -195,40 +231,21 @@ public class AdvancedUIManager : MonoBehaviour
         {
             parryTextObject.SetActive(true);
 
-            // Cập nhật vị trí UI bay ngẫu nhiên trái/phải nhân vật
             if (targetTransform != null && Camera.main != null)
             {
-                // Cách 1: Random bất kỳ điểm nào TRONG KHOẢNG từ -0.5 đến 0.5 (có thể rơi vào giữa là 0)
                 float randomDirection = Random.Range(-0.5f, 0.5f);
-
-                // Cách 2: Nếu bạn CHỈ muốn ra đúng -0.5 (trái) hoặc 0.5 (phải) mà KHÔNG BAO GIỜ rơi vào chính giữa
-                // thì comment dòng trên lại và bỏ comment dòng dưới đây:
-                // float randomDirection = Random.Range(0, 2) == 0 ? -0.5f : 0.5f;
-
-                // Tạo offset mới kết hợp độ cao (Y) cũ và độ lệch ngang (X) mới
-                Vector3 dynamicOffset = new Vector3(
-                    parryHorizontalOffset * randomDirection,
-                    parryTextOffset.y,
-                    parryTextOffset.z
-                );
-
-                // Lấy vị trí 3D của nhân vật cộng thêm offset
+                Vector3 dynamicOffset = new Vector3(parryHorizontalOffset * randomDirection, parryTextOffset.y, parryTextOffset.z);
                 Vector3 worldPos = targetTransform.position + dynamicOffset;
-
-                // Chuyển từ tọa độ 3D sang tọa độ 2D của màn hình UI
                 Vector3 screenPos = Camera.main.WorldToScreenPoint(worldPos);
 
-                // Gán vị trí cho text
                 parryTextObject.transform.position = screenPos;
             }
 
-            // Hủy các lệnh tắt trước đó (nếu người chơi parry liên tục)
             CancelInvoke(nameof(HideParryText));
-
-            // Tự động tắt chữ sau 1 giây
             Invoke(nameof(HideParryText), 1f);
         }
     }
+
     private void HideParryText()
     {
         if (parryTextObject != null)
@@ -236,26 +253,23 @@ public class AdvancedUIManager : MonoBehaviour
             parryTextObject.SetActive(false);
         }
     }
+
     public void ShowDamageText(Transform targetTransform, int amount, bool isCrit, bool isHeal = false)
     {
         if (damageTextPrefab == null || targetTransform == null) return;
 
-        // Giảm biên độ random để sát thương hiện gom lại gần nhau hơn
         float randomX = Random.Range(-0.4f, 0.4f);
         float randomY = Random.Range(0f, 0.5f);
         Vector3 randomOffset = new Vector3(randomX, randomY, 0);
 
-        // Giảm độ cao cơ sở (từ 1.5f xuống 0.8f) để gần người mục tiêu hơn
         Vector3 worldPos = targetTransform.position + Vector3.up * 0.8f + randomOffset;
 
         if (Camera.main != null)
         {
             Vector3 screenPos = Camera.main.WorldToScreenPoint(worldPos);
-
-            // Tạo text tại vị trí container
             GameObject damageObj = Instantiate(damageTextPrefab, screenPos, Quaternion.identity, damageTextContainer != null ? damageTextContainer : transform);
-
             TextMeshProUGUI txt = damageObj.GetComponent<TextMeshProUGUI>();
+
             if (txt != null)
             {
                 if (isHeal)
@@ -266,12 +280,11 @@ public class AdvancedUIManager : MonoBehaviour
                 else
                 {
                     txt.text = amount.ToString();
-                    txt.color = isCrit ? new Color(1f, 0.5f, 0f) : Color.white; // Màu cam nếu chí mạng, trắng nếu đánh thường
-                    if (isCrit) txt.fontSize *= 1.3f; // Phóng to chữ nếu chí mạng
+                    txt.color = isCrit ? new Color(1f, 0.5f, 0f) : Color.white;
+                    if (isCrit) txt.fontSize *= 1.3f;
                 }
             }
 
-            // Tự động hủy UI sau 1 giây
             Destroy(damageObj, 1f);
         }
     }
@@ -296,7 +309,6 @@ public class PartyHUDUnit
         boundUnit.OnStatsChanged -= OnStatsChangedHandler;
         boundUnit.OnStatsChanged += OnStatsChangedHandler;
 
-        // Gọi thẳng hàm cập nhật để ăn giá trị hiện tại ngay lập tức
         OnStatsChangedHandler(boundUnit.currentHP, boundUnit.maxHP, boundUnit.GetTotalShield());
     }
 
@@ -315,5 +327,4 @@ public class PartyHUDUnit
             hpText.text = shield > 0 ? $"{current}/{max} <color=white>[+{shield}]</color>" : $"{current} / {max}";
         }
     }
-
 }
