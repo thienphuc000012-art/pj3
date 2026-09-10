@@ -18,7 +18,6 @@ public class AdvancedUIManager : MonoBehaviour
     [Header("Stains UI")]
     public Image[] stainIcons;
 
-    // --- LƯU TRỮ TRẠNG THÁI STAIN ĐỂ UPDATE ANIMATION ---
     private int currentStainsForUI = 0;
     private int currentPreviewChange = 0;
 
@@ -49,14 +48,31 @@ public class AdvancedUIManager : MonoBehaviour
     void Awake()
     {
         Instance = this;
+
+        // --- TẮT SẠCH TOÀN BỘ UI NGAY LẬP TỨC KHI VỪA KHỞI TẠO ---
+        if (enemyHudPanel != null) enemyHudPanel.SetActive(false);
+
+        if (turnOrderContainer != null) turnOrderContainer.gameObject.SetActive(false);
+
+        if (stainIcons != null && stainIcons.Length > 0 && stainIcons[0] != null)
+        {
+            Transform stainParent = stainIcons[0].transform.parent;
+            if (stainParent != null) stainParent.gameObject.SetActive(false);
+        }
+
+        foreach (var hud in partyHUDList)
+        {
+            if (hud != null && hud.gameObject != null)
+                hud.gameObject.SetActive(false);
+        }
+
+        ShowActionMenu(false);
     }
 
     void Update()
     {
-        // --- TẠO HIỆU ỨNG CHỚP NHÁY (BLINK) CHO STAIN UI MỖI FRAME ---
         if (stainIcons == null) return;
 
-        // Giảm blinkSpeed từ 4f xuống 1.5f để nhịp chớp chậm và mượt hơn
         float blinkSpeed = 1f;
         float blinkAlpha = Mathf.PingPong(Time.time * blinkSpeed, 0.6f) + 0.2f;
 
@@ -89,10 +105,7 @@ public class AdvancedUIManager : MonoBehaviour
         }
     }
 
-    public void PositionActionMenu(Transform target)
-    {
-        // Không còn gán vị trí nữa, UI sẽ đứng yên
-    }
+    public void PositionActionMenu(Transform target) { }
 
     public void ShowActionMenu(bool isShow)
     {
@@ -121,7 +134,6 @@ public class AdvancedUIManager : MonoBehaviour
         }
     }
 
-    // --- HÀM CẬP NHẬT TRẠNG THÁI STAIN (Không set màu trực tiếp nữa mà lưu biến để Update xử lý blink) ---
     public void UpdateStainsUI(int currentAmount, int previewChange = 0)
     {
         currentStainsForUI = currentAmount;
@@ -181,16 +193,22 @@ public class AdvancedUIManager : MonoBehaviour
         }
     }
 
-    // --- QUẢN LÝ HP BAR CHO ENEMY VÀ PARTY ---
     public void RegisterEnemyHP(BattleUnit enemy)
     {
         if (enemy == null) return;
-        if (enemyHudPanel != null) enemyHudPanel.SetActive(true);
-        if (enemyNameText != null) enemyNameText.text = enemy.unitName;
 
         enemy.OnStatsChanged -= UpdateEnemyHPUISafe;
         enemy.OnStatsChanged += UpdateEnemyHPUISafe;
         UpdateEnemyHPUISafe(enemy.currentHP, enemy.maxHP, enemy.GetTotalShield());
+
+        if (enemyNameText != null) enemyNameText.text = enemy.unitName;
+
+        bool isStartingGame = CombatManager.Instance != null &&
+                             (CombatManager.Instance.state == CombatState.Start ||
+                              CombatManager.Instance.state == CombatState.BattleStartAnim);
+
+        if (enemyHudPanel != null)
+            enemyHudPanel.SetActive(!isStartingGame);
     }
 
     void UpdateEnemyHPUISafe(int current, int max, int shield)
@@ -204,14 +222,17 @@ public class AdvancedUIManager : MonoBehaviour
     {
         for (int i = 0; i < partyHUDList.Count; i++)
         {
+            if (partyHUDList[i] == null) continue;
+
             if (i < playerList.Count && playerList[i] != null)
             {
-                partyHUDList[i].gameObject.SetActive(true);
+                // Chỉ gán dữ liệu, không can thiệp SetActive ở đây để tránh bị xung đột
                 partyHUDList[i].BindUnit(playerList[i]);
             }
             else
             {
-                partyHUDList[i].gameObject.SetActive(false);
+                if (partyHUDList[i].gameObject != null)
+                    partyHUDList[i].gameObject.SetActive(false);
             }
         }
     }
@@ -224,7 +245,6 @@ public class AdvancedUIManager : MonoBehaviour
         }
     }
 
-    // --- CHỨC NĂNG PARRY UI ---
     public void ShowParryText(Transform targetTransform)
     {
         if (parryTextObject != null)
@@ -288,9 +308,46 @@ public class AdvancedUIManager : MonoBehaviour
             Destroy(damageObj, 1f);
         }
     }
+
+    public void ToggleAllUI(bool isShow)
+    {
+        ShowActionMenu(isShow);
+
+        if (turnOrderContainer != null)
+            turnOrderContainer.gameObject.SetActive(isShow);
+
+        if (enemyHudPanel != null)
+        {
+            if (isShow && CombatManager.Instance != null && CombatManager.Instance.enemyParty.Count > 0)
+                enemyHudPanel.SetActive(true);
+            else
+                enemyHudPanel.SetActive(false);
+        }
+
+        // Quản lý hiển thị HUD party trực tiếp tại đây dựa theo lệnh isShow
+        for (int i = 0; i < partyHUDList.Count; i++)
+        {
+            if (partyHUDList[i] != null && partyHUDList[i].gameObject != null)
+            {
+                bool shouldShow = isShow && CombatManager.Instance != null && i < CombatManager.Instance.playerParty.Count && CombatManager.Instance.playerParty[i] != null;
+                partyHUDList[i].gameObject.SetActive(shouldShow);
+            }
+        }
+
+        if (isShow && CombatManager.Instance != null)
+        {
+            RegisterPartyHP(CombatManager.Instance.playerParty);
+        }
+
+        if (stainIcons != null && stainIcons.Length > 0 && stainIcons[0] != null)
+        {
+            Transform stainParent = stainIcons[0].transform.parent;
+            if (stainParent != null) stainParent.gameObject.SetActive(isShow);
+        }
+    }
 }
 
-[System.Serializable]
+    [System.Serializable]
 public class PartyHUDUnit
 {
     public GameObject gameObject;
