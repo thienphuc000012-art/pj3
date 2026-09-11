@@ -61,7 +61,6 @@ public class CombatManager : MonoBehaviour
         }
         AdvancedUIManager.Instance.RegisterPartyHP(playerParty);
 
-        // Thay vì gọi DetermineTurnOrder ngay lập tức, ta sẽ chạy Coroutine giới thiệu
         StartCoroutine(BattleStartRoutine());
     }
 
@@ -69,11 +68,11 @@ public class CombatManager : MonoBehaviour
     {
         state = CombatState.BattleStartAnim;
 
-        // 1. Tắt toàn bộ UI
+        // Bật Camera tổng thể đầu trận
+        CameraManager.Instance.SwitchToBattleStartCam();
+
         AdvancedUIManager.Instance.ToggleAllUI(false);
 
-        // 2. Kích hoạt Animation "BattleStart" cho toàn bộ nhân vật (nếu có)
-        // Lưu ý: Bạn cần tạo một Trigger tên là "BattleStart" trong Animator của cả Player và Quái
         foreach (var p in playerParty.Where(u => u != null && u.animator != null))
         {
             p.animator.SetTrigger("BattleStart");
@@ -83,13 +82,11 @@ public class CombatManager : MonoBehaviour
             e.animator.SetTrigger("BattleStart");
         }
 
-        // 3. Đợi Animation chạy xong (Giả sử mất 2.5 giây, bạn có thể chỉnh lại cho khớp với thời lượng Anim)
-        yield return new WaitForSeconds(3f);
+        // Chờ thời gian Animation dạo đầu (Bạn có thể tăng số này lên 2-3s để xem rõ camera tổng)
+        yield return new WaitForSeconds(2.5f);
 
-        // 4. Bật lại toàn bộ UI
         AdvancedUIManager.Instance.ToggleAllUI(true);
 
-        // 5. Bắt đầu tính toán lượt đi và vào trận
         DetermineTurnOrder();
     }
 
@@ -148,6 +145,9 @@ public class CombatManager : MonoBehaviour
     {
         if (currentTarget == null || selectedAction == null) return;
         CameraManager.Instance.ResetTargetCam();
+
+        AdvancedUIManager.Instance.ToggleChangeTargetHint(false); // Tắt UI hint
+
         OnActionSelected(selectedAction);
     }
 
@@ -155,6 +155,7 @@ public class CombatManager : MonoBehaviour
     {
         if (state != CombatState.PlayerTurn) return;
 
+        // 1. Trường hợp đang ở bước Chọn Mục Tiêu (Sau khi bấm Attack hoặc chọn Skill/Item)
         if (selectedAction != null)
         {
             CameraManager.Instance.ResetTargetCam();
@@ -175,7 +176,9 @@ public class CombatManager : MonoBehaviour
                 AdvancedUIManager.Instance.UpdateTargetUI("");
             }
 
-            AdvancedUIManager.Instance.ShowActionMenu(true);
+            AdvancedUIManager.Instance.ToggleChangeTargetHint(false); // Tắt UI hint
+            AdvancedUIManager.Instance.ShowActionMenu(true); // Bật lại 3 nút
+
             if (AdvancedUIManager.Instance.subMenuPanel != null)
             {
                 AdvancedUIManager.Instance.subMenuPanel.SetActive(false);
@@ -184,17 +187,27 @@ public class CombatManager : MonoBehaviour
             currentOpenMenu = OpenMenuType.None;
             ResetMenuAnimations();
 
+            // --- THÊM MỚI Ở ĐÂY: Trả camera về lại nhân vật đang đánh ---
+            int activePlayerIndex = playerParty.IndexOf(currentActiveUnit);
+            if (activePlayerIndex >= 0)
+            {
+                CameraManager.Instance.SwitchToPlayerTurnCam(activePlayerIndex, true);
+            }
+
             return;
         }
 
+        // 2. Trường hợp đang mở Menu con (Skills / Items) mà chưa chọn kỹ năng nào
         if (currentOpenMenu != OpenMenuType.None)
         {
             currentOpenMenu = OpenMenuType.None;
             ResetMenuAnimations();
+
             if (AdvancedUIManager.Instance.subMenuPanel != null)
                 AdvancedUIManager.Instance.subMenuPanel.SetActive(false);
 
-            // --- THÊM MỚI: Đưa camera về cam lượt của player ---
+            AdvancedUIManager.Instance.ShowActionMenu(true); // Bật lại 3 nút
+
             int playerIndex = playerParty.IndexOf(currentActiveUnit);
             if (playerIndex >= 0)
             {
@@ -202,7 +215,6 @@ public class CombatManager : MonoBehaviour
             }
         }
     }
-
     void SetupPositions()
     {
         for (int i = 0; i < playerParty.Count; i++)
@@ -262,7 +274,9 @@ public class CombatManager : MonoBehaviour
         isSelectingSelfOnly = false;
         currentTarget = null;
         currentOpenMenu = OpenMenuType.None;
+
         AdvancedUIManager.Instance.UpdateTargetUI("");
+        AdvancedUIManager.Instance.ToggleChangeTargetHint(false); // Chắc chắn tắt hint đầu lượt
 
         AdvancedUIManager.Instance.UpdateStainsUI(currentStains, 0);
 
@@ -303,7 +317,7 @@ public class CombatManager : MonoBehaviour
         }
 
         ResetMenuAnimations();
-        currentOpenMenu = OpenMenuType.None; // --- Đóng trạng thái menu ---
+        currentOpenMenu = OpenMenuType.None;
         isSelectingBuffTarget = false;
         isSelectingSelfOnly = false;
         selectedAction = attackAction;
@@ -318,13 +332,13 @@ public class CombatManager : MonoBehaviour
             AdvancedUIManager.Instance.UpdateTargetUI(currentTarget.unitName);
             AdvancedUIManager.Instance.ShowActionMenu(false);
 
-            // --- Tắt bảng SubMenu nếu đang mở dở ---
+            AdvancedUIManager.Instance.ToggleChangeTargetHint(true); // Bật UI Hint
+
             if (AdvancedUIManager.Instance.subMenuPanel != null)
             {
                 AdvancedUIManager.Instance.subMenuPanel.SetActive(false);
             }
 
-            // Chuyển sang camera mục tiêu (sẽ tự động tắt menu cam trong CameraManager)
             CameraManager.Instance.SwitchToTargetCam(currentTarget);
 
             if (selectedAction != null)
@@ -343,8 +357,8 @@ public class CombatManager : MonoBehaviour
             currentOpenMenu = OpenMenuType.None;
             ResetMenuAnimations();
             AdvancedUIManager.Instance.subMenuPanel.SetActive(false);
+            AdvancedUIManager.Instance.ShowActionMenu(true); // Hiện lại 3 nút
 
-            // --- THÊM MỚI: Trả lại camera lượt đi bình thường khi tắt menu ---
             int playerIndex = playerParty.IndexOf(currentActiveUnit);
             CameraManager.Instance.SwitchToPlayerTurnCam(playerIndex, true);
             return;
@@ -361,13 +375,13 @@ public class CombatManager : MonoBehaviour
             currentActiveUnit.animator.SetBool("IsSkillIdle", true);
         }
 
-        // --- THÊM MỚI: Chuyển sang Camera Menu của Player hiện tại ---
         int activePlayerIdx = playerParty.IndexOf(currentActiveUnit);
         if (activePlayerIdx >= 0)
         {
             CameraManager.Instance.SwitchToPlayerMenuCam(activePlayerIdx);
         }
 
+        AdvancedUIManager.Instance.ShowActionMenu(false); // Ẩn 3 nút đi
         AdvancedUIManager.Instance.PopulateSubMenu(currentActiveUnit.characterSkills);
     }
 
@@ -380,8 +394,8 @@ public class CombatManager : MonoBehaviour
             currentOpenMenu = OpenMenuType.None;
             ResetMenuAnimations();
             AdvancedUIManager.Instance.subMenuPanel.SetActive(false);
+            AdvancedUIManager.Instance.ShowActionMenu(true); // Hiện lại 3 nút
 
-            // --- THÊM MỚI: Trả lại camera lượt đi bình thường khi tắt menu ---
             int playerIndex = playerParty.IndexOf(currentActiveUnit);
             CameraManager.Instance.SwitchToPlayerTurnCam(playerIndex, true);
             return;
@@ -398,15 +412,16 @@ public class CombatManager : MonoBehaviour
             currentActiveUnit.animator.SetBool("IsItemIdle", true);
         }
 
-        // --- THÊM MỚI: Chuyển sang Camera Menu của Player hiện tại ---
         int activePlayerIdx = playerParty.IndexOf(currentActiveUnit);
         if (activePlayerIdx >= 0)
         {
             CameraManager.Instance.SwitchToPlayerMenuCam(activePlayerIdx);
         }
 
+        AdvancedUIManager.Instance.ShowActionMenu(false); // Ẩn 3 nút đi
         AdvancedUIManager.Instance.PopulateSubMenu(inventoryItems);
     }
+
     public void OnSkillButtonClicked(ActionData skillAction)
     {
         if (state != CombatState.PlayerTurn) return;
@@ -420,9 +435,8 @@ public class CombatManager : MonoBehaviour
         selectedAction = skillAction;
         isSelectingSelfOnly = skillAction.isSelfOnly;
         isSelectingBuffTarget = skillAction.isFriendlyAction || isSelectingSelfOnly;
-        currentOpenMenu = OpenMenuType.None; // --- Đóng trạng thái menu ---
+        currentOpenMenu = OpenMenuType.None;
 
-        // --- Tắt bảng SubMenu khi người chơi bấm chọn skill ---
         if (AdvancedUIManager.Instance.subMenuPanel != null)
         {
             AdvancedUIManager.Instance.subMenuPanel.SetActive(false);
@@ -444,13 +458,15 @@ public class CombatManager : MonoBehaviour
         if (currentTarget != null)
         {
             AdvancedUIManager.Instance.UpdateTargetUI(currentTarget.unitName);
-            // Chuyển sang camera mục tiêu (sẽ tự động tắt menu cam trong CameraManager)
+            AdvancedUIManager.Instance.ToggleChangeTargetHint(true); // Bật UI Hint
+
             CameraManager.Instance.SwitchToTargetCam(currentTarget);
         }
 
         AdvancedUIManager.Instance.UpdateStainsUI(currentStains, skillAction.stainChange);
         AdvancedUIManager.Instance.ShowActionMenu(false);
     }
+
     public void OnActionSelected(ActionData action)
     {
         selectedAction = action;
@@ -493,6 +509,17 @@ public class CombatManager : MonoBehaviour
     private IEnumerator ExecuteActionRoutine(BattleUnit attacker, BattleUnit target, ActionData action)
     {
         state = CombatState.Executing;
+
+        // --- THÊM MỚI: Bật Camera riêng cho Player lúc họ đang đánh ---
+        if (attacker.isPlayer)
+        {
+            int playerIndex = playerParty.IndexOf(attacker);
+            if (playerIndex >= 0)
+            {
+                CameraManager.Instance.SetInstantCutBlendForAction();
+                CameraManager.Instance.SwitchToPlayerActionCam(playerIndex);
+            }
+        }
 
         if (action != null && attacker.isPlayer)
         {

@@ -1,11 +1,17 @@
 ﻿using UnityEngine;
 using Unity.Cinemachine;
 using System.Collections.Generic;
-using System.Collections;
 
 public class CameraManager : MonoBehaviour
 {
     public static CameraManager Instance;
+
+    [Header("Camera Transition Settings")]
+    [Tooltip("Thời gian lia camera (giây). Chỉnh số này nhỏ lại (VD: 0.3 - 0.5) để cam lia nhanh hơn.")]
+    public float transitionSpeed = 0.4f; // --- THÊM MỚI: Tốc độ lia cam ---
+
+    [Header("Battle Start Camera (Camera tổng thể đầu trận)")]
+    public CinemachineCamera battleStartCam;
 
     [Header("Party Turn Cameras (Lia bình thường)")]
     public List<CinemachineCamera> playerPartyCams;
@@ -20,8 +26,10 @@ public class CameraManager : MonoBehaviour
     [Header("Menu Cameras (Skills & Items - Cắt ngay lập tức)")]
     public List<CinemachineCamera> playerMenuCams;
 
+    [Header("Player Action Cameras (Camera riêng khi Tấn công/Dùng chiêu)")]
+    public List<CinemachineCamera> playerActionCams;
+
     private CinemachineBrain mainBrain;
-    private CinemachineBlendDefinition originalBlend;
 
     void Awake()
     {
@@ -30,28 +38,26 @@ public class CameraManager : MonoBehaviour
         if (Camera.main != null)
         {
             mainBrain = Camera.main.GetComponent<CinemachineBrain>();
-            if (mainBrain != null)
-            {
-                originalBlend = mainBrain.DefaultBlend;
-            }
         }
     }
 
-    // Camera lượt đi: Có thể chọn cắt ngay lập tức (khi tắt menu) hoặc lia mượt (khi đổi lượt)
+    public void SwitchToBattleStartCam()
+    {
+        SetFastBlend();
+        ResetAllCams();
+
+        if (battleStartCam != null)
+        {
+            battleStartCam.Priority = 20;
+        }
+    }
+
     public void SwitchToPlayerTurnCam(int playerIndex, bool instantCut = false)
     {
-        if (instantCut)
-        {
-            SetInstantCutBlend(); // Cắt ngay lập tức khi tắt menu
-        }
-        else
-        {
-            RestoreOriginalBlend(); // Lia bình thường khi đổi lượt giữa các player
-        }
+        if (instantCut) SetInstantCutBlend();
+        else SetFastBlend(); // Chuyển sang lia nhanh thay vì lia mặc định
 
-        ResetAllHitCams();
-        ResetAllMenuCams();
-        ResetTargetCamWithoutCut();
+        ResetAllCams();
 
         for (int i = 0; i < playerPartyCams.Count; i++)
         {
@@ -60,13 +66,23 @@ public class CameraManager : MonoBehaviour
         }
     }
 
-    // Camera menu: CẮT NGAY LẬP TỨC
+    public void SwitchToPlayerActionCam(int playerIndex)
+    {
+        // QUAN TRỌNG: Ép cắt ngay lập tức (Instant Cut) từ Targeting Cam sang Action Cam
+        SetInstantCutBlend();
+        ResetAllCams();
+
+        for (int i = 0; i < playerActionCams.Count; i++)
+        {
+            if (playerActionCams[i] != null)
+                playerActionCams[i].Priority = (i == playerIndex) ? 12 : 0;
+        }
+    }
+
     public void SwitchToPlayerMenuCam(int playerIndex)
     {
-        SetInstantCutBlend(); // Cắt cứng ngay lập tức
-
-        ResetAllHitCams();
-        ResetTargetCamWithoutCut();
+        SetInstantCutBlend();
+        ResetAllCams();
 
         for (int i = 0; i < playerMenuCams.Count; i++)
         {
@@ -75,22 +91,10 @@ public class CameraManager : MonoBehaviour
         }
     }
 
-    public void ResetAllMenuCams()
-    {
-        foreach (var cam in playerMenuCams)
-        {
-            if (cam != null) cam.Priority = 0;
-        }
-    }
-
-    // Camera trúng đòn: LIA BÌNH THƯỜNG
     public void SwitchToTargetHitCam(BattleUnit targetUnit)
     {
-        RestoreOriginalBlend(); // Trả lại hiệu ứng lia mượt
-
-        ResetAllTurnCams();
-        ResetAllMenuCams();
-        ResetTargetCamWithoutCut();
+        SetFastBlend(); // Chuyển sang lia nhanh
+        ResetAllCams();
 
         int targetIndex = CombatManager.Instance.playerParty.IndexOf(targetUnit);
         for (int i = 0; i < playerHitCams.Count; i++)
@@ -100,13 +104,10 @@ public class CameraManager : MonoBehaviour
         }
     }
 
-    // Camera zoom chọn mục tiêu: CẮT NGAY LẬP TỨC
     public void SwitchToTargetCam(BattleUnit targetUnit)
     {
-        SetInstantCutBlend(); // Cắt cứng ngay lập tức
-
-        // QUAN TRỌNG: Phải tắt toàn bộ menu cam đang mở để không bị kẹt góc nhìn menu
-        ResetAllMenuCams();
+        SetInstantCutBlend();
+        ResetAllCams();
 
         CinemachineCamera targetCamToActivate = null;
 
@@ -114,69 +115,57 @@ public class CameraManager : MonoBehaviour
         {
             int targetIndex = CombatManager.Instance.playerParty.IndexOf(targetUnit);
             if (targetIndex >= 0 && targetIndex < playerTargetCams.Count)
-            {
                 targetCamToActivate = playerTargetCams[targetIndex];
-            }
         }
         else
         {
             int targetIndex = CombatManager.Instance.enemyParty.IndexOf(targetUnit);
             if (targetIndex >= 0 && targetIndex < enemyTargetCams.Count)
-            {
                 targetCamToActivate = enemyTargetCams[targetIndex];
-            }
         }
 
-        if (targetCamToActivate != null)
-        {
-            targetCamToActivate.Priority = 15;
-        }
-
-        foreach (var cam in playerTargetCams)
-        {
-            if (cam != null && cam != targetCamToActivate) cam.Priority = 0;
-        }
-        foreach (var cam in enemyTargetCams)
-        {
-            if (cam != null && cam != targetCamToActivate) cam.Priority = 0;
-        }
+        if (targetCamToActivate != null) targetCamToActivate.Priority = 15;
     }
 
     public void ResetTargetCam()
     {
         SetInstantCutBlend();
-        ResetTargetCamWithoutCut();
+        ResetAllCams();
     }
 
-    private void ResetTargetCamWithoutCut()
+    private void ResetAllCams()
     {
+        if (battleStartCam != null) battleStartCam.Priority = 0;
+
+        foreach (var cam in playerPartyCams) { if (cam != null) cam.Priority = 0; }
+        foreach (var cam in playerHitCams) { if (cam != null) cam.Priority = 0; }
         foreach (var cam in playerTargetCams) { if (cam != null) cam.Priority = 0; }
         foreach (var cam in enemyTargetCams) { if (cam != null) cam.Priority = 0; }
-    }
-
-    private void ResetAllTurnCams()
-    {
-        foreach (var cam in playerPartyCams) { if (cam != null) cam.Priority = 0; }
-    }
-
-    private void ResetAllHitCams()
-    {
-        foreach (var cam in playerHitCams) { if (cam != null) cam.Priority = 0; }
+        foreach (var cam in playerMenuCams) { if (cam != null) cam.Priority = 0; }
+        foreach (var cam in playerActionCams) { if (cam != null) cam.Priority = 0; }
     }
 
     private void SetInstantCutBlend()
     {
         if (mainBrain != null)
-        {
-            mainBrain.DefaultBlend = default(CinemachineBlendDefinition);
-        }
+            mainBrain.DefaultBlend = default(CinemachineBlendDefinition); // Cắt ngay lập tức (0 giây)
     }
 
-    private void RestoreOriginalBlend()
+    /// --- THÊM MỚI: Hàm cài đặt lia cam nhanh dựa trên biến transitionSpeed ---
+    private void SetFastBlend()
     {
         if (mainBrain != null)
         {
-            mainBrain.DefaultBlend = originalBlend;
+            // LƯU Ý: Dùng "Styles" (có chữ s) thay vì "Style" đối với Cinemachine 3.x
+            mainBrain.DefaultBlend = new CinemachineBlendDefinition(
+                Unity.Cinemachine.CinemachineBlendDefinition.Styles.EaseInOut,
+                transitionSpeed
+            );
         }
+    }
+    // --- THÊM MỚI: Hàm hỗ trợ cắt cứng camera khi bắt đầu hành động ---
+    public void SetInstantCutBlendForAction()
+    {
+        SetInstantCutBlend();
     }
 }

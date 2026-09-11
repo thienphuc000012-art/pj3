@@ -4,11 +4,12 @@ using TMPro;
 
 public class ActionButtonUI : MonoBehaviour
 {
-    public TextMeshProUGUI actionNameText;
-
-    // --- THÊM BIẾN NÀY ĐỂ HIỂN THỊ ICON LÊN UI ---
-    public Image actionIcon;
-    // ---------------------------------------------
+    [Header("UI References")]
+    public TextMeshProUGUI nameText;       // Tên kỹ năng
+    public TextMeshProUGUI infoText;       // THAY ĐỔI: Sẽ dùng để hiển thị Mô tả (Description)
+    public TextMeshProUGUI stainText;      // Hiển thị Stain (+ hoặc -)
+    public Image iconImage;                // Icon kỹ năng
+    public Button button;
 
     private ActionData currentAction;
 
@@ -16,38 +17,69 @@ public class ActionButtonUI : MonoBehaviour
     {
         currentAction = action;
 
-        // Cập nhật Tên
-        if (actionNameText != null)
+        // 1. Hiển thị Tên
+        if (nameText != null)
+            nameText.text = action.actionName;
+
+        // 2. Hiển thị Icon
+        if (iconImage != null && action.icon != null)
         {
-            actionNameText.text = action.actionName;
+            iconImage.sprite = action.icon;
+            iconImage.gameObject.SetActive(true);
+        }
+        else if (iconImage != null)
+        {
+            iconImage.gameObject.SetActive(false);
         }
 
-        // --- CẬP NHẬT ICON ---
-        if (actionIcon != null)
+        // 3. Hiển thị số lượng Stain
+        if (stainText != null)
         {
-            if (action.icon != null)
+            if (action.stainChange > 0)
             {
-                actionIcon.sprite = action.icon;
-                actionIcon.gameObject.SetActive(true); // Hiện ảnh nếu có
+                stainText.text = $"+{action.stainChange} Stain";
+                stainText.color = Color.cyan; // Màu xanh dương cho hồi Stain
+            }
+            else if (action.stainChange < 0)
+            {
+                stainText.text = $"{action.stainChange} Stain"; // Đã có sẵn dấu trừ
+                stainText.color = new Color(1f, 0.4f, 0.4f); // Màu đỏ cho tiêu hao Stain
             }
             else
             {
-                actionIcon.gameObject.SetActive(false); // Ẩn đi nếu skill này chưa gắn ảnh
+                stainText.text = "0 Stain";
+                stainText.color = Color.white;
             }
         }
-        // ---------------------
 
-        Button btn = GetComponent<Button>();
-        if (btn != null)
+        // 4. Hiển thị Mô tả (Description) thay vì các thông số khô khan
+        if (infoText != null)
         {
-            btn.onClick.RemoveAllListeners();
+            if (!string.IsNullOrEmpty(action.description))
+            {
+                // Nếu có ghi description trong Inspector thì hiển thị description đó
+                infoText.text = action.description;
+            }
+            else
+            {
+                // Nếu quên ghi description, hiển thị tạm dòng chữ này để nhắc nhở
+                infoText.text = "<color=#AAAAAA><i>Chưa có mô tả kỹ năng.</i></color>";
+            }
+        }
 
-            btn.onClick.AddListener(() => {
-                if (CombatManager.Instance != null)
-                {
-                    CombatManager.Instance.OnSkillButtonClicked(currentAction);
-                }
-            });
+        // 5. Gán sự kiện khi bấm nút (Chuyển lệnh về CombatManager)
+        if (button != null)
+        {
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(OnClick);
+        }
+    }
+
+    private void OnClick()
+    {
+        if (CombatManager.Instance != null && currentAction != null)
+        {
+            CombatManager.Instance.OnSkillButtonClicked(currentAction);
         }
     }
 }

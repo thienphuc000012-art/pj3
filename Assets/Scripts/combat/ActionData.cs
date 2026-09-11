@@ -4,6 +4,11 @@
 public class ActionData : ScriptableObject
 {
     public string actionName;
+
+    // --- THÊM MỚI: Biến lưu mô tả của kỹ năng/Vật phẩm ---
+    [TextArea(2, 4)]
+    public string description;
+
     public Sprite icon;
     public enum ActionType { Attack, Skill, Item }
     public ActionType type;
@@ -21,7 +26,7 @@ public class ActionData : ScriptableObject
     public bool isAoE;
     public bool isSelfOnly;
 
-    // --- BIẾN MỚI DÀNH CHO HỆ THỐNG STAIN ---
+    // --- BIẾN DÀNH CHO HỆ THỐNG STAIN ---
     [Header("Resource Cost")]
     [Tooltip("Dương (+) là hồi Stain, Âm (-) là tốn Stain. (Vd: Attack = 1, Skill = -1)")]
     public int stainChange = 0;

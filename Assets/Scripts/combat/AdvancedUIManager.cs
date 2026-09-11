@@ -15,6 +15,9 @@ public class AdvancedUIManager : MonoBehaviour
     public Transform subMenuContent;
     public GameObject actionButtonPrefab;
 
+    [Header("Hints")]
+    public GameObject changeTargetHintText; // --- THÊM MỚI: UI Text gợi ý "A/D để đổi mục tiêu" ---
+
     [Header("Stains UI")]
     public Image[] stainIcons;
 
@@ -49,10 +52,9 @@ public class AdvancedUIManager : MonoBehaviour
     {
         Instance = this;
 
-        // --- TẮT SẠCH TOÀN BỘ UI NGAY LẬP TỨC KHI VỪA KHỞI TẠO ---
         if (enemyHudPanel != null) enemyHudPanel.SetActive(false);
-
         if (turnOrderContainer != null) turnOrderContainer.gameObject.SetActive(false);
+        if (changeTargetHintText != null) changeTargetHintText.SetActive(false); // --- Tắt Text gợi ý ban đầu ---
 
         if (stainIcons != null && stainIcons.Length > 0 && stainIcons[0] != null)
         {
@@ -112,7 +114,16 @@ public class AdvancedUIManager : MonoBehaviour
         if (actionMenuPanel != null)
         {
             actionMenuPanel.gameObject.SetActive(isShow);
-            if (!isShow && subMenuPanel != null) subMenuPanel.SetActive(false);
+            // Đã xóa dòng ép ẩn subMenuPanel ở đây để ta có thể ẩn riêng 3 nút (actionMenuPanel) mà subMenuPanel vẫn hiện
+        }
+    }
+
+    // --- THÊM MỚI: Bật/Tắt Text gợi ý ---
+    public void ToggleChangeTargetHint(bool isShow)
+    {
+        if (changeTargetHintText != null)
+        {
+            changeTargetHintText.SetActive(isShow);
         }
     }
 
@@ -226,7 +237,6 @@ public class AdvancedUIManager : MonoBehaviour
 
             if (i < playerList.Count && playerList[i] != null)
             {
-                // Chỉ gán dữ liệu, không can thiệp SetActive ở đây để tránh bị xung đột
                 partyHUDList[i].BindUnit(playerList[i]);
             }
             else
@@ -312,6 +322,7 @@ public class AdvancedUIManager : MonoBehaviour
     public void ToggleAllUI(bool isShow)
     {
         ShowActionMenu(isShow);
+        if (!isShow) ToggleChangeTargetHint(false); // --- Đảm bảo tắt Text gợi ý khi tắt toàn bộ UI ---
 
         if (turnOrderContainer != null)
             turnOrderContainer.gameObject.SetActive(isShow);
@@ -324,7 +335,6 @@ public class AdvancedUIManager : MonoBehaviour
                 enemyHudPanel.SetActive(false);
         }
 
-        // Quản lý hiển thị HUD party trực tiếp tại đây dựa theo lệnh isShow
         for (int i = 0; i < partyHUDList.Count; i++)
         {
             if (partyHUDList[i] != null && partyHUDList[i].gameObject != null)
@@ -347,7 +357,7 @@ public class AdvancedUIManager : MonoBehaviour
     }
 }
 
-    [System.Serializable]
+[System.Serializable]
 public class PartyHUDUnit
 {
     public GameObject gameObject;
