@@ -246,17 +246,34 @@ public class CombatManager : MonoBehaviour
         }
 
         allUnitsTimeline.Clear();
-        allUnitsTimeline.AddRange(playerParty.Where(u => u.currentHP > 0));
-        allUnitsTimeline.AddRange(enemyParty.Where(u => u.currentHP > 0));
 
-        allUnitsTimeline = allUnitsTimeline.OrderByDescending(u => u.speed).ToList();
+        // Gom tất cả unit còn sống
+        var aliveUnits = playerParty.Where(u => u.currentHP > 0).Concat(enemyParty.Where(u => u.currentHP > 0)).ToList();
+
+        // Check Phase của địch trước khi xếp lịch để lấy đúng số actionsPerTurn
+        foreach (var unit in aliveUnits)
+        {
+            if (!unit.isPlayer) unit.CheckPhase();
+        }
+
+        // Sắp xếp theo tốc độ
+        aliveUnits = aliveUnits.OrderByDescending(u => u.speed).ToList();
+
+        // --- CẬP NHẬT: Đẩy Unit vào Timeline NHIỀU LẦN dựa theo Actions Per Turn ---
+        foreach (var unit in aliveUnits)
+        {
+            int actionsCount = unit.isPlayer ? 1 : (unit.actionsPerTurn > 0 ? unit.actionsPerTurn : 1);
+            for (int i = 0; i < actionsCount; i++)
+            {
+                allUnitsTimeline.Add(unit); // Ép UI vẽ nhiều Portrait
+            }
+        }
 
         AdvancedUIManager.Instance.UpdateTurnOrderUI(allUnitsTimeline);
 
         currentTimelineIndex = 0;
         StartNextUnitTurn();
     }
-
     private void ResetMenuAnimations()
     {
         if (currentActiveUnit != null && currentActiveUnit.animator != null)
@@ -276,7 +293,7 @@ public class CombatManager : MonoBehaviour
         currentOpenMenu = OpenMenuType.None;
 
         AdvancedUIManager.Instance.UpdateTargetUI("");
-        AdvancedUIManager.Instance.ToggleChangeTargetHint(false); // Chắc chắn tắt hint đầu lượt
+        AdvancedUIManager.Instance.ToggleChangeTargetHint(false);
 
         AdvancedUIManager.Instance.UpdateStainsUI(currentStains, 0);
 
@@ -284,6 +301,13 @@ public class CombatManager : MonoBehaviour
         if (playerParty.All(p => p.currentHP <= 0)) { state = CombatState.Lost; Debug.Log("LOSE!"); return; }
 
         currentActiveUnit = allUnitsTimeline[currentTimelineIndex];
+
+        // --- CẬP NHẬT: Nếu unit chết giữa chừng (ví dụ chết do độc/counter), bỏ qua lượt ---
+        if (currentActiveUnit == null || currentActiveUnit.currentHP <= 0)
+        {
+            EndCurrentTurn();
+            return;
+        }
 
         ResetMenuAnimations();
 
@@ -476,41 +500,45 @@ public class CombatManager : MonoBehaviour
         AdvancedUIManager.Instance.ShowActionMenu(false);
         AdvancedUIManager.Instance.UpdateTargetUI("");
 
-        StartCoroutine(ExecuteActionRoutine(currentActiveUnit, currentTarget, selectedAction));
+        // Truyền thêm cờ true để Player tự động kết thúc lượt sau khi đánh xong 1 hit
+        StartCoroutine(ExecuteActionRoutine(currentActiveUnit, currentTarget, selectedAction, true));
     }
 
     System.Collections.IEnumerator EnemyAICore()
     {
         yield return new WaitForSeconds(0.5f);
 
+        // ĐÃ XÓA: currentActiveUnit.CheckPhase(); 
+        // -> Boss sẽ không đổi phase ngay giữa Turn Order nữa, 
+        // mà sẽ đợi hàm DetermineTurnOrder() chạy ở đầu Wave tiếp theo.
+
         List<BattleUnit> livePlayers = playerParty.Where(p => p.currentHP > 0).ToList();
         if (livePlayers.Count == 0) yield break;
 
+        // KHÔNG ĐÁNH 1 NGƯỜI 2 LẦN LIÊN TỤC (Chỉ áp dụng nếu party còn >1 người sống)
+        if (livePlayers.Count > 1 && currentActiveUnit.lastTarget != null && livePlayers.Contains(currentActiveUnit.lastTarget))
+        {
+            livePlayers.Remove(currentActiveUnit.lastTarget);
+        }
+
         currentTarget = livePlayers[Random.Range(0, livePlayers.Count)];
-        selectedAction = currentActiveUnit.defaultAttack != null ? currentActiveUnit.defaultAttack : currentActiveUnit.characterSkills.FirstOrDefault();
+        currentActiveUnit.lastTarget = currentTarget; // Lưu lại mục tiêu để né vào đòn sau
+
+        // Lấy chiêu theo Action Pattern (Không random)
+        selectedAction = currentActiveUnit.GetNextAction();
 
         CameraManager.Instance.SwitchToTargetHitCam(currentTarget);
 
         yield return new WaitForSeconds(0.5f);
 
-        StartCoroutine(ExecuteActionRoutine(currentActiveUnit, currentTarget, selectedAction));
+        // Do Timeline đã nhân bản sẵn các lượt đánh, ta chỉ việc đánh 1 đòn rồi kết thúc
+        // EndCurrentTurn() sẽ lo việc chuyển sang đòn thứ 2 tự động nếu còn lượt
+        StartCoroutine(ExecuteActionRoutine(currentActiveUnit, currentTarget, selectedAction, true));
     }
-
-    public Vector3 GetMeleeAttackPosition(BattleUnit attacker, BattleUnit target)
-    {
-        if (target == null) return attacker.transform.position;
-
-        Vector3 directionToTarget = (target.transform.position - attacker.transform.position).normalized;
-        float stopDistance = 1.6f;
-        Vector3 attackPosition = target.transform.position - (directionToTarget * stopDistance);
-        return attackPosition;
-    }
-
-    private IEnumerator ExecuteActionRoutine(BattleUnit attacker, BattleUnit target, ActionData action)
+    private IEnumerator ExecuteActionRoutine(BattleUnit attacker, BattleUnit target, ActionData action, bool endTurnAfter = true)
     {
         state = CombatState.Executing;
 
-        // --- THÊM MỚI: Bật Camera riêng cho Player lúc họ đang đánh ---
         if (attacker.isPlayer)
         {
             int playerIndex = playerParty.IndexOf(attacker);
@@ -564,7 +592,21 @@ public class CombatManager : MonoBehaviour
             attacker.animator.CrossFade("Idle", 0.1f);
         }
 
-        EndCurrentTurn();
+        // --- CẬP NHẬT: Chỉ chuyển lượt nếu được cho phép (Boss đánh multi-hit sẽ cấm cờ này lại) ---
+        if (endTurnAfter)
+        {
+            EndCurrentTurn();
+        }
+    }
+
+    public Vector3 GetMeleeAttackPosition(BattleUnit attacker, BattleUnit target)
+    {
+        if (target == null) return attacker.transform.position;
+
+        Vector3 directionToTarget = (target.transform.position - attacker.transform.position).normalized;
+        float stopDistance = 1.6f;
+        Vector3 attackPosition = target.transform.position - (directionToTarget * stopDistance);
+        return attackPosition;
     }
 
     private IEnumerator MoveToPosition(Transform unitTransform, Vector3 targetPos, float duration)

@@ -1125,6 +1125,11 @@ MonoBehaviour:
   baseCrit: 10
   defaultAttack: {fileID: 11400000, guid: 5802a4ab318ca6b4f83d133ed36b71af, type: 2}
   characterSkills: []
+  isBoss: 0
+  actionsPerTurn: 1
+  baseActionPattern: []
+  bossPhases: []
+  lastTarget: {fileID: 0}
   speed: 5
   unitPortrait: {fileID: 21300000, guid: 1af0c29339b09c441b936366cc94ef00, type: 3}
   isPlayer: 0
@@ -3362,6 +3367,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: e8dbd2482ab38d84687f031f56b141df, type: 2}
   - {fileID: 11400000, guid: 687fee65e17fe374abdddeacc3671564, type: 2}
   - {fileID: 11400000, guid: bfae87a977bf73f4c86d8a2fcf86b009, type: 2}
+  isBoss: 0
+  actionsPerTurn: 1
+  baseActionPattern: []
+  bossPhases: []
+  lastTarget: {fileID: 0}
   speed: 15
   unitPortrait: {fileID: 21300000, guid: 82361fa11de5cc34386d1b5565ad8f5a, type: 3}
   isPlayer: 1
@@ -4825,7 +4835,7 @@ Transform:
   m_GameObject: {fileID: 899439757}
   serializedVersion: 2
   m_LocalRotation: {x: 0.1137834, y: -0.1213923, z: -0.0036121856, w: 0.9860549}
-  m_LocalPosition: {x: -963.89, y: -535.4, z: -3.43}
+  m_LocalPosition: {x: -963.7, y: -534.73, z: -4.11}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -7510,6 +7520,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c0fcaf05249c36e47bee0b4d186511ef, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ParrySystem
+  parryCooldown: 1
 --- !u!1 &1262840401
 GameObject:
   m_ObjectHideFlags: 0
@@ -7678,6 +7689,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 687fee65e17fe374abdddeacc3671564, type: 2}
   - {fileID: 11400000, guid: b7a6c8303b913374ba3eba1250355d0a, type: 2}
   - {fileID: 11400000, guid: 147ca3bf8513ee74ea9627cf932fe845, type: 2}
+  isBoss: 0
+  actionsPerTurn: 1
+  baseActionPattern: []
+  bossPhases: []
+  lastTarget: {fileID: 0}
   speed: 16
   unitPortrait: {fileID: 21300000, guid: 82361fa11de5cc34386d1b5565ad8f5a, type: 3}
   isPlayer: 1
@@ -8499,7 +8515,7 @@ Transform:
   m_GameObject: {fileID: 1512650708}
   serializedVersion: 2
   m_LocalRotation: {x: 0.23806289, y: -0.044056136, z: 0.01081039, w: 0.9701898}
-  m_LocalPosition: {x: -967.25, y: -533.39, z: -4.06}
+  m_LocalPosition: {x: -967.22, y: -533, z: -4.41}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -8759,6 +8775,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: e8dbd2482ab38d84687f031f56b141df, type: 2}
   - {fileID: 11400000, guid: 687fee65e17fe374abdddeacc3671564, type: 2}
   - {fileID: 11400000, guid: b7a6c8303b913374ba3eba1250355d0a, type: 2}
+  isBoss: 0
+  actionsPerTurn: 1
+  baseActionPattern: []
+  bossPhases: []
+  lastTarget: {fileID: 0}
   speed: 14
   unitPortrait: {fileID: 21300000, guid: e7fcf5c2f0061d94abdb0622300c8719, type: 3}
   isPlayer: 1
@@ -12604,8 +12625,18 @@ MonoBehaviour:
   baseAtk: 10
   baseDef: 5
   baseCrit: 10
-  defaultAttack: {fileID: 11400000, guid: f4fd381b02d00ab45a17df37683eadaa, type: 2}
+  defaultAttack: {fileID: 11400000, guid: fcb0cc7c27be4104a89d579861c52117, type: 2}
   characterSkills: []
+  isBoss: 1
+  actionsPerTurn: 1
+  baseActionPattern: []
+  bossPhases:
+  - hpPercentThreshold: 0.397
+    actionsPerTurn: 2
+    phaseActionPattern:
+    - {fileID: 11400000, guid: fcb0cc7c27be4104a89d579861c52117, type: 2}
+    - {fileID: 11400000, guid: f4fd381b02d00ab45a17df37683eadaa, type: 2}
+  lastTarget: {fileID: 0}
   speed: 15
   unitPortrait: {fileID: 21300000, guid: 82361fa11de5cc34386d1b5565ad8f5a, type: 3}
   isPlayer: 0
