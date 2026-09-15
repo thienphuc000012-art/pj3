@@ -302,7 +302,6 @@ public class CombatManager : MonoBehaviour
 
         currentActiveUnit = allUnitsTimeline[currentTimelineIndex];
 
-        // --- CẬP NHẬT: Nếu unit chết giữa chừng (ví dụ chết do độc/counter), bỏ qua lượt ---
         if (currentActiveUnit == null || currentActiveUnit.currentHP <= 0)
         {
             EndCurrentTurn();
@@ -315,9 +314,17 @@ public class CombatManager : MonoBehaviour
         {
             state = CombatState.PlayerTurn;
             int playerIndex = playerParty.IndexOf(currentActiveUnit);
+
+            // 1. Ép ẩn Action Menu trước
+            AdvancedUIManager.Instance.ShowActionMenu(false);
+
+            // 2. Chuyển Camera
             CameraManager.Instance.SwitchToPlayerTurnCam(playerIndex);
             AdvancedUIManager.Instance.PositionActionMenu(currentActiveUnit.transform);
-            AdvancedUIManager.Instance.ShowActionMenu(true);
+
+            // 3. Gọi Coroutine chờ Camera lia xong rồi mới bật UI lên
+            StartCoroutine(ShowActionMenuAfterCamera(CameraManager.Instance.transitionSpeed));
+
             currentTarget = enemyParty.FirstOrDefault(e => e.currentHP > 0);
         }
         else
@@ -325,6 +332,18 @@ public class CombatManager : MonoBehaviour
             state = CombatState.EnemyTurn;
             AdvancedUIManager.Instance.ShowActionMenu(false);
             StartCoroutine(EnemyAICore());
+        }
+    }
+
+    // --- THÊM MỚI: Coroutine đợi camera lia xong ---
+    private IEnumerator ShowActionMenuAfterCamera(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+
+        // Kiểm tra an toàn: Chỉ bật UI nếu vẫn đang ở lượt Player và chưa mở Menu/chọn mục tiêu
+        if (state == CombatState.PlayerTurn && selectedAction == null && currentOpenMenu == OpenMenuType.None)
+        {
+            AdvancedUIManager.Instance.ShowActionMenu(true);
         }
     }
 

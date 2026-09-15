@@ -67,7 +67,7 @@ public class BattleUnit : MonoBehaviour
 
     public event Action<int, int, int> OnStatsChanged;
 
-    private List<ActiveBuff> activeBuffs = new List<ActiveBuff>();
+    public List<ActiveBuff> activeBuffs = new List<ActiveBuff>();
 
     void Awake()
     {

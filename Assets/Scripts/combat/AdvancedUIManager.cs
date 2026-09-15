@@ -16,7 +16,7 @@ public class AdvancedUIManager : MonoBehaviour
     public GameObject actionButtonPrefab;
 
     [Header("Hints")]
-    public GameObject changeTargetHintText; // --- THÊM MỚI: UI Text gợi ý "A/D để đổi mục tiêu" ---
+    public GameObject changeTargetHintText;
 
     [Header("Stains UI")]
     public Image[] stainIcons;
@@ -48,13 +48,35 @@ public class AdvancedUIManager : MonoBehaviour
     public GameObject damageTextPrefab;
     public Transform damageTextContainer;
 
+    // --- THÊM MỚI: HỆ THỐNG ICON BUFF ---
+    [Header("Buff UI Settings")]
+    public GameObject buffIconPrefab; // Prefab Image dùng làm Icon Buff
+    public List<BuffSpriteMapping> buffSprites; // Map loại Buff với hình ảnh
+
+    [System.Serializable]
+    public struct BuffSpriteMapping
+    {
+        public ActionData.BuffStat stat;
+        public Sprite sprite;
+    }
+
+    public Sprite GetBuffSprite(ActionData.BuffStat stat)
+    {
+        foreach (var mapping in buffSprites)
+        {
+            if (mapping.stat == stat) return mapping.sprite;
+        }
+        return null;
+    }
+    // ------------------------------------
+
     void Awake()
     {
         Instance = this;
 
         if (enemyHudPanel != null) enemyHudPanel.SetActive(false);
         if (turnOrderContainer != null) turnOrderContainer.gameObject.SetActive(false);
-        if (changeTargetHintText != null) changeTargetHintText.SetActive(false); // --- Tắt Text gợi ý ban đầu ---
+        if (changeTargetHintText != null) changeTargetHintText.SetActive(false);
 
         if (stainIcons != null && stainIcons.Length > 0 && stainIcons[0] != null)
         {
@@ -73,36 +95,42 @@ public class AdvancedUIManager : MonoBehaviour
 
     void Update()
     {
-        if (stainIcons == null) return;
-
-        float blinkSpeed = 1f;
-        float blinkAlpha = Mathf.PingPong(Time.time * blinkSpeed, 0.6f) + 0.2f;
-
-        for (int i = 0; i < stainIcons.Length; i++)
+        // 1. Nhấp nháy Stain
+        if (stainIcons != null)
         {
-            if (stainIcons[i] == null) continue;
+            float blinkSpeed = 1f;
+            float blinkAlpha = Mathf.PingPong(Time.time * blinkSpeed, 0.6f) + 0.2f;
 
-            if (i < currentStainsForUI)
+            for (int i = 0; i < stainIcons.Length; i++)
             {
-                if (currentPreviewChange < 0 && i >= currentStainsForUI + currentPreviewChange)
+                if (stainIcons[i] == null) continue;
+
+                if (i < currentStainsForUI)
                 {
-                    stainIcons[i].color = new Color(1f, 0.3f, 0.3f, blinkAlpha);
+                    if (currentPreviewChange < 0 && i >= currentStainsForUI + currentPreviewChange)
+                        stainIcons[i].color = new Color(1f, 0.3f, 0.3f, blinkAlpha);
+                    else
+                        stainIcons[i].color = Color.white;
                 }
                 else
                 {
-                    stainIcons[i].color = Color.white;
+                    if (currentPreviewChange > 0 && i < currentStainsForUI + currentPreviewChange)
+                        stainIcons[i].color = new Color(1f, 1f, 1f, blinkAlpha);
+                    else
+                        stainIcons[i].color = new Color(1f, 1f, 1f, 0.2f);
                 }
             }
-            else
+        }
+
+        // --- THÊM MỚI: 2. Nhấp nháy Icon Buff sắp hết hạn ---
+        float buffBlinkSpeed = 5f; // Tốc độ nhấp nháy buff
+        float buffBlinkAlpha = Mathf.PingPong(Time.time * buffBlinkSpeed, 0.7f) + 0.3f; // Alpha dao động từ 0.3 đến 1.0
+
+        foreach (var hud in partyHUDList)
+        {
+            if (hud != null && hud.gameObject != null && hud.gameObject.activeInHierarchy)
             {
-                if (currentPreviewChange > 0 && i < currentStainsForUI + currentPreviewChange)
-                {
-                    stainIcons[i].color = new Color(1f, 1f, 1f, blinkAlpha);
-                }
-                else
-                {
-                    stainIcons[i].color = new Color(1f, 1f, 1f, 0.2f);
-                }
+                hud.UpdateBuffBlinking(buffBlinkAlpha);
             }
         }
     }
@@ -114,17 +142,12 @@ public class AdvancedUIManager : MonoBehaviour
         if (actionMenuPanel != null)
         {
             actionMenuPanel.gameObject.SetActive(isShow);
-            // Đã xóa dòng ép ẩn subMenuPanel ở đây để ta có thể ẩn riêng 3 nút (actionMenuPanel) mà subMenuPanel vẫn hiện
         }
     }
 
-    // --- THÊM MỚI: Bật/Tắt Text gợi ý ---
     public void ToggleChangeTargetHint(bool isShow)
     {
-        if (changeTargetHintText != null)
-        {
-            changeTargetHintText.SetActive(isShow);
-        }
+        if (changeTargetHintText != null) changeTargetHintText.SetActive(isShow);
     }
 
     public void PopulateSubMenu(List<ActionData> actionList)
@@ -175,19 +198,10 @@ public class AdvancedUIManager : MonoBehaviour
                 imgComponent.sprite = unit.unitPortrait;
             }
 
-            if (!unit.isPlayer && imgComponent != null)
-            {
-                imgComponent.color = Color.red;
-            }
+            if (!unit.isPlayer && imgComponent != null) imgComponent.color = Color.red;
 
-            if (i == 0)
-            {
-                portrait.transform.localScale = Vector3.one * 1.2f;
-            }
-            else
-            {
-                portrait.transform.localScale = Vector3.one;
-            }
+            if (i == 0) portrait.transform.localScale = Vector3.one * 1.2f;
+            else portrait.transform.localScale = Vector3.one;
         }
     }
 
@@ -197,9 +211,12 @@ public class AdvancedUIManager : MonoBehaviour
         {
             GameObject firstPortrait = activePortraits[0];
             activePortraits.RemoveAt(0);
-            if (firstPortrait != null)
+            if (firstPortrait != null) Destroy(firstPortrait);
+
+            // --- CẬP NHẬT: Phóng to chân dung của nhân vật vừa được đẩy lên đầu (người đang đánh) ---
+            if (activePortraits.Count > 0 && activePortraits[0] != null)
             {
-                Destroy(firstPortrait);
+                activePortraits[0].transform.localScale = Vector3.one * 1.2f;
             }
         }
     }
@@ -249,10 +266,7 @@ public class AdvancedUIManager : MonoBehaviour
 
     public void UpdateTargetUI(string targetName)
     {
-        if (targetNameText != null)
-        {
-            targetNameText.gameObject.SetActive(false);
-        }
+        if (targetNameText != null) targetNameText.gameObject.SetActive(false);
     }
 
     public void ShowParryText(Transform targetTransform)
@@ -278,10 +292,7 @@ public class AdvancedUIManager : MonoBehaviour
 
     private void HideParryText()
     {
-        if (parryTextObject != null)
-        {
-            parryTextObject.SetActive(false);
-        }
+        if (parryTextObject != null) parryTextObject.SetActive(false);
     }
 
     public void ShowDamageText(Transform targetTransform, int amount, bool isCrit, bool isHeal = false)
@@ -322,10 +333,9 @@ public class AdvancedUIManager : MonoBehaviour
     public void ToggleAllUI(bool isShow)
     {
         ShowActionMenu(isShow);
-        if (!isShow) ToggleChangeTargetHint(false); // --- Đảm bảo tắt Text gợi ý khi tắt toàn bộ UI ---
+        if (!isShow) ToggleChangeTargetHint(false);
 
-        if (turnOrderContainer != null)
-            turnOrderContainer.gameObject.SetActive(isShow);
+        if (turnOrderContainer != null) turnOrderContainer.gameObject.SetActive(isShow);
 
         if (enemyHudPanel != null)
         {
@@ -344,10 +354,7 @@ public class AdvancedUIManager : MonoBehaviour
             }
         }
 
-        if (isShow && CombatManager.Instance != null)
-        {
-            RegisterPartyHP(CombatManager.Instance.playerParty);
-        }
+        if (isShow && CombatManager.Instance != null) RegisterPartyHP(CombatManager.Instance.playerParty);
 
         if (stainIcons != null && stainIcons.Length > 0 && stainIcons[0] != null)
         {
@@ -365,6 +372,12 @@ public class PartyHUDUnit
     public Image shieldFill;
     public TextMeshProUGUI hpText;
     public TextMeshProUGUI nameText;
+
+    // --- THÊM MỚI: Biến chứa Icon Buff ---
+    [Header("Buff UI")]
+    public Transform buffContainer; // Gắn Object chứa Layout Group để xếp Icon buff
+    private List<Image> spawnedBuffIcons = new List<Image>();
+    private List<ActiveBuff> currentBuffs = new List<ActiveBuff>();
 
     private BattleUnit boundUnit;
 
@@ -392,6 +405,55 @@ public class PartyHUDUnit
         if (hpText != null)
         {
             hpText.text = shield > 0 ? $"{current}/{max} <color=white>[+{shield}]</color>" : $"{current} / {max}";
+        }
+
+        // --- THÊM MỚI: Quản lý Icon Buff mỗi khi Stats thay đổi ---
+        if (boundUnit != null && buffContainer != null)
+        {
+            currentBuffs = boundUnit.activeBuffs;
+
+            // Xóa Icon cũ đi
+            foreach (var icon in spawnedBuffIcons)
+            {
+                if (icon != null) UnityEngine.Object.Destroy(icon.gameObject);
+            }
+            spawnedBuffIcons.Clear();
+
+            // Sinh Icon mới
+            foreach (var buff in currentBuffs)
+            {
+                if (AdvancedUIManager.Instance.buffIconPrefab == null) continue;
+
+                GameObject newIcon = UnityEngine.Object.Instantiate(AdvancedUIManager.Instance.buffIconPrefab, buffContainer);
+                Image img = newIcon.GetComponent<Image>();
+
+                if (img != null)
+                {
+                    Sprite buffSprite = AdvancedUIManager.Instance.GetBuffSprite(buff.stat);
+                    if (buffSprite != null) img.sprite = buffSprite;
+
+                    spawnedBuffIcons.Add(img);
+                }
+            }
+        }
+    }
+
+    // --- THÊM MỚI: Hàm hỗ trợ nhấp nháy từ Update ---
+    public void UpdateBuffBlinking(float currentAlpha)
+    {
+        for (int i = 0; i < spawnedBuffIcons.Count; i++)
+        {
+            if (spawnedBuffIcons[i] == null) continue;
+
+            // Nếu buff chỉ còn 1 duration (tức là qua Turn này sẽ biến mất) -> Nhấp nháy
+            if (i < currentBuffs.Count && currentBuffs[i].duration <= 1)
+            {
+                spawnedBuffIcons[i].color = new Color(1f, 1f, 1f, currentAlpha);
+            }
+            else
+            {
+                spawnedBuffIcons[i].color = Color.white;
+            }
         }
     }
 }
