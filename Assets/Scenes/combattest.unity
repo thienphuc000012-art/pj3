@@ -1852,7 +1852,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalCameraData
   m_RenderShadows: 1
-  m_RequiresDepthTextureOption: 2
+  m_RequiresDepthTextureOption: 1
   m_RequiresOpaqueTextureOption: 2
   m_CameraType: 0
   m_Cameras: []
@@ -7830,7 +7830,7 @@ MonoBehaviour:
   characterSkills:
   - {fileID: 11400000, guid: 35516c7356841a44bbed0f08b30e40d9, type: 2}
   - {fileID: 11400000, guid: 147ca3bf8513ee74ea9627cf932fe845, type: 2}
-  - {fileID: 11400000, guid: 687fee65e17fe374abdddeacc3671564, type: 2}
+  - {fileID: 11400000, guid: 8041ddf7f5ced7248977ebb746a1a1f5, type: 2}
   - {fileID: 11400000, guid: b7a6c8303b913374ba3eba1250355d0a, type: 2}
   isBoss: 0
   actionsPerTurn: 1
@@ -7911,11 +7911,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BattleUnit_AnimationEvents
   ownerUnit: {fileID: 1263546240}
   swordTrail: {fileID: 674141341}
---- !u!4 &1263546246 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 4545140334807992944, guid: 1f080cff37e59784f9797e18c4f7c0cd, type: 3}
-  m_PrefabInstance: {fileID: 1941740018}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1272870089
 GameObject:
   m_ObjectHideFlags: 0
@@ -12719,9 +12714,6 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
-    - targetCorrespondingSourceObject: {fileID: 4545140334807992944, guid: 1f080cff37e59784f9797e18c4f7c0cd, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 2000810623}
     - targetCorrespondingSourceObject: {fileID: 3207224968252326657, guid: 1f080cff37e59784f9797e18c4f7c0cd, type: 3}
       insertIndex: -1
       addedObject: {fileID: 997284718}
@@ -12891,37 +12883,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 410252085}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &2000810622
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2000810623}
-  m_Layer: 7
-  m_Name: GameObject
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2000810623
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2000810622}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1.51, z: -2.18}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1263546246}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2012900699 stripped
 MonoBehaviour:
