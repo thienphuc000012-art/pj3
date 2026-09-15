@@ -552,6 +552,10 @@ PrefabInstance:
     m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 4f83daa9ebe15614aacb2bbe897090ff, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 5.1900344
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 4f83daa9ebe15614aacb2bbe897090ff, type: 3}
       propertyPath: m_LocalPosition.x
       value: 5.95
       objectReference: {fileID: 0}
@@ -612,10 +616,10 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 4f83daa9ebe15614aacb2bbe897090ff, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1008679358}
+      addedObject: {fileID: 1008679359}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 4f83daa9ebe15614aacb2bbe897090ff, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1008679359}
+      addedObject: {fileID: 1008679365}
   m_SourcePrefab: {fileID: 100100000, guid: 4f83daa9ebe15614aacb2bbe897090ff, type: 3}
 --- !u!1 &444026032 stripped
 GameObject:
@@ -640,6 +644,33 @@ MonoBehaviour:
   enviromentChecker: {fileID: 444026039}
   rotspeed: 600
   animator: {fileID: 444026036}
+  ladderGrabDistance: 0.6
+  topLadderRayDistance: 1.5
+  topLadderRayFootOffset: 0.05
+  topLadderHeightTolerance: 0.45
+  ladderSurfaceOffset: 0.35
+  climbDownDropHeight: 1.2
+  climbDownTransitionDuration: 0.8
+  climbDownVerticalAlignDuration: 0.18
+  climbTopForwardDistance: 0.75
+  climbTopSearchHeight: 1.5
+  climbTopSearchDownDistance: 2.5
+  climbTopGroundOffset: 0.03
+  climbTopAnimationStateName: Base Layer.ClimbToTop
+  climbTopAnimationBlend: 0.03
+  climbTopStartNormalizedTime: 0.05
+  climbTopMatchStart: 0.3
+  climbTopMatchEnd: 0.98
+  climbTopMatchPositionWeight: {x: 1, y: 1, z: 1}
+  climbTopMatchRotationWeight: 0
+  climbTopStateEnterTimeout: 0.6
+  climbTopStandingStateName: Base Layer.Standing
+  climbTopStandingBlendDuration: 0.08
+  climbTopStandingAlignDuration: 0.12
+  climbTopStandingHoldDuration: 0.18
+  climbTopFinishNormalizedTime: 0.98
+  climbTopExitStateName: Base Layer.Basic Movement
+  climbTopExitBlendDuration: 0.08
   CC: {fileID: 444026037}
   surfaceCheckRadius: 0.2
   surfaceCheckOffset: {x: 0, y: 0, z: 0}
@@ -1070,7 +1101,7 @@ GameObject:
   m_Component:
   - component: {fileID: 545312220}
   m_Layer: 11
-  m_Name: GameObject
+  m_Name: LadderTopTrigger
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1085,7 +1116,7 @@ Transform:
   m_GameObject: {fileID: 545312219}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0.498}
+  m_LocalPosition: {x: 0, y: -0.036, z: 0.942}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1246,7 +1277,7 @@ GameObject:
   - component: {fileID: 926408082}
   - component: {fileID: 926408081}
   - component: {fileID: 926408080}
-  m_Layer: 9
+  m_Layer: 8
   m_Name: Cube (6)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1584,28 +1615,6 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 4f83daa9ebe15614aacb2bbe897090ff, type: 3}
   m_PrefabInstance: {fileID: 430373135}
   m_PrefabAsset: {fileID: 0}
---- !u!64 &1008679358
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1008679353}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: -1924272962102386870, guid: 4f83daa9ebe15614aacb2bbe897090ff, type: 3}
 --- !u!114 &1008679359
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1623,6 +1632,27 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 4f83daa9ebe15614aacb2bbe897090ff, type: 3}
   m_PrefabInstance: {fileID: 430373135}
   m_PrefabAsset: {fileID: 0}
+--- !u!65 &1008679365
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1008679353}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.1347818, y: 0.026983572, z: 0.87230146}
+  m_Center: {x: -0.000072307885, y: 0.0061518, z: 0.43615073}
 --- !u!1 &1051414396
 GameObject:
   m_ObjectHideFlags: 0
