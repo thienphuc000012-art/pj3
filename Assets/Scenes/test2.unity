@@ -605,7 +605,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 4f83daa9ebe15614aacb2bbe897090ff, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 545312220}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 4f83daa9ebe15614aacb2bbe897090ff, type: 3}
       insertIndex: -1
@@ -799,6 +802,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ShimmyController
   sphereRadius: 0.05
   sphereGap: 0.4
+  sideProbeOutset: 0.12
+  sideProbeDepth: 0.25
   rayHeight: 1.6
   rayLength: 1
   canMoveRight: 0
@@ -822,6 +827,12 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 1280
   rayHeight: 1.8
+  roofInset: 0.45
+  roofProbeHeight: 0.8
+  roofProbeDistance: 1.5
+  matchStartTime: 0.15
+  matchEndTime: 0.92
+  finalGroundPadding: 0.02
   foundLedgeToRoofClimb: 0
   climbPointObjPrefab: {fileID: 1140234676808202508, guid: b235fd4ecf005f64db179d703353110a, type: 3}
   climbPointObj: {fileID: 0}
@@ -1049,6 +1060,37 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 537854009}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &545312219
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 545312220}
+  m_Layer: 11
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &545312220
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 545312219}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0.498}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1008679362}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &642564355
 GameObject:
   m_ObjectHideFlags: 0
@@ -1576,6 +1618,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 24419e5c1ea11c24c85bfaeb611bf71e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Ladder
+--- !u!4 &1008679362 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 4f83daa9ebe15614aacb2bbe897090ff, type: 3}
+  m_PrefabInstance: {fileID: 430373135}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1051414396
 GameObject:
   m_ObjectHideFlags: 0
@@ -3942,7 +3989,7 @@ Transform:
   m_GameObject: {fileID: 2062685997}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: -0.00138, y: 0.513, z: -0.511}
+  m_LocalPosition: {x: -0.00138, y: 0.492, z: -0.511}
   m_LocalScale: {x: 0.052795254, y: 0.021289317, z: 1.0069547}
   m_ConstrainProportionsScale: 0
   m_Children: []

@@ -57,26 +57,41 @@ public class RoofLedgeDetection : MonoBehaviour
 
     IEnumerator DropToLedgeHang()
     {
+        if (isDropingFromRoof)
+            yield break;
+
         isDropingFromRoof = true;
 
-        // FIX QUAN TRỌNG: Cập nhật dữ liệu gờ mái nhà sang cho PlayerClimb
-        // Giúp PlayerClimb biết điểm Y chính xác để bắn tia HopDown
-        playerClimbScript.rayLedgeDownHit = rayLedgeDwnHit;
-        playerClimbScript.rayLedgeForwardHit = rayLedgeFwdHit;
+        // Chụp hit NGAY tại frame bắt đầu drop.
+        // Từ đây về sau KHÔNG dùng transform hiện tại để suy ra lại vị trí gờ.
+        RaycastHit stableForwardHit = rayLedgeFwdHit;
+        RaycastHit stableDownHit = rayLedgeDwnHit;
 
-        // Xoay nhân vật quay mặt vào gờ tường NGAY LẬP TỨC trước khi chạy Animation/MatchTarget
-        if (rayLedgeFwdHit.normal != Vector3.zero)
+        if (stableForwardHit.collider == null || stableDownHit.collider == null)
         {
-            Quaternion lookRot = Quaternion.LookRotation(-rayLedgeFwdHit.normal);
-            transform.rotation = lookRot;
+            isDropingFromRoof = false;
+            yield break;
         }
 
+        // Khóa CC/control + lưu stable ledge anchor ngay lập tức.
+        playerClimbScript.BeginDropToLedgeHang(stableForwardHit, stableDownHit);
+
         playerClimbScript.animator.CrossFade("droptofreehang", 0.2f);
-        playerClimbScript.isClimbing = true;
-        playerClimbScript.playerState = PlayerState.ClimbingState;
 
-        yield return new WaitForSeconds(1.2f);
+        // Không dùng WaitForSeconds(1.2f): clip/transition có thể dài ngắn khác nhau.
+        // Chỉ mở lại hệ thống ledge khi droptofreehang thực sự gần hoàn tất.
+        yield return null;
 
+        while (playerClimbScript.animator.IsInTransition(0))
+            yield return null;
+
+        while (playerClimbScript.animator.GetCurrentAnimatorStateInfo(0).IsName("droptofreehang") &&
+               playerClimbScript.animator.GetCurrentAnimatorStateInfo(0).normalizedTime < 0.95f)
+        {
+            yield return null;
+        }
+
+        playerClimbScript.EndDropToLedgeHang();
         isDropingFromRoof = false;
     }
 
