@@ -41,9 +41,11 @@ public class AdvancedUIManager : MonoBehaviour
     [Header("Target HUD")]
     public TextMeshProUGUI targetNameText;
     [Header("Parry UI")]
+    [Tooltip("Object mẫu chữ Parry. Hệ thống sẽ clone object này cho từng nhân vật.")]
     public GameObject parryTextObject;
     public Vector3 parryTextOffset = new Vector3(0, -1f, 0);
     public float parryHorizontalOffset = 1.5f;
+    [Min(0.1f)] public float parryTextDuration = 1f;
     [Header("Damage Text UI")]
     public GameObject damageTextPrefab;
     public Transform damageTextContainer;
@@ -77,6 +79,9 @@ public class AdvancedUIManager : MonoBehaviour
         if (enemyHudPanel != null) enemyHudPanel.SetActive(false);
         if (turnOrderContainer != null) turnOrderContainer.gameObject.SetActive(false);
         if (changeTargetHintText != null) changeTargetHintText.SetActive(false);
+
+        // parryTextObject giờ chỉ dùng làm object mẫu để clone.
+        if (parryTextObject != null) parryTextObject.SetActive(false);
 
         if (stainIcons != null && stainIcons.Length > 0 && stainIcons[0] != null)
         {
@@ -271,28 +276,31 @@ public class AdvancedUIManager : MonoBehaviour
 
     public void ShowParryText(Transform targetTransform)
     {
-        if (parryTextObject != null)
-        {
-            parryTextObject.SetActive(true);
+        if (parryTextObject == null || targetTransform == null || Camera.main == null)
+            return;
 
-            if (targetTransform != null && Camera.main != null)
-            {
-                float randomDirection = Random.Range(-0.5f, 0.5f);
-                Vector3 dynamicOffset = new Vector3(parryHorizontalOffset * randomDirection, parryTextOffset.y, parryTextOffset.z);
-                Vector3 worldPos = targetTransform.position + dynamicOffset;
-                Vector3 screenPos = Camera.main.WorldToScreenPoint(worldPos);
+        // Mỗi target có một instance riêng -> có thể hiện đồng thời cho cả Party.
+        Transform parent = parryTextObject.transform.parent != null
+            ? parryTextObject.transform.parent
+            : transform;
 
-                parryTextObject.transform.position = screenPos;
-            }
+        GameObject parryInstance = Instantiate(parryTextObject, parent);
+        parryInstance.name = parryTextObject.name + "_Instance";
+        parryInstance.SetActive(true);
 
-            CancelInvoke(nameof(HideParryText));
-            Invoke(nameof(HideParryText), 1f);
-        }
-    }
+        float randomDirection = Random.Range(-0.5f, 0.5f);
 
-    private void HideParryText()
-    {
-        if (parryTextObject != null) parryTextObject.SetActive(false);
+        Vector3 dynamicOffset = new Vector3(
+            parryHorizontalOffset * randomDirection,
+            parryTextOffset.y,
+            parryTextOffset.z);
+
+        Vector3 worldPos = targetTransform.position + dynamicOffset;
+        Vector3 screenPos = Camera.main.WorldToScreenPoint(worldPos);
+
+        parryInstance.transform.position = screenPos;
+
+        Destroy(parryInstance, parryTextDuration);
     }
 
     public void ShowDamageText(Transform targetTransform, int amount, bool isCrit, bool isHeal = false)

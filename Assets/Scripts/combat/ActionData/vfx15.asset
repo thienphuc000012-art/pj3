@@ -10,9 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 532a234c595fb3944bb8626c21ed8968, type: 3}
-  m_Name: vfx
+  m_Name: vfx15
   m_EditorClassIdentifier: Assembly-CSharp::ActionData
   actionName: fb
+  description: 
   icon: {fileID: 21300000, guid: 5095f88fc7d044b45a5bd236e31ef517, type: 3}
   type: 1
   power: 7
@@ -28,7 +29,14 @@ MonoBehaviour:
   buffDuration: 0
   isMelee: 0
   vfxType: 1
-  vfxPrefab: {fileID: 1748139164946814, guid: 7c0271f8dd3c5e047bf01c5dc512b215, type: 3}
-  vfxSpeed: 15
-  castVfxPrefab: {fileID: 1935630441017222, guid: 5356fbc1702eb3840aaa8b7071bb831f, type: 3}
-  hitVfxPrefab: {fileID: 145962, guid: 7c051a19bdaa6dc4c96e1b5142e6779a, type: 3}
+  vfxPrefab: {fileID: 195834, guid: 0f8e13aeb6fb37946bb423241dcc662d, type: 3}
+  castVfxPrefab: {fileID: 1546378701820074, guid: 1ac120b671fc4ed4c8609ceb4e348c62, type: 3}
+  hitVfxPrefab: {fileID: 1837398281301428, guid: a1afed5275142c94b8e9f229ba603cb8, type: 3}
+  projectileMoveMode: 0
+  vfxSpeed: 5
+  vfxLifeTime: 5
+  projectileStartOffset: {x: 0, y: 0, z: 0}
+  projectileTargetOffset: {x: 0, y: 1, z: 0}
+  curveHeight: 1
+  curveSideOffset: 0
+  rfxUseGravity: 1

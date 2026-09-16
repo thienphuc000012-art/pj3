@@ -10,28 +10,28 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 532a234c595fb3944bb8626c21ed8968, type: 3}
-  m_Name: vfx1
+  m_Name: vfx27
   m_EditorClassIdentifier: Assembly-CSharp::ActionData
-  actionName: fb
+  actionName: b
   description: 
-  icon: {fileID: 21300000, guid: 5095f88fc7d044b45a5bd236e31ef517, type: 3}
+  icon: {fileID: 21300000, guid: 742198cc0ec8f0143b32a726fe61f028, type: 3}
   type: 1
-  power: 7
+  power: 5
   damageMultiplier: 1
   isHeal: 0
-  animationTriggerName: Attack1
+  animationTriggerName: heal
   isFriendlyAction: 0
   isAoE: 1
   isSelfOnly: 0
-  stainChange: -2
+  stainChange: 0
   buffStat: 0
-  buffAmount: 0
-  buffDuration: 0
+  buffAmount: 5
+  buffDuration: 3
   isMelee: 0
-  vfxType: 1
-  vfxPrefab: {fileID: 1748139164946814, guid: 7c0271f8dd3c5e047bf01c5dc512b215, type: 3}
-  castVfxPrefab: {fileID: 1935630441017222, guid: 5356fbc1702eb3840aaa8b7071bb831f, type: 3}
-  hitVfxPrefab: {fileID: 145962, guid: 7c051a19bdaa6dc4c96e1b5142e6779a, type: 3}
+  vfxType: 2
+  vfxPrefab: {fileID: 167990, guid: 69f5fe3f798dd8b4ab58e3b1cb6bd6c9, type: 3}
+  castVfxPrefab: {fileID: 0}
+  hitVfxPrefab: {fileID: 0}
   projectileMoveMode: 0
   vfxSpeed: 15
   vfxLifeTime: 5

@@ -10,18 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 532a234c595fb3944bb8626c21ed8968, type: 3}
-  m_Name: vfx2
+  m_Name: vfx12
   m_EditorClassIdentifier: Assembly-CSharp::ActionData
-  actionName: fb
+  actionName: elce
   description: 
-  icon: {fileID: 21300000, guid: 5095f88fc7d044b45a5bd236e31ef517, type: 3}
+  icon: {fileID: 21300000, guid: 742198cc0ec8f0143b32a726fe61f028, type: 3}
   type: 1
-  power: 7
+  power: 5
   damageMultiplier: 1
   isHeal: 0
   animationTriggerName: Attack1
   isFriendlyAction: 0
-  isAoE: 1
+  isAoE: 0
   isSelfOnly: 0
   stainChange: -2
   buffStat: 0
@@ -29,7 +29,14 @@ MonoBehaviour:
   buffDuration: 0
   isMelee: 0
   vfxType: 1
-  vfxPrefab: {fileID: 153592, guid: 0986516cedd19504bbce8b3532461869, type: 3}
-  vfxSpeed: 15
-  castVfxPrefab: {fileID: 1242068248825616, guid: 7d198579e899cf8458cc959937ec8d6b, type: 3}
-  hitVfxPrefab: {fileID: 1369401709340560, guid: e0e6c9ae18e69094888cb90cd4a2fb61, type: 3}
+  vfxPrefab: {fileID: 1033462822675242, guid: 9767561a623134e47b167b7ec5561b6e, type: 3}
+  castVfxPrefab: {fileID: 1632418803800030, guid: 2e25952a6622a194083ac4dabc23a7b3, type: 3}
+  hitVfxPrefab: {fileID: 167520, guid: e4be32506ae3329469e4f1f0b8931b2b, type: 3}
+  projectileMoveMode: 0
+  vfxSpeed: 7
+  vfxLifeTime: 5
+  projectileStartOffset: {x: 0, y: 0, z: 0}
+  projectileTargetOffset: {x: 0, y: 1, z: 0}
+  curveHeight: 2
+  curveSideOffset: 0
+  rfxUseGravity: 0

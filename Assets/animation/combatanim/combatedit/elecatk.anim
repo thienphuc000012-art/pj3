@@ -237505,14 +237505,14 @@ AnimationClip:
   m_HasMotionFloatCurves: 0
   m_Events:
   - time: 0.3
-    functionName: AnimEvent_PlayCastVFX
+    functionName: AnimEvent_PlayVFX
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 0
     messageOptions: 0
-  - time: 2.2333333
-    functionName: AnimEvent_PlayVFX
+  - time: 0.3
+    functionName: AnimEvent_PlayCastVFX
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0

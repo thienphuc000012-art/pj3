@@ -29,6 +29,13 @@ public class CameraManager : MonoBehaviour
     [Header("Player Action Cameras (Camera riêng khi Tấn công/Dùng chiêu)")]
     public List<CinemachineCamera> playerActionCams;
 
+    [Header("Enemy Special Cameras")]
+    [Tooltip("Camera cinematic chỉ dùng khi Boss vừa bước vào Phase 2.")]
+    public CinemachineCamera enemyPhase2Cam;
+
+    [Tooltip("Camera dùng khi Enemy thực hiện Action có isAoE = true.")]
+    public CinemachineCamera enemyAoECam;
+
     private CinemachineBrain mainBrain;
 
     void Awake()
@@ -104,6 +111,28 @@ public class CameraManager : MonoBehaviour
         }
     }
 
+    public void SwitchToEnemyPhase2Cam()
+    {
+        SetFastBlend();
+        ResetAllCams();
+
+        if (enemyPhase2Cam != null)
+        {
+            enemyPhase2Cam.Priority = 20;
+        }
+    }
+
+    public void SwitchToEnemyAoECam()
+    {
+        SetFastBlend();
+        ResetAllCams();
+
+        if (enemyAoECam != null)
+        {
+            enemyAoECam.Priority = 15;
+        }
+    }
+
     public void SwitchToTargetCam(BattleUnit targetUnit)
     {
         SetInstantCutBlend();
@@ -136,6 +165,8 @@ public class CameraManager : MonoBehaviour
     private void ResetAllCams()
     {
         if (battleStartCam != null) battleStartCam.Priority = 0;
+        if (enemyPhase2Cam != null) enemyPhase2Cam.Priority = 0;
+        if (enemyAoECam != null) enemyAoECam.Priority = 0;
 
         foreach (var cam in playerPartyCams) { if (cam != null) cam.Priority = 0; }
         foreach (var cam in playerHitCams) { if (cam != null) cam.Priority = 0; }

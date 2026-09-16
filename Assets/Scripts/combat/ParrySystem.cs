@@ -31,21 +31,80 @@ public class ParrySystem : MonoBehaviour
 
     private void TriggerParryAction()
     {
-        // TÌM NHÂN VẬT ĐANG BỊ ĐÁNH (Target hiện tại của CombatManager)
-        BattleUnit targetPlayer = CombatManager.Instance.currentTarget;
+        CombatManager combat = CombatManager.Instance;
+        if (combat == null) return;
+
+        // =========================================================
+        // ENEMY AOE ATTACK:
+        // Một lần bấm Space -> toàn bộ Party còn sống cùng Parry.
+        // =========================================================
+        if (combat.IsCurrentEnemyAoEAttack())
+        {
+            bool foundLivingPlayer = false;
+
+            foreach (BattleUnit player in combat.playerParty)
+            {
+                if (player == null || player.currentHP <= 0) continue;
+
+                foundLivingPlayer = true;
+
+                if (player.animator != null)
+                {
+                    player.animator.ResetTrigger("Hit");
+                    player.animator.SetTrigger("Parry");
+                }
+            }
+
+            if (!foundLivingPlayer) return;
+
+            if (isParryWindowOpen)
+            {
+                // CombatManager đang dùng cùng một parrySuccessful cho toàn bộ
+                // targets của AoE, nên true = cả Party chặn đòn.
+                parrySuccessful = true;
+                isParryWindowOpen = false;
+
+                // Hiện chữ PARRY riêng trên đầu từng thành viên còn sống.
+                if (AdvancedUIManager.Instance != null)
+                {
+                    foreach (BattleUnit player in combat.playerParty)
+                    {
+                        if (player == null || player.currentHP <= 0) continue;
+
+                        AdvancedUIManager.Instance.ShowParryText(player.transform);
+                    }
+                }
+
+                Debug.Log("[PARRY AOE] Cả Party Parry thành công!");
+            }
+            else
+            {
+                // Bấm sai timing: cả Party vẫn chạy animation Parry,
+                // nhưng damage AoE vẫn đi qua bình thường.
+                parrySuccessful = false;
+                Debug.Log("[PARRY AOE] Cả Party Parry sai timing!");
+            }
+
+            return;
+        }
+
+        // =========================================================
+        // ĐÒN ĐƠN MỤC TIÊU:
+        // Giữ nguyên hành vi cũ, chỉ target hiện tại Parry.
+        // =========================================================
+        BattleUnit targetPlayer = combat.currentTarget;
         if (targetPlayer == null || !targetPlayer.isPlayer) return;
 
-        // Bật Animation Parry NGAY LẬP TỨC
         if (targetPlayer.animator != null)
         {
+            targetPlayer.animator.ResetTrigger("Hit");
             targetPlayer.animator.SetTrigger("Parry");
         }
 
-        // KIỂM TRA THÀNH CÔNG (Nếu bấm đúng lúc cửa sổ Parry đang mở)
         if (isParryWindowOpen)
         {
             parrySuccessful = true;
-            isParryWindowOpen = false; // Đóng cửa sổ để không ăn 2 lần
+            isParryWindowOpen = false;
 
             if (AdvancedUIManager.Instance != null)
             {
@@ -54,7 +113,6 @@ public class ParrySystem : MonoBehaviour
         }
         else
         {
-            // Bấm sai lúc -> Coi như thất bại (Dù vẫn có Animation)
             parrySuccessful = false;
         }
     }

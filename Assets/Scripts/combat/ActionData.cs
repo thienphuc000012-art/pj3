@@ -42,10 +42,32 @@ public class ActionData : ScriptableObject
 
     public enum VfxType { None, Shoot, SpawnAtTarget }
 
+    // Cách projectile di chuyển khi VfxType = Shoot.
+    public enum ProjectileMoveMode
+    {
+        Straight,       // CombatManager tự kéo VFX bay thẳng tới target.
+        RFX4Prefab,     // Giữ nguyên RFX4_PhysicsMotion / RFX4_RaycastCollision của prefab.
+        BezierCurve     // CombatManager tự điều khiển projectile theo đường cong Bezier.
+    }
+
     [Header("VFX Settings")]
     public VfxType vfxType = VfxType.None;
     public GameObject vfxPrefab;
-    public float vfxSpeed = 15f;
     public GameObject castVfxPrefab;
     public GameObject hitVfxPrefab;
+
+    [Header("Projectile Settings")]
+    public ProjectileMoveMode projectileMoveMode = ProjectileMoveMode.Straight;
+    [Min(0.01f)] public float vfxSpeed = 15f;
+    [Min(0.1f)] public float vfxLifeTime = 5f;
+    public Vector3 projectileStartOffset = Vector3.zero;
+    public Vector3 projectileTargetOffset = new Vector3(0f, 1f, 0f);
+
+    [Header("Bezier Curve Settings")]
+    public float curveHeight = 2f;
+    public float curveSideOffset = 0f;
+
+    [Header("RFX4 Projectile Settings")]
+    [Tooltip("Chỉ dùng khi Projectile Move Mode = RFX4Prefab.")]
+    public bool rfxUseGravity = false;
 }

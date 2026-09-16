@@ -45,6 +45,18 @@ public class CombatManager : MonoBehaviour
 
     private OpenMenuType currentOpenMenu = OpenMenuType.None;
 
+    // Dùng cho ParrySystem:
+    // true khi Enemy hiện tại đang thực hiện một đòn AoE gây damage.
+    public bool IsCurrentEnemyAoEAttack()
+    {
+        return currentActiveUnit != null &&
+               !currentActiveUnit.isPlayer &&
+               selectedAction != null &&
+               selectedAction.isAoE &&
+               !selectedAction.isFriendlyAction &&
+               !selectedAction.isHeal;
+    }
+
     void Awake() { Instance = this; }
 
     void Start()
@@ -248,30 +260,90 @@ public class CombatManager : MonoBehaviour
         allUnitsTimeline.Clear();
 
         // Gom tất cả unit còn sống
-        var aliveUnits = playerParty.Where(u => u.currentHP > 0).Concat(enemyParty.Where(u => u.currentHP > 0)).ToList();
+        var aliveUnits = playerParty.Where(u => u.currentHP > 0)
+            .Concat(enemyParty.Where(u => u.currentHP > 0))
+            .ToList();
 
-        // Check Phase của địch trước khi xếp lịch để lấy đúng số actionsPerTurn
+        BattleUnit phase2IntroBoss = null;
+
+        // Phase chỉ được check ở đầu Wave mới.
+        // Nếu Boss vừa bước vào Phase 2 thì ghi lại để chạy cinematic đúng 1 lần.
         foreach (var unit in aliveUnits)
         {
-            if (!unit.isPlayer) unit.CheckPhase();
+            if (unit.isPlayer) continue;
+
+            int enteredPhase = unit.CheckPhase();
+
+            if (enteredPhase == 2 && !unit.phase2IntroPlayed)
+            {
+                unit.phase2IntroPlayed = true;
+                phase2IntroBoss = unit;
+            }
         }
 
         // Sắp xếp theo tốc độ
         aliveUnits = aliveUnits.OrderByDescending(u => u.speed).ToList();
 
-        // --- CẬP NHẬT: Đẩy Unit vào Timeline NHIỀU LẦN dựa theo Actions Per Turn ---
+        // Đẩy Unit vào Timeline NHIỀU LẦN dựa theo Actions Per Turn
         foreach (var unit in aliveUnits)
         {
             int actionsCount = unit.isPlayer ? 1 : (unit.actionsPerTurn > 0 ? unit.actionsPerTurn : 1);
             for (int i = 0; i < actionsCount; i++)
             {
-                allUnitsTimeline.Add(unit); // Ép UI vẽ nhiều Portrait
+                allUnitsTimeline.Add(unit);
             }
         }
 
         AdvancedUIManager.Instance.UpdateTurnOrderUI(allUnitsTimeline);
 
         currentTimelineIndex = 0;
+
+        if (phase2IntroBoss != null)
+        {
+            StartCoroutine(BossPhase2IntroRoutine(phase2IntroBoss));
+        }
+        else
+        {
+            StartNextUnitTurn();
+        }
+    }
+
+    private IEnumerator BossPhase2IntroRoutine(BattleUnit boss)
+    {
+        if (boss == null)
+        {
+            StartNextUnitTurn();
+            yield break;
+        }
+
+        state = CombatState.Executing;
+        isTransitioningTurn = true;
+
+        // Cinematic Phase 2: ẩn UI để không che animation/camera.
+        if (AdvancedUIManager.Instance != null)
+        {
+            AdvancedUIManager.Instance.ToggleAllUI(false);
+        }
+
+        if (CameraManager.Instance != null)
+        {
+            CameraManager.Instance.SwitchToEnemyPhase2Cam();
+        }
+
+        // Trigger animation chỉ chạy đúng 1 lần vì phase2IntroPlayed đã được đánh dấu.
+        if (boss.animator != null && !string.IsNullOrEmpty(boss.phase2AnimationTriggerName))
+        {
+            boss.animator.SetTrigger(boss.phase2AnimationTriggerName);
+        }
+
+        yield return new WaitForSeconds(Mathf.Max(0f, boss.phase2IntroDuration));
+
+        if (AdvancedUIManager.Instance != null)
+        {
+            AdvancedUIManager.Instance.ToggleAllUI(true);
+        }
+
+        isTransitioningTurn = false;
         StartNextUnitTurn();
     }
     private void ResetMenuAnimations()
@@ -546,7 +618,16 @@ public class CombatManager : MonoBehaviour
         // Lấy chiêu theo Action Pattern (Không random)
         selectedAction = currentActiveUnit.GetNextAction();
 
-        CameraManager.Instance.SwitchToTargetHitCam(currentTarget);
+        // Enemy dùng skill AoE -> dùng camera AoE riêng.
+        // Skill thường -> vẫn dùng camera nhìn vào Player bị nhắm như cũ.
+        if (selectedAction != null && selectedAction.isAoE)
+        {
+            CameraManager.Instance.SwitchToEnemyAoECam();
+        }
+        else
+        {
+            CameraManager.Instance.SwitchToTargetHitCam(currentTarget);
+        }
 
         yield return new WaitForSeconds(0.5f);
 
@@ -691,6 +772,9 @@ public class CombatManager : MonoBehaviour
 
                 foreach (var enemy in targets)
                 {
+                    // Hit VFX dùng chung mốc thời gian với Animation Event gây damage.
+                    SpawnActionHitVFX(actionToUse, enemy);
+
                     int hpBefore = enemy.currentHP;
                     enemy.TakeDamage(rawDamage, false);
                     int actualDamageTaken = hpBefore - enemy.currentHP;
@@ -712,6 +796,8 @@ public class CombatManager : MonoBehaviour
 
                 if (!parried)
                 {
+                    // Parry thành công thì không hiện hiệu ứng trúng đòn.
+                    SpawnActionHitVFX(actionToUse, ally);
                     AdvancedUIManager.Instance.ShowDamageText(ally.transform, actualDamageTaken, isCrit, false);
                 }
             }
@@ -721,94 +807,354 @@ public class CombatManager : MonoBehaviour
 
     private void PlayVFX(BattleUnit attacker, BattleUnit target, ActionData action)
     {
-        if (action.vfxPrefab == null || target == null) return;
+        if (action == null || action.vfxPrefab == null || target == null) return;
 
         List<BattleUnit> targetList = new List<BattleUnit>();
+
         if (action.isAoE)
         {
-            targetList = (action.isFriendlyAction || action.isHeal) ? playerParty : enemyParty;
+            // Xác định AoE đánh phe nào dựa trên NGƯỜI CAST.
+            // Player tấn công -> Enemy
+            // Enemy tấn công -> Player
+            // Heal/Friendly -> phe của chính người cast
+            bool targetsOwnTeam = action.isFriendlyAction || action.isHeal;
+
+            if (attacker.isPlayer)
+            {
+                targetList = targetsOwnTeam
+                    ? playerParty.Where(u => u != null && u.currentHP > 0).ToList()
+                    : enemyParty.Where(u => u != null && u.currentHP > 0).ToList();
+            }
+            else
+            {
+                targetList = targetsOwnTeam
+                    ? enemyParty.Where(u => u != null && u.currentHP > 0).ToList()
+                    : playerParty.Where(u => u != null && u.currentHP > 0).ToList();
+            }
         }
         else
         {
             targetList.Add(target);
         }
 
+        // =========================================================
+        // VFX SINH TRỰC TIẾP TẠI TARGET
+        // =========================================================
         if (action.vfxType == ActionData.VfxType.SpawnAtTarget)
         {
-            foreach (var u in targetList.Where(u => u.currentHP > 0))
+            foreach (BattleUnit u in targetList.Where(u => u != null && u.currentHP > 0))
             {
+                // Giữ đúng hành vi cũ: SpawnAtTarget sinh ngay tại transform.position của target.
                 GameObject vfx = Instantiate(action.vfxPrefab, u.transform.position, u.transform.rotation);
                 Destroy(vfx, 2f);
             }
+
+            return;
         }
-        else if (action.vfxType == ActionData.VfxType.Shoot)
+
+        // =========================================================
+        // PROJECTILE
+        // =========================================================
+        if (action.vfxType != ActionData.VfxType.Shoot) return;
+
+        Transform spawnTransform = attacker.handTransform != null
+            ? attacker.handTransform
+            : attacker.transform;
+
+        Vector3 startPos = spawnTransform.TransformPoint(action.projectileStartOffset);
+
+        foreach (BattleUnit u in targetList.Where(u => u != null && u.currentHP > 0))
         {
-            Vector3 startPos = attacker.handTransform != null ? attacker.handTransform.position : attacker.transform.position + Vector3.up * 1f;
+            Vector3 targetPos = u.transform.position + action.projectileTargetOffset;
+            Vector3 directionToTarget = targetPos - startPos;
 
-            foreach (var u in targetList.Where(u => u.currentHP > 0))
+            Quaternion rotation = directionToTarget.sqrMagnitude > 0.0001f
+                ? Quaternion.LookRotation(directionToTarget.normalized, Vector3.up)
+                : spawnTransform.rotation;
+
+            GameObject vfx = Instantiate(action.vfxPrefab, startPos, rotation);
+
+            switch (action.projectileMoveMode)
             {
-                Vector3 targetPos = u.transform.position + Vector3.up * 1f;
-                Vector3 directionToTarget = targetPos - startPos;
-                Quaternion rotation = directionToTarget != Vector3.zero ? Quaternion.LookRotation(directionToTarget) : Quaternion.identity;
-
-                GameObject vfx = Instantiate(action.vfxPrefab, startPos, rotation);
-
-                RFX4_EffectSettings rfxSettings = vfx.GetComponent<RFX4_EffectSettings>();
-                if (rfxSettings != null) rfxSettings.UseGravity = false;
-
-                MonoBehaviour[] allScripts = vfx.GetComponentsInChildren<MonoBehaviour>();
-                foreach (MonoBehaviour script in allScripts)
-                {
-                    if (script.GetType().Name == "RFX4_PhysicsMotion" || script.GetType().Name == "RFX4_RaycastCollision")
+                // -------------------------------------------------
+                // 1. BAY THẲNG - game tự điều khiển transform
+                // -------------------------------------------------
+                case ActionData.ProjectileMoveMode.Straight:
                     {
-                        Destroy(script);
+                        DisableRFX4Movement(vfx);
+                        StartCoroutine(MoveVFXRoutine(
+                            vfx,
+                            targetPos,
+                            action.vfxSpeed));
+                        break;
                     }
-                }
-                StartCoroutine(MoveVFXRoutine(vfx, targetPos, action.vfxSpeed, action.hitVfxPrefab));
+
+                // -------------------------------------------------
+                // 2. GIỮ NGUYÊN CHUYỂN ĐỘNG CỦA PREFAB RFX4
+                // -------------------------------------------------
+                case ActionData.ProjectileMoveMode.RFX4Prefab:
+                    {
+                        SetupRFX4Projectile(vfx, action);
+                        break;
+                    }
+
+                // -------------------------------------------------
+                // 3. BAY THEO ĐƯỜNG CONG BEZIER
+                // -------------------------------------------------
+                case ActionData.ProjectileMoveMode.BezierCurve:
+                    {
+                        DisableRFX4Movement(vfx);
+                        StartCoroutine(MoveVFXBezierRoutine(
+                            vfx,
+                            targetPos,
+                            action.vfxSpeed,
+                            action.curveHeight,
+                            action.curveSideOffset));
+                        break;
+                    }
             }
         }
     }
 
+    /// <summary>
+    /// Tắt CHỈ phần movement/collision tự động của RFX4 khi CombatManager
+    /// cần tự điều khiển projectile. ParticleTrail, LightCurves, shader... vẫn chạy.
+    /// </summary>
+    private void DisableRFX4Movement(GameObject vfx)
+    {
+        if (vfx == null) return;
+
+        RFX4_PhysicsMotion[] motions = vfx.GetComponentsInChildren<RFX4_PhysicsMotion>(true);
+
+        foreach (RFX4_PhysicsMotion motion in motions)
+        {
+            if (motion == null) continue;
+
+            // RFX4_PhysicsMotion.OnDisable() reset local transform,
+            // nên lưu lại và phục hồi ngay sau khi disable.
+            Transform motionTransform = motion.transform;
+            Vector3 savedLocalPosition = motionTransform.localPosition;
+            Quaternion savedLocalRotation = motionTransform.localRotation;
+            Vector3 savedLocalScale = motionTransform.localScale;
+
+            motion.enabled = false;
+
+            motionTransform.localPosition = savedLocalPosition;
+            motionTransform.localRotation = savedLocalRotation;
+            motionTransform.localScale = savedLocalScale;
+        }
+
+        // Không tham chiếu trực tiếp type để đoạn này vẫn dùng được với
+        // các phiên bản RFX4 khác nhau. Chỉ disable script đúng tên.
+        MonoBehaviour[] scripts = vfx.GetComponentsInChildren<MonoBehaviour>(true);
+        foreach (MonoBehaviour script in scripts)
+        {
+            if (script == null) continue;
+
+            if (script.GetType().Name == "RFX4_RaycastCollision")
+            {
+                script.enabled = false;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Cho prefab RFX4 tự bay bằng RFX4_PhysicsMotion.
+    /// CombatManager chỉ truyền Speed/Gravity và lifetime.
+    /// </summary>
+    private void SetupRFX4Projectile(GameObject vfx, ActionData action)
+    {
+        if (vfx == null || action == null) return;
+
+        RFX4_EffectSettings settings = vfx.GetComponentInChildren<RFX4_EffectSettings>(true);
+
+        if (settings != null)
+        {
+            settings.Speed = action.vfxSpeed;
+            settings.UseGravity = action.rfxUseGravity;
+        }
+
+        // Không gán action.hitVfxPrefab vào EffectOnCollision nữa.
+        // Hit VFX được spawn duy nhất tại ApplyDamageFromAnimation để đồng bộ
+        // chính xác với Animation Event gây damage và tránh nổ VFX hai lần.
+
+        // RFX4_PhysicsMotion không tự Destroy root projectile sau collision.
+        Destroy(vfx, action.vfxLifeTime);
+    }
+
     public void PlayCastVFXFromAnimation(BattleUnit attacker)
     {
-        ActionData currentAction = attacker.isPlayer ? selectedAction : (selectedAction != null ? selectedAction : attacker.defaultAttack);
+        ActionData currentAction = attacker.isPlayer
+            ? selectedAction
+            : (selectedAction != null ? selectedAction : attacker.defaultAttack);
 
         if (currentAction != null && currentAction.castVfxPrefab != null)
         {
-            Transform spawnPoint = attacker.handTransform != null ? attacker.handTransform : attacker.transform;
-            GameObject castVfx = Instantiate(currentAction.castVfxPrefab, spawnPoint.position, spawnPoint.rotation, spawnPoint);
+            Transform spawnPoint = attacker.handTransform != null
+                ? attacker.handTransform
+                : attacker.transform;
+
+            GameObject castVfx = Instantiate(
+                currentAction.castVfxPrefab,
+                spawnPoint.position,
+                spawnPoint.rotation,
+                spawnPoint);
+
             Destroy(castVfx, 1.5f);
         }
     }
 
     public void PlayVFXFromAnimation(BattleUnit attacker)
     {
-        ActionData currentAction = attacker.isPlayer ? selectedAction : (selectedAction != null ? selectedAction : attacker.defaultAttack);
+        if (attacker == null) return;
+
+        ActionData currentAction = attacker.isPlayer
+            ? selectedAction
+            : (selectedAction != null ? selectedAction : attacker.defaultAttack);
+
         if (currentAction != null && currentAction.vfxPrefab != null)
         {
             PlayVFX(attacker, currentTarget, currentAction);
         }
     }
 
-    private IEnumerator MoveVFXRoutine(GameObject vfx, Vector3 targetPos, float speed, GameObject hitPrefab)
+    /// <summary>
+    /// Projectile bay thẳng. Dùng cho prefab không cần RFX4_PhysicsMotion.
+    /// </summary>
+    private IEnumerator MoveVFXRoutine(
+        GameObject vfx,
+        Vector3 targetPos,
+        float speed)
     {
+        if (vfx == null) yield break;
+
+        speed = Mathf.Max(0.01f, speed);
+
         while (vfx != null && Vector3.Distance(vfx.transform.position, targetPos) > 0.1f)
         {
-            vfx.transform.position = Vector3.MoveTowards(vfx.transform.position, targetPos, speed * Time.deltaTime);
-            vfx.transform.LookAt(targetPos);
+            Vector3 oldPosition = vfx.transform.position;
+            Vector3 newPosition = Vector3.MoveTowards(
+                oldPosition,
+                targetPos,
+                speed * Time.deltaTime);
+
+            vfx.transform.position = newPosition;
+
+            Vector3 moveDirection = newPosition - oldPosition;
+            if (moveDirection.sqrMagnitude > 0.000001f)
+            {
+                vfx.transform.rotation = Quaternion.LookRotation(moveDirection.normalized, Vector3.up);
+            }
+
             yield return null;
         }
 
         if (vfx != null)
         {
+            vfx.transform.position = targetPos;
             Destroy(vfx);
         }
 
-        if (hitPrefab != null)
+    }
+
+    /// <summary>
+    /// Projectile bay theo Quadratic Bezier:
+    /// start -> control point -> target.
+    /// </summary>
+    private IEnumerator MoveVFXBezierRoutine(
+        GameObject vfx,
+        Vector3 targetPos,
+        float speed,
+        float curveHeight,
+        float curveSideOffset)
+    {
+        if (vfx == null) yield break;
+
+        Vector3 startPos = vfx.transform.position;
+        float distance = Vector3.Distance(startPos, targetPos);
+        float duration = distance / Mathf.Max(speed, 0.01f);
+        duration = Mathf.Max(duration, 0.05f);
+
+        Vector3 forward = targetPos - startPos;
+        Vector3 side = Vector3.Cross(Vector3.up, forward.normalized);
+
+        if (side.sqrMagnitude < 0.0001f)
         {
-            GameObject hitVfx = Instantiate(hitPrefab, targetPos, Quaternion.identity);
-            Destroy(hitVfx, 2f);
+            side = vfx.transform.right;
         }
+
+        side.Normalize();
+
+        Vector3 controlPoint =
+            (startPos + targetPos) * 0.5f
+            + Vector3.up * curveHeight
+            + side * curveSideOffset;
+
+        float elapsed = 0f;
+
+        while (vfx != null && elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+
+            Vector3 position = EvaluateQuadraticBezier(
+                startPos,
+                controlPoint,
+                targetPos,
+                t);
+
+            // Đạo hàm Bezier để projectile luôn nhìn đúng hướng đường cong.
+            Vector3 tangent =
+                2f * (1f - t) * (controlPoint - startPos)
+                + 2f * t * (targetPos - controlPoint);
+
+            vfx.transform.position = position;
+
+            if (tangent.sqrMagnitude > 0.000001f)
+            {
+                vfx.transform.rotation = Quaternion.LookRotation(tangent.normalized, Vector3.up);
+            }
+
+            yield return null;
+        }
+
+        if (vfx != null)
+        {
+            vfx.transform.position = targetPos;
+            Destroy(vfx);
+        }
+
+    }
+
+    private Vector3 EvaluateQuadraticBezier(
+        Vector3 start,
+        Vector3 control,
+        Vector3 end,
+        float t)
+    {
+        float oneMinusT = 1f - t;
+
+        return
+            oneMinusT * oneMinusT * start
+            + 2f * oneMinusT * t * control
+            + t * t * end;
+    }
+
+    private void SpawnActionHitVFX(ActionData action, BattleUnit target)
+    {
+        if (action == null || target == null || action.hitVfxPrefab == null) return;
+
+        // Dùng cùng offset với điểm đích của projectile để VFX nằm đúng vị trí va chạm.
+        Vector3 hitPosition = target.transform.position + action.projectileTargetOffset;
+        SpawnHitVFX(action.hitVfxPrefab, hitPosition);
+    }
+
+    private void SpawnHitVFX(GameObject hitPrefab, Vector3 position)
+    {
+        if (hitPrefab == null) return;
+
+        GameObject hitVfx = Instantiate(hitPrefab, position, Quaternion.identity);
+        Destroy(hitVfx, 2f);
     }
 
     public void EndCurrentTurn()

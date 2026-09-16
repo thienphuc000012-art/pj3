@@ -49,8 +49,17 @@ public class BattleUnit : MonoBehaviour
     [Tooltip("Danh sách các Phase của Boss (Nhập theo thứ tự giảm dần: 0.7 -> 0.5 -> 0.2)")]
     public List<BossPhase> bossPhases;
 
-    private int currentPhaseIndex = -1; // -1 là chưa vào Phase nào
+    private int currentPhaseIndex = -1; // -1 = Phase 1/base, bossPhases[0] = Phase 2
     private int currentPatternIndex = 0; // Đếm số thứ tự chiêu thức trong chuỗi
+
+    [Header("Phase 2 Intro")]
+    [Tooltip("Tên Trigger trong Animator chạy đúng 1 lần khi Boss bắt đầu Phase 2.")]
+    public string phase2AnimationTriggerName = "Phase2";
+
+    [Tooltip("Thời gian giữ camera Phase 2 trước khi tiếp tục Turn Order.")]
+    [Min(0f)] public float phase2IntroDuration = 2.5f;
+
+    [HideInInspector] public bool phase2IntroPlayed = false;
 
     [HideInInspector] public BattleUnit lastTarget = null; // Ghi nhớ mục tiêu vừa đánh
 
@@ -83,10 +92,11 @@ public class BattleUnit : MonoBehaviour
         UpdateUI();
     }
 
-    // --- CẬP NHẬT: Kiểm tra Phase và Reset chuỗi kỹ năng khi đổi Phase ---
-    public void CheckPhase()
+    // Trả về số Phase vừa chuyển tới.
+    // 0 = không đổi phase, 2 = bossPhases[0], 3 = bossPhases[1], ...
+    public int CheckPhase()
     {
-        if (!isBoss || bossPhases == null || bossPhases.Count == 0) return;
+        if (!isBoss || bossPhases == null || bossPhases.Count == 0) return 0;
 
         float currentHpPercent = (float)currentHP / maxHP;
 
@@ -96,11 +106,15 @@ public class BattleUnit : MonoBehaviour
             {
                 currentPhaseIndex = i;
                 actionsPerTurn = bossPhases[i].actionsPerTurn;
-                currentPatternIndex = 0; // Reset lại combo khi Boss nổi điên
-                Debug.Log($"[BOSS HỆ THỐNG] {unitName} chuyển sang Phase {i + 1} mạnh hơn!");
-                return;
+                currentPatternIndex = 0;
+
+                int phaseNumber = i + 2; // Base = Phase 1, bossPhases[0] = Phase 2
+                Debug.Log($"[BOSS HỆ THỐNG] {unitName} chuyển sang Phase {phaseNumber}!");
+                return phaseNumber;
             }
         }
+
+        return 0;
     }
 
     // --- CẬP NHẬT: Lấy kỹ năng tiếp theo trong chuỗi thay vì Random ---
