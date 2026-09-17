@@ -33,6 +33,8 @@ public class BattleUnit : MonoBehaviour
     public int baseAtk = 10;
     public int baseDef = 5;
     [Range(0, 100)] public int baseCrit = 10;
+    [Tooltip("Total damage percentage on a critical hit: 150 means x1.5 damage before defense.")]
+    [Min(100)] public int baseCritDamage = 150;
 
     [Header("Player Skills")]
     public ActionData defaultAttack;
@@ -67,10 +69,17 @@ public class BattleUnit : MonoBehaviour
     public int speed;
     public Sprite unitPortrait;
     public int currentHP { get; private set; }
+    public bool IsDead => currentHP <= 0;
     public bool isPlayer;
 
     [Header("VFX References")]
     public Transform handTransform;
+    [Tooltip("VFX spawn point on the left hand. Falls back to the Humanoid LeftHand bone when unassigned.")]
+    public Transform leftHandTransform;
+
+    public Transform VfxOrigin => handTransform != null ? handTransform : transform;
+
+    public Vector3 GetVfxTargetPosition(Vector3 offset) => transform.position + offset;
 
     public Animator animator;
 
@@ -81,13 +90,19 @@ public class BattleUnit : MonoBehaviour
     void Awake()
     {
         currentHP = maxHP;
+        // CombatManager owns placement and movement. Set this before slot
+        // placement, rather than reinitializing the Animator on the first attack.
+        if (animator != null) animator.applyRootMotion = false;
     }
 
     void Start()
     {
-        if (handTransform == null && animator != null)
+        if (animator != null && animator.isHuman)
         {
-            if (animator.isHuman) handTransform = animator.GetBoneTransform(HumanBodyBones.RightHand);
+            if (handTransform == null)
+                handTransform = animator.GetBoneTransform(HumanBodyBones.RightHand);
+            if (leftHandTransform == null)
+                leftHandTransform = animator.GetBoneTransform(HumanBodyBones.LeftHand);
         }
         UpdateUI();
     }
@@ -146,12 +161,15 @@ public class BattleUnit : MonoBehaviour
 
     public void AddBuff(ActionData.BuffStat stat, int amount, int duration)
     {
+        if (IsDead || stat == ActionData.BuffStat.None || duration <= 0) return;
         activeBuffs.Add(new ActiveBuff { stat = stat, amount = amount, duration = duration });
         UpdateUI();
     }
 
     public int GetBuffValue(ActionData.BuffStat stat) => activeBuffs.Where(b => b.stat == stat).Sum(b => b.amount);
     public int GetTotalShield() => GetBuffValue(ActionData.BuffStat.Shield);
+    public int GetCritChance() => Mathf.Clamp(baseCrit + GetBuffValue(ActionData.BuffStat.Crit), 0, 100);
+    public float GetCritDamageMultiplier() => Mathf.Max(100, baseCritDamage + GetBuffValue(ActionData.BuffStat.CritDamage)) / 100f;
 
     public void TickBuffs()
     {
@@ -162,17 +180,12 @@ public class BattleUnit : MonoBehaviour
 
     public void TakeDamage(int rawDamage, bool isParried)
     {
+        if (IsDead) return;
         // --- CẬP NHẬT: Nếu Parry thành công, chặn Damage và KHÔNG gọi lại SetTrigger("Parry") ---
         if (isParried)
         {
             // (Đã xóa animator.SetTrigger("Parry") ở đây vì nó đã được gọi ngay lúc bấm phím Space ở ParrySystem)
             return;
-        }
-
-        if (animator != null)
-        {
-            animator.ResetTrigger("Parry"); // Xóa hàng đợi Parry (nếu có)
-            animator.SetTrigger("Hit");     // Ép chuyển sang Hit
         }
 
         int totalDef = baseDef + GetBuffValue(ActionData.BuffStat.Def);
@@ -198,10 +211,28 @@ public class BattleUnit : MonoBehaviour
         currentHP = Mathf.Max(0, currentHP - finalDamage);
 
         UpdateUI();
-        if (currentHP == 0 && animator != null) animator.SetTrigger("Die");
+        if (IsDead)
+        {
+            foreach (SwordBladeTrail trail in GetComponentsInChildren<SwordBladeTrail>(true))
+                trail.StopTrail();
+            if (animator != null)
+            {
+                // Discard queued attack/Hit/Parry triggers before entering Die.
+                foreach (AnimatorControllerParameter parameter in animator.parameters)
+                    if (parameter.type == AnimatorControllerParameterType.Trigger)
+                        animator.ResetTrigger(parameter.nameHash);
+                animator.SetTrigger("Die");
+            }
+        }
+        else if (animator != null)
+        {
+            animator.ResetTrigger("Parry");
+            animator.SetTrigger("Hit");
+        }
     }
     public void Heal(int amount)
     {
+        if (IsDead) return; // Healing is not a revive action.
         if (amount > 0)
         {
             currentHP = Mathf.Min(maxHP, currentHP + amount);

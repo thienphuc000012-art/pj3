@@ -30,6 +30,7 @@ public class RFX4_PhysicsMotion : MonoBehaviour
     [HideInInspector] public float HUE = -1;
 
     public event EventHandler<RFX4_CollisionInfo> CollisionEnter;
+    public event Action<GameObject> EffectCreated;
 
     Rigidbody rigid;
     SphereCollider collid;
@@ -114,6 +115,7 @@ public class RFX4_PhysicsMotion : MonoBehaviour
             if (EffectOnCollision != null)
             {
                 var instance = Instantiate(EffectOnCollision, contact.point, new Quaternion()) as GameObject;
+                EffectCreated?.Invoke(instance);
 
                 if (HUE > -0.9f) RFX4_ColorHelper.ChangeObjectColorByHUE(instance, HUE);
                 

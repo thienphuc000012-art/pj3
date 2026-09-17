@@ -27,6 +27,7 @@ public class RFX4_RaycastCollision : MonoBehaviour
     private bool canUpdate;
 
     public event EventHandler<RFX4_PhysicsMotion.RFX4_CollisionInfo> CollisionEnter;
+    public event Action<GameObject> EffectCreated;
 
     void Awake()
     {
@@ -97,6 +98,7 @@ public class RFX4_RaycastCollision : MonoBehaviour
                         }
 
                         CollidedInstances.Add(instance);
+                        EffectCreated?.Invoke(instance);
 
                         if (HUE > -0.9f) RFX4_ColorHelper.ChangeObjectColorByHUE(instance, HUE);
                     

@@ -652,6 +652,10 @@ MonoBehaviour:
     sprite: {fileID: 21300000, guid: 0205b2663deeec94c99df92a96caaf8e, type: 3}
   - stat: 4
     sprite: {fileID: 21300000, guid: 0a45aa171e6abe24f9c211decff6cd8b, type: 3}
+  - stat: 3
+    sprite: {fileID: 21300000, guid: 0a45aa171e6abe24f9c211decff6cd8b, type: 3}
+  - stat: 5
+    sprite: {fileID: 21300000, guid: 0a45aa171e6abe24f9c211decff6cd8b, type: 3}
 --- !u!114 &75075911
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1139,6 +1143,7 @@ MonoBehaviour:
   baseAtk: 10
   baseDef: 5
   baseCrit: 10
+  baseCritDamage: 150
   defaultAttack: {fileID: 11400000, guid: 5802a4ab318ca6b4f83d133ed36b71af, type: 2}
   characterSkills: []
   isBoss: 0
@@ -1153,6 +1158,7 @@ MonoBehaviour:
   unitPortrait: {fileID: 21300000, guid: 1af0c29339b09c441b936366cc94ef00, type: 3}
   isPlayer: 0
   handTransform: {fileID: 0}
+  leftHandTransform: {fileID: 0}
   animator: {fileID: 120728060}
   activeBuffs: []
 --- !u!95 &120728060 stripped
@@ -3443,12 +3449,17 @@ MonoBehaviour:
   baseAtk: 10
   baseDef: 5
   baseCrit: 10
+  baseCritDamage: 150
   defaultAttack: {fileID: 11400000, guid: fcb0cc7c27be4104a89d579861c52117, type: 2}
   characterSkills:
   - {fileID: 11400000, guid: e288a344a0ee08f42bee7a0c4f10bd03, type: 2}
-  - {fileID: 11400000, guid: 8857ea3dcd9fe2d40af5ba89b021f793, type: 2}
+  - {fileID: 11400000, guid: 8041ddf7f5ced7248977ebb746a1a1f5, type: 2}
   - {fileID: 11400000, guid: 687fee65e17fe374abdddeacc3671564, type: 2}
   - {fileID: 11400000, guid: bfae87a977bf73f4c86d8a2fcf86b009, type: 2}
+  - {fileID: 11400000, guid: 2e8470d7480e4e5e8ce16bd894d715a7, type: 2}
+  - {fileID: 11400000, guid: 7a1a04a484344b3c8ae407632b4d4512, type: 2}
+  - {fileID: 11400000, guid: a60e3b2ba7984252a25632664fb7f2fe, type: 2}
+  - {fileID: 11400000, guid: c74b1f143d534eab8a17acc93698e501, type: 2}
   isBoss: 0
   actionsPerTurn: 1
   baseActionPattern: []
@@ -3461,6 +3472,7 @@ MonoBehaviour:
   unitPortrait: {fileID: 21300000, guid: 82361fa11de5cc34386d1b5565ad8f5a, type: 3}
   isPlayer: 1
   handTransform: {fileID: 634164439}
+  leftHandTransform: {fileID: 1743646139}
   animator: {fileID: 444026036}
   activeBuffs: []
 --- !u!114 &444026040
@@ -3850,6 +3862,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: af722974d37c73f4d923654f931bdca1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CombatManager
+  turnVfxCleanupDelay: 0.2
   state: 0
   playerParty:
   - {fileID: 444026039}
@@ -7836,12 +7849,17 @@ MonoBehaviour:
   baseAtk: 10
   baseDef: 5
   baseCrit: 10
+  baseCritDamage: 150
   defaultAttack: {fileID: 11400000, guid: fcb0cc7c27be4104a89d579861c52117, type: 2}
   characterSkills:
-  - {fileID: 11400000, guid: 35516c7356841a44bbed0f08b30e40d9, type: 2}
+  - {fileID: 11400000, guid: e8dbd2482ab38d84687f031f56b141df, type: 2}
   - {fileID: 11400000, guid: 147ca3bf8513ee74ea9627cf932fe845, type: 2}
   - {fileID: 11400000, guid: 8041ddf7f5ced7248977ebb746a1a1f5, type: 2}
   - {fileID: 11400000, guid: 41b08d97f105fb9479628e1ff59f1aa1, type: 2}
+  - {fileID: 11400000, guid: e8dbd2482ab38d84687f031f56b141df, type: 2}
+  - {fileID: 11400000, guid: 7a1a04a484344b3c8ae407632b4d4512, type: 2}
+  - {fileID: 11400000, guid: a60e3b2ba7984252a25632664fb7f2fe, type: 2}
+  - {fileID: 11400000, guid: c74b1f143d534eab8a17acc93698e501, type: 2}
   isBoss: 0
   actionsPerTurn: 1
   baseActionPattern: []
@@ -7854,6 +7872,7 @@ MonoBehaviour:
   unitPortrait: {fileID: 21300000, guid: 82361fa11de5cc34386d1b5565ad8f5a, type: 3}
   isPlayer: 1
   handTransform: {fileID: 1410646031}
+  leftHandTransform: {fileID: 1645511661}
   animator: {fileID: 1263546241}
   activeBuffs: []
 --- !u!95 &1263546241 stripped
@@ -8900,6 +8919,11 @@ Transform:
   - {fileID: 1954148719}
   m_Father: {fileID: 153795298}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!4 &1645511661 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3724775423460961334, guid: 1f080cff37e59784f9797e18c4f7c0cd, type: 3}
+  m_PrefabInstance: {fileID: 1941740018}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1697092147 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 3771841246725116106, guid: 1f080cff37e59784f9797e18c4f7c0cd, type: 3}
@@ -8922,12 +8946,17 @@ MonoBehaviour:
   baseAtk: 10
   baseDef: 5
   baseCrit: 10
+  baseCritDamage: 150
   defaultAttack: {fileID: 11400000, guid: fcb0cc7c27be4104a89d579861c52117, type: 2}
   characterSkills:
   - {fileID: 11400000, guid: 35516c7356841a44bbed0f08b30e40d9, type: 2}
   - {fileID: 11400000, guid: e8dbd2482ab38d84687f031f56b141df, type: 2}
   - {fileID: 11400000, guid: 687fee65e17fe374abdddeacc3671564, type: 2}
   - {fileID: 11400000, guid: b7a6c8303b913374ba3eba1250355d0a, type: 2}
+  - {fileID: 11400000, guid: 2e8470d7480e4e5e8ce16bd894d715a7, type: 2}
+  - {fileID: 11400000, guid: 7a1a04a484344b3c8ae407632b4d4512, type: 2}
+  - {fileID: 11400000, guid: a60e3b2ba7984252a25632664fb7f2fe, type: 2}
+  - {fileID: 11400000, guid: c74b1f143d534eab8a17acc93698e501, type: 2}
   isBoss: 0
   actionsPerTurn: 1
   baseActionPattern: []
@@ -8940,6 +8969,7 @@ MonoBehaviour:
   unitPortrait: {fileID: 21300000, guid: e7fcf5c2f0061d94abdb0622300c8719, type: 3}
   isPlayer: 1
   handTransform: {fileID: 1722140976}
+  leftHandTransform: {fileID: 0}
   animator: {fileID: 1697092149}
   activeBuffs: []
 --- !u!95 &1697092149 stripped
@@ -9073,8 +9103,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 327, y: -24}
-  m_SizeDelta: {x: 614, y: 617}
+  m_AnchoredPosition: {x: 403.3062, y: -6.6288}
+  m_SizeDelta: {x: 766.6126, y: 1066.7444}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1723221046
 MonoBehaviour:
@@ -10191,6 +10221,11 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1734649715}
   m_CullTransparentMesh: 1
+--- !u!4 &1743646139 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3724775423460961334, guid: 1f080cff37e59784f9797e18c4f7c0cd, type: 3}
+  m_PrefabInstance: {fileID: 1196265780}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1743900279
 GameObject:
   m_ObjectHideFlags: 0
@@ -12929,6 +12964,7 @@ MonoBehaviour:
   baseAtk: 10
   baseDef: 5
   baseCrit: 10
+  baseCritDamage: 150
   defaultAttack: {fileID: 11400000, guid: fcb0cc7c27be4104a89d579861c52117, type: 2}
   characterSkills: []
   isBoss: 1
@@ -12948,6 +12984,7 @@ MonoBehaviour:
   unitPortrait: {fileID: 21300000, guid: 82361fa11de5cc34386d1b5565ad8f5a, type: 3}
   isPlayer: 0
   handTransform: {fileID: 1768304767}
+  leftHandTransform: {fileID: 0}
   animator: {fileID: 1965605816}
   activeBuffs: []
 --- !u!95 &1965605816 stripped

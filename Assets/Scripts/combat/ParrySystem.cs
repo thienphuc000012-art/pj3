@@ -19,7 +19,8 @@ public class ParrySystem : MonoBehaviour
 
         // 1. Chỉ cho phép bấm Parry khi Địch đang hành động
         BattleUnit activeUnit = CombatManager.Instance.currentActiveUnit;
-        if (activeUnit == null || activeUnit.isPlayer) return;
+        if (activeUnit == null || activeUnit.IsDead || activeUnit.isPlayer) return;
+        if (CombatManager.Instance.state != CombatState.Executing) return;
 
         // 2. Bắt nút Space với Cooldown chống spam
         if (Input.GetKeyDown(KeyCode.Space) && Time.time >= lastParryTime + parryCooldown)
@@ -32,7 +33,9 @@ public class ParrySystem : MonoBehaviour
     private void TriggerParryAction()
     {
         CombatManager combat = CombatManager.Instance;
-        if (combat == null) return;
+        if (combat == null || combat.state != CombatState.Executing ||
+            combat.currentActiveUnit == null || combat.currentActiveUnit.IsDead ||
+            combat.currentActiveUnit.isPlayer) return;
 
         // =========================================================
         // ENEMY AOE ATTACK:
@@ -93,7 +96,7 @@ public class ParrySystem : MonoBehaviour
         // Giữ nguyên hành vi cũ, chỉ target hiện tại Parry.
         // =========================================================
         BattleUnit targetPlayer = combat.currentTarget;
-        if (targetPlayer == null || !targetPlayer.isPlayer) return;
+        if (targetPlayer == null || !targetPlayer.isPlayer || targetPlayer.IsDead) return;
 
         if (targetPlayer.animator != null)
         {

@@ -13,13 +13,34 @@ MonoBehaviour:
   m_Name: vfx1buff
   m_EditorClassIdentifier: Assembly-CSharp::ActionData
   actionName: b
+  description: 
   icon: {fileID: 21300000, guid: 742198cc0ec8f0143b32a726fe61f028, type: 3}
   type: 1
   power: 5
+  damageMultiplier: 1
   isHeal: 0
   animationTriggerName: Anim10
   isFriendlyAction: 0
+  isAoE: 0
+  isSelfOnly: 0
+  stainChange: 0
+  buffStat: 0
+  buffAmount: 0
+  buffDuration: 0
   isMelee: 0
   vfxType: 2
   vfxPrefab: {fileID: 0}
+  castVfxPrefab: {fileID: 0}
+  hitVfxPrefab: {fileID: 0}
+  hitVfxTiming: 0
+  castVfxLifeTime: 5
+  hitVfxLifeTime: 3
+  beamPlaybackSpeed: 1
+  projectileMoveMode: 0
   vfxSpeed: 15
+  vfxLifeTime: 5
+  projectileStartOffset: {x: 0, y: 0, z: 0}
+  projectileTargetOffset: {x: 0, y: 1, z: 0}
+  curveHeight: 2
+  curveSideOffset: 0
+  rfxUseGravity: 0

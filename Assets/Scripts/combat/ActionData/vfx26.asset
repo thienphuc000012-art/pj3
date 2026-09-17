@@ -18,18 +18,29 @@ MonoBehaviour:
   type: 1
   power: 5
   damageMultiplier: 1
-  isHeal: 1
+  isHeal: 0
   animationTriggerName: heal
   isFriendlyAction: 1
-  isAoE: 0
-  isSelfOnly: 1
+  isAoE: 1
+  isSelfOnly: 0
   stainChange: 0
-  buffStat: 0
-  buffAmount: 5
-  buffDuration: 0
+  buffStat: 3
+  buffAmount: 100
+  buffDuration: 2
   isMelee: 0
   vfxType: 2
   vfxPrefab: {fileID: 111372, guid: b58af954af4cd9a45a687a98dd9b9249, type: 3}
-  vfxSpeed: 15
   castVfxPrefab: {fileID: 191306, guid: a00869e5e1cfc8445b1c3f7445b45514, type: 3}
   hitVfxPrefab: {fileID: 0}
+  hitVfxTiming: 0
+  castVfxLifeTime: 5
+  hitVfxLifeTime: 3
+  beamPlaybackSpeed: 1
+  projectileMoveMode: 0
+  vfxSpeed: 15
+  vfxLifeTime: 5
+  projectileStartOffset: {x: 0, y: 0, z: 0}
+  projectileTargetOffset: {x: 0, y: 1, z: 0}
+  curveHeight: 2
+  curveSideOffset: 0
+  rfxUseGravity: 0

@@ -23,7 +23,7 @@ MonoBehaviour:
   isFriendlyAction: 0
   isAoE: 1
   isSelfOnly: 0
-  stainChange: -2
+  stainChange: 0
   buffStat: 0
   buffAmount: 0
   buffDuration: 0
@@ -32,6 +32,10 @@ MonoBehaviour:
   vfxPrefab: {fileID: 153592, guid: 0986516cedd19504bbce8b3532461869, type: 3}
   castVfxPrefab: {fileID: 1242068248825616, guid: 7d198579e899cf8458cc959937ec8d6b, type: 3}
   hitVfxPrefab: {fileID: 1369401709340560, guid: e0e6c9ae18e69094888cb90cd4a2fb61, type: 3}
+  hitVfxTiming: 0
+  castVfxLifeTime: 5
+  hitVfxLifeTime: 3
+  beamPlaybackSpeed: 1
   projectileMoveMode: 2
   vfxSpeed: 5
   vfxLifeTime: 5

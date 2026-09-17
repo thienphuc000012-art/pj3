@@ -31,16 +31,20 @@ public class ActionData : ScriptableObject
     [Tooltip("Dương (+) là hồi Stain, Âm (-) là tốn Stain. (Vd: Attack = 1, Skill = -1)")]
     public int stainChange = 0;
 
-    public enum BuffStat { None, Atk, Def, Crit, Shield }
+    // Preserve serialized values used by existing skill assets.
+    public enum BuffStat { None = 0, Atk = 1, Def = 2, Crit = 3, Shield = 4, CritDamage = 5 }
     [Header("Buff & Shield Settings")]
     public BuffStat buffStat = BuffStat.None;
+    [Tooltip("Crit: bonus percentage points to crit chance. CritDamage: bonus percentage points to crit damage (150 + 50 = 200%). Other stats: flat bonus.")]
     public int buffAmount;
-    public int buffDuration;
+    [Tooltip("Number of rounds the buff lasts. Buffs of the same stat stack additively.")]
+    [Min(1)] public int buffDuration = 1;
 
     [Header("Attack Distance Type")]
     public bool isMelee = true;
 
-    public enum VfxType { None, Shoot, SpawnAtTarget }
+    // Append values so existing serialized actions keep their VFX behavior.
+    public enum VfxType { None, Shoot, SpawnAtTarget, Beam }
 
     // Cách projectile di chuyển khi VfxType = Shoot.
     public enum ProjectileMoveMode
@@ -55,6 +59,16 @@ public class ActionData : ScriptableObject
     public GameObject vfxPrefab;
     public GameObject castVfxPrefab;
     public GameObject hitVfxPrefab;
+
+    public enum HitVfxTiming { VfxImpact, AnimationEvent }
+    [Tooltip("VfxImpact: hit plays on projectile arrival / beam emission. AnimationEvent: use the damage event.")]
+    public HitVfxTiming hitVfxTiming = HitVfxTiming.VfxImpact;
+    [Min(0.1f)] public float castVfxLifeTime = 5f;
+    [Min(0.1f)] public float hitVfxLifeTime = 5f;
+
+    [Header("Beam Settings")]
+    [Tooltip("Playback speed of a beam's charge-up and particles. Damage still uses animation events.")]
+    [Min(0.01f)] public float beamPlaybackSpeed = 1f;
 
     [Header("Projectile Settings")]
     public ProjectileMoveMode projectileMoveMode = ProjectileMoveMode.Straight;

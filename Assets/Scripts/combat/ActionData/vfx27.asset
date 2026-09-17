@@ -32,6 +32,10 @@ MonoBehaviour:
   vfxPrefab: {fileID: 167990, guid: 69f5fe3f798dd8b4ab58e3b1cb6bd6c9, type: 3}
   castVfxPrefab: {fileID: 0}
   hitVfxPrefab: {fileID: 0}
+  hitVfxTiming: 0
+  castVfxLifeTime: 5
+  hitVfxLifeTime: 3
+  beamPlaybackSpeed: 1
   projectileMoveMode: 0
   vfxSpeed: 15
   vfxLifeTime: 5

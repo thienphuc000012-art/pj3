@@ -8,6 +8,7 @@ public class RFX4_ParticleCollisionGameObject : MonoBehaviour
     public GameObject InstancedGO;
     public float DestroyDelay = 5;
     public GameObject RotationParent;
+    public event System.Action<GameObject> EffectCreated;
 
     private List<ParticleCollisionEvent> collisionEvents = new List<ParticleCollisionEvent>();
     ParticleSystem initiatorPS;
@@ -26,6 +27,7 @@ public class RFX4_ParticleCollisionGameObject : MonoBehaviour
             GameObject instance;
             if (RotationParent != null)  instance = Instantiate(InstancedGO, collisionEvents[i].intersection, RotationParent.transform.rotation);
             else instance = Instantiate(InstancedGO, collisionEvents[i].intersection, new Quaternion());
+            EffectCreated?.Invoke(instance);
             Destroy(instance, DestroyDelay);
         }
     }

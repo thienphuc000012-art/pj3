@@ -9,6 +9,77 @@ public enum OpenMenuType { None, Skills, Items }
 public class CombatManager : MonoBehaviour
 {
     public static CombatManager Instance;
+    [Header("Turn VFX Cleanup")]
+    [Min(0f)] public float turnVfxCleanupDelay = 1.5f;
+    private Coroutine turnTransitionRoutine;
+    private readonly List<CombatBeamVfx> activeBeams = new List<CombatBeamVfx>();
+    private readonly List<GameObject> pendingVfxImpacts = new List<GameObject>();
+    private readonly Dictionary<BattleUnit, List<GameObject>> castInstances = new Dictionary<BattleUnit, List<GameObject>>();
+    private readonly HashSet<BattleUnit> castStarted = new HashSet<BattleUnit>();
+    private readonly HashSet<BattleUnit> vfxLaunched = new HashSet<BattleUnit>();
+    private sealed class VfxActionState { public bool parried; }
+    private VfxActionState vfxActionState = new VfxActionState();
+    private readonly HashSet<GameObject> combatVfxInstances = new HashSet<GameObject>();
+
+    private void TrackCombatVFX(GameObject vfx)
+    {
+        combatVfxInstances.RemoveWhere(item => item == null);
+        if (vfx == null || !combatVfxInstances.Add(vfx)) return;
+        // Impacts created by RFX4 can live outside the original effect hierarchy.
+        foreach (var motion in vfx.GetComponentsInChildren<RFX4_PhysicsMotion>(true))
+            motion.EffectCreated += TrackCombatVFX;
+        foreach (var ray in vfx.GetComponentsInChildren<RFX4_RaycastCollision>(true))
+        {
+            ray.EffectCreated += TrackCombatVFX;
+            foreach (GameObject impact in ray.CollidedInstances)
+                TrackCombatVFX(impact);
+        }
+        foreach (var collision in vfx.GetComponentsInChildren<RFX4_ParticleCollisionGameObject>(true))
+            collision.EffectCreated += TrackCombatVFX;
+    }
+
+    private void ClearCombatVFX()
+    {
+        GameObject[] instances = combatVfxInstances.ToArray();
+        combatVfxInstances.Clear();
+        foreach (GameObject vfx in instances)
+        {
+            if (vfx == null) continue;
+            // Hide particles, lights and audio immediately; Destroy completes
+            // at frame end, before the enemy's new effects are created.
+            vfx.SetActive(false);
+            Destroy(vfx);
+        }
+        activeBeams.Clear();
+        pendingVfxImpacts.Clear();
+        castInstances.Clear();
+        castStarted.Clear();
+        vfxLaunched.Clear();
+    }
+
+    public void StopBeamVFX(BattleUnit caster)
+    {
+        for (int i = activeBeams.Count - 1; i >= 0; i--)
+        {
+            CombatBeamVfx beam = activeBeams[i];
+            if (beam == null || beam.Caster == caster)
+            {
+                if (beam != null) beam.FinishAttack();
+                if (beam == null || beam.HasEmitted) activeBeams.RemoveAt(i);
+            }
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (turnTransitionRoutine != null)
+        {
+            StopCoroutine(turnTransitionRoutine);
+            turnTransitionRoutine = null;
+            isTransitioningTurn = false;
+        }
+        ClearCombatVFX();
+    }
 
     [Header("Game State")]
     public CombatState state;
@@ -104,7 +175,7 @@ public class CombatManager : MonoBehaviour
 
     void Update()
     {
-        if (state != CombatState.PlayerTurn) return;
+        if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
 
         if (Input.GetMouseButtonDown(1))
         {
@@ -165,7 +236,7 @@ public class CombatManager : MonoBehaviour
 
     private void CancelCurrentAction()
     {
-        if (state != CombatState.PlayerTurn) return;
+        if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
 
         // 1. Trường hợp đang ở bước Chọn Mục Tiêu (Sau khi bấm Attack hoặc chọn Skill/Item)
         if (selectedAction != null)
@@ -231,7 +302,7 @@ public class CombatManager : MonoBehaviour
     {
         for (int i = 0; i < playerParty.Count; i++)
         {
-            if (i < playerSlots.Length && playerParty[i] != null)
+            if (i < playerSlots.Length && playerSlots[i] != null && playerParty[i] != null)
             {
                 playerParty[i].transform.position = playerSlots[i].position;
                 playerParty[i].transform.rotation = playerSlots[i].rotation;
@@ -239,7 +310,7 @@ public class CombatManager : MonoBehaviour
         }
         for (int i = 0; i < enemyParty.Count; i++)
         {
-            if (i < enemySlots.Length && enemyParty[i] != null)
+            if (i < enemySlots.Length && enemySlots[i] != null && enemyParty[i] != null)
             {
                 enemyParty[i].transform.position = enemySlots[i].position;
                 enemyParty[i].transform.rotation = enemySlots[i].rotation;
@@ -421,7 +492,7 @@ public class CombatManager : MonoBehaviour
 
     public void OnAttackClicked()
     {
-        if (state != CombatState.PlayerTurn) return;
+        if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
 
         ActionData attackAction = currentActiveUnit.defaultAttack;
 
@@ -465,7 +536,7 @@ public class CombatManager : MonoBehaviour
 
     public void OnSkillsClicked()
     {
-        if (state != CombatState.PlayerTurn) return;
+        if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
 
         if (currentOpenMenu == OpenMenuType.Skills)
         {
@@ -502,7 +573,7 @@ public class CombatManager : MonoBehaviour
 
     public void OnItemsClicked()
     {
-        if (state != CombatState.PlayerTurn) return;
+        if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
 
         if (currentOpenMenu == OpenMenuType.Items)
         {
@@ -539,7 +610,7 @@ public class CombatManager : MonoBehaviour
 
     public void OnSkillButtonClicked(ActionData skillAction)
     {
-        if (state != CombatState.PlayerTurn) return;
+        if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
 
         if (currentStains + skillAction.stainChange < 0)
         {
@@ -584,6 +655,7 @@ public class CombatManager : MonoBehaviour
 
     public void OnActionSelected(ActionData action)
     {
+        if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead || action == null) return;
         selectedAction = action;
         currentOpenMenu = OpenMenuType.None;
 
@@ -637,7 +709,15 @@ public class CombatManager : MonoBehaviour
     }
     private IEnumerator ExecuteActionRoutine(BattleUnit attacker, BattleUnit target, ActionData action, bool endTurnAfter = true)
     {
+        if (attacker == null || attacker.IsDead)
+        {
+            if (endTurnAfter) EndCurrentTurn();
+            yield break;
+        }
         state = CombatState.Executing;
+        castStarted.Clear();
+        vfxLaunched.Clear();
+        vfxActionState = new VfxActionState();
 
         if (attacker.isPlayer)
         {
@@ -655,12 +735,8 @@ public class CombatManager : MonoBehaviour
         }
 
         Vector3 originalPosition = attacker.transform.position;
+        Quaternion originalRotation = attacker.transform.rotation;
         isAttackAnimationFinished = false;
-
-        if (attacker.animator != null)
-        {
-            attacker.animator.applyRootMotion = false;
-        }
 
         if (action != null && action.isMelee && target != null && !action.isFriendlyAction && !action.isHeal)
         {
@@ -672,7 +748,12 @@ public class CombatManager : MonoBehaviour
             string animTrigger = !string.IsNullOrEmpty(action.animationTriggerName) ? action.animationTriggerName : "Attack";
             attacker.animator.SetTrigger(animTrigger);
 
-            yield return new WaitUntil(() => isAttackAnimationFinished);
+            yield return new WaitUntil(() => isAttackAnimationFinished || attacker == null || attacker.IsDead);
+            if (attacker == null || attacker.IsDead)
+            {
+                if (endTurnAfter) EndCurrentTurn();
+                yield break;
+            }
 
             attacker.animator.Play("JumpBack");
             yield return StartCoroutine(MoveToPosition(attacker.transform, originalPosition, 0.35f));
@@ -682,12 +763,27 @@ public class CombatManager : MonoBehaviour
             string animTrigger = action != null ? action.animationTriggerName : "Attack";
             attacker.animator.SetTrigger(animTrigger);
 
-            yield return new WaitUntil(() => isAttackAnimationFinished);
+            yield return new WaitUntil(() => isAttackAnimationFinished || attacker == null || attacker.IsDead);
+            if (attacker == null || attacker.IsDead)
+            {
+                if (endTurnAfter) EndCurrentTurn();
+                yield break;
+            }
         }
 
+        // A long flight/charge must resolve before the next action changes the
+        // selected target. Expired or destroyed effects cannot stall the turn.
+        yield return new WaitUntil(() =>
+        {
+            pendingVfxImpacts.RemoveAll(vfx => vfx == null);
+            return pendingVfxImpacts.Count == 0;
+        });
+        StopBeamVFX(attacker);
+        FinishCastVFX(attacker);
         attacker.transform.position = originalPosition;
+        attacker.transform.rotation = originalRotation;
 
-        if (attacker.animator != null)
+        if (!attacker.IsDead && attacker.animator != null)
         {
             attacker.animator.CrossFade("Idle", 0.1f);
         }
@@ -726,6 +822,7 @@ public class CombatManager : MonoBehaviour
 
     public void ApplyDamageFromAnimation(BattleUnit attacker)
     {
+        if (attacker == null || attacker.IsDead) return;
         ActionData actionToUse = selectedAction != null ? selectedAction : attacker.defaultAttack;
         if (actionToUse == null) return;
 
@@ -733,12 +830,12 @@ public class CombatManager : MonoBehaviour
         float calculatedDamage = (totalAtk * actionToUse.damageMultiplier) + actionToUse.power;
         int rawDamage = Mathf.RoundToInt(calculatedDamage);
 
-        int critChance = attacker.baseCrit + attacker.GetBuffValue(ActionData.BuffStat.Crit);
-        bool isCrit = UnityEngine.Random.Range(0, 100) < critChance;
+        bool isCrit = !actionToUse.isFriendlyAction && !actionToUse.isHeal &&
+            UnityEngine.Random.Range(0, 100) < attacker.GetCritChance();
 
         if (isCrit && !actionToUse.isFriendlyAction)
         {
-            rawDamage = Mathf.RoundToInt(rawDamage * 1.5f);
+            rawDamage = Mathf.RoundToInt(rawDamage * attacker.GetCritDamageMultiplier());
         }
 
         if (attacker.isPlayer)
@@ -772,8 +869,9 @@ public class CombatManager : MonoBehaviour
 
                 foreach (var enemy in targets)
                 {
-                    // Hit VFX dùng chung mốc thời gian với Animation Event gây damage.
-                    SpawnActionHitVFX(actionToUse, enemy);
+                    // Melee/explicit animation timing uses this event. Ranged
+                    // impact-timed VFX is emitted by the visual arrival callback.
+                    if (!UsesVfxImpact(actionToUse)) SpawnActionHitVFX(actionToUse, enemy);
 
                     int hpBefore = enemy.currentHP;
                     enemy.TakeDamage(rawDamage, false);
@@ -786,6 +884,7 @@ public class CombatManager : MonoBehaviour
         else
         {
             bool parried = ParrySystem.Instance.parrySuccessful;
+            vfxActionState.parried = parried;
             List<BattleUnit> targets = actionToUse.isAoE ? playerParty.Where(u => u.currentHP > 0).ToList() : new List<BattleUnit> { currentTarget };
 
             foreach (var ally in targets)
@@ -797,7 +896,7 @@ public class CombatManager : MonoBehaviour
                 if (!parried)
                 {
                     // Parry thành công thì không hiện hiệu ứng trúng đòn.
-                    SpawnActionHitVFX(actionToUse, ally);
+                    if (!UsesVfxImpact(actionToUse)) SpawnActionHitVFX(actionToUse, ally);
                     AdvancedUIManager.Instance.ShowDamageText(ally.transform, actualDamageTaken, isCrit, false);
                 }
             }
@@ -807,7 +906,7 @@ public class CombatManager : MonoBehaviour
 
     private void PlayVFX(BattleUnit attacker, BattleUnit target, ActionData action)
     {
-        if (action == null || action.vfxPrefab == null || target == null) return;
+        if (attacker == null || attacker.IsDead || action == null || action.vfxPrefab == null || target == null) return;
 
         List<BattleUnit> targetList = new List<BattleUnit>();
 
@@ -846,6 +945,7 @@ public class CombatManager : MonoBehaviour
             {
                 // Giữ đúng hành vi cũ: SpawnAtTarget sinh ngay tại transform.position của target.
                 GameObject vfx = Instantiate(action.vfxPrefab, u.transform.position, u.transform.rotation);
+                TrackCombatVFX(vfx);
                 Destroy(vfx, 2f);
             }
 
@@ -855,24 +955,50 @@ public class CombatManager : MonoBehaviour
         // =========================================================
         // PROJECTILE
         // =========================================================
-        if (action.vfxType != ActionData.VfxType.Shoot) return;
+        if (action.vfxType != ActionData.VfxType.Shoot &&
+            action.vfxType != ActionData.VfxType.Beam) return;
 
-        Transform spawnTransform = attacker.handTransform != null
-            ? attacker.handTransform
-            : attacker.transform;
+        Transform spawnTransform = attacker.VfxOrigin;
 
         Vector3 startPos = spawnTransform.TransformPoint(action.projectileStartOffset);
 
         foreach (BattleUnit u in targetList.Where(u => u != null && u.currentHP > 0))
         {
-            Vector3 targetPos = u.transform.position + action.projectileTargetOffset;
+            Vector3 targetPos = u.GetVfxTargetPosition(action.projectileTargetOffset);
             Vector3 directionToTarget = targetPos - startPos;
 
             Quaternion rotation = directionToTarget.sqrMagnitude > 0.0001f
                 ? Quaternion.LookRotation(directionToTarget.normalized, Vector3.up)
                 : spawnTransform.rotation;
 
-            GameObject vfx = Instantiate(action.vfxPrefab, startPos, rotation);
+            // Configure while inactive: RFX4 raycasts run in OnEnable and can
+            // otherwise hit the caster or create an unwanted impact immediately.
+            GameObject staging = new GameObject("Combat VFX Setup");
+            staging.SetActive(false);
+            GameObject vfx = Instantiate(action.vfxPrefab, startPos, rotation, staging.transform);
+            vfx.SetActive(false);
+
+            if (action.vfxType == ActionData.VfxType.Beam)
+            {
+                DisableRFX4Movement(vfx);
+                CombatBeamVfx beam = vfx.AddComponent<CombatBeamVfx>();
+                beam.Initialize(attacker, u, action, CreateImpactCallback(vfx, attacker, u, action));
+                activeBeams.RemoveAll(item => item == null);
+                activeBeams.Add(beam);
+                ActivateCombatVfx(vfx, staging, action.vfxLifeTime);
+                continue;
+            }
+
+            if (action.projectileMoveMode != ActionData.ProjectileMoveMode.RFX4Prefab)
+                DisableRFX4Movement(vfx);
+            else
+                SetupRFX4Projectile(vfx, action);
+
+            System.Action impact = CreateImpactCallback(vfx, attacker, u, action);
+            if (action.projectileMoveMode == ActionData.ProjectileMoveMode.RFX4Prefab)
+                BindRFX4Impact(vfx, u, action, impact);
+
+            ActivateCombatVfx(vfx, staging, action.vfxLifeTime);
 
             switch (action.projectileMoveMode)
             {
@@ -881,11 +1007,11 @@ public class CombatManager : MonoBehaviour
                 // -------------------------------------------------
                 case ActionData.ProjectileMoveMode.Straight:
                     {
-                        DisableRFX4Movement(vfx);
                         StartCoroutine(MoveVFXRoutine(
                             vfx,
                             targetPos,
-                            action.vfxSpeed));
+                            action.vfxSpeed,
+                            impact, u, action.projectileTargetOffset));
                         break;
                     }
 
@@ -894,7 +1020,6 @@ public class CombatManager : MonoBehaviour
                 // -------------------------------------------------
                 case ActionData.ProjectileMoveMode.RFX4Prefab:
                     {
-                        SetupRFX4Projectile(vfx, action);
                         break;
                     }
 
@@ -903,16 +1028,72 @@ public class CombatManager : MonoBehaviour
                 // -------------------------------------------------
                 case ActionData.ProjectileMoveMode.BezierCurve:
                     {
-                        DisableRFX4Movement(vfx);
                         StartCoroutine(MoveVFXBezierRoutine(
                             vfx,
                             targetPos,
                             action.vfxSpeed,
                             action.curveHeight,
-                            action.curveSideOffset));
+                            action.curveSideOffset,
+                            impact, u, action.projectileTargetOffset));
                         break;
                     }
             }
+        }
+    }
+
+    private void ActivateCombatVfx(GameObject vfx, GameObject staging, float lifetime)
+    {
+        TrackCombatVFX(vfx);
+        vfx.transform.SetParent(null, true);
+        vfx.SetActive(true);
+        Destroy(staging);
+        Destroy(vfx, Mathf.Max(0.1f, lifetime));
+    }
+
+    private static bool UsesVfxImpact(ActionData action)
+    {
+        return action != null && action.vfxPrefab != null &&
+            action.hitVfxTiming == ActionData.HitVfxTiming.VfxImpact &&
+            (action.vfxType == ActionData.VfxType.Shoot || action.vfxType == ActionData.VfxType.Beam);
+    }
+
+    private System.Action CreateImpactCallback(GameObject vfx, BattleUnit attacker,
+        BattleUnit target, ActionData action)
+    {
+        pendingVfxImpacts.Add(vfx);
+        VfxActionState actionState = vfxActionState;
+        bool completed = false;
+        return () =>
+        {
+            if (completed) return;
+            completed = true;
+            pendingVfxImpacts.Remove(vfx);
+            bool parried = attacker != null && !attacker.isPlayer &&
+                (actionState.parried || (ParrySystem.Instance != null && ParrySystem.Instance.parrySuccessful));
+            if (UsesVfxImpact(action) && !parried && target != null)
+                SpawnActionHitVFX(action, target);
+        };
+    }
+
+    private void BindRFX4Impact(GameObject vfx, BattleUnit target, ActionData action, System.Action impact)
+    {
+        System.EventHandler<RFX4_PhysicsMotion.RFX4_CollisionInfo> onCollision = (sender, info) =>
+        {
+            BattleUnit hitUnit = info.HitCollider != null
+                ? info.HitCollider.GetComponentInParent<BattleUnit>() : null;
+            if (hitUnit == target) impact();
+        };
+        foreach (RFX4_PhysicsMotion motion in vfx.GetComponentsInChildren<RFX4_PhysicsMotion>(true))
+        {
+            motion.CollisionEnter += onCollision;
+            // Combat owns the configured hit effect: do not spawn a second
+            // copy from the vendor's collision handler.
+            if (action.hitVfxPrefab != null) motion.EffectOnCollision = null;
+        }
+        foreach (RFX4_RaycastCollision ray in vfx.GetComponentsInChildren<RFX4_RaycastCollision>(true))
+        {
+            ray.CollisionEnter += onCollision;
+            if (action.hitVfxPrefab != null) ray.Effects = new GameObject[0];
         }
     }
 
@@ -974,9 +1155,7 @@ public class CombatManager : MonoBehaviour
             settings.UseGravity = action.rfxUseGravity;
         }
 
-        // Không gán action.hitVfxPrefab vào EffectOnCollision nữa.
-        // Hit VFX được spawn duy nhất tại ApplyDamageFromAnimation để đồng bộ
-        // chính xác với Animation Event gây damage và tránh nổ VFX hai lần.
+        // BindRFX4Impact owns collision callbacks and prevents duplicate hits.
 
         // RFX4_PhysicsMotion không tự Destroy root projectile sau collision.
         Destroy(vfx, action.vfxLifeTime);
@@ -984,29 +1163,69 @@ public class CombatManager : MonoBehaviour
 
     public void PlayCastVFXFromAnimation(BattleUnit attacker)
     {
+        if (attacker == null || attacker.IsDead || castStarted.Contains(attacker) || vfxLaunched.Contains(attacker)) return;
         ActionData currentAction = attacker.isPlayer
             ? selectedAction
             : (selectedAction != null ? selectedAction : attacker.defaultAttack);
 
         if (currentAction != null && currentAction.castVfxPrefab != null)
         {
-            Transform spawnPoint = attacker.handTransform != null
-                ? attacker.handTransform
-                : attacker.transform;
-
-            GameObject castVfx = Instantiate(
-                currentAction.castVfxPrefab,
-                spawnPoint.position,
-                spawnPoint.rotation,
-                spawnPoint);
-
-            Destroy(castVfx, 1.5f);
+            castStarted.Add(attacker);
+            var instances = new List<GameObject>(2);
+            castInstances[attacker] = instances;
+            if (attacker.handTransform != null)
+                instances.Add(SpawnCastVFXAtPoint(attacker.handTransform, currentAction));
+            if (attacker.leftHandTransform != null && attacker.leftHandTransform != attacker.handTransform)
+                instances.Add(SpawnCastVFXAtPoint(attacker.leftHandTransform, currentAction));
+            if (instances.Count == 0)
+                instances.Add(SpawnCastVFXAtPoint(attacker.transform, currentAction));
         }
+    }
+
+    private GameObject SpawnCastVFXAtPoint(Transform spawnPoint, ActionData currentAction)
+    {
+        GameObject staging = new GameObject("Combat Cast Setup");
+        staging.SetActive(false);
+
+        GameObject castVfx = Instantiate(
+            currentAction.castVfxPrefab,
+            spawnPoint.position,
+            spawnPoint.rotation,
+            staging.transform);
+
+        castVfx.SetActive(false);
+        if (currentAction.vfxType == ActionData.VfxType.Beam)
+        {
+            RFX4_PlaybackSpeed playback = castVfx.GetComponent<RFX4_PlaybackSpeed>();
+            if (playback == null) playback = castVfx.AddComponent<RFX4_PlaybackSpeed>();
+            playback.playbackSpeed = Mathf.Max(0.01f, currentAction.beamPlaybackSpeed);
+        }
+        castVfx.transform.SetParent(spawnPoint, true);
+        TrackCombatVFX(castVfx);
+        castVfx.SetActive(true);
+        Destroy(staging);
+
+        Destroy(castVfx, GetVfxLifeTime(castVfx, currentAction.castVfxLifeTime));
+        return castVfx;
+    }
+
+    private void FinishCastVFX(BattleUnit attacker)
+    {
+        if (!castInstances.TryGetValue(attacker, out List<GameObject> instances)) return;
+        // Stop ongoing charging, allowing one-shot flashes and existing
+        // particles to finish instead of cutting them at an arbitrary 1.5 s.
+        foreach (GameObject cast in instances)
+        {
+            if (cast == null) continue;
+            foreach (ParticleSystem particles in cast.GetComponentsInChildren<ParticleSystem>(true))
+                if (particles.main.loop) particles.Stop(false, ParticleSystemStopBehavior.StopEmitting);
+        }
+        castInstances.Remove(attacker);
     }
 
     public void PlayVFXFromAnimation(BattleUnit attacker)
     {
-        if (attacker == null) return;
+        if (attacker == null || attacker.IsDead) return;
 
         ActionData currentAction = attacker.isPlayer
             ? selectedAction
@@ -1014,6 +1233,11 @@ public class CombatManager : MonoBehaviour
 
         if (currentAction != null && currentAction.vfxPrefab != null)
         {
+            // Handle clips with a missing or later cast event without playing
+            // the cast again after the projectile has already launched.
+            PlayCastVFXFromAnimation(attacker);
+            vfxLaunched.Add(attacker);
+            FinishCastVFX(attacker);
             PlayVFX(attacker, currentTarget, currentAction);
         }
     }
@@ -1024,14 +1248,17 @@ public class CombatManager : MonoBehaviour
     private IEnumerator MoveVFXRoutine(
         GameObject vfx,
         Vector3 targetPos,
-        float speed)
+        float speed,
+        System.Action onImpact, BattleUnit target, Vector3 targetOffset)
     {
         if (vfx == null) yield break;
 
         speed = Mathf.Max(0.01f, speed);
 
-        while (vfx != null && Vector3.Distance(vfx.transform.position, targetPos) > 0.1f)
+        while (vfx != null)
         {
+            if (target != null) targetPos = target.GetVfxTargetPosition(targetOffset);
+            if (Vector3.Distance(vfx.transform.position, targetPos) <= 0.1f) break;
             Vector3 oldPosition = vfx.transform.position;
             Vector3 newPosition = Vector3.MoveTowards(
                 oldPosition,
@@ -1046,12 +1273,14 @@ public class CombatManager : MonoBehaviour
                 vfx.transform.rotation = Quaternion.LookRotation(moveDirection.normalized, Vector3.up);
             }
 
+            if (Vector3.Distance(newPosition, targetPos) <= 0.1f) break;
             yield return null;
         }
 
         if (vfx != null)
         {
             vfx.transform.position = targetPos;
+            onImpact?.Invoke();
             Destroy(vfx);
         }
 
@@ -1066,7 +1295,8 @@ public class CombatManager : MonoBehaviour
         Vector3 targetPos,
         float speed,
         float curveHeight,
-        float curveSideOffset)
+        float curveSideOffset,
+        System.Action onImpact, BattleUnit target, Vector3 targetOffset)
     {
         if (vfx == null) yield break;
 
@@ -1094,6 +1324,7 @@ public class CombatManager : MonoBehaviour
 
         while (vfx != null && elapsed < duration)
         {
+            if (target != null) targetPos = target.GetVfxTargetPosition(targetOffset);
             elapsed += Time.deltaTime;
             float t = Mathf.Clamp01(elapsed / duration);
 
@@ -1115,12 +1346,14 @@ public class CombatManager : MonoBehaviour
                 vfx.transform.rotation = Quaternion.LookRotation(tangent.normalized, Vector3.up);
             }
 
+            if (t >= 1f) break;
             yield return null;
         }
 
         if (vfx != null)
         {
             vfx.transform.position = targetPos;
+            onImpact?.Invoke();
             Destroy(vfx);
         }
 
@@ -1146,21 +1379,46 @@ public class CombatManager : MonoBehaviour
 
         // Dùng cùng offset với điểm đích của projectile để VFX nằm đúng vị trí va chạm.
         Vector3 hitPosition = target.transform.position + action.projectileTargetOffset;
-        SpawnHitVFX(action.hitVfxPrefab, hitPosition);
+        SpawnHitVFX(action.hitVfxPrefab, hitPosition, action.hitVfxLifeTime);
     }
 
-    private void SpawnHitVFX(GameObject hitPrefab, Vector3 position)
+    private void SpawnHitVFX(GameObject hitPrefab, Vector3 position, float lifetime)
     {
         if (hitPrefab == null) return;
 
         GameObject hitVfx = Instantiate(hitPrefab, position, Quaternion.identity);
-        Destroy(hitVfx, 2f);
+        TrackCombatVFX(hitVfx);
+        Destroy(hitVfx, GetVfxLifeTime(hitVfx, lifetime));
+    }
+
+    private static float GetVfxLifeTime(GameObject vfx, float minimumLifetime)
+    {
+        float lifetime = Mathf.Max(0.1f, minimumLifetime);
+        foreach (ParticleSystem particles in vfx.GetComponentsInChildren<ParticleSystem>(true))
+        {
+            var main = particles.main;
+            if (main.loop) continue; // Looping effects use the configured timeout.
+            float duration = main.startDelay.constantMax + main.duration + main.startLifetime.constantMax;
+            lifetime = Mathf.Max(lifetime, duration / Mathf.Max(0.01f, main.simulationSpeed));
+        }
+        return lifetime;
     }
 
     public void EndCurrentTurn()
     {
         if (isTransitioningTurn) return;
         isTransitioningTurn = true;
+        state = CombatState.Executing;
+        turnTransitionRoutine = StartCoroutine(FinishTurnAfterVfx());
+    }
+
+    private IEnumerator FinishTurnAfterVfx()
+    {
+        // Keep the outgoing turn's effects visible before clearing them.
+        // The next unit cannot create new effects until this cleanup finishes.
+        yield return new WaitForSeconds(Mathf.Max(0f, turnVfxCleanupDelay));
+        ClearCombatVFX();
+        turnTransitionRoutine = null;
 
         SetupPositions();
         AdvancedUIManager.Instance.RemoveFirstPortrait();
@@ -1178,7 +1436,7 @@ public class CombatManager : MonoBehaviour
 
     public void SetTargetUnit(BattleUnit newTarget)
     {
-        if (state != CombatState.PlayerTurn) return;
+        if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
 
         if (newTarget != null && newTarget.currentHP > 0)
         {
