@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 532a234c595fb3944bb8626c21ed8968, type: 3}
+  m_Name: vfx20
+  m_EditorClassIdentifier: Assembly-CSharp::ActionData
+  actionName: b
+  description: 
+  icon: {fileID: 21300000, guid: 742198cc0ec8f0143b32a726fe61f028, type: 3}
+  type: 1
+  power: 5
+  damageMultiplier: 1
+  isHeal: 0
+  animationTriggerName: Attack20
+  isFriendlyAction: 0
+  isAoE: 0
+  isSelfOnly: 0
+  stainChange: 0
+  buffStat: 0
+  buffAmount: 5
+  buffDuration: 3
+  isMelee: 1
+  vfxType: 2
+  vfxPrefab: {fileID: 1601494591900918, guid: adc86087c1be2744a9fc0c6b4dfdb0f6, type: 3}
+  castVfxPrefab: {fileID: 160412, guid: 0716ff45e57149d489f0f1947875edbe, type: 3}
+  hitVfxPrefab: {fileID: 0}
+  projectileMoveMode: 0
+  vfxSpeed: 15
+  vfxLifeTime: 5
+  projectileStartOffset: {x: 0, y: 0, z: 0}
+  projectileTargetOffset: {x: 0, y: 1, z: 0}
+  curveHeight: 2
+  curveSideOffset: 0
+  rfxUseGravity: 0

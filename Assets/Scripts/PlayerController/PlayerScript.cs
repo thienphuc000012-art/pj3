@@ -114,6 +114,30 @@ public class PlayerScript : MonoBehaviour
     public float jumpForce = 5f;
     bool wasOnSurface;
 
+    [Header("Fall & Landing")]
+    [Tooltip("Phai roi it nhat bao nhieu met moi phat animation Land.")]
+    [SerializeField] private float minLandingFallDistance = 0.45f;
+
+    [Tooltip("Toc do roi toi thieu moi duoc coi la landing.")]
+    [SerializeField] private float minLandingFallSpeed = -2.5f;
+
+    [Tooltip("Roi it nhat bao nhieu met moi chuyen sang Falling.")]
+    [SerializeField] private float minFallingDistance = 0.45f;
+
+    [Tooltip("Phai o tren khong it nhat bao lau moi duoc coi la Falling.")]
+    [SerializeField] private float minFallingAirTime = 0.10f;
+
+    [Tooltip("Neu da vao Falling nhung cham dat voi cu roi nho, blend thang ve Basic Movement de khong bi ket animation.")]
+    [SerializeField] private float smallDropRecoveryBlend = 0.08f;
+
+    [Tooltip("Ten state locomotion trong Animator.")]
+    [SerializeField] private string basicMovementStateName = "Base Layer.Basic Movement";
+
+    private float airbornePeakY;
+    private float airTime;
+    private bool trackingAirborne;
+    private bool fallingAnimationActive;
+
     private void Awake()
     {
         // MatchTarget yêu cầu Apply Root Motion phải được bật.
@@ -153,10 +177,69 @@ public class PlayerScript : MonoBehaviour
         wasOnSurface = onSurface;
         SurfaceCheck();
 
-        // KIỂM TRA TIẾP ĐẤT (LANDING)
-        if (!wasOnSurface && onSurface && !playerInAction && !isClimbingLadder)
+        // =========================================================
+        // FALL / LANDING TRACKING
+        // - Khong kich hoat Falling/Land chi vi mat ground 1-2 frame.
+        // - Chi Land khi Player that su roi du xa va du nhanh.
+        // =========================================================
+        if (!onSurface && !isClimbingLadder)
         {
-            animator.SetTrigger("Land");
+            if (!trackingAirborne)
+            {
+                trackingAirborne = true;
+                airbornePeakY = transform.position.y;
+                airTime = 0f;
+            }
+
+            if (transform.position.y > airbornePeakY)
+                airbornePeakY = transform.position.y;
+
+            airTime += Time.deltaTime;
+        }
+
+        if (!wasOnSurface &&
+            onSurface &&
+            trackingAirborne &&
+            !playerInAction &&
+            !isClimbingLadder)
+        {
+            float fallDistance = Mathf.Max(0f, airbornePeakY - transform.position.y);
+            bool fellFarEnough = fallDistance >= minLandingFallDistance;
+            bool fellFastEnough = fallingSpeed <= minLandingFallSpeed;
+
+            bool shouldPlayLanding = fellFarEnough && fellFastEnough;
+
+            // Vua cham dat thi Falling phai tat NGAY, bat ke cu roi lon hay nho.
+            animator.SetBool("IsFalling", false);
+            animator.SetBool("OnSurface", true);
+
+            if (shouldPlayLanding)
+            {
+                animator.SetTrigger("Land");
+            }
+            else
+            {
+                // Cu roi nho: KHONG phat Land.
+                // Neu Animator da kip vao fallingidle thi dua no ve locomotion ngay,
+                // tranh truong hop bi ket o fallingidle vi khong co Land trigger.
+                animator.ResetTrigger("Land");
+
+                if (fallingAnimationActive &&
+                    !string.IsNullOrEmpty(basicMovementStateName))
+                {
+                    animator.CrossFadeInFixedTime(
+                        basicMovementStateName,
+                        Mathf.Max(0.01f, smallDropRecoveryBlend),
+                        0,
+                        0f
+                    );
+                }
+            }
+
+            fallingAnimationActive = false;
+            trackingAirborne = false;
+            airTime = 0f;
+            airbornePeakY = transform.position.y;
         }
 
         if (onSurface && !isClimbingLadder)
@@ -202,8 +285,21 @@ public class PlayerScript : MonoBehaviour
         animator.SetBool("OnSurface", onSurface);
         animator.SetFloat("VerticalSpeed", fallingSpeed);
 
-        bool isFalling = !onSurface && fallingSpeed <= 0.1f && !isClimbingLadder;
+        float currentFallDistance = 0f;
+        if (trackingAirborne)
+            currentFallDistance = Mathf.Max(0f, airbornePeakY - transform.position.y);
+
+        bool isFalling =
+            !onSurface &&
+            !isClimbingLadder &&
+            fallingSpeed < -0.5f &&
+            airTime >= minFallingAirTime &&
+            currentFallDistance >= minFallingDistance;
+
         animator.SetBool("IsFalling", isFalling);
+
+        if (isFalling)
+            fallingAnimationActive = true;
 
         // --- CẬP NHẬT ANIMATOR CHO LEO THANG ---
         animator.SetBool("IsClimbing", isClimbingLadder);

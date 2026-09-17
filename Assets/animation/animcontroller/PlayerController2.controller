@@ -403,10 +403,10 @@ AnimatorStateMachine:
     m_Position: {x: 180, y: 170, z: 0}
   - serializedVersion: 1
     m_State: {fileID: -5897463637883555158}
-    m_Position: {x: -30, y: -20, z: 0}
+    m_Position: {x: -30, y: -50, z: 0}
   - serializedVersion: 1
     m_State: {fileID: -2263036967664347865}
-    m_Position: {x: -40, y: 90, z: 0}
+    m_Position: {x: -40, y: 140, z: 0}
   - serializedVersion: 1
     m_State: {fileID: -1825390782046158047}
     m_Position: {x: -30, y: 30, z: 0}
@@ -927,9 +927,6 @@ AnimatorStateTransition:
   m_Conditions:
   - m_ConditionMode: 1
     m_ConditionEvent: IsFalling
-    m_EventTreshold: 0
-  - m_ConditionMode: 2
-    m_ConditionEvent: OnSurface
     m_EventTreshold: 0
   m_DstStateMachine: {fileID: 0}
   m_DstState: {fileID: -1825390782046158047}

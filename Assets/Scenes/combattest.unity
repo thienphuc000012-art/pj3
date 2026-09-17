@@ -1505,7 +1505,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!23 &179522350
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -3446,7 +3446,7 @@ MonoBehaviour:
   defaultAttack: {fileID: 11400000, guid: fcb0cc7c27be4104a89d579861c52117, type: 2}
   characterSkills:
   - {fileID: 11400000, guid: e288a344a0ee08f42bee7a0c4f10bd03, type: 2}
-  - {fileID: 11400000, guid: e8dbd2482ab38d84687f031f56b141df, type: 2}
+  - {fileID: 11400000, guid: 8857ea3dcd9fe2d40af5ba89b021f793, type: 2}
   - {fileID: 11400000, guid: 687fee65e17fe374abdddeacc3671564, type: 2}
   - {fileID: 11400000, guid: bfae87a977bf73f4c86d8a2fcf86b009, type: 2}
   isBoss: 0
@@ -7850,7 +7850,7 @@ MonoBehaviour:
   phase2IntroDuration: 2.5
   phase2IntroPlayed: 0
   lastTarget: {fileID: 0}
-  speed: 20
+  speed: 10
   unitPortrait: {fileID: 21300000, guid: 82361fa11de5cc34386d1b5565ad8f5a, type: 3}
   isPlayer: 1
   handTransform: {fileID: 1410646031}
