@@ -70,6 +70,13 @@ public class BattleUnit : MonoBehaviour
     public Sprite unitPortrait;
     public int currentHP { get; private set; }
     public bool IsDead => currentHP <= 0;
+    public void SetPersistentHP(int hp)
+    {
+        currentHP = Mathf.Clamp(hp, 0, maxHP);
+        activeBuffs.Clear();
+        if (IsDead && animator != null) animator.SetTrigger("Die");
+        UpdateUI();
+    }
     public bool isPlayer;
 
     [Header("VFX References")]

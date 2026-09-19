@@ -35,6 +35,7 @@ public class ShimmyController : MonoBehaviour
 
     private void Update()
     {
+        if (CampaignSession.InputBlocked) return;
         // 1. Nếu không ở trạng thái leo trèo thì reset shimmy
         if (!playerClimbScript.isClimbing)
         {

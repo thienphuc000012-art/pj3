@@ -90,6 +90,7 @@ public class PlayerClimb : MonoBehaviour
 
     private void Update()
     {
+        if (CampaignSession.InputBlocked) return;
         // Khi đang LedgeToClimb: KHÔNG đọc bất kỳ input climb nào.
         // Đồng thời giữ CharacterController và player control bị khóa trong toàn bộ animation.
         if (roofClimbInputLocked)

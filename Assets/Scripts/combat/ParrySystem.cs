@@ -65,6 +65,7 @@ public class ParrySystem : MonoBehaviour
                 // CombatManager đang dùng cùng một parrySuccessful cho toàn bộ
                 // targets của AoE, nên true = cả Party chặn đòn.
                 parrySuccessful = true;
+                combat.GetComponent<BattleResultPanel>()?.RecordParry();
                 isParryWindowOpen = false;
 
                 // Hiện chữ PARRY riêng trên đầu từng thành viên còn sống.
@@ -107,6 +108,7 @@ public class ParrySystem : MonoBehaviour
         if (isParryWindowOpen)
         {
             parrySuccessful = true;
+            combat.GetComponent<BattleResultPanel>()?.RecordParry();
             isParryWindowOpen = false;
 
             if (AdvancedUIManager.Instance != null)

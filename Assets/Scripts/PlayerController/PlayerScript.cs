@@ -169,6 +169,7 @@ public class PlayerScript : MonoBehaviour
 
     private void Update()
     {
+        if (CampaignSession.InputBlocked) return;
         if (!playerControl || playerHanging || isMountingLadder)
             return;
 

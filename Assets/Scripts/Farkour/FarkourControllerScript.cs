@@ -17,6 +17,7 @@ public class FarkourControllerScript : MonoBehaviour
 
     void Update()
     {
+        if (CampaignSession.InputBlocked) return;
         if (Input.GetButtonDown("Jump") && !playerScript.playerInAction && !playerScript.playerHanging)
         {
             bool isParkourPerformed = false;

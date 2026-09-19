@@ -225,6 +225,7 @@ public class MainCameraController : MonoBehaviour
 
     private void Update()
     {
+        if (CampaignSession.InputBlocked) return;
         HandleCursor();
 
 

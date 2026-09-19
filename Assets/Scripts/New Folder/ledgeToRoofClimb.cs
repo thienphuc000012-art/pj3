@@ -42,6 +42,7 @@ public class LedgeToRoofClimb : MonoBehaviour
 
     private void Update()
     {
+        if (CampaignSession.InputBlocked) return;
         if (playerClimb.isClimbing &&
             !playerClimb.isHopping &&
             !playerClimb.IsEnteringLedge &&

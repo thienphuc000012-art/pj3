@@ -132,6 +132,9 @@ public class CombatManager : MonoBehaviour
 
     void Start()
     {
+        if (GetComponent<BattleResultPanel>() == null) gameObject.AddComponent<BattleResultPanel>();
+        if (CampaignSession.Instance != null && CampaignSession.Instance.InEncounter)
+            CampaignSession.Instance.PrepareBattle(this);
         state = CombatState.Start;
         SetupPositions();
 
@@ -156,7 +159,7 @@ public class CombatManager : MonoBehaviour
 
         AdvancedUIManager.Instance.ToggleAllUI(false);
 
-        foreach (var p in playerParty.Where(u => u != null && u.animator != null))
+        foreach (var p in playerParty.Where(u => u != null && !u.IsDead && u.animator != null))
         {
             p.animator.SetTrigger("BattleStart");
         }
@@ -426,6 +429,17 @@ public class CombatManager : MonoBehaviour
         }
     }
 
+    private void CompleteBattle(bool victory)
+    {
+        state = victory ? CombatState.Won : CombatState.Lost;
+        AdvancedUIManager.Instance.ToggleAllUI(false);
+        ClearCombatVFX();
+        if (CampaignSession.Instance != null && CampaignSession.Instance.InEncounter)
+            CampaignSession.Instance.FinishBattle(this, victory);
+        else Debug.Log(victory ? "WIN!" : "LOSE!");
+        GetComponent<BattleResultPanel>().Show(victory);
+    }
+
     void StartNextUnitTurn()
     {
         isTransitioningTurn = false;
@@ -440,8 +454,8 @@ public class CombatManager : MonoBehaviour
 
         AdvancedUIManager.Instance.UpdateStainsUI(currentStains, 0);
 
-        if (enemyParty.All(e => e.currentHP <= 0)) { state = CombatState.Won; Debug.Log("WIN!"); return; }
-        if (playerParty.All(p => p.currentHP <= 0)) { state = CombatState.Lost; Debug.Log("LOSE!"); return; }
+        if (enemyParty.All(e => e.currentHP <= 0)) { CompleteBattle(true); return; }
+        if (playerParty.All(p => p.currentHP <= 0)) { CompleteBattle(false); return; }
 
         currentActiveUnit = allUnitsTimeline[currentTimelineIndex];
 
@@ -656,6 +670,11 @@ public class CombatManager : MonoBehaviour
     public void OnActionSelected(ActionData action)
     {
         if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead || action == null) return;
+        if (action.type == ActionData.ActionType.Item && CampaignSession.Instance != null && CampaignSession.Instance.InEncounter)
+        {
+            if (currentTarget == null || currentTarget.IsDead || !CampaignSession.Instance.ConsumeBattleItem(action)) return;
+            CampaignSession.Instance.RefreshBattleItems(this);
+        }
         selectedAction = action;
         currentOpenMenu = OpenMenuType.None;
 
@@ -822,6 +841,7 @@ public class CombatManager : MonoBehaviour
 
     public void ApplyDamageFromAnimation(BattleUnit attacker)
     {
+        if (state == CombatState.Won || state == CombatState.Lost) return;
         if (attacker == null || attacker.IsDead) return;
         ActionData actionToUse = selectedAction != null ? selectedAction : attacker.defaultAttack;
         if (actionToUse == null) return;
@@ -876,6 +896,7 @@ public class CombatManager : MonoBehaviour
                     int hpBefore = enemy.currentHP;
                     enemy.TakeDamage(rawDamage, false);
                     int actualDamageTaken = hpBefore - enemy.currentHP;
+                    GetComponent<BattleResultPanel>()?.RecordDamage(true, actualDamageTaken);
 
                     AdvancedUIManager.Instance.ShowDamageText(enemy.transform, actualDamageTaken, isCrit, false);
                 }
@@ -892,6 +913,7 @@ public class CombatManager : MonoBehaviour
                 int hpBefore = ally.currentHP;
                 ally.TakeDamage(rawDamage, parried);
                 int actualDamageTaken = hpBefore - ally.currentHP;
+                GetComponent<BattleResultPanel>()?.RecordDamage(false, actualDamageTaken);
 
                 if (!parried)
                 {

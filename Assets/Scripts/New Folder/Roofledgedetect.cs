@@ -21,6 +21,7 @@ public class RoofLedgeDetection : MonoBehaviour
 
     private void Update()
     {
+        if (CampaignSession.InputBlocked) return;
         if (!playerClimbScript.isClimbing)
         {
             for (int i = 0; i < rayAmount; i++)
