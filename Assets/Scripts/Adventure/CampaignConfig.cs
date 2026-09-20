@@ -9,6 +9,8 @@ public class CampaignConfig : ScriptableObject
     public string mapScene = "mapgame";
     public string battleScene = "combattest";
     public List<BattleUnit> startingParty = new List<BattleUnit>();
+    public List<PartyPreviewImage> partyPreviews = new List<PartyPreviewImage>();
+    public Sprite PreviewImage(BattleUnit member) => partyPreviews?.Find(x => x != null && x.member == member)?.image;
     public BattleUnit demoEnemy;
     public List<AdventureItem> items = new List<AdventureItem>();
     public List<CraftRecipe> recipes = new List<CraftRecipe>();
@@ -18,6 +20,13 @@ public class CampaignConfig : ScriptableObject
     public SkillUnlockRule SkillRule(ActionData skill) => skillUnlocks?.Find(x => x != null && x.skill == skill);
     public ActionData[] UnlockPrerequisites(ActionData skill) => SkillRule(skill)?.prerequisites?.Where(x => x != null).Distinct().ToArray() ?? new ActionData[0];
     public AdventureItem FindItem(string id) => items.Find(x => x.id == id);
+}
+
+[Serializable]
+public class PartyPreviewImage
+{
+    public BattleUnit member;
+    public Sprite image;
 }
 
 [Serializable]
@@ -77,6 +86,20 @@ public class PartyMemberProgress
     public List<SkillRank> skills = new List<SkillRank>();
     public bool loadoutInitialized;
     public List<string> equippedSkills = new List<string>();
+    public bool FillEmptySkillSlots(string[] learned, int capacity)
+    {
+        if (equippedSkills == null) equippedSkills = new List<string>();
+        bool changed = false;
+        while (equippedSkills.Count < capacity) { equippedSkills.Add(""); changed = true; }
+        for (int i = 0; i < capacity; i++)
+        {
+            if (!string.IsNullOrEmpty(equippedSkills[i])) continue;
+            string next = learned.FirstOrDefault(id => !string.IsNullOrEmpty(id) && !equippedSkills.Contains(id));
+            if (next == null) break;
+            equippedSkills[i] = next; changed = true;
+        }
+        return changed;
+    }
     public bool TryEquip(int slot, string id, string[] learned, int capacity)
     {
         if (slot < 0 || slot >= capacity || learned == null || (!string.IsNullOrEmpty(id) && !learned.Contains(id))) return false;

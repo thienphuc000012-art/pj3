@@ -17,7 +17,12 @@ MonoBehaviour:
   startingParty:
   - {fileID: 444026039, guid: dc7d861b0bfa4e2c94d52c1b1bb21402, type: 3}
   - {fileID: 1263546240, guid: 93629340780741a19fadabee6ea03686, type: 3}
-  demoEnemy: {fileID: 1965605815, guid: a3cf033d6ddc489d878c3b0d332e243d, type: 3}
+  partyPreviews:
+  - member: {fileID: 444026039, guid: dc7d861b0bfa4e2c94d52c1b1bb21402, type: 3}
+    image: {fileID: 0}
+  - member: {fileID: 1263546240, guid: 93629340780741a19fadabee6ea03686, type: 3}
+    image: {fileID: 0}
+  demoEnemy: {fileID: 0}
   items:
   - id: herb
     displayName: "Th\u1EA3o d\u01B0\u1EE3c"

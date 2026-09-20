@@ -28,7 +28,8 @@ public class LoadingScreen : MonoBehaviour
         { Error = "Không tìm thấy scene đích hoặc scene Loading trong Build Settings."; Debug.LogError(Error); return false; }
         Error = null; destination = scene; IsLoading = true;
         Time.timeScale = 1;
-        SceneManager.LoadSceneAsync(SceneName);
+        if (MapChunkStreamer.Instance != null) MapChunkStreamer.Instance.TransitionTo(SceneName);
+        else SceneManager.LoadSceneAsync(SceneName);
         return true;
     }
     IEnumerator Start()

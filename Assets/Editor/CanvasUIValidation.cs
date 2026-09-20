@@ -61,7 +61,7 @@ public static class CanvasUIValidation
                         var button = root.Component<Button>("Menu/Party/Member/MoveLeft");
                         button.onClick.Invoke(); Check(clicks == 1, "Native button events");
                         int selected = -1;
-                        var members = root.Rows("Menu/Inventory/Picker/Viewport/Content", 2,
+                        var members = root.Rows("Menu/Party/Member/Picker/Viewport/Content", 2,
                             (row, index) => AdventureCanvasRoot.RowClick(row, "Select", () => selected = index));
                         members[1].GetComponent<Button>().onClick.Invoke();
                         Check(selected == 1 && members[1].GetComponent<Image>().raycastTarget, "Full portrait card selects second member");
@@ -72,6 +72,12 @@ public static class CanvasUIValidation
                         Check(root.Component<Button>("Menu/Inventory/Detail/Use") != null, "Selected item use button");
                         Check(root.Component<Button>("Menu/Attributes/Confirm") != null && root.Component<Button>("Menu/Attributes/Cancel") != null, "Attribute draft confirmation controls");
                         Check(root.Component<Button>("Menu/Attributes/Stats/Viewport/Content/Template/Reduce") != null, "Attribute point removal control");
+                        foreach (string page in new[] { "Attributes", "Skills" })
+                        {
+                            string previewPath = "Menu/" + page + "/CharacterPreview";
+                            Check(root.Component<RectTransform>(previewPath).sizeDelta == new Vector2(250, 650), "Upgrade preview size: " + page);
+                            Check(!root.Component<Image>(previewPath + "/Portrait").raycastTarget && !root.Component<RawImage>(previewPath + "/Render").raycastTarget, "Upgrade previews do not block selection");
+                        }
                         Check(root.Component<RawImage>("Menu/Party/Overview/Cards/Viewport/Content/Template/Preview") != null, "Portrait card render surface");
                         var previewCards = root.Node("Menu/Party/Overview/Cards");
                         Check(previewCards.GetComponentsInChildren<Button>(true).Length == 0 && previewCards.GetComponentsInChildren<Graphic>(true).All(g => !g.raycastTarget), "Main party preview is not interactive");
@@ -94,8 +100,11 @@ public static class CanvasUIValidation
                         AdventureCanvasRoot.RowSelected(rows[0], false);
                         Check(!selectedHighlight.gameObject.activeSelf, "Deselection clears the glow");
                         Check(root.Component<RawImage>("Menu/Party/Member/Preview") != null, "Separate member detail panel");
-                        Check(root.Component<Button>("Menu/Party/Member/Remove") != null && root.Component<Button>("Menu/Party/Member/Slots/Viewport/Content/Template/Select") != null, "Loadout slot controls");
+                        Check(root.Component<Button>("Menu/Party/Member/SkillDialog/Confirm") != null && root.Component<Button>("Menu/Party/Member/Slots/Viewport/Content/Template/Select") != null, "Loadout slot controls");
                         Check(root.Component<TMP_Text>("Menu/Skills/Reason") != null, "Visible skill unlock reason");
+                        Check(root.transform.Find("Menu/Inventory/Picker") == null && root.transform.Find("Menu/Inventory/Summary") == null, "Inventory has no character UI");
+                        Check(root.transform.Find("Menu/Party/Member/Learned") == null && root.Component<Button>("Menu/Party/Member/SkillContext/Change") != null, "Skill list is only in the change dialog");
+                        Check(!root.Node("Menu/Party/Member/SkillDialog").gameObject.activeSelf, "Change dialog starts closed");
                         Check(obj.GetComponentsInChildren<TMP_Text>(true).All(t => !t.text.Contains("\u25c7") && !t.text.Contains("\u25c6")), "Unsupported diamond glyphs removed");
                     }
                 }

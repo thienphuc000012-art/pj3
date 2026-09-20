@@ -6,15 +6,21 @@ public class MapGameSetup : MonoBehaviour
     public CampaignConfig config;
     public PlayerScript player;
     public bool createStarterInteractions = true;
-    private void Start()
+    private System.Collections.IEnumerator Start()
     {
         if (config == null) config = Resources.Load<CampaignConfig>("Adventure/CampaignConfig");
         if (player == null) player = FindFirstObjectByType<PlayerScript>();
-        if (config == null || player == null) { Debug.LogError("MapGameSetup requires campaign config and map player."); return; }
+        if (config == null || player == null) { Debug.LogError("MapGameSetup requires campaign config and map player."); yield break; }
         // Use the original spawn for sample placement, even after loading a save.
         Vector3 origin = player.transform.position;
         var session = CampaignSession.Ensure(config);
         session.BindMap(player);
+        var streaming = GetComponent<MapChunkStreamer>();
+        if (streaming != null)
+        {
+            yield return streaming.Initialize(player);
+            if (!streaming.Ready) yield break;
+        }
         if (createStarterInteractions) CreateStarterPoints(origin);
         session.RefreshWorld();
     }

@@ -25,6 +25,18 @@ public class AdventureCanvasRoot : MonoBehaviour
     TMP_FontAsset runtimeFont;
     void Awake()
     {
+        // Every full-screen UI reads the same background authored in AdventureCanvas.
+        var common = Resources.Load<GameObject>("Adventure/UI/AdventureCanvas");
+        var source = common != null ? common.transform.Find("Menu/Background")?.GetComponent<Image>() : null;
+        var target = transform.Find(kind == AdventureCanvasKind.Adventure ? "Menu/Background" : "Background")?.GetComponent<Image>();
+        if (source != null && target != null) ApplyBackground(source, target);
+        foreach (var path in new[] { "Menu/Party/Overview/Backdrop", "Menu/Party/Member/Backdrop", "Menu/Inventory/Backdrop", "Menu/Rest/Backdrop", "Menu/Attributes/Backdrop", "Menu/Skills/Backdrop", "Menu/Craft/Backdrop" })
+        {
+            var backdrop = transform.Find(path)?.GetComponent<Image>();
+            if (source != null && backdrop != null) ApplyBackground(source, backdrop);
+        }
+        var dialog = transform.Find("Menu/Party/Member/SkillDialog")?.GetComponent<Image>();
+        if (source != null && dialog != null) { dialog.color = source.color; dialog.sprite = source.sprite; dialog.type = source.type; }
         foreach (var preview in GetComponentsInChildren<RawImage>(true))
             if (preview.texture == null) preview.enabled = false;
         if (languageFont != null)
@@ -37,6 +49,11 @@ public class AdventureCanvasRoot : MonoBehaviour
                 if (text.font == defaultFont || text.font == null) text.font = runtimeFont;
         }
         EnsureEventSystem();
+    }
+    static void ApplyBackground(Image source, Image target)
+    {
+        target.sprite = source.sprite; target.color = source.color; target.type = source.type;
+        target.material = source.material; target.enabled = true; target.gameObject.SetActive(true);
     }
     public static AdventureCanvasRoot Acquire(AdventureCanvasKind kind)
     {

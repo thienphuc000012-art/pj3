@@ -149,6 +149,7 @@ public class PlayerScript : MonoBehaviour
 
     private void OnAnimatorMove()
     {
+        if (MapChunkStreamer.MovementBlocked) return;
         if (animator == null)
             return;
 

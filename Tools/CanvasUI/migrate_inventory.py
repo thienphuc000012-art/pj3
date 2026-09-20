@@ -28,7 +28,7 @@ def parse(text):
 
 old, old_owners, old_paths = parse(target.read_text(encoding='utf-8-sig'))
 new, new_owners, new_paths = parse(generated.read_text(encoding='utf-8-sig'))
-scopes = ['Menu/Party', 'HUD/Hints']
+scopes = ['Menu/Party/Overview/Cards/Viewport/Content/Template']
 def affected(path):
     return any(path == 'AdventureCanvas/' + s or path.startswith('AdventureCanvas/' + s + '/') for s in scopes)
 old_ids_by_path = {p:i for i,p in old_paths.items()}

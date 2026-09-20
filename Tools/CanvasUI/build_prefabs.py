@@ -236,6 +236,72 @@ def build_adventure():
   if node['name'] in placements:node['r']=placements[node['name']]
  p.button(member,'MoveLeft',(110,610,320,44),'← Đổi vị trí')
  p.button(member,'MoveRight',(110,670,320,44),'Đổi vị trí →')
+ # One full-screen backdrop shared by every menu page.
+ background=next(c for c in menu['children'] if c['name']=='Background')
+ for index,(cls,fid,title,node,body) in enumerate(p.docs):
+  if node is background and 'm_Color:' in body:
+   body=re.sub(r'm_Color: \{[^}]+\}', 'm_Color: '+color((.035,.11,.21,1)), body)
+   p.docs[index]=(cls,fid,title,node,body)
+ for parent in [overview,member]:
+  next(c for c in parent['children'] if c['name']=='Backdrop')['active']=True
+ inv=pages['Inventory']
+ for node in list(inv['children']):
+  if node['name'] in ['Picker','Summary']:remove(node)
+  elif node['name']=='Items':node['r']=(605,265,710,535)
+  elif node['name']=='Detail':node['r']=(605,825,710,175)
+  elif node['name']=='Empty':node['r']=(605,235,710,30)
+ # Learned skills appear only in the explicit replacement dialog.
+ for node in list(member['children']):
+  if node['name'] in ['Remove','LearnedTitle']:remove(node)
+ context=p.panel(member,'SkillContext',(520,625,715,90),active=False,ray=True)
+ p.button(context,'Change',(20,18,425,54),'Thay đổi kỹ năng')
+ p.button(context,'Cancel',(465,18,230,54),'Đóng')
+ dialog=p.panel(member,'SkillDialog',(0,0,1920,1080),(.035,.11,.21,1),active=False,ray=True)
+ p.text(dialog,'Title',(510,265,900,60),'Đổi kỹ năng',36,cyan)
+ learned=next(c for c in member['children'] if c['name']=='Learned')
+ empty=next(c for c in member['children'] if c['name']=='Empty')
+ for node,rect in [(learned,(510,350,900,490)),(empty,(530,370,850,80))]:
+  member['children'].remove(node);node['p']=dialog;dialog['children'].append(node);node['r']=rect
+ p.button(dialog,'Cancel',(510,875,360,56),'Hủy')
+ p.button(dialog,'Confirm',(1050,875,360,56),'Chấp thuận')
+ for pageName in ['Inventory','Rest','Attributes','Skills','Craft']:
+  parent=pages[pageName]
+  backdrop=p.panel(parent,'Backdrop',(70,240,1780,766),(.035,.11,.21,1))
+  parent['children'].remove(backdrop);parent['children'].insert(0,backdrop)
+ cards['r']=(525,255,1280,720);card['r']=(0,0,300,700)
+ sizes={'Portrait':(25,25,250,650),'Preview':(25,25,250,650),'CardBlue':(0,0,300,700),
+  'StatsBackground':(0,535,300,165),'Details':(15,550,135,118),'HP':(160,578,125,8),
+  'XP':(160,620,125,8),'Experience':(160,638,125,40)}
+ for child in card['children']:
+  if child['name'] in sizes:child['r']=sizes[child['name']]
+ for index,(cls,fid,title,node,body) in enumerate(p.docs):
+  if node is content:body=body.replace('m_CellSize: {x: 300, y: 600}', 'm_CellSize: {x: 300, y: 700}')
+  if node is card:body=body.replace('m_MinHeight: 600','m_MinHeight: 700').replace('m_PreferredHeight: 600','m_PreferredHeight: 700')
+  p.docs[index]=(cls,fid,title,node,body)
+ hint=next(c for c in overview['children'] if c['name']=='Hint');hint['r']=(120,977,1680,28)
+ for pageName in ['Attributes','Skills']:
+  portraitRoot=p.node('CharacterPreview',pages[pageName],(180,370,250,650))
+  portrait=p.portrait(portraitRoot,'Portrait',(0,0,250,650));portrait['stretch']=True
+  render=p.node('Render',portraitRoot,(0,0,250,650));render['stretch']=True;p.image(render,(1,1,1,1),raw=True)
+ # Compact HP/EXP plate with level on the right; no prefab names above portraits.
+ remove(next(c for c in card['children'] if c['name']=='Name'))
+ plate={'StatsBackground':(0,540,300,160),'Details':(20,608,180,31),
+  'HP':(20,643,180,9),'Experience':(20,656,180,25),'XP':(20,685,180,6)}
+ for child in card['children']:
+  if child['name'] in plate:child['r']=plate[child['name']]
+ hp=next(c for c in card['children'] if c['name']=='HP')['children'][0]
+ xp=next(c for c in card['children'] if c['name']=='XP')['children'][0]
+ for index,(cls,fid,title,node,body) in enumerate(p.docs):
+  if node is hp:body=re.sub(r'm_Color: \{[^}]+\}', 'm_Color: '+color((.75,.14,.16,1)),body)
+  if node is xp:body=re.sub(r'm_Color: \{[^}]+\}', 'm_Color: '+color((1,1,1,1)),body)
+  if node in card['children'] and node['name']=='Details':body=re.sub(r'(?m)^  m_text: .*$', '  m_text: "HP 100/100"',body)
+  if node in card['children'] and node['name']=='Experience':body=re.sub(r'(?m)^  m_text: .*$', '  m_text: "EXP 0 / 100"',body)
+  p.docs[index]=(cls,fid,title,node,body)
+ p.text(card,'HPLabel',(20,578,180,22),'',16)['active']=False
+ p.text(card,'LevelLabel',(220,608,70,27),'Level',18)
+ p.text(card,'Level',(220,635,70,56),'1',42,GOLD)
+ p.panel(card,'PlateEdge',(15,540,270,1),GOLD)
+ p.text(card,'PlayerName',(20,545,265,58),'Player',52,GOLD)
  return p.save()
 
 def build_result():

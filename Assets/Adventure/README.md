@@ -174,3 +174,31 @@ Vùng chọn dùng SelectionFadeGraphic: alpha mạnh nhất ở mép trên, gi�
 P là phím duy nhất mở menu trên map. Main Menu có Party và Inventory ở trái; preview tối đa 4 nhân vật bên phải không có Button, không nhận raycast và không kéo/cuộn. Party mở trực tiếp panel Member: chọn tên nhân vật ở danh sách bên trái, đổi 4 ô kỹ năng ở giữa, xem preview và chỉ số bên phải. Nút đổi thứ tự party nằm dưới danh sách nhân vật. Inventory giữ nguyên lưới vật phẩm và chức năng dùng thuốc.
 
 Esc/Trở lại từ Party hoặc Inventory về Main Menu, từ Main Menu đóng menu. P đóng menu đang mở. Điểm nghỉ vẫn có luồng thuộc tính, học kỹ năng và chế tạo riêng.
+
+### Cập nhật nền chung và thay kỹ năng có xác nhận
+
+Tất cả màn hình lấy màu/sprite nền từ AdventureCanvas > Menu/Background, gồm các trang menu, màn kết quả và loading. Inventory chỉ còn lưới vật phẩm và mô tả, không có chọn nhân vật/bảng chỉ số. Nút dùng thuốc ghi rõ tên người nhận (nhân vật đã chọn trong Party; mặc định thành viên đầu).
+
+Party chỉ hiện các ô mang theo. Click trái chọn ô, click phải mở Thay đổi kỹ năng; bấm nút này mở hộp danh sách đã học. Chọn một kỹ năng rồi Chấp thuận mới lưu. Hủy/Esc bỏ lựa chọn nháp. Danh sách đã học không hiện thường trực. Các ô thiếu tự điền kỹ năng đã học chưa được gán, tối đa 4; giữ nguyên ô đã có và không lặp kỹ năng. Nếu chưa học đủ 4 kỹ năng, ô còn lại vẫn trống.
+
+Mỗi trang vẫn có Backdrop riêng và luôn bật trong trang đó. Main Menu, Party, Inventory, Rest, Attributes, Skills và Craft cùng dùng hình/màu từ Menu/Background; không xóa hoặc tắt Backdrop để chia sẻ nền. Backdrop nằm sau nội dung để không che nút và danh sách.
+
+### Tự gán ảnh preview party
+
+### Tự đặt nhiều điểm tương tác trong mapgame
+
+Thoát Play Mode, mở mapgame. Trong Hierarchy, chuột phải > Adventure (hoặc menu GameObject > Adventure), chọn Save and Rest Point, Chest, Item Pickup, Enemy Encounter hoặc Discovery Area. Điểm mới nằm tại object đang chọn hoặc tâm Scene View. Di chuyển bằng Move Tool; có nút Đặt xuống mặt đất trong Inspector (dùng Surface Layer của player). Bật Gizmos để xem phạm vi tương tác.
+
+- Save and Rest Point: đến gần, bấm E rồi chọn Lưu / Hồi máu. Checkpoint là vị trí player lúc lưu; thua trận về checkpoint đã lưu gần nhất và hồi đầy máu.
+- Chest / Item Pickup: chọn vật phẩm từ danh sách, nhập số lượng và EXP. Danh sách vật phẩm lấy từ Resources/Adventure/CampaignConfig.asset > Items. Thêm model rương/item làm object con để hiển thị trong map.
+- Enemy Encounter: kéo prefab có BattleUnit từ Project vào Enemy trong trận. Mỗi ô tương ứng một enemy; có thể lặp cùng prefab. Nút Thêm model enemy vào map tạo model xem trước tại điểm, tắt các script combat/collider của model trên map. Battle vẫn dùng prefab gốc. Khi thay danh sách enemy, xóa nhóm Enemy Visuals cũ rồi tạo lại. Đến gần và bấm E để bắt đầu trận.
+- Nhân bản thành vị trí mới: sao chép cả cấu hình/model và tạo ID mới; sau đó kéo đến vị trí mong muốn. Save scene để giữ các điểm vừa đặt.
+- Nếu chỉ dùng các điểm tự đặt, bấm Tắt các điểm mẫu tự sinh trong scene này trong Inspector của một điểm. Có thể bật lại Create Starter Interactions trên MapGameSetup.
+
+Các điểm tự đặt dùng hệ thống lưu hiện có: rương/item đã nhận và encounter đã thắng sẽ ẩn khi tải map. ID hiện tại có cả đường dẫn Hierarchy, vì vậy đổi tên/đổi cha/thứ tự điểm sau khi đã tạo bản save có thể khiến điểm được tính là mới. Giữ bố cục Hierarchy ổn định cho các bản save đang sử dụng. Không thay Persistent ID của điểm cũ nếu muốn giữ trạng thái đã thu thập.
+
+### Ảnh preview
+
+Chọn Assets/Resources/Adventure/CampaignConfig.asset trong Inspector, mở Party Previews. Mỗi dòng chọn Member (prefab nhân vật) và Image (Sprite). Hai thành viên mặc định đã có sẵn dòng để kéo ảnh vào. Import ảnh dưới dạng Sprite (2D and UI); nên dùng ảnh tỉ lệ 250:650. Ảnh đã gán được ưu tiên, không bị render model ghi đè; đổi thứ tự party không đổi ảnh của thành viên. Chưa gán ảnh thì giữ preview tự render/portrait cũ.
+
+Main Menu: khung Portrait và Preview là 250 × 650; GridLayoutGroup Cell Size là 300 × 700; Template LayoutElement cao 700, viewport cao 720 để không cắt thẻ. Chỉnh template ở Menu/Party/Overview/Cards/Viewport/Content/Template.

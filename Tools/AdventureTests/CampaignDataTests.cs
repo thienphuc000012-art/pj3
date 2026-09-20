@@ -73,6 +73,14 @@ public static class CampaignDataTests
         Check(memberB.TryAllocateStats(new[] { 0, 0, 3, 0, 0 }, 10) && memberB.statPoints == 0 && memberA.statPoints == 1 && memberA.defBonus == 0, "Other member spends their own independent pool");
         memberA.GainXP(100);
         Check(memberA.statPoints == 4 && memberB.statPoints == 0, "Level-up attribute points belong to the member who levels");
+        var auto = new PartyMemberProgress { equippedSkills = new List<string> { "ice", "", "fire", "" } };
+        Check(auto.FillEmptySkillSlots(new[] { "fire", "ice", "heal", "wind", "guard" }, 4), "Autofill adds learned skills to empty slots");
+        Check(auto.equippedSkills[0] == "ice" && auto.equippedSkills[2] == "fire" && auto.equippedSkills[1] == "heal" && auto.equippedSkills[3] == "wind", "Autofill preserves assigned skills and avoids duplicates");
+        Check(!auto.FillEmptySkillSlots(new[] { "fire", "ice", "heal", "wind", "guard" }, 4), "Full loadout is unchanged on subsequent refresh");
+        var few = new PartyMemberProgress(); few.FillEmptySkillSlots(new[] { "fire" }, 4);
+        Check(few.equippedSkills.Count == 4 && few.equippedSkills[0] == "fire" && few.equippedSkills[1] == "", "Insufficient learned skills leave empty slots, never duplicate skills");
+        few.FillEmptySkillSlots(new[] { "fire", "ice" }, 4);
+        Check(few.equippedSkills[1] == "ice" && few.equippedSkills[2] == "", "Newly learned skill fills next empty slot");
         Console.WriteLine("PASS: " + checks + " campaign data regression checks");
     }
 }

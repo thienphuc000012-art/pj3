@@ -9,6 +9,12 @@ public class AdventureUI : MonoBehaviour
     int selectedMember, selectedSkill, restPage;
     string selectedItemId;
     int selectedSlot;
+    bool skillContextOpen, skillDialogOpen;
+    ActionData pendingSkill;
+    PartyMemberProgress skillDialogMember;
+    void CloseSkillChange() { skillContextOpen = false; skillDialogOpen = false; pendingSkill = null; skillDialogMember = null; }
+    void OpenSkillContext(int slot) { selectedSlot = slot; CloseSkillChange(); skillContextOpen = true; skillDialogMember = S.Data.party[selectedMember]; }
+
     readonly List<PartyMenuStage> cardStages = new List<PartyMenuStage>();
     readonly int[] pendingStats = new int[5];
     PartyMemberProgress draftMember;
@@ -33,14 +39,14 @@ public class AdventureUI : MonoBehaviour
         if (S.Busy) return;
         if (previousMenu != S.Menu)
         {
-            restPage = 0; selectedSkill = 0; previousMenu = S.Menu;
+            restPage = 0; selectedSkill = 0; CloseSkillChange(); previousMenu = S.Menu;
             if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
         }
         selectedMember = Mathf.Clamp(selectedMember, 0, Mathf.Max(0, S.Data.party.Count - 1));
         bool menuOpen = S.Menu != AdventureMenu.None;
         if (S.Menu != AdventureMenu.Main) foreach (var card in cardStages) card.Hide();
-        if (menuOpen && S.Menu != AdventureMenu.Main && Input.GetKeyDown(KeyCode.Q)) SelectMember(-1);
-        if (menuOpen && S.Menu != AdventureMenu.Main && Input.GetKeyDown(KeyCode.R)) SelectMember(1);
+        if (menuOpen && !skillDialogOpen && !skillContextOpen && S.Menu != AdventureMenu.Inventory && S.Menu != AdventureMenu.Main && Input.GetKeyDown(KeyCode.Q)) SelectMember(-1);
+        if (menuOpen && !skillDialogOpen && !skillContextOpen && S.Menu != AdventureMenu.Inventory && S.Menu != AdventureMenu.Main && Input.GetKeyDown(KeyCode.R)) SelectMember(1);
         view.Active("HUD", !menuOpen); view.Active("Menu", menuOpen);
         view.Active("Toast", Time.unscaledTime < S.MessageUntil);
         view.Text("Toast/Message", S.Message ?? "");
@@ -62,11 +68,23 @@ public class AdventureUI : MonoBehaviour
         bool main = S.Menu == AdventureMenu.Main, party = S.Menu == AdventureMenu.Party, rest = S.Menu == AdventureMenu.Rest;
         bool detail = rest && (restPage == 1 || restPage == 2);
         view.Active("Menu/Preview", false);
-        view.Active("Menu/DetailPreview", detail);
-        if (detail || party)
+        view.Active("Menu/DetailPreview", false);
+        if (detail && S.Data.party.Count > 0)
+        {
+            var unit = S.Template(S.Data.party[selectedMember]);
+            var assigned = S.Config.PreviewImage(unit);
+            string prefix = restPage == 1 ? "Menu/Attributes/CharacterPreview" : "Menu/Skills/CharacterPreview";
+            var portrait = view.Component<Image>(prefix + "/Portrait");
+            portrait.sprite = assigned != null ? assigned : unit.unitPortrait;
+            portrait.preserveAspect = true; portrait.enabled = portrait.sprite != null;
+            var preview = view.Component<RawImage>(prefix + "/Render");
+            if (assigned != null) stage.Hide(); else stage.Show(new[] { unit });
+            preview.texture = stage.Texture; preview.enabled = assigned == null && stage.ReadyFor(unit);
+        }
+        else if (party)
         {
             stage.Show(S.Data.party.Skip(selectedMember).Take(1).Select(p => S.Template(p)));
-            var preview = view.Component<RawImage>(party ? "Menu/Party/Member/Preview" : "Menu/DetailPreview");
+            var preview = view.Component<RawImage>("Menu/Party/Member/Preview");
             preview.texture = stage.Texture; preview.enabled = stage.Ready;
         }
         else stage.Hide();
@@ -76,12 +94,12 @@ public class AdventureUI : MonoBehaviour
         view.Text("Menu/Title", main ? "MAIN MENU" : party ? "PARTY" : page == "Inventory" ? "RƯƠNG ĐỒ" : page == "Attributes" ? "THUỘC TÍNH" : page == "Skills" ? "KỸ NĂNG" : page == "Craft" ? "CHẾ TẠO" : "ĐIỂM NGHỈ");
         view.Text("Menu/Subtitle", rest ? S.RestPoint?.displayName ?? "Nghỉ ngơi bên hành trình" : "Mỗi thành viên mang theo một câu chuyện.");
         view.Text("Menu/Back/Label", (party || S.Menu == AdventureMenu.Inventory) ? "[Esc] Main Menu" : rest && restPage > 0 ? "← Điểm nghỉ" : "[Esc] Trở lại");
-        view.Text("Menu/Hints", rest ? "Q / R Đổi thành viên • Nâng cấp chỉ khả dụng tại điểm nghỉ" : main ? "P / Esc Đóng menu" : "Q / R Đổi thành viên • Esc Main Menu • P Đóng menu");
+        view.Text("Menu/Hints", rest ? "Q / R Đổi thành viên • Nâng cấp chỉ khả dụng tại điểm nghỉ" : main ? "P / Esc Đóng menu" : S.Menu == AdventureMenu.Inventory ? "Chọn vật phẩm • Esc Main Menu • P Đóng menu" : "Q / R Đổi thành viên • Esc Main Menu • P Đóng menu");
         if (page == "Party") {
             view.Active("Menu/Party/Overview", main); view.Active("Menu/Party/Member", party);
             if (main) Party(); else MemberSkills();
         }
-        else if (page == "Inventory") { Picker("Menu/Inventory"); Summary("Menu/Inventory/Summary"); Inventory(); }
+        else if (page == "Inventory") Inventory();
         else if (page == "Rest") Rest();
         else if (page == "Attributes") Attributes();
         else if (page == "Skills") Skills();
@@ -96,7 +114,13 @@ public class AdventureUI : MonoBehaviour
         view.Click("Menu/Inventory/Detail/Use", () => { if (selectedItemId != null) S.UseItem(selectedItemId, selectedMember); });
         view.Click("Menu/Party/Member/MoveLeft", () => { if (selectedMember > 0) { S.Swap(selectedMember, selectedMember - 1); selectedMember--; } });
         view.Click("Menu/Party/Member/MoveRight", () => { if (selectedMember + 1 < S.Data.party.Count) { S.Swap(selectedMember, selectedMember + 1); selectedMember++; } });
-        view.Click("Menu/Party/Member/Remove", () => S.EquipSkill(selectedMember, selectedSlot, null));
+        view.Click("Menu/Party/Member/SkillContext/Change", () => { skillContextOpen = false; skillDialogOpen = true; pendingSkill = null; });
+        view.Click("Menu/Party/Member/SkillContext/Cancel", CloseSkillChange);
+        view.Click("Menu/Party/Member/SkillDialog/Cancel", CloseSkillChange);
+        view.Click("Menu/Party/Member/SkillDialog/Confirm", () => {
+            if (pendingSkill != null && skillDialogMember == S.Data.party[selectedMember]) S.EquipSkill(selectedMember, selectedSlot, pendingSkill);
+            CloseSkillChange();
+        });
         view.Click("Menu/Rest/Save", () => S.RestAndSave());
         view.Click("Menu/Rest/Attributes", () => restPage = 1);
         view.Click("Menu/Rest/Skills", () => { restPage = 2; SelectLearnable(); });
@@ -116,7 +140,7 @@ public class AdventureUI : MonoBehaviour
     }
     void ChooseMember(int index)
     {
-        selectedMember = index; selectedSkill = 0; selectedSlot = 0; ResetStatDraft();
+        CloseSkillChange(); selectedMember = index; selectedSkill = 0; selectedSlot = 0; ResetStatDraft();
         if (restPage == 2) SelectLearnable();
     }
     void SelectLearnable()
@@ -130,6 +154,7 @@ public class AdventureUI : MonoBehaviour
     }
     public bool HandleBack()
     {
+        if (skillContextOpen || skillDialogOpen) { CloseSkillChange(); return true; }
         if (S.Menu == AdventureMenu.Party || S.Menu == AdventureMenu.Inventory) { S.SetMenu(AdventureMenu.Main); return true; }
         if (S.Menu == AdventureMenu.Rest && restPage > 0) { restPage = 0; ResetStatDraft(); return true; }
         return false;
@@ -150,15 +175,18 @@ public class AdventureUI : MonoBehaviour
         for (int i = 0; i < S.Data.party.Count; i++)
         {
             var p = S.Data.party[i];
-            AdventureCanvasRoot.RowText(rows[i], "Name", S.Template(p).unitName);
-            AdventureCanvasRoot.RowText(rows[i], "Details", "Cấp " + p.level + "\nHP " + p.hp + " / " + S.MaxHP(p) + "\nSP " + p.skillPoints);
+            AdventureCanvasRoot.RowText(rows[i], "PlayerName", S.Template(p).unitName);
+            AdventureCanvasRoot.RowText(rows[i], "Details", "HP " + p.hp + "/" + S.MaxHP(p));
+            AdventureCanvasRoot.RowText(rows[i], "Level", p.level.ToString());
             AdventureCanvasRoot.RowFill(rows[i], "HP/Fill", (float)p.hp / S.MaxHP(p));
             AdventureCanvasRoot.RowFill(rows[i], "XP/Fill", (float)p.xp / p.RequiredXP);
-            AdventureCanvasRoot.RowText(rows[i], "Experience", p.xp + " / " + p.RequiredXP + " EXP");
-            AdventureCanvasRoot.RowPortrait(rows[i], "Portrait", S.Template(p).unitPortrait);
-            if (!preparing) { cardStages[i].Show(new[] { S.Template(p) }); preparing = !cardStages[i].Ready; }
+            AdventureCanvasRoot.RowText(rows[i], "Experience", "EXP " + p.xp + " / " + p.RequiredXP);
+            var assigned = S.Config.PreviewImage(S.Template(p));
+            AdventureCanvasRoot.RowPortrait(rows[i], "Portrait", assigned != null ? assigned : S.Template(p).unitPortrait);
+            if (assigned != null) cardStages[i].Hide();
+            else if (!preparing) { cardStages[i].Show(new[] { S.Template(p) }); preparing = !cardStages[i].Ready; }
             var preview = rows[i].transform.Find("Preview").GetComponent<RawImage>();
-            preview.texture = cardStages[i].Texture; preview.enabled = cardStages[i].ReadyFor(S.Template(p));
+            preview.texture = cardStages[i].Texture; preview.enabled = assigned == null && cardStages[i].ReadyFor(S.Template(p));
 
         }
 
@@ -173,24 +201,31 @@ public class AdventureUI : MonoBehaviour
         var p = S.Data.party[selectedMember]; S.EnsureLoadout(p);
         selectedSlot = Mathf.Clamp(selectedSlot, 0, S.SkillSlots - 1);
         var all = CurrentSkills(); var learned = S.LearnedSkills(p);
-        var slots = view.Rows(prefix + "/Slots" + Content, S.SkillSlots, (row, i) => AdventureCanvasRoot.RowClick(row, "Select", () => selectedSlot = i));
+        var slots = view.Rows(prefix + "/Slots" + Content, S.SkillSlots, (row, i) => {
+            AdventureCanvasRoot.RowClick(row, "Select", () => { selectedSlot = i; CloseSkillChange(); });
+            row.AddComponent<SkillSlotPointer>().rightClick = () => OpenSkillContext(i);
+            row.transform.Find("Select").gameObject.AddComponent<SkillSlotPointer>().rightClick = () => OpenSkillContext(i);
+        });
         for (int i = 0; i < S.SkillSlots; i++) {
             var skill = all.FirstOrDefault(x => x.name == p.equippedSkills[i]);
             AdventureCanvasRoot.RowSelected(slots[i], selectedSlot == i);
             AdventureCanvasRoot.RowText(slots[i], "Select/Label", "Ô " + (i + 1) + " • " + (skill != null ? skill.actionName : "Trống"));
         }
-        var rows = view.Rows(prefix + "/Learned" + Content, learned.Length, (row, i) => AdventureCanvasRoot.RowClick(row, "Select", () => {
-            var known = S.LearnedSkills(S.Data.party[selectedMember]); if (i < known.Length) S.EquipSkill(selectedMember, selectedSlot, known[i]);
+        view.Active(prefix + "/SkillContext", skillContextOpen);
+        view.Active(prefix + "/SkillDialog", skillDialogOpen);
+        view.Text(prefix + "/Hint", "Click trái chọn ô • Click phải để thay đổi kỹ năng • Tự điền kỹ năng đã học vào ô trống");
+        if (!skillDialogOpen) return;
+        var rows = view.Rows(prefix + "/SkillDialog/Learned" + Content, learned.Length, (row, i) => AdventureCanvasRoot.RowClick(row, "Select", () => {
+            var known = S.LearnedSkills(S.Data.party[selectedMember]); if (i < known.Length) pendingSkill = known[i];
         }));
         for (int i = 0; i < learned.Length; i++) {
-            int slot = p.equippedSkills.IndexOf(learned[i].name);
-            AdventureCanvasRoot.RowSelected(rows[i], slot == selectedSlot);
-            AdventureCanvasRoot.RowText(rows[i], "Select/Label", learned[i].actionName + (slot >= 0 ? " • Ô " + (slot + 1) : ""));
+            AdventureCanvasRoot.RowSelected(rows[i], pendingSkill == learned[i]);
+            AdventureCanvasRoot.RowText(rows[i], "Select/Label", learned[i].actionName);
             AdventureCanvasRoot.RowText(rows[i], "Description", learned[i].description ?? "");
         }
-        view.Text(prefix + "/Hint", "Chọn ô " + (selectedSlot + 1) + ", rồi click kỹ năng đã học để gán. Thay đổi tự lưu.");
-        view.Enabled(prefix + "/Remove", !string.IsNullOrEmpty(p.equippedSkills[selectedSlot]));
-        view.Active(prefix + "/Empty", learned.Length == 0);
+        view.Text(prefix + "/SkillDialog/Title", "Đổi kỹ năng ô " + (selectedSlot + 1));
+        view.Active(prefix + "/SkillDialog/Empty", learned.Length == 0);
+        view.Enabled(prefix + "/SkillDialog/Confirm", pendingSkill != null && skillDialogMember == p);
     }
     void Inventory()
     {
@@ -217,7 +252,7 @@ public class AdventureUI : MonoBehaviour
         view.Text(prefix + "/Detail/Count", selectedItemId != null ? "Số lượng: " + S.Count(selectedItemId) : "");
         bool canHeal = selected != null && selected.mapHeal > 0;
         view.Active(prefix + "/Detail/Use", canHeal);
-        view.Text(prefix + "/Detail/Use/Label", canHeal ? "Dùng • Hồi " + selected.mapHeal + " HP" : "Dùng");
+        view.Text(prefix + "/Detail/Use/Label", canHeal && S.Data.party.Count > 0 ? "Hồi " + selected.mapHeal + " HP • " + S.Template(S.Data.party[selectedMember]).unitName : "Dùng");
         view.Enabled(prefix + "/Detail/Use", canHeal && S.Data.party.Count > 0 && S.Data.party[selectedMember].hp > 0 && S.Data.party[selectedMember].hp < S.MaxHP(S.Data.party[selectedMember]));
     }
     void Picker(string prefix)

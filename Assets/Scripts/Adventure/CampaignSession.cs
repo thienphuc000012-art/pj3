@@ -10,7 +10,7 @@ using Unity.Cinemachine;
 public class CampaignSession : MonoBehaviour
 {
     public static CampaignSession Instance { get; private set; }
-    public static bool InputBlocked => Instance != null && (Instance.Busy || Instance.Menu != AdventureMenu.None);
+    public static bool InputBlocked => MapChunkStreamer.MovementBlocked || (Instance != null && (Instance.Busy || Instance.Menu != AdventureMenu.None));
     public CampaignConfig Config { get; private set; }
     public CampaignSave Data { get; private set; }
     public PlayerScript MapPlayer { get; private set; }
@@ -96,8 +96,33 @@ public class CampaignSession : MonoBehaviour
     }
     public void RefreshWorld()
     {
-        worldPoints = FindObjectsByType<WorldInteraction>(FindObjectsSortMode.None);
-        foreach (var point in worldPoints) if (point.IsConsumed) point.gameObject.SetActive(false);
+        worldPoints =
+            FindObjectsByType<WorldInteraction>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None
+            );
+
+
+        foreach (WorldInteraction point in worldPoints)
+        {
+            if (point == null)
+                continue;
+
+
+            if (point.IsConsumed)
+            {
+                Debug.LogWarning(
+                    "[Adventure] Hiding consumed interaction\n" +
+                    "Name: " + point.name + "\n" +
+                    "Kind: " + point.kind + "\n" +
+                    "ID: " + point.Id,
+                    point
+                );
+
+
+                point.gameObject.SetActive(false);
+            }
+        }
     }
     public BattleUnit Template(PartyMemberProgress member) => Config.startingParty[member.prefabIndex];
     public int MaxHP(PartyMemberProgress member) => Template(member).maxHP + member.hpBonus;
@@ -105,7 +130,7 @@ public class CampaignSession : MonoBehaviour
         point.gameObject.activeInHierarchy && Vector3.Distance(MapPlayer.transform.position, point.transform.position) <= point.range;
     void Update()
     {
-        if (!OnMap || MapPlayer == null || Busy) return;
+        if (!OnMap || MapPlayer == null || Busy || MapChunkStreamer.MovementBlocked) return;
         if (Input.GetKeyDown(KeyCode.Escape)) { if (!GetComponent<AdventureUI>().HandleBack()) SetMenu(AdventureMenu.None); return; }
         if (Input.GetKeyDown(KeyCode.P)) SetMenu(Menu == AdventureMenu.None ? AdventureMenu.Main : AdventureMenu.None);
         if (Menu != AdventureMenu.None) return;
@@ -249,12 +274,13 @@ public class CampaignSession : MonoBehaviour
         var reason = UnlockBlockedReason(p, skill);
         if (!string.IsNullOrEmpty(reason)) { Notify(reason); return; }
         if (!p.TryUnlock(skill, SkillCost(skill))) return;
-        Save(); Notify("Đã mở khóa " + skill.actionName);
+        EnsureLoadout(p); Save(); Notify("Đã mở khóa " + skill.actionName);
     }
     public int SkillSlots => Mathf.Max(1, Config.equippedSkillSlots);
     public ActionData[] LearnedSkills(PartyMemberProgress p) => Template(p).characterSkills.Where(x => x != null && IsSkillUnlocked(p, x)).Distinct().ToArray();
     public void EnsureLoadout(PartyMemberProgress p)
     {
+        bool initializedNow = !p.loadoutInitialized;
         var known = LearnedSkills(p);
         if (!p.loadoutInitialized)
         {
@@ -265,6 +291,7 @@ public class CampaignSession : MonoBehaviour
         var seen = new HashSet<string>();
         for (int i = 0; i < p.equippedSkills.Count; i++)
             if (i >= SkillSlots || !known.Any(x => x.name == p.equippedSkills[i]) || !seen.Add(p.equippedSkills[i])) p.equippedSkills[i] = "";
+        if (p.FillEmptySkillSlots(known.Select(x => x.name).ToArray(), SkillSlots) || initializedNow) Save();
     }
     public void EquipSkill(int memberIndex, int slot, ActionData skill)
     {
