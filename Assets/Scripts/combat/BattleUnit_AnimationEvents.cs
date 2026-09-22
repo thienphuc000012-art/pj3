@@ -21,10 +21,25 @@ public class BattleUnit_AnimationEvents : MonoBehaviour
 
     public void AnimEvent_DealDamage()
     {
-        if (ownerUnit == null || ownerUnit.IsDead) return;
-        if (ownerUnit != null) Debug.Log($"[Animation Event] {ownerUnit.unitName} chạm mục tiêu (DealDamage)!");
-        CombatManager.Instance.ApplyDamageFromAnimation(ownerUnit);
-        ParrySystem.Instance.CloseWindow();
+        if (ownerUnit == null || ownerUnit.IsDead)
+            return;
+
+        Debug.Log(
+            $"[Animation Event] {ownerUnit.unitName} DealDamage event. " +
+            "Shoot/Beam sẽ không damage ở event này; damage được resolve khi VFX impact."
+        );
+
+        if (CombatManager.Instance != null)
+        {
+            CombatManager.Instance.ApplyDamageFromAnimation(ownerUnit);
+        }
+
+        // Event vẫn có thể dùng để đóng timing Parry.
+        // parrySuccessful không bị xóa ở đây; Shoot/Beam sẽ đọc nó lúc impact.
+        if (ParrySystem.Instance != null)
+        {
+            ParrySystem.Instance.CloseWindow();
+        }
     }
 
     public void AnimEvent_EndAttack()

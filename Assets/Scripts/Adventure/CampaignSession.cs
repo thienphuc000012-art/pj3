@@ -38,6 +38,7 @@ public class CampaignSession : MonoBehaviour
         public int xp;
         public List<ItemStack> rewards;
         public List<BattleUnit> enemies;
+        public string combatSetupId;
     }
 
     public static CampaignSession Ensure(CampaignConfig config)
@@ -96,33 +97,8 @@ public class CampaignSession : MonoBehaviour
     }
     public void RefreshWorld()
     {
-        worldPoints =
-            FindObjectsByType<WorldInteraction>(
-                FindObjectsInactive.Include,
-                FindObjectsSortMode.None
-            );
-
-
-        foreach (WorldInteraction point in worldPoints)
-        {
-            if (point == null)
-                continue;
-
-
-            if (point.IsConsumed)
-            {
-                Debug.LogWarning(
-                    "[Adventure] Hiding consumed interaction\n" +
-                    "Name: " + point.name + "\n" +
-                    "Kind: " + point.kind + "\n" +
-                    "ID: " + point.Id,
-                    point
-                );
-
-
-                point.gameObject.SetActive(false);
-            }
-        }
+        worldPoints = FindObjectsByType<WorldInteraction>(FindObjectsSortMode.None);
+        foreach (var point in worldPoints) if (point.IsConsumed) point.gameObject.SetActive(false);
     }
     public BattleUnit Template(PartyMemberProgress member) => Config.startingParty[member.prefabIndex];
     public int MaxHP(PartyMemberProgress member) => Template(member).maxHP + member.hpBonus;
@@ -322,7 +298,14 @@ public class CampaignSession : MonoBehaviour
         { Notify("Cần party còn sống và prefab quái hợp lệ."); return; }
         if (!Application.CanStreamedLevelBeLoaded(Config.battleScene)) { Notify("Chưa thêm combattest vào Build Settings."); return; }
         CapturePosition();
-        encounter = new EncounterData { id = point.Id, xp = point.experience, rewards = point.rewards.Select(x => new ItemStack(x.id, x.count)).ToList(), enemies = new List<BattleUnit>(point.enemyPrefabs) };
+        encounter = new EncounterData
+        {
+            id = point.Id,
+            xp = point.experience,
+            rewards = point.rewards.Select(x => new ItemStack(x.id, x.count)).ToList(),
+            enemies = new List<BattleUnit>(point.enemyPrefabs),
+            combatSetupId = point.combatSetupId
+        };
         Busy = true;
         if (!LoadingScreen.Load(Config.battleScene))
         { encounter = null; Busy = false; Notify(LoadingScreen.Error); }
@@ -330,6 +313,10 @@ public class CampaignSession : MonoBehaviour
     public void PrepareBattle(CombatManager manager)
     {
         if (encounter == null) return;
+
+        BattleEncounterSetup battleSetup = FindBattleEncounterSetup(encounter.combatSetupId, manager);
+        manager.activeEncounterSetup = battleSetup;
+
         var oldPlayers = manager.playerParty.ToArray();
         var oldEnemies = manager.enemyParty.ToArray();
         // Include inactive test characters that are not in the manager's roster.
@@ -337,9 +324,48 @@ public class CampaignSession : MonoBehaviour
             if (unit.gameObject.scene == manager.gameObject.scene) unit.gameObject.SetActive(false);
         manager.playerParty.Clear(); manager.enemyParty.Clear(); manager.allUnitsTimeline.Clear();
         manager.playerSlots = ExpandSlots(manager.playerSlots, Data.party.Count, manager.transform, "Party slot");
-        manager.playerMeleeSlots = ExpandSlots(manager.playerMeleeSlots, Data.party.Count, manager.transform, "Party melee slot");
+
+        // Ghi nhớ playerMeleeSlots thật đã setup trong scene.
+        // Enemy -> Player sẽ dùng đúng slot theo index của Player target.
+        bool[] playerMeleeSlotConfigured = new bool[Data.party.Count];
+        if (manager.playerMeleeSlots != null)
+        {
+            for (int i = 0; i < playerMeleeSlotConfigured.Length && i < manager.playerMeleeSlots.Length; i++)
+                playerMeleeSlotConfigured[i] = manager.playerMeleeSlots[i] != null;
+        }
+
+        manager.playerMeleeSlots = ExpandSlots(
+            manager.playerMeleeSlots,
+            Data.party.Count,
+            manager.transform,
+            "Party melee slot"
+        );
+        manager.playerMeleeSlotConfigured = playerMeleeSlotConfigured;
+
         manager.enemySlots = ExpandSlots(manager.enemySlots, encounter.enemies.Count, manager.transform, "Enemy slot");
+
+        // Ghi nhớ enemyMeleeSlots đã được setup sẵn trong scene trước khi ExpandSlots()
+        // tự tạo thêm slot còn thiếu. Slot setup sẵn vẫn được dùng như trước.
+        bool[] enemyMeleeSlotConfigured = new bool[encounter.enemies.Count];
+        if (manager.enemyMeleeSlots != null)
+        {
+            for (int i = 0; i < enemyMeleeSlotConfigured.Length && i < manager.enemyMeleeSlots.Length; i++)
+                enemyMeleeSlotConfigured[i] = manager.enemyMeleeSlots[i] != null;
+        }
+
         manager.enemyMeleeSlots = ExpandSlots(manager.enemyMeleeSlots, encounter.enemies.Count, manager.transform, "Enemy melee slot");
+        manager.enemyMeleeSlotConfigured = enemyMeleeSlotConfigured;
+
+        // Preset ghi vị trí spawn vào enemySlots trước khi spawn, vì
+        // CombatManager.SetupPositions() sẽ tiếp tục lấy vị trí từ chính các slot này.
+        // CombatManager ưu tiên BattleEncounterSetup, sau đó fallback về
+        // playerMeleeSlots/enemyMeleeSlots thật đã setup sẵn trong scene.
+        ApplyEnemySpawnSetup(
+            battleSetup,
+            manager.enemySlots,
+            encounter.enemies.Count
+        );
+
         for (int i = 0; i < Data.party.Count; i++)
         {
             var member = Data.party[i];
@@ -358,10 +384,77 @@ public class CampaignSession : MonoBehaviour
             manager.enemyParty.Add(unit);
         }
         RebindCameras(oldPlayers, oldEnemies, manager);
+
+        if (battleSetup != null && CameraManager.Instance != null)
+            CameraManager.Instance.ApplyEncounterSetup(battleSetup, manager.enemyParty);
+
         RefreshBattleItems(manager);
         Busy = false;
         Cursor.lockState = CursorLockMode.None; Cursor.visible = true;
     }
+    static BattleEncounterSetup FindBattleEncounterSetup(string setupId, CombatManager manager)
+    {
+        if (manager == null || string.IsNullOrWhiteSpace(setupId))
+            return null;
+
+        BattleEncounterSetup fallback = null;
+
+        foreach (var setup in FindObjectsByType<BattleEncounterSetup>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (setup == null || setup.gameObject.scene != manager.gameObject.scene)
+                continue;
+
+            if (fallback == null && setup.setupId == "default")
+                fallback = setup;
+
+            if (string.Equals(setup.setupId, setupId, StringComparison.Ordinal))
+            {
+                Debug.Log("[Combat Setup] Loaded preset: " + setup.setupId, setup);
+                return setup;
+            }
+        }
+
+        if (fallback != null)
+        {
+            Debug.LogWarning(
+                "[Combat Setup] Không tìm thấy preset '" + setupId + "'. Dùng preset default.",
+                fallback
+            );
+            return fallback;
+        }
+
+        Debug.LogWarning(
+            "[Combat Setup] Không tìm thấy BattleEncounterSetup có ID '" + setupId + "' trong scene combat. Dùng enemySlots/camera mặc định."
+        );
+        return null;
+    }
+
+    static void ApplyEnemySpawnSetup(
+        BattleEncounterSetup setup,
+        Transform[] enemySlots,
+        int enemyCount)
+    {
+        if (setup == null || enemySlots == null)
+            return;
+
+        for (int i = 0; i < enemyCount && i < enemySlots.Length; i++)
+        {
+            EnemyCombatSetup enemySetup = setup.GetEnemySetup(i);
+
+            if (enemySetup == null ||
+                enemySetup.spawnPoint == null ||
+                enemySlots[i] == null)
+            {
+                continue;
+            }
+
+            enemySlots[i].SetPositionAndRotation(
+                enemySetup.spawnPoint.position,
+                enemySetup.spawnPoint.rotation
+            );
+        }
+    }
+
     static Transform[] ExpandSlots(Transform[] slots, int count, Transform parent, string label)
     {
         var list = slots == null ? new List<Transform>() : new List<Transform>(slots);

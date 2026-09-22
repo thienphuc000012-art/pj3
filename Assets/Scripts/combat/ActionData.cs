@@ -61,13 +61,21 @@ public class ActionData : ScriptableObject
     public GameObject hitVfxPrefab;
 
     public enum HitVfxTiming { VfxImpact, AnimationEvent }
-    [Tooltip("VfxImpact: hit plays on projectile arrival / beam emission. AnimationEvent: use the damage event.")]
+
+    [Tooltip(
+        "Shoot/Beam tấn công luôn gây damage + Hit VFX khi VFX impact target, " +
+        "không còn dùng Animation Event để gây damage. Field này được giữ lại " +
+        "để tương thích các Action asset cũ / loại VFX khác."
+    )]
     public HitVfxTiming hitVfxTiming = HitVfxTiming.VfxImpact;
     [Min(0.1f)] public float castVfxLifeTime = 5f;
     [Min(0.1f)] public float hitVfxLifeTime = 5f;
 
     [Header("Beam Settings")]
-    [Tooltip("Playback speed of a beam's charge-up and particles. Damage still uses animation events.")]
+    [Tooltip(
+        "Playback speed của charge/particle Beam. " +
+        "Damage của Beam được resolve khi Beam impact target."
+    )]
     [Min(0.01f)] public float beamPlaybackSpeed = 1f;
 
     [Header("Projectile Settings")]

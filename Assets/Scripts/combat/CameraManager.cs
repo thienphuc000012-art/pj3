@@ -23,6 +23,10 @@ public class CameraManager : MonoBehaviour
     public List<CinemachineCamera> playerTargetCams;
     public List<CinemachineCamera> enemyTargetCams;
 
+    [Header("Enemy Action Cameras")]
+    [Tooltip("Camera riêng của từng enemy khi enemy đó tới lượt hành động.")]
+    public List<CinemachineCamera> enemyActionCams = new List<CinemachineCamera>();
+
     [Header("Menu Cameras (Skills & Items - Cắt ngay lập tức)")]
     public List<CinemachineCamera> playerMenuCams;
 
@@ -156,6 +160,93 @@ public class CameraManager : MonoBehaviour
         if (targetCamToActivate != null) targetCamToActivate.Priority = 15;
     }
 
+    public bool SwitchToEnemyActionCam(BattleUnit enemy)
+    {
+        if (enemy == null || CombatManager.Instance == null)
+            return false;
+
+        int enemyIndex = CombatManager.Instance.enemyParty.IndexOf(enemy);
+        if (enemyIndex < 0 || enemyIndex >= enemyActionCams.Count)
+            return false;
+
+        CinemachineCamera cam = enemyActionCams[enemyIndex];
+        if (cam == null)
+            return false;
+
+        SetFastBlend();
+        ResetAllCams();
+        cam.Priority = 15;
+        return true;
+    }
+
+    public void ApplyEncounterSetup(BattleEncounterSetup setup, List<BattleUnit> enemies)
+    {
+        if (setup == null || enemies == null)
+            return;
+
+        // Camera chung của encounter: chỉ override khi preset có gán.
+        if (setup.battleStartCamera != null)
+            battleStartCam = setup.battleStartCamera;
+
+        if (setup.enemyAoECamera != null)
+            enemyAoECam = setup.enemyAoECamera;
+
+        if (setup.enemyPhase2Camera != null)
+            enemyPhase2Cam = setup.enemyPhase2Camera;
+
+        EnsureCameraListSize(enemyTargetCams, enemies.Count);
+        EnsureCameraListSize(enemyActionCams, enemies.Count);
+
+        for (int i = 0; i < enemies.Count; i++)
+        {
+            BattleUnit enemy = enemies[i];
+            EnemyCombatSetup enemySetup = setup.GetEnemySetup(i);
+
+            if (enemy == null || enemySetup == null)
+                continue;
+
+            // Chỉ thay camera khi preset có gán camera riêng.
+            if (enemySetup.targetCamera != null)
+            {
+                enemyTargetCams[i] = enemySetup.targetCamera;
+                PrepareEnemyCamera(enemyTargetCams[i], enemy);
+            }
+
+            if (enemySetup.actionCamera != null)
+            {
+                enemyActionCams[i] = enemySetup.actionCamera;
+                PrepareEnemyCamera(enemyActionCams[i], enemy);
+            }
+        }
+
+        setup.SetAllCameraPriorities(0);
+    }
+
+    private static void EnsureCameraListSize(List<CinemachineCamera> list, int count)
+    {
+        if (list == null)
+            return;
+
+        while (list.Count < count)
+            list.Add(null);
+    }
+
+    private static void PrepareEnemyCamera(CinemachineCamera cam, BattleUnit enemy)
+    {
+        if (cam == null || enemy == null)
+            return;
+
+        cam.Priority = 0;
+
+        // Giữ nguyên vị trí/rotation camera đã tự setup trong scene.
+        // Chỉ đổi target sang enemy runtime vừa spawn.
+        cam.LookAt = enemy.transform;
+
+        // Nếu camera được cấu hình có Follow thì cũng remap Follow sang enemy runtime.
+        if (cam.Follow != null)
+            cam.Follow = enemy.transform;
+    }
+
     public void ResetTargetCam()
     {
         SetInstantCutBlend();
@@ -172,6 +263,7 @@ public class CameraManager : MonoBehaviour
         foreach (var cam in playerHitCams) { if (cam != null) cam.Priority = 0; }
         foreach (var cam in playerTargetCams) { if (cam != null) cam.Priority = 0; }
         foreach (var cam in enemyTargetCams) { if (cam != null) cam.Priority = 0; }
+        foreach (var cam in enemyActionCams) { if (cam != null) cam.Priority = 0; }
         foreach (var cam in playerMenuCams) { if (cam != null) cam.Priority = 0; }
         foreach (var cam in playerActionCams) { if (cam != null) cam.Priority = 0; }
     }

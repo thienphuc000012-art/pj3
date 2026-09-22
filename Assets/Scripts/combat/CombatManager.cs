@@ -17,7 +17,13 @@ public class CombatManager : MonoBehaviour
     private readonly Dictionary<BattleUnit, List<GameObject>> castInstances = new Dictionary<BattleUnit, List<GameObject>>();
     private readonly HashSet<BattleUnit> castStarted = new HashSet<BattleUnit>();
     private readonly HashSet<BattleUnit> vfxLaunched = new HashSet<BattleUnit>();
-    private sealed class VfxActionState { public bool parried; }
+    private sealed class VfxActionState
+    {
+        public bool parried;
+        public bool impactDamagePrepared;
+        public int impactRawDamage;
+        public bool impactIsCrit;
+    }
     private VfxActionState vfxActionState = new VfxActionState();
     private readonly HashSet<GameObject> combatVfxInstances = new HashSet<GameObject>();
 
@@ -107,6 +113,17 @@ public class CombatManager : MonoBehaviour
     [Header("Melee Attack Positions (Scene Slots)")]
     public Transform[] playerMeleeSlots;
     public Transform[] enemyMeleeSlots;
+
+    [HideInInspector] public BattleEncounterSetup activeEncounterSetup;
+
+    // true ở index nào thì enemyMeleeSlots[index] là slot thật đã được setup
+    // trong scene hoặc được BattleEncounterSetup override.
+    // Slot tự sinh chỉ để đủ kích thước mảng sẽ không vô tình thay đổi combat.
+    [HideInInspector] public bool[] enemyMeleeSlotConfigured;
+
+    // true ở index nào thì playerMeleeSlots[index] là slot thật đã được setup
+    // trong scene trước khi CampaignSession tự tạo slot còn thiếu.
+    [HideInInspector] public bool[] playerMeleeSlotConfigured;
 
     [HideInInspector] public bool isSelectingBuffTarget = false;
     [HideInInspector] public bool isSelectingSelfOnly = false;
@@ -710,14 +727,19 @@ public class CombatManager : MonoBehaviour
         selectedAction = currentActiveUnit.GetNextAction();
 
         // Enemy dùng skill AoE -> dùng camera AoE riêng.
-        // Skill thường -> vẫn dùng camera nhìn vào Player bị nhắm như cũ.
+        // Skill thường -> ưu tiên Action Camera riêng của chính enemy này.
+        // Nếu encounter chưa setup Action Camera thì fallback về camera cũ nhìn Player bị nhắm.
         if (selectedAction != null && selectedAction.isAoE)
         {
             CameraManager.Instance.SwitchToEnemyAoECam();
         }
         else
         {
-            CameraManager.Instance.SwitchToTargetHitCam(currentTarget);
+            bool usedEnemyActionCamera =
+                CameraManager.Instance.SwitchToEnemyActionCam(currentActiveUnit);
+
+            if (!usedEnemyActionCamera)
+                CameraManager.Instance.SwitchToTargetHitCam(currentTarget);
         }
 
         yield return new WaitForSeconds(0.5f);
@@ -759,10 +781,17 @@ public class CombatManager : MonoBehaviour
 
         if (action != null && action.isMelee && target != null && !action.isFriendlyAction && !action.isHeal)
         {
-            Vector3 attackPosition = GetMeleeAttackPosition(attacker, target);
+            Transform meleeSlot = GetEncounterMeleeSlot(attacker, target);
+            Vector3 attackPosition = meleeSlot != null
+                ? meleeSlot.position
+                : GetMeleeAttackPosition(attacker, target);
 
             attacker.animator.Play("JumpForward");
             yield return StartCoroutine(MoveToPosition(attacker.transform, attackPosition, 0.35f));
+
+            // Luôn xoay mặt attacker về phía target khi đã tới vị trí melee.
+            // Không dùng rotation của Melee Slot vì slot chỉ quyết định VỊ TRÍ.
+            FaceMeleeTarget(attacker, target);
 
             string animTrigger = !string.IsNullOrEmpty(action.animationTriggerName) ? action.animationTriggerName : "Attack";
             attacker.animator.SetTrigger(animTrigger);
@@ -797,6 +826,17 @@ public class CombatManager : MonoBehaviour
             pendingVfxImpacts.RemoveAll(vfx => vfx == null);
             return pendingVfxImpacts.Count == 0;
         });
+
+        // Shoot/Beam của Enemy giữ Parry state cho tới khi toàn bộ impact
+        // của action (kể cả AoE) đã resolve xong rồi mới reset.
+        if (UsesVfxImpactDamage(action) &&
+            attacker != null &&
+            !attacker.isPlayer &&
+            ParrySystem.Instance != null)
+        {
+            ParrySystem.Instance.ResetParryState();
+        }
+
         StopBeamVFX(attacker);
         FinishCastVFX(attacker);
         attacker.transform.position = originalPosition;
@@ -814,14 +854,193 @@ public class CombatManager : MonoBehaviour
         }
     }
 
+    private Transform GetEncounterMeleeSlot(BattleUnit attacker, BattleUnit target)
+    {
+        if (attacker == null || target == null)
+            return null;
+
+        // ============================================================
+        // PLAYER -> ENEMY
+        // ============================================================
+        // Ưu tiên:
+        // 1. BattleEncounterSetup.Enemies[enemyIndex].playerMeleeSlot
+        // 2. CombatManager.enemyMeleeSlots[enemyIndex] đã setup sẵn
+        // ============================================================
+        if (attacker.isPlayer)
+        {
+            int enemyIndex = enemyParty.IndexOf(target);
+            if (enemyIndex < 0)
+                return null;
+
+            if (activeEncounterSetup != null)
+            {
+                EnemyCombatSetup enemySetup =
+                    activeEncounterSetup.GetEnemySetup(enemyIndex);
+
+                if (enemySetup != null &&
+                    enemySetup.playerMeleeSlot != null)
+                {
+                    return enemySetup.playerMeleeSlot;
+                }
+            }
+
+            if (TryGetConfiguredEnemyTargetMeleeSlot(
+                target,
+                out Transform enemyTargetSlot))
+            {
+                return enemyTargetSlot;
+            }
+
+            return null;
+        }
+
+        // ============================================================
+        // ENEMY -> PLAYER
+        // ============================================================
+        // Ưu tiên:
+        // 1. BattleEncounterSetup.Enemies[attackerEnemyIndex]
+        //      .enemyMeleeSlots[targetPlayerIndex]
+        // 2. CombatManager.playerMeleeSlots[targetPlayerIndex] đã setup sẵn
+        // ============================================================
+        int attackerEnemyIndex = enemyParty.IndexOf(attacker);
+        int targetPlayerIndex = playerParty.IndexOf(target);
+
+        if (attackerEnemyIndex < 0 || targetPlayerIndex < 0)
+            return null;
+
+        if (activeEncounterSetup != null)
+        {
+            EnemyCombatSetup attackerSetup =
+                activeEncounterSetup.GetEnemySetup(attackerEnemyIndex);
+
+            if (attackerSetup != null)
+            {
+                Transform encounterSlot =
+                    attackerSetup.GetEnemyMeleeSlot(targetPlayerIndex);
+
+                if (encounterSlot != null)
+                    return encounterSlot;
+            }
+        }
+
+        if (TryGetConfiguredPlayerTargetMeleeSlot(
+            target,
+            out Transform playerTargetSlot))
+        {
+            return playerTargetSlot;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Slot đứng gần Enemy target khi Player lao tới đánh.
+    /// enemyMeleeSlots được index theo enemyParty.
+    /// </summary>
+    private bool TryGetConfiguredEnemyTargetMeleeSlot(
+        BattleUnit targetEnemy,
+        out Transform meleeSlot)
+    {
+        meleeSlot = null;
+
+        if (targetEnemy == null || targetEnemy.isPlayer)
+            return false;
+
+        int enemyIndex = enemyParty.IndexOf(targetEnemy);
+
+        if (enemyIndex < 0 ||
+            enemyMeleeSlots == null ||
+            enemyIndex >= enemyMeleeSlots.Length ||
+            enemyMeleeSlots[enemyIndex] == null)
+        {
+            return false;
+        }
+
+        if (enemyMeleeSlotConfigured == null ||
+            enemyIndex >= enemyMeleeSlotConfigured.Length ||
+            !enemyMeleeSlotConfigured[enemyIndex])
+        {
+            return false;
+        }
+
+        meleeSlot = enemyMeleeSlots[enemyIndex];
+        return true;
+    }
+
+    /// <summary>
+    /// Slot đứng gần Player target khi Enemy lao tới đánh.
+    /// playerMeleeSlots được index theo playerParty.
+    /// </summary>
+    private bool TryGetConfiguredPlayerTargetMeleeSlot(
+        BattleUnit targetPlayer,
+        out Transform meleeSlot)
+    {
+        meleeSlot = null;
+
+        if (targetPlayer == null || !targetPlayer.isPlayer)
+            return false;
+
+        int playerIndex = playerParty.IndexOf(targetPlayer);
+
+        if (playerIndex < 0 ||
+            playerMeleeSlots == null ||
+            playerIndex >= playerMeleeSlots.Length ||
+            playerMeleeSlots[playerIndex] == null)
+        {
+            return false;
+        }
+
+        if (playerMeleeSlotConfigured == null ||
+            playerIndex >= playerMeleeSlotConfigured.Length ||
+            !playerMeleeSlotConfigured[playerIndex])
+        {
+            return false;
+        }
+
+        meleeSlot = playerMeleeSlots[playerIndex];
+        return true;
+    }
+
     public Vector3 GetMeleeAttackPosition(BattleUnit attacker, BattleUnit target)
     {
-        if (target == null) return attacker.transform.position;
+        if (attacker == null)
+            return Vector3.zero;
 
-        Vector3 directionToTarget = (target.transform.position - attacker.transform.position).normalized;
+        Transform encounterSlot = GetEncounterMeleeSlot(attacker, target);
+        if (encounterSlot != null)
+            return encounterSlot.position;
+
+        // Không có bất kỳ Melee Slot nào -> fallback cách tính tự động cũ.
+        if (target == null)
+            return attacker.transform.position;
+
+        Vector3 directionToTarget =
+            (target.transform.position - attacker.transform.position).normalized;
+
         float stopDistance = 1.6f;
-        Vector3 attackPosition = target.transform.position - (directionToTarget * stopDistance);
+
+        Vector3 attackPosition =
+            target.transform.position - (directionToTarget * stopDistance);
+
         return attackPosition;
+    }
+
+    private void FaceMeleeTarget(BattleUnit attacker, BattleUnit target)
+    {
+        if (attacker == null || target == null)
+            return;
+
+        Vector3 direction = target.transform.position - attacker.transform.position;
+
+        // Chỉ xoay trên mặt phẳng ngang để nhân vật không bị cúi/ngửa
+        // khi pivot của target cao hoặc thấp hơn.
+        direction.y = 0f;
+
+        if (direction.sqrMagnitude < 0.0001f)
+            return;
+
+        attacker.transform.rotation =
+            Quaternion.LookRotation(direction.normalized, Vector3.up);
     }
 
     private IEnumerator MoveToPosition(Transform unitTransform, Vector3 targetPos, float duration)
@@ -845,6 +1064,27 @@ public class CombatManager : MonoBehaviour
         if (attacker == null || attacker.IsDead) return;
         ActionData actionToUse = selectedAction != null ? selectedAction : attacker.defaultAttack;
         if (actionToUse == null) return;
+
+        // ============================================================
+        // SHOOT / BEAM:
+        // Damage KHÔNG còn chạy từ Animation Event.
+        // Projectile/Beam phải thật sự impact target rồi callback mới gây damage.
+        // ============================================================
+        if (UsesVfxImpactDamage(actionToUse))
+        {
+            // Nếu đây là skill của Enemy, giữ lại kết quả Parry tại timing
+            // của animation event (nếu clip vẫn còn AnimEvent_DealDamage).
+            // Nếu clip không có event này thì callback impact vẫn đọc trực tiếp
+            // trạng thái Parry hiện tại.
+            if (!attacker.isPlayer && ParrySystem.Instance != null)
+            {
+                vfxActionState.parried =
+                    vfxActionState.parried ||
+                    ParrySystem.Instance.parrySuccessful;
+            }
+
+            return;
+        }
 
         int totalAtk = attacker.baseAtk + attacker.GetBuffValue(ActionData.BuffStat.Atk);
         float calculatedDamage = (totalAtk * actionToUse.damageMultiplier) + actionToUse.power;
@@ -1072,29 +1312,230 @@ public class CombatManager : MonoBehaviour
         Destroy(vfx, Mathf.Max(0.1f, lifetime));
     }
 
-    private static bool UsesVfxImpact(ActionData action)
+    private static bool UsesVfxImpactDamage(ActionData action)
     {
-        return action != null && action.vfxPrefab != null &&
-            action.hitVfxTiming == ActionData.HitVfxTiming.VfxImpact &&
-            (action.vfxType == ActionData.VfxType.Shoot || action.vfxType == ActionData.VfxType.Beam);
+        return action != null &&
+               action.vfxPrefab != null &&
+               !action.isFriendlyAction &&
+               !action.isHeal &&
+               (action.vfxType == ActionData.VfxType.Shoot ||
+                action.vfxType == ActionData.VfxType.Beam);
     }
 
-    private System.Action CreateImpactCallback(GameObject vfx, BattleUnit attacker,
-        BattleUnit target, ActionData action)
+    // Giữ tên hàm cũ cho các đoạn code kiểm tra Hit VFX.
+    // Với Shoot/Beam tấn công, Hit VFX luôn đi theo impact thật của VFX.
+    private static bool UsesVfxImpact(ActionData action)
+    {
+        return UsesVfxImpactDamage(action);
+    }
+
+    private System.Action CreateImpactCallback(
+        GameObject vfx,
+        BattleUnit attacker,
+        BattleUnit target,
+        ActionData action)
     {
         pendingVfxImpacts.Add(vfx);
+
+        // Mỗi action/routine có một VfxActionState riêng.
+        // AoE có nhiều projectile vẫn dùng chung raw damage / crit / parry.
         VfxActionState actionState = vfxActionState;
+
         bool completed = false;
+
         return () =>
         {
-            if (completed) return;
+            // Một projectile có thể báo collision nhiều lần.
+            // Chỉ được resolve impact đúng 1 lần.
+            if (completed)
+                return;
+
             completed = true;
             pendingVfxImpacts.Remove(vfx);
-            bool parried = attacker != null && !attacker.isPlayer &&
-                (actionState.parried || (ParrySystem.Instance != null && ParrySystem.Instance.parrySuccessful));
-            if (UsesVfxImpact(action) && !parried && target != null)
-                SpawnActionHitVFX(action, target);
+
+            if (attacker == null ||
+                target == null ||
+                action == null ||
+                target.IsDead)
+            {
+                return;
+            }
+
+            // Chỉ Shoot/Beam offensive mới gây damage bằng impact callback.
+            if (!UsesVfxImpactDamage(action))
+                return;
+
+            ResolveVfxImpactDamage(
+                attacker,
+                target,
+                action,
+                actionState
+            );
         };
+    }
+
+    private void PrepareVfxImpactDamage(
+        BattleUnit attacker,
+        ActionData action,
+        VfxActionState actionState)
+    {
+        if (attacker == null ||
+            action == null ||
+            actionState == null ||
+            actionState.impactDamagePrepared)
+        {
+            return;
+        }
+
+        int totalAtk =
+            attacker.baseAtk +
+            attacker.GetBuffValue(ActionData.BuffStat.Atk);
+
+        float calculatedDamage =
+            (totalAtk * action.damageMultiplier) +
+            action.power;
+
+        int rawDamage =
+            Mathf.RoundToInt(calculatedDamage);
+
+        bool isCrit =
+            !action.isFriendlyAction &&
+            !action.isHeal &&
+            UnityEngine.Random.Range(0, 100) <
+            attacker.GetCritChance();
+
+        if (isCrit)
+        {
+            rawDamage = Mathf.RoundToInt(
+                rawDamage *
+                attacker.GetCritDamageMultiplier()
+            );
+        }
+
+        actionState.impactRawDamage = rawDamage;
+        actionState.impactIsCrit = isCrit;
+        actionState.impactDamagePrepared = true;
+    }
+
+    private void ResolveVfxImpactDamage(
+        BattleUnit attacker,
+        BattleUnit target,
+        ActionData action,
+        VfxActionState actionState)
+    {
+        if (attacker == null ||
+            target == null ||
+            action == null ||
+            actionState == null ||
+            target.IsDead)
+        {
+            return;
+        }
+
+        PrepareVfxImpactDamage(
+            attacker,
+            action,
+            actionState
+        );
+
+        int rawDamage =
+            actionState.impactRawDamage;
+
+        bool isCrit =
+            actionState.impactIsCrit;
+
+        // ============================================================
+        // PLAYER PROJECTILE / BEAM -> ENEMY
+        // ============================================================
+        if (attacker.isPlayer)
+        {
+            int hpBefore =
+                target.currentHP;
+
+            // DAMAGE xảy ra đúng lúc VFX impact.
+            target.TakeDamage(
+                rawDamage,
+                false
+            );
+
+            int actualDamageTaken =
+                hpBefore -
+                target.currentHP;
+
+            GetComponent<BattleResultPanel>()?
+                .RecordDamage(
+                    true,
+                    actualDamageTaken
+                );
+
+            if (AdvancedUIManager.Instance != null)
+            {
+                AdvancedUIManager.Instance.ShowDamageText(
+                    target.transform,
+                    actualDamageTaken,
+                    isCrit,
+                    false
+                );
+            }
+
+            // Thứ tự yêu cầu:
+            // 1. Damage
+            // 2. Hit VFX
+            SpawnActionHitVFX(
+                action,
+                target
+            );
+
+            return;
+        }
+
+        // ============================================================
+        // ENEMY PROJECTILE / BEAM -> PLAYER
+        // ============================================================
+        bool parried =
+            actionState.parried ||
+            (ParrySystem.Instance != null &&
+             ParrySystem.Instance.parrySuccessful);
+
+        // Giữ kết quả parry cho toàn bộ projectile của cùng một action/AoE.
+        actionState.parried = parried;
+
+        int playerHpBefore =
+            target.currentHP;
+
+        target.TakeDamage(
+            rawDamage,
+            parried
+        );
+
+        int playerDamageTaken =
+            playerHpBefore -
+            target.currentHP;
+
+        GetComponent<BattleResultPanel>()?
+            .RecordDamage(
+                false,
+                playerDamageTaken
+            );
+
+        if (!parried)
+        {
+            if (AdvancedUIManager.Instance != null)
+            {
+                AdvancedUIManager.Instance.ShowDamageText(
+                    target.transform,
+                    playerDamageTaken,
+                    isCrit,
+                    false
+                );
+            }
+
+            // Chỉ chạy Hit VFX khi đòn thật sự trúng và không bị Parry.
+            SpawnActionHitVFX(
+                action,
+                target
+            );
+        }
     }
 
     private void BindRFX4Impact(GameObject vfx, BattleUnit target, ActionData action, System.Action impact)
