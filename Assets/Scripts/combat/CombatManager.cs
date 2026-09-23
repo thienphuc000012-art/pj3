@@ -23,6 +23,10 @@ public class CombatManager : MonoBehaviour
         public bool impactDamagePrepared;
         public int impactRawDamage;
         public bool impactIsCrit;
+
+        // VFX Parry state cho Shoot / Beam.
+        public bool parryWindowOpened;
+        public bool parryWindowFinished;
     }
     private VfxActionState vfxActionState = new VfxActionState();
     private readonly HashSet<GameObject> combatVfxInstances = new HashSet<GameObject>();
@@ -760,6 +764,12 @@ public class CombatManager : MonoBehaviour
         vfxLaunched.Clear();
         vfxActionState = new VfxActionState();
 
+        // Enemy action mới bắt đầu -> xóa kết quả Parry còn sót lại từ action trước.
+        if (!attacker.isPlayer && ParrySystem.Instance != null)
+        {
+            ParrySystem.Instance.ResetParryState();
+        }
+
         if (attacker.isPlayer)
         {
             int playerIndex = playerParty.IndexOf(attacker);
@@ -1243,11 +1253,43 @@ public class CombatManager : MonoBehaviour
             if (action.vfxType == ActionData.VfxType.Beam)
             {
                 DisableRFX4Movement(vfx);
-                CombatBeamVfx beam = vfx.AddComponent<CombatBeamVfx>();
-                beam.Initialize(attacker, u, action, CreateImpactCallback(vfx, attacker, u, action));
+
+                System.Action beamImpact =
+                    CreateImpactCallback(vfx, attacker, u, action);
+
+                CombatBeamVfx beam =
+                    vfx.AddComponent<CombatBeamVfx>();
+
+                beam.Initialize(
+                    attacker,
+                    u,
+                    action,
+                    beamImpact
+                );
+
                 activeBeams.RemoveAll(item => item == null);
                 activeBeams.Add(beam);
-                ActivateCombatVfx(vfx, staging, action.vfxLifeTime);
+
+                ActivateCombatVfx(
+                    vfx,
+                    staging,
+                    action.vfxLifeTime
+                );
+
+                // Beam không có thời gian bay như projectile.
+                // Dùng beamParryDelay để căn thời điểm mở Parry.
+                if (ShouldStartVfxParry(attacker, action))
+                {
+                    StartCoroutine(
+                        OpenVfxParryWindow(
+                            attacker,
+                            action,
+                            vfxActionState,
+                            action.beamParryDelay
+                        )
+                    );
+                }
+
                 continue;
             }
 
@@ -1261,6 +1303,22 @@ public class CombatManager : MonoBehaviour
                 BindRFX4Impact(vfx, u, action, impact);
 
             ActivateCombatVfx(vfx, staging, action.vfxLifeTime);
+
+            // Shoot: theo dõi vị trí thật của projectile.
+            // Khi projectile còn gần parryOpenBeforeImpact giây nữa tới target,
+            // hệ thống tự mở cửa sổ Parry.
+            if (ShouldStartVfxParry(attacker, action))
+            {
+                StartCoroutine(
+                    MonitorProjectileParry(
+                        vfx,
+                        attacker,
+                        u,
+                        action,
+                        vfxActionState
+                    )
+                );
+            }
 
             switch (action.projectileMoveMode)
             {
@@ -1322,6 +1380,41 @@ public class CombatManager : MonoBehaviour
                 action.vfxType == ActionData.VfxType.Beam);
     }
 
+    private ActionData GetCurrentActionForUnit(BattleUnit unit)
+    {
+        if (unit == null)
+            return null;
+
+        if (unit == currentActiveUnit && selectedAction != null)
+            return selectedAction;
+
+        return unit.defaultAttack;
+    }
+
+    /// <summary>
+    /// Dùng bởi Animation Event:
+    /// Shoot / Beam offensive gây damage bằng VFX impact, không phải DealDamage event.
+    /// </summary>
+    public bool IsVfxImpactDamageAction(BattleUnit unit)
+    {
+        return UsesVfxImpactDamage(GetCurrentActionForUnit(unit));
+    }
+
+    /// <summary>
+    /// Dùng bởi Animation Event để biết OpenParry / CloseParry cũ có phải bỏ qua không.
+    /// </summary>
+    public bool ShouldUseVfxParryTiming(BattleUnit unit)
+    {
+        if (unit == null || unit.isPlayer)
+            return false;
+
+        ActionData action = GetCurrentActionForUnit(unit);
+
+        return action != null &&
+               action.useVfxParry &&
+               UsesVfxImpactDamage(action);
+    }
+
     // Giữ tên hàm cũ cho các đoạn code kiểm tra Hit VFX.
     // Với Shoot/Beam tấn công, Hit VFX luôn đi theo impact thật của VFX.
     private static bool UsesVfxImpact(ActionData action)
@@ -1364,6 +1457,19 @@ public class CombatManager : MonoBehaviour
             // Chỉ Shoot/Beam offensive mới gây damage bằng impact callback.
             if (!UsesVfxImpactDamage(action))
                 return;
+
+            // VFX đã chạm mục tiêu -> cửa sổ Parry kết thúc ngay tại impact.
+            // Lưu kết quả trước khi đóng window.
+            if (!attacker.isPlayer && ParrySystem.Instance != null)
+            {
+                actionState.parried =
+                    actionState.parried ||
+                    ParrySystem.Instance.parrySuccessful;
+
+                ParrySystem.Instance.CloseWindow();
+            }
+
+            actionState.parryWindowFinished = true;
 
             ResolveVfxImpactDamage(
                 attacker,
@@ -1536,6 +1642,194 @@ public class CombatManager : MonoBehaviour
                 target
             );
         }
+    }
+
+    private bool ShouldStartVfxParry(
+        BattleUnit attacker,
+        ActionData action)
+    {
+        return attacker != null &&
+               !attacker.isPlayer &&
+               action != null &&
+               action.useVfxParry &&
+               UsesVfxImpactDamage(action) &&
+               ParrySystem.Instance != null;
+    }
+
+    private IEnumerator OpenVfxParryWindow(
+        BattleUnit attacker,
+        ActionData action,
+        VfxActionState actionState,
+        float delay = 0f)
+    {
+        if (!ShouldStartVfxParry(attacker, action) ||
+            actionState == null ||
+            actionState.parryWindowFinished)
+        {
+            yield break;
+        }
+
+        if (delay > 0f)
+        {
+            yield return new WaitForSeconds(delay);
+        }
+
+        // Nhiều projectile / AoE có thể cùng gọi coroutine.
+        // Chỉ coroutine đầu tiên được mở window.
+        if (actionState.parryWindowOpened ||
+            actionState.parryWindowFinished ||
+            ParrySystem.Instance == null)
+        {
+            yield break;
+        }
+
+        actionState.parryWindowOpened = true;
+
+        // Xóa input Parry bấm quá sớm trước khi window thật sự mở.
+        ParrySystem.Instance.ResetParryState();
+        ParrySystem.Instance.OpenWindow();
+
+        float timer = 0f;
+        float duration = Mathf.Max(
+            0.01f,
+            action.parryWindowDuration
+        );
+
+        while (!actionState.parryWindowFinished &&
+               timer < duration)
+        {
+            timer += Time.deltaTime;
+            yield return null;
+        }
+
+        if (!actionState.parryWindowFinished &&
+            ParrySystem.Instance != null)
+        {
+            // Hết cửa sổ nhưng không xóa parrySuccessful:
+            // nếu người chơi vừa Parry thành công thì kết quả phải được giữ
+            // cho tới lúc projectile/beam impact.
+            ParrySystem.Instance.CloseWindow();
+        }
+    }
+
+    private IEnumerator MonitorProjectileParry(
+        GameObject projectile,
+        BattleUnit attacker,
+        BattleUnit target,
+        ActionData action,
+        VfxActionState actionState)
+    {
+        if (projectile == null ||
+            target == null ||
+            !ShouldStartVfxParry(attacker, action) ||
+            actionState == null)
+        {
+            yield break;
+        }
+
+        Transform travelTransform =
+            GetProjectileTravelTransform(
+                projectile,
+                action
+            );
+
+        if (travelTransform == null)
+            yield break;
+
+        Vector3 previousPosition =
+            travelTransform.position;
+
+        float measuredSpeed =
+            Mathf.Max(0.01f, action.vfxSpeed);
+
+        while (projectile != null &&
+               travelTransform != null &&
+               target != null &&
+               !target.IsDead &&
+               !actionState.parryWindowOpened &&
+               !actionState.parryWindowFinished)
+        {
+            Vector3 currentPosition =
+                travelTransform.position;
+
+            if (Time.deltaTime > 0.00001f)
+            {
+                float frameSpeed =
+                    Vector3.Distance(
+                        currentPosition,
+                        previousPosition
+                    ) / Time.deltaTime;
+
+                // RFX4 có thể có 1 vài frame đầu chưa di chuyển.
+                // Chỉ nhận tốc độ đo được khi thật sự có movement.
+                if (frameSpeed > 0.01f)
+                {
+                    measuredSpeed = frameSpeed;
+                }
+            }
+
+            Vector3 targetPosition =
+                target.GetVfxTargetPosition(
+                    action.projectileTargetOffset
+                );
+
+            float distance =
+                Vector3.Distance(
+                    currentPosition,
+                    targetPosition
+                );
+
+            float estimatedTimeToImpact =
+                distance /
+                Mathf.Max(0.01f, measuredSpeed);
+
+            if (estimatedTimeToImpact <=
+                Mathf.Max(
+                    0.01f,
+                    action.parryOpenBeforeImpact
+                ))
+            {
+                StartCoroutine(
+                    OpenVfxParryWindow(
+                        attacker,
+                        action,
+                        actionState
+                    )
+                );
+
+                yield break;
+            }
+
+            previousPosition = currentPosition;
+            yield return null;
+        }
+    }
+
+    private Transform GetProjectileTravelTransform(
+        GameObject projectile,
+        ActionData action)
+    {
+        if (projectile == null)
+            return null;
+
+        // Straight / Bezier do CombatManager kéo root object.
+        if (action == null ||
+            action.projectileMoveMode !=
+            ActionData.ProjectileMoveMode.RFX4Prefab)
+        {
+            return projectile.transform;
+        }
+
+        // RFX4 thường di chuyển Transform chứa RFX4_PhysicsMotion,
+        // không nhất thiết là root prefab.
+        RFX4_PhysicsMotion motion =
+            projectile.GetComponentInChildren<
+                RFX4_PhysicsMotion>(true);
+
+        if (motion != null)
+            return motion.transform;
+
+        return projectile.transform;
     }
 
     private void BindRFX4Impact(GameObject vfx, BattleUnit target, ActionData action, System.Action impact)

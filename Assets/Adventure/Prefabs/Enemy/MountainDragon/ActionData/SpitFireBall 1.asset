@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 532a234c595fb3944bb8626c21ed8968, type: 3}
+  m_Name: SpitFireBall 1
+  m_EditorClassIdentifier: Assembly-CSharp::ActionData
+  actionName: SpitFireBall
+  description: 
+  icon: {fileID: 21300000, guid: 779ff2d03c859954d928e76c8725151c, type: 3}
+  type: 1
+  power: 10
+  damageMultiplier: 1
+  isHeal: 0
+  animationTriggerName: SpitFireBall
+  isFriendlyAction: 0
+  isAoE: 0
+  isSelfOnly: 0
+  stainChange: 0
+  buffStat: 0
+  buffAmount: 0
+  buffDuration: 0
+  isMelee: 0
+  vfxType: 1
+  vfxPrefab: {fileID: 6140006693554785414, guid: af1e64aeef4734641a99b959a0f60767, type: 3}
+  castVfxPrefab: {fileID: 13531440185366499, guid: 19be04178a7a6d542b5543b52eaacea4, type: 3}
+  hitVfxPrefab: {fileID: 6981941031284743971, guid: 84cbf7d4f1c16bc478f079adeb0b6994, type: 3}
+  hitVfxTiming: 1
+  castVfxLifeTime: 10
+  hitVfxLifeTime: 3
+  beamPlaybackSpeed: 1
+  projectileMoveMode: 0
+  vfxSpeed: 5
+  vfxLifeTime: 5
+  projectileStartOffset: {x: 0, y: 0, z: 0}
+  projectileTargetOffset: {x: 0, y: 1, z: 0}
+  curveHeight: 2
+  curveSideOffset: 0
+  rfxUseGravity: 0

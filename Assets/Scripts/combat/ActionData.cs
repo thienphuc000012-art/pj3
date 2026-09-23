@@ -71,6 +71,31 @@ public class ActionData : ScriptableObject
     [Min(0.1f)] public float castVfxLifeTime = 5f;
     [Min(0.1f)] public float hitVfxLifeTime = 5f;
 
+    [Header("VFX Parry Timing")]
+    [Tooltip(
+        "Chỉ dùng cho đòn tấn công Shoot / Beam của Enemy. " +
+        "Bật để cửa sổ Parry tự căn theo VFX thay vì Animation Event."
+    )]
+    public bool useVfxParry = true;
+
+    [Tooltip(
+        "Shoot: mở cửa sổ Parry khi projectile ước tính còn từng này giây nữa sẽ chạm target."
+    )]
+    [Min(0.01f)]
+    public float parryOpenBeforeImpact = 0.25f;
+
+    [Tooltip(
+        "Thời gian cửa sổ Parry được mở. Hết thời gian này mà chưa Parry thì cửa sổ đóng."
+    )]
+    [Min(0.01f)]
+    public float parryWindowDuration = 0.30f;
+
+    [Tooltip(
+        "Beam: chờ từng này giây kể từ lúc Beam được spawn rồi mới mở cửa sổ Parry."
+    )]
+    [Min(0f)]
+    public float beamParryDelay = 0.10f;
+
     [Header("Beam Settings")]
     [Tooltip(
         "Playback speed của charge/particle Beam. " +

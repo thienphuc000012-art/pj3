@@ -7,16 +7,46 @@ public class BattleUnit_AnimationEvents : MonoBehaviour
     public SwordBladeTrail swordTrail;
     public void AnimEvent_OpenParry()
     {
-        if (ownerUnit == null || ownerUnit.IsDead) return;
-        if (ownerUnit != null) Debug.Log($"[Animation Event] {ownerUnit.unitName} MỞ cửa sổ Parry!");
-        ParrySystem.Instance.OpenWindow();
+        if (ownerUnit == null || ownerUnit.IsDead)
+            return;
+
+        // Shoot / Beam dùng VFX Parry Timing thì bỏ qua event Parry cũ.
+        if (CombatManager.Instance != null &&
+            CombatManager.Instance.ShouldUseVfxParryTiming(ownerUnit))
+        {
+            return;
+        }
+
+        Debug.Log(
+            $"[Animation Event] {ownerUnit.unitName} MỞ cửa sổ Parry!"
+        );
+
+        if (ParrySystem.Instance != null)
+        {
+            ParrySystem.Instance.OpenWindow();
+        }
     }
 
     public void AnimEvent_CloseParry()
     {
-        if (ownerUnit == null || ownerUnit.IsDead) return;
-        if (ownerUnit != null) Debug.Log($"[Animation Event] {ownerUnit.unitName} ĐÓNG cửa sổ Parry!");
-        ParrySystem.Instance.CloseWindow();
+        if (ownerUnit == null || ownerUnit.IsDead)
+            return;
+
+        // Shoot / Beam dùng VFX Parry Timing thì CombatManager tự đóng.
+        if (CombatManager.Instance != null &&
+            CombatManager.Instance.ShouldUseVfxParryTiming(ownerUnit))
+        {
+            return;
+        }
+
+        Debug.Log(
+            $"[Animation Event] {ownerUnit.unitName} ĐÓNG cửa sổ Parry!"
+        );
+
+        if (ParrySystem.Instance != null)
+        {
+            ParrySystem.Instance.CloseWindow();
+        }
     }
 
     public void AnimEvent_DealDamage()
@@ -24,18 +54,30 @@ public class BattleUnit_AnimationEvents : MonoBehaviour
         if (ownerUnit == null || ownerUnit.IsDead)
             return;
 
-        Debug.Log(
-            $"[Animation Event] {ownerUnit.unitName} DealDamage event. " +
-            "Shoot/Beam sẽ không damage ở event này; damage được resolve khi VFX impact."
-        );
+        if (CombatManager.Instance == null)
+            return;
 
-        if (CombatManager.Instance != null)
+        // Shoot / Beam gây damage khi VFX impact.
+        // Nếu clip cũ vẫn còn DealDamage event thì bỏ qua hoàn toàn.
+        if (CombatManager.Instance.IsVfxImpactDamageAction(ownerUnit))
         {
-            CombatManager.Instance.ApplyDamageFromAnimation(ownerUnit);
+            Debug.Log(
+                $"[Animation Event] {ownerUnit.unitName}: " +
+                "bỏ qua DealDamage vì Shoot/Beam dùng VFX Impact Damage."
+            );
+
+            return;
         }
 
-        // Event vẫn có thể dùng để đóng timing Parry.
-        // parrySuccessful không bị xóa ở đây; Shoot/Beam sẽ đọc nó lúc impact.
+        Debug.Log(
+            $"[Animation Event] {ownerUnit.unitName} " +
+            "chạm mục tiêu (DealDamage)!"
+        );
+
+        CombatManager.Instance.ApplyDamageFromAnimation(
+            ownerUnit
+        );
+
         if (ParrySystem.Instance != null)
         {
             ParrySystem.Instance.CloseWindow();

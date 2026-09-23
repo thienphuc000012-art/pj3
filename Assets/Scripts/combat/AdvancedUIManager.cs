@@ -385,7 +385,21 @@ public class PartyHUDUnit
     [Header("Buff UI")]
     public Transform buffContainer; // Gắn Object chứa Layout Group để xếp Icon buff
     private List<Image> spawnedBuffIcons = new List<Image>();
-    private List<ActiveBuff> currentBuffs = new List<ActiveBuff>();
+
+    // UI chỉ giữ 1 entry cho mỗi loại BuffStat.
+    // Gameplay vẫn giữ từng ActiveBuff riêng để duration và amount hoạt động như cũ.
+    private List<GroupedBuffUI> groupedBuffs = new List<GroupedBuffUI>();
+
+    private class GroupedBuffUI
+    {
+        public ActionData.BuffStat stat;
+        public int stackCount;
+        public int totalAmount;
+
+        // Icon chỉ nhấp nháy khi stack cuối cùng của loại buff này
+        // cũng sắp hết hạn.
+        public int maxDuration;
+    }
 
     private BattleUnit boundUnit;
 
@@ -415,52 +429,152 @@ public class PartyHUDUnit
             hpText.text = shield > 0 ? $"{current}/{max} <color=white>[+{shield}]</color>" : $"{current} / {max}";
         }
 
-        // --- THÊM MỚI: Quản lý Icon Buff mỗi khi Stats thay đổi ---
+        // --- BUFF UI: gộp các buff cùng BuffStat thành 1 icon ---
         if (boundUnit != null && buffContainer != null)
         {
-            currentBuffs = boundUnit.activeBuffs;
+            groupedBuffs.Clear();
 
-            // Xóa Icon cũ đi
-            foreach (var icon in spawnedBuffIcons)
+            // =========================================================
+            // GỘP BUFF CÙNG LOẠI
+            // =========================================================
+            foreach (ActiveBuff buff in boundUnit.activeBuffs)
             {
-                if (icon != null) UnityEngine.Object.Destroy(icon.gameObject);
+                if (buff == null ||
+                    buff.stat == ActionData.BuffStat.None)
+                {
+                    continue;
+                }
+
+                GroupedBuffUI group = null;
+
+                for (int i = 0; i < groupedBuffs.Count; i++)
+                {
+                    if (groupedBuffs[i].stat == buff.stat)
+                    {
+                        group = groupedBuffs[i];
+                        break;
+                    }
+                }
+
+                if (group == null)
+                {
+                    group = new GroupedBuffUI
+                    {
+                        stat = buff.stat,
+                        stackCount = 0,
+                        totalAmount = 0,
+                        maxDuration = 0
+                    };
+
+                    groupedBuffs.Add(group);
+                }
+
+                group.stackCount++;
+                group.totalAmount += buff.amount;
+                group.maxDuration = Mathf.Max(
+                    group.maxDuration,
+                    buff.duration
+                );
             }
+
+            // =========================================================
+            // XÓA ICON UI CŨ
+            // =========================================================
+            foreach (Image icon in spawnedBuffIcons)
+            {
+                if (icon != null)
+                {
+                    UnityEngine.Object.Destroy(
+                        icon.gameObject
+                    );
+                }
+            }
+
             spawnedBuffIcons.Clear();
 
-            // Sinh Icon mới
-            foreach (var buff in currentBuffs)
+            // =========================================================
+            // MỖI LOẠI BUFF CHỈ SINH 1 ICON
+            // =========================================================
+            foreach (GroupedBuffUI group in groupedBuffs)
             {
-                if (AdvancedUIManager.Instance.buffIconPrefab == null) continue;
-
-                GameObject newIcon = UnityEngine.Object.Instantiate(AdvancedUIManager.Instance.buffIconPrefab, buffContainer);
-                Image img = newIcon.GetComponent<Image>();
-
-                if (img != null)
+                if (AdvancedUIManager.Instance == null ||
+                    AdvancedUIManager.Instance.buffIconPrefab == null)
                 {
-                    Sprite buffSprite = AdvancedUIManager.Instance.GetBuffSprite(buff.stat);
-                    if (buffSprite != null) img.sprite = buffSprite;
-
-                    spawnedBuffIcons.Add(img);
+                    continue;
                 }
+
+                GameObject newIcon =
+                    UnityEngine.Object.Instantiate(
+                        AdvancedUIManager.Instance.buffIconPrefab,
+                        buffContainer
+                    );
+
+                Image img =
+                    newIcon.GetComponent<Image>();
+
+                if (img == null)
+                {
+                    UnityEngine.Object.Destroy(newIcon);
+                    continue;
+                }
+
+                Sprite buffSprite =
+                    AdvancedUIManager.Instance.GetBuffSprite(
+                        group.stat
+                    );
+
+                if (buffSprite != null)
+                {
+                    img.sprite = buffSprite;
+                }
+
+                // Nếu prefab icon có TextMeshProUGUI con:
+                // 1 stack -> trống
+                // 2 stack -> x2
+                // 3 stack -> x3
+                TextMeshProUGUI stackText =
+                    newIcon.GetComponentInChildren<
+                        TextMeshProUGUI>(true);
+
+                if (stackText != null)
+                {
+                    stackText.text =
+                        group.stackCount > 1
+                        ? "x" + group.stackCount
+                        : "";
+                }
+
+                spawnedBuffIcons.Add(img);
             }
         }
     }
 
-    // --- THÊM MỚI: Hàm hỗ trợ nhấp nháy từ Update ---
+    // --- Nhấp nháy Buff Icon sắp hết hạn ---
     public void UpdateBuffBlinking(float currentAlpha)
     {
         for (int i = 0; i < spawnedBuffIcons.Count; i++)
         {
-            if (spawnedBuffIcons[i] == null) continue;
+            if (spawnedBuffIcons[i] == null)
+                continue;
 
-            // Nếu buff chỉ còn 1 duration (tức là qua Turn này sẽ biến mất) -> Nhấp nháy
-            if (i < currentBuffs.Count && currentBuffs[i].duration <= 1)
+            bool aboutToExpire =
+                i < groupedBuffs.Count &&
+                groupedBuffs[i].maxDuration <= 1;
+
+            if (aboutToExpire)
             {
-                spawnedBuffIcons[i].color = new Color(1f, 1f, 1f, currentAlpha);
+                spawnedBuffIcons[i].color =
+                    new Color(
+                        1f,
+                        1f,
+                        1f,
+                        currentAlpha
+                    );
             }
             else
             {
-                spawnedBuffIcons[i].color = Color.white;
+                spawnedBuffIcons[i].color =
+                    Color.white;
             }
         }
     }
