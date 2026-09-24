@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -62,6 +62,101 @@ public class BattleUnit : MonoBehaviour
     [Min(0f)] public float phase2IntroDuration = 2.5f;
 
     [HideInInspector] public bool phase2IntroPlayed = false;
+
+    [Header("Phase 2 Idle")]
+    [Tooltip("Idle clip currently used by the boss Animator. Replaced only for this boss after the Phase 2 intro.")]
+    public AnimationClip baseIdleClip;
+    [Tooltip("Looping idle animation used after the Phase 2 intro and between all Phase 2 skills.")]
+    public AnimationClip phase2IdleClip;
+    [Tooltip("Animator idle state path, for example Base Layer.Idle.")]
+    public string idleStateName = "Base Layer.Idle";
+    private AnimatorOverrideController phaseIdleController;
+    private RuntimeAnimatorController originalIdleController;
+
+    [Header("Hit Reactions")]
+    [Tooltip("Original animation assigned to the Animator Hit state.")]
+    public AnimationClip baseHitClip;
+    [Tooltip("Optional stronger reaction when receiving a critical hit.")]
+    public AnimationClip criticalHitClip;
+    [Tooltip("Hit reaction while the boss is in Phase 2 or later.")]
+    public AnimationClip phase2HitClip;
+    [Tooltip("Optional critical reaction in Phase 2. Falls back to Phase 2 Hit first.")]
+    public AnimationClip phase2CriticalHitClip;
+
+    public AnimationClip ResolveHitReactionClip(bool isCritical)
+    {
+        if (isBoss && currentPhaseIndex >= 0)
+        {
+            if (isCritical && phase2CriticalHitClip != null) return phase2CriticalHitClip;
+            if (phase2HitClip != null) return phase2HitClip;
+        }
+        return isCritical && criticalHitClip != null ? criticalHitClip : baseHitClip;
+    }
+
+    // One instance-local override controller holds BOTH idle and hit overrides.
+    // Preparing Phase 2 after a critical hit must not skip the idle replacement.
+    private bool OverrideAnimationClip(AnimationClip original, AnimationClip replacement)
+    {
+        if (animator == null || animator.runtimeAnimatorController == null || original == null || replacement == null) return false;
+        bool creating = phaseIdleController == null;
+        var controller = creating ? new AnimatorOverrideController(animator.runtimeAnimatorController) : phaseIdleController;
+        var overrides = new List<KeyValuePair<AnimationClip, AnimationClip>>();
+        controller.GetOverrides(overrides);
+        bool found = false;
+        for (int i = 0; i < overrides.Count; i++)
+        {
+            if (overrides[i].Key != original && overrides[i].Value != original) continue;
+            overrides[i] = new KeyValuePair<AnimationClip, AnimationClip>(overrides[i].Key, replacement);
+            found = true;
+        }
+        if (!found)
+        {
+            if (creating)
+            {
+                if (Application.isPlaying) Destroy(controller); else DestroyImmediate(controller);
+            }
+            Debug.LogWarning("Animation clip is not in the unit Animator: " + original.name, this);
+            return false;
+        }
+        controller.ApplyOverrides(overrides);
+        if (creating)
+        {
+            originalIdleController = animator.runtimeAnimatorController;
+            controller.name = name + " Combat Animations";
+            phaseIdleController = controller;
+            animator.runtimeAnimatorController = controller;
+        }
+        return true;
+    }
+
+    public void PreparePhase2Idle()
+    {
+        if (IsDead || animator == null) return;
+        if (phase2IdleClip != null) OverrideAnimationClip(baseIdleClip, phase2IdleClip);
+        if (phase2HitClip != null) OverrideAnimationClip(baseHitClip, phase2HitClip);
+    }
+
+    public void EnterPhase2Idle()
+    {
+        PreparePhase2Idle();
+        ReturnToCombatIdle();
+    }
+
+    public void ReturnToCombatIdle()
+    {
+        if (IsDead || animator == null || string.IsNullOrEmpty(idleStateName)) return;
+        int stateHash = Animator.StringToHash(idleStateName);
+        if (animator.HasState(0, stateHash)) animator.CrossFadeInFixedTime(stateHash, .1f, 0);
+    }
+
+    private void OnDestroy()
+    {
+        if (phaseIdleController == null) return;
+        if (animator != null && animator.runtimeAnimatorController == phaseIdleController)
+            animator.runtimeAnimatorController = originalIdleController;
+        if (Application.isPlaying) Destroy(phaseIdleController);
+        else DestroyImmediate(phaseIdleController);
+    }
 
     [HideInInspector] public BattleUnit lastTarget = null; // Ghi nhớ mục tiêu vừa đánh
 
@@ -185,7 +280,7 @@ public class BattleUnit : MonoBehaviour
         UpdateUI();
     }
 
-    public void TakeDamage(int rawDamage, bool isParried)
+    public void TakeDamage(int rawDamage, bool isParried, bool isCritical = false)
     {
         if (IsDead) return;
         // --- CẬP NHẬT: Nếu Parry thành công, chặn Damage và KHÔNG gọi lại SetTrigger("Parry") ---
@@ -231,9 +326,11 @@ public class BattleUnit : MonoBehaviour
                 animator.SetTrigger("Die");
             }
         }
-        else if (animator != null)
+        else if (animator != null && finalDamage > 0)
         {
-            animator.ResetTrigger("Parry");
+            OverrideAnimationClip(baseHitClip, ResolveHitReactionClip(isCritical));
+            if (animator.parameters.Any(p => p.type == AnimatorControllerParameterType.Trigger && p.name == "Parry"))
+                animator.ResetTrigger("Parry");
             animator.SetTrigger("Hit");
         }
     }

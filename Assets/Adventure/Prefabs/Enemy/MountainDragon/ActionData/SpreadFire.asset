@@ -1,0 +1,53 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 532a234c595fb3944bb8626c21ed8968, type: 3}
+  m_Name: SpreadFire
+  m_EditorClassIdentifier: Assembly-CSharp::ActionData
+  actionName: SpreadFire
+  description: 
+  icon: {fileID: 21300000, guid: 779ff2d03c859954d928e76c8725151c, type: 3}
+  type: 1
+  power: 10
+  damageMultiplier: 1
+  isHeal: 0
+  animationTriggerName: SpreadFire
+  isFriendlyAction: 0
+  isAoE: 0
+  isSelfOnly: 0
+  stainChange: 0
+  buffStat: 0
+  buffAmount: 0
+  buffDuration: 0
+  isMelee: 0
+  vfxType: 3
+  vfxPrefab: {fileID: 389821699222927281, guid: 856f1f18fb8861d4499813c38a5963ae, type: 3}
+  castVfxPrefab: {fileID: 0}
+  hitVfxPrefab: {fileID: 132858, guid: 0768513c98f0e6342bdeeb058aa7d6bd, type: 3}
+  hitVfxTiming: 1
+  castVfxLifeTime: 10
+  hitVfxLifeTime: 3
+  useVfxParry: 1
+  parryOpenBeforeImpact: 0.25
+  parryWindowDuration: 0.3
+  beamParryDelay: 0.2
+  beamPlaybackSpeed: 1
+  beamParticleStream: 1
+  beamStreamParticleName: Flames
+  beamStreamTravelTime: 0.45
+  projectileMoveMode: 0
+  vfxSpeed: 5
+  vfxLifeTime: 2
+  projectileStartOffset: {x: 0, y: 0, z: 0}
+  projectileTargetOffset: {x: 0, y: 1, z: 0}
+  curveHeight: 2
+  curveSideOffset: 0
+  rfxUseGravity: 0

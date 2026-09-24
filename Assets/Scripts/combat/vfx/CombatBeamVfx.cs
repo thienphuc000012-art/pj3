@@ -2,8 +2,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Fits RFX4's Distance particles between combat units without physics raycasts.
-/// Damage and parry remain owned by combat animation events.
+/// Fits RFX4 distance beams or an opted-in forward particle stream to combat targets.
+/// Reports impact to CombatManager; animation events control emission and stopping.
 /// </summary>
 public sealed class CombatBeamVfx : MonoBehaviour
 {
@@ -17,6 +17,10 @@ public sealed class CombatBeamVfx : MonoBehaviour
     private Vector3 targetOffset;
     private readonly List<ParticleSystem> distanceParticles = new List<ParticleSystem>();
     private readonly List<ParticleSystemRenderer> distanceRenderers = new List<ParticleSystemRenderer>();
+    private ParticleSystem stream;
+    private ParticleSystem.Particle[] streamBuffer;
+    private float streamTravelTime;
+    private bool particleStream;
 
     // Called on an inactive clone, before any prefab OnEnable callbacks.
     public void Initialize(BattleUnit owner, BattleUnit destination, ActionData action,
@@ -27,6 +31,8 @@ public sealed class CombatBeamVfx : MonoBehaviour
         startOffset = action.projectileStartOffset;
         targetOffset = action.projectileTargetOffset;
         onImpact = impact;
+        particleStream = action.beamParticleStream;
+        streamTravelTime = Mathf.Max(.05f, action.beamStreamTravelTime);
 
         RFX4_PlaybackSpeed playback = GetComponent<RFX4_PlaybackSpeed>();
         if (playback == null) playback = gameObject.AddComponent<RFX4_PlaybackSpeed>();
@@ -34,6 +40,30 @@ public sealed class CombatBeamVfx : MonoBehaviour
 
         foreach (ParticleSystem particles in GetComponentsInChildren<ParticleSystem>(true))
         {
+            if (particleStream && particles.name == action.beamStreamParticleName)
+            {
+                stream = particles;
+                stream.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+                var main = stream.main;
+                main.prewarm = false;
+                main.simulationSpace = ParticleSystemSimulationSpace.Local;
+                main.startSpeed = 0;
+                main.startLifetime = streamTravelTime + .1f;
+                main.gravityModifier = 0;
+                // The source prefab emits throughout a five-metre cone volume.
+                // Emit at its base instead, otherwise nearby targets are hit at spawn.
+                var shape = stream.shape;
+                shape.shapeType = ParticleSystemShapeType.Cone;
+                shape.position = Vector3.zero;
+                shape.rotation = Vector3.zero;
+                shape.length = .01f;
+                streamBuffer = new ParticleSystem.Particle[main.maxParticles];
+                var velocity = stream.velocityOverLifetime;
+                velocity.enabled = true;
+                velocity.space = ParticleSystemSimulationSpace.Local;
+                velocity.x = 0; velocity.y = 0;
+                continue;
+            }
             if (!particles.name.Contains("Distance")) continue;
             ParticleSystemRenderer renderer = particles.GetComponent<ParticleSystemRenderer>();
             if (renderer == null) continue;
@@ -42,6 +72,7 @@ public sealed class CombatBeamVfx : MonoBehaviour
         }
 
         UpdateEndpoints();
+        if (particleStream && stream == null) Debug.LogError("Beam stream particle system not found: " + action.beamStreamParticleName, this);
     }
 
     private void LateUpdate()
@@ -54,6 +85,11 @@ public sealed class CombatBeamVfx : MonoBehaviour
         }
 
         UpdateEndpoints();
+        if (particleStream)
+        {
+            UpdateStreamImpact();
+            return;
+        }
         if (!HasEmitted)
         {
             // Wait for real particles, including their authored start delay and
@@ -67,6 +103,31 @@ public sealed class CombatBeamVfx : MonoBehaviour
                 if (stopAfterEmission) Destroy(gameObject, 0.2f);
                 break;
             }
+        }
+    }
+
+    private void UpdateStreamImpact()
+    {
+        if (stream == null) return;
+        Vector3 end = target.GetVfxTargetPosition(targetOffset);
+        Vector3 axis = transform.forward;
+        float length = Vector3.Dot(end - transform.position, axis);
+        int count = stream.GetParticles(streamBuffer);
+        bool reached = false;
+        for (int i = 0; i < count; i++)
+        {
+            Vector3 world = stream.transform.TransformPoint(streamBuffer[i].position);
+            if (Vector3.Dot(world - transform.position, axis) < length) continue;
+            reached = true;
+            // Don't send the flame past the target into the background.
+            streamBuffer[i].remainingLifetime = 0;
+        }
+        stream.SetParticles(streamBuffer, count);
+        if (reached && !HasEmitted)
+        {
+            HasEmitted = true;
+            onImpact?.Invoke(); onImpact = null;
+            if (stopAfterEmission) Destroy(gameObject, .2f);
         }
     }
 
@@ -86,6 +147,14 @@ public sealed class CombatBeamVfx : MonoBehaviour
         transform.position = start;
         if (direction.sqrMagnitude > 0.000001f)
             transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+
+        if (stream != null)
+        {
+            stream.transform.SetPositionAndRotation(start, transform.rotation);
+            var velocity = stream.velocityOverLifetime;
+            float zScale = Mathf.Max(.0001f, stream.transform.TransformVector(Vector3.forward).magnitude);
+            velocity.z = direction.magnitude / (streamTravelTime * zScale);
+        }
 
         for (int i = 0; i < distanceParticles.Count; i++)
         {

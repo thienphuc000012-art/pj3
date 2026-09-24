@@ -102,6 +102,10 @@ public class ActionData : ScriptableObject
         "Damage của Beam được resolve khi Beam impact target."
     )]
     [Min(0.01f)] public float beamPlaybackSpeed = 1f;
+    [Tooltip("Fit a forward particle stream (e.g. Flamethrower) to the selected target.")]
+    public bool beamParticleStream;
+    public string beamStreamParticleName = "Flames";
+    [Min(0.05f)] public float beamStreamTravelTime = 0.45f;
 
     [Header("Projectile Settings")]
     public ProjectileMoveMode projectileMoveMode = ProjectileMoveMode.Straight;

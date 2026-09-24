@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -426,12 +426,17 @@ public class CombatManager : MonoBehaviour
         }
 
         // Trigger animation chỉ chạy đúng 1 lần vì phase2IntroPlayed đã được đánh dấu.
+        // Override before the intro exits, so its automatic Idle transition cannot
+        // briefly show the Phase 1 idle while the cinematic timer is still running.
+        boss.PreparePhase2Idle();
         if (boss.animator != null && !string.IsNullOrEmpty(boss.phase2AnimationTriggerName))
         {
             boss.animator.SetTrigger(boss.phase2AnimationTriggerName);
         }
 
         yield return new WaitForSeconds(Mathf.Max(0f, boss.phase2IntroDuration));
+
+        if (boss != null && !boss.IsDead) boss.EnterPhase2Idle();
 
         if (AdvancedUIManager.Instance != null)
         {
@@ -854,7 +859,7 @@ public class CombatManager : MonoBehaviour
 
         if (!attacker.IsDead && attacker.animator != null)
         {
-            attacker.animator.CrossFade("Idle", 0.1f);
+            attacker.ReturnToCombatIdle();
         }
 
         // --- CẬP NHẬT: Chỉ chuyển lượt nếu được cho phép (Boss đánh multi-hit sẽ cấm cờ này lại) ---
@@ -1144,7 +1149,7 @@ public class CombatManager : MonoBehaviour
                     if (!UsesVfxImpact(actionToUse)) SpawnActionHitVFX(actionToUse, enemy);
 
                     int hpBefore = enemy.currentHP;
-                    enemy.TakeDamage(rawDamage, false);
+                    enemy.TakeDamage(rawDamage, false, isCrit);
                     int actualDamageTaken = hpBefore - enemy.currentHP;
                     GetComponent<BattleResultPanel>()?.RecordDamage(true, actualDamageTaken);
 
@@ -1161,7 +1166,7 @@ public class CombatManager : MonoBehaviour
             foreach (var ally in targets)
             {
                 int hpBefore = ally.currentHP;
-                ally.TakeDamage(rawDamage, parried);
+                ally.TakeDamage(rawDamage, parried, isCrit);
                 int actualDamageTaken = hpBefore - ally.currentHP;
                 GetComponent<BattleResultPanel>()?.RecordDamage(false, actualDamageTaken);
 
@@ -1561,7 +1566,8 @@ public class CombatManager : MonoBehaviour
             // DAMAGE xảy ra đúng lúc VFX impact.
             target.TakeDamage(
                 rawDamage,
-                false
+                false,
+                isCrit
             );
 
             int actualDamageTaken =
@@ -1611,7 +1617,8 @@ public class CombatManager : MonoBehaviour
 
         target.TakeDamage(
             rawDamage,
-            parried
+            parried,
+            isCrit
         );
 
         int playerDamageTaken =

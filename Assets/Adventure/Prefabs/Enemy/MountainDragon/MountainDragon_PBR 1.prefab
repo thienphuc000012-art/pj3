@@ -2343,7 +2343,7 @@ MonoBehaviour:
   baseCritDamage: 150
   defaultAttack: {fileID: 0}
   characterSkills: []
-  isBoss: 0
+  isBoss: 1
   actionsPerTurn: 1
   baseActionPattern:
   - {fileID: 11400000, guid: ce73fe8b2ef5e344cb6c4fb667f35f8c, type: 2}
@@ -2353,11 +2353,17 @@ MonoBehaviour:
   bossPhases:
   - hpPercentThreshold: 0.5
     actionsPerTurn: 1
-    phaseActionPattern:
-    - {fileID: 0}
+    phaseActionPattern: []
   phase2AnimationTriggerName: Phase2
-  phase2IntroDuration: 2.5
+  phase2IntroDuration: 2.1
   phase2IntroPlayed: 0
+  baseIdleClip: {fileID: 7400000, guid: 16f8dbc1c530bf048a4536d0c96c80a4, type: 2}
+  phase2IdleClip: {fileID: 7400000, guid: 4d85ea0e96c902e49ab794273ffac155, type: 2}
+  idleStateName: Base Layer.Idle
+  baseHitClip: {fileID: 7400000, guid: 67e8a65f415aa0946bae5b43dc5238dc, type: 2}
+  criticalHitClip: {fileID: 7400000, guid: 1d817ce00d810154aa2443796be8e974, type: 2}
+  phase2HitClip: {fileID: 7400000, guid: d974287ba23ecb348b5dd2d05770c032, type: 2}
+  phase2CriticalHitClip: {fileID: 0}
   lastTarget: {fileID: 0}
   speed: 30
   unitPortrait: {fileID: 21300000, guid: f69696d136baf5c43a75bed5e7a43833, type: 3}
