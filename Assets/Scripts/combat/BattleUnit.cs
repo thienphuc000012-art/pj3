@@ -24,6 +24,17 @@ public class BossPhase
     public List<ActionData> phaseActionPattern;
 }
 
+[Serializable]
+public class IdleVfxAttachment
+{
+    public GameObject prefab;
+    [Tooltip("VFX follows this point/bone. Leave empty to use the unit root.")]
+    public Transform spawnPoint;
+    public Vector3 localPosition;
+    public Vector3 localRotation;
+    public Vector3 localScale = Vector3.one;
+}
+
 public class BattleUnit : MonoBehaviour
 {
     public string unitName;
@@ -72,6 +83,57 @@ public class BattleUnit : MonoBehaviour
     public string idleStateName = "Base Layer.Idle";
     private AnimatorOverrideController phaseIdleController;
     private RuntimeAnimatorController originalIdleController;
+
+    [Header("Idle VFX")]
+    [Tooltip("Effects shown only while in Idle State Name. Use looping VFX prefabs for continuous effects.")]
+    public List<IdleVfxAttachment> idleVfx = new List<IdleVfxAttachment>();
+    [Tooltip("Effects for Phase 2 and later. An empty list means no idle effects in Phase 2.")]
+    public List<IdleVfxAttachment> phase2IdleVfx = new List<IdleVfxAttachment>();
+    private readonly List<GameObject> activeIdleVfx = new List<GameObject>();
+    private int activeIdleVfxPhase = -1;
+
+    private void LateUpdate()
+    {
+        int phase = -1;
+        if (!IsDead && animator != null && animator.isActiveAndEnabled &&
+            animator.runtimeAnimatorController != null && !string.IsNullOrEmpty(idleStateName))
+        {
+            // Follow the destination during a blend so attacks/Hit/Die hide idle effects immediately.
+            var state = animator.IsInTransition(0)
+                ? animator.GetNextAnimatorStateInfo(0) : animator.GetCurrentAnimatorStateInfo(0);
+            if (state.IsName(idleStateName)) phase = isBoss && currentPhaseIndex >= 0 ? 1 : 0;
+        }
+        if (phase == activeIdleVfxPhase) return;
+        ClearIdleVfx();
+        activeIdleVfxPhase = phase;
+        if (phase < 0) return;
+        var attachments = phase == 1 ? phase2IdleVfx : idleVfx;
+        if (attachments == null) return;
+        foreach (var entry in attachments)
+        {
+            if (entry == null || entry.prefab == null) continue;
+            var instance = Instantiate(entry.prefab, entry.spawnPoint != null ? entry.spawnPoint : transform, false);
+            instance.transform.localPosition = entry.localPosition;
+            instance.transform.localRotation = Quaternion.Euler(entry.localRotation);
+            instance.transform.localScale = Vector3.Scale(entry.prefab.transform.localScale, entry.localScale);
+            activeIdleVfx.Add(instance);
+            instance.SetActive(true);
+        }
+    }
+
+    private void ClearIdleVfx()
+    {
+        foreach (var instance in activeIdleVfx)
+        {
+            if (instance == null) continue;
+            instance.SetActive(false);
+            if (Application.isPlaying) Destroy(instance); else DestroyImmediate(instance);
+        }
+        activeIdleVfx.Clear();
+        activeIdleVfxPhase = -1;
+    }
+
+    private void OnDisable() => ClearIdleVfx();
 
     [Header("Hit Reactions")]
     [Tooltip("Original animation assigned to the Animator Hit state.")]
@@ -151,6 +213,7 @@ public class BattleUnit : MonoBehaviour
 
     private void OnDestroy()
     {
+        ClearIdleVfx();
         if (phaseIdleController == null) return;
         if (animator != null && animator.runtimeAnimatorController == phaseIdleController)
             animator.runtimeAnimatorController = originalIdleController;

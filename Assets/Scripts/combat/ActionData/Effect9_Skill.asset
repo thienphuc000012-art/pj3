@@ -19,7 +19,7 @@ MonoBehaviour:
   power: 7
   damageMultiplier: 1
   isHeal: 0
-  animationTriggerName: Anim10
+  animationTriggerName: Attack9ice
   isFriendlyAction: 0
   isAoE: 0
   isSelfOnly: 0
@@ -32,10 +32,15 @@ MonoBehaviour:
   vfxPrefab: {fileID: 1979527227019656, guid: b780c48924835834894c395fe01f19c1, type: 3}
   castVfxPrefab: {fileID: 0}
   hitVfxPrefab: {fileID: 173866, guid: 6692e3c69d930964f89b810020ae7d5c, type: 3}
+  useCustomHitVfxOffset: 1
+  hitVfxOffset: {x: 0, y: 0, z: 0}
   hitVfxTiming: 0
   castVfxLifeTime: 5
   hitVfxLifeTime: 3
   beamPlaybackSpeed: 1
+  beamParticleNames:
+  - Trail
+  - TrailDistortion
   projectileMoveMode: 0
   vfxSpeed: 15
   vfxLifeTime: 5

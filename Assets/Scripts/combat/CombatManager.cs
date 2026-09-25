@@ -801,12 +801,12 @@ public class CombatManager : MonoBehaviour
                 ? meleeSlot.position
                 : GetMeleeAttackPosition(attacker, target);
 
+            // Choose the attack facing BEFORE jumping. Turning only on landing
+            // makes JumpForward and the following attack visibly face different directions.
+            // Use the landing position so an offset melee slot cannot introduce a second turn.
+            FaceAttackTarget(attacker, target, attackPosition);
             attacker.animator.Play("JumpForward");
             yield return StartCoroutine(MoveToPosition(attacker.transform, attackPosition, 0.35f));
-
-            // Luôn xoay mặt attacker về phía target khi đã tới vị trí melee.
-            // Không dùng rotation của Melee Slot vì slot chỉ quyết định VỊ TRÍ.
-            FaceMeleeTarget(attacker, target);
 
             string animTrigger = !string.IsNullOrEmpty(action.animationTriggerName) ? action.animationTriggerName : "Attack";
             attacker.animator.SetTrigger(animTrigger);
@@ -823,6 +823,8 @@ public class CombatManager : MonoBehaviour
         }
         else
         {
+            if (action != null && target != null && !action.isFriendlyAction && !action.isHeal)
+                FaceAttackTarget(attacker, target, attacker.transform.position);
             string animTrigger = action != null ? action.animationTriggerName : "Attack";
             attacker.animator.SetTrigger(animTrigger);
 
@@ -1040,12 +1042,12 @@ public class CombatManager : MonoBehaviour
         return attackPosition;
     }
 
-    private void FaceMeleeTarget(BattleUnit attacker, BattleUnit target)
+    private void FaceAttackTarget(BattleUnit attacker, BattleUnit target, Vector3 attackPosition)
     {
         if (attacker == null || target == null)
             return;
 
-        Vector3 direction = target.transform.position - attacker.transform.position;
+        Vector3 direction = target.transform.position - attackPosition;
 
         // Chỉ xoay trên mặt phẳng ngang để nhân vật không bị cúi/ngửa
         // khi pivot của target cao hoặc thấp hơn.
@@ -2141,8 +2143,9 @@ public class CombatManager : MonoBehaviour
     {
         if (action == null || target == null || action.hitVfxPrefab == null) return;
 
-        // Dùng cùng offset với điểm đích của projectile để VFX nằm đúng vị trí va chạm.
-        Vector3 hitPosition = target.transform.position + action.projectileTargetOffset;
+        // Full-body hit effects can start at the feet while the beam aims at the torso.
+        Vector3 hitOffset = action.useCustomHitVfxOffset ? action.hitVfxOffset : action.projectileTargetOffset;
+        Vector3 hitPosition = target.transform.position + hitOffset;
         SpawnHitVFX(action.hitVfxPrefab, hitPosition, action.hitVfxLifeTime);
     }
 

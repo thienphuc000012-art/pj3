@@ -35,7 +35,14 @@ MonoBehaviour:
   hitVfxTiming: 0
   castVfxLifeTime: 5
   hitVfxLifeTime: 3
+  useVfxParry: 0
+  parryOpenBeforeImpact: 0.25
+  parryWindowDuration: 0.3
+  beamParryDelay: 0.1
   beamPlaybackSpeed: 1
+  beamParticleStream: 0
+  beamStreamParticleName: Flames
+  beamStreamTravelTime: 0.45
   projectileMoveMode: 0
   vfxSpeed: 15
   vfxLifeTime: 5

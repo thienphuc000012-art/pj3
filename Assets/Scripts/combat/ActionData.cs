@@ -59,6 +59,10 @@ public class ActionData : ScriptableObject
     public GameObject vfxPrefab;
     public GameObject castVfxPrefab;
     public GameObject hitVfxPrefab;
+    [Tooltip("Use a separate position for Hit VFX, for example the target root for a full-body effect. Otherwise uses Projectile Target Offset.")]
+    public bool useCustomHitVfxOffset;
+    [Tooltip("World-space offset from the target root. Zero places the Hit VFX at the target pivot/feet.")]
+    public Vector3 hitVfxOffset = Vector3.zero;
 
     public enum HitVfxTiming { VfxImpact, AnimationEvent }
 
@@ -102,6 +106,8 @@ public class ActionData : ScriptableObject
         "Damage của Beam được resolve khi Beam impact target."
     )]
     [Min(0.01f)] public float beamPlaybackSpeed = 1f;
+    [Tooltip("Exact particle object names to stretch for a beam. Empty uses the RFX4 Distance naming convention.")]
+    public string[] beamParticleNames = new string[0];
     [Tooltip("Fit a forward particle stream (e.g. Flamethrower) to the selected target.")]
     public bool beamParticleStream;
     public string beamStreamParticleName = "Flames";

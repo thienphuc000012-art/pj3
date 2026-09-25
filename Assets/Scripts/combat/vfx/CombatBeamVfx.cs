@@ -64,7 +64,10 @@ public sealed class CombatBeamVfx : MonoBehaviour
                 velocity.x = 0; velocity.y = 0;
                 continue;
             }
-            if (!particles.name.Contains("Distance")) continue;
+            bool isBeamParticle = action.beamParticleNames != null && action.beamParticleNames.Length > 0
+                ? System.Array.IndexOf(action.beamParticleNames, particles.name) >= 0
+                : particles.name.Contains("Distance");
+            if (!isBeamParticle) continue;
             ParticleSystemRenderer renderer = particles.GetComponent<ParticleSystemRenderer>();
             if (renderer == null) continue;
             distanceParticles.Add(particles);
