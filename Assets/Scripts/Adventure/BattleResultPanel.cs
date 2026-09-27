@@ -24,6 +24,7 @@ public class BattleResultPanel : MonoBehaviour
     public void Show(bool won)
     {
         if (visible) return;
+        ScreenSpaceCut.StopActive();
         victory = won; visible = true; duration = Time.unscaledTime - started;
         oldTimeScale = Time.timeScale; Time.timeScale = 0;
         Cursor.lockState = CursorLockMode.None; Cursor.visible = true;

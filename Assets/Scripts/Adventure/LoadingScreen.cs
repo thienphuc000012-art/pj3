@@ -27,6 +27,7 @@ public class LoadingScreen : MonoBehaviour
         if (string.IsNullOrEmpty(scene) || scene == SceneName || !Application.CanStreamedLevelBeLoaded(scene) || !Application.CanStreamedLevelBeLoaded(SceneName))
         { Error = "Không tìm thấy scene đích hoặc scene Loading trong Build Settings."; Debug.LogError(Error); return false; }
         Error = null; destination = scene; IsLoading = true;
+        ScreenSpaceCut.StopActive();
         Time.timeScale = 1;
         if (MapChunkStreamer.Instance != null) MapChunkStreamer.Instance.TransitionTo(SceneName);
         else SceneManager.LoadSceneAsync(SceneName);

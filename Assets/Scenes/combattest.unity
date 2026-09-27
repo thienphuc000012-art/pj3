@@ -701,7 +701,7 @@ PrefabInstance:
     - target: {fileID: 6342075890019822996, guid: 713b69530f4ea474b9a3a7b55c14929f, type: 3}
       propertyPath: m_Controller
       value: 
-      objectReference: {fileID: 9100000, guid: c4fd274514c452348ad862136d5d9af3, type: 2}
+      objectReference: {fileID: 0}
     - target: {fileID: 6669287467422008770, guid: 713b69530f4ea474b9a3a7b55c14929f, type: 3}
       propertyPath: m_IsActive
       value: 0
@@ -2068,8 +2068,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 203175422}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.021174055, y: -0.36965996, z: 0.01041614, w: 0.92886746}
-  m_LocalPosition: {x: -1.210022, y: 5.090027, z: -4.28}
+  m_LocalRotation: {x: -0.021174055, y: 0.3696601, z: -0.010416144, w: -0.9288674}
+  m_LocalPosition: {x: -1.6199951, y: 3.9000244, z: -1.02}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -11755,7 +11755,7 @@ Transform:
   m_GameObject: {fileID: 2024680774}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 5.075}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -11813,7 +11813,7 @@ SkinnedMeshRenderer:
   m_Quality: 0
   m_UpdateWhenOffscreen: 1
   m_SkinnedMotionVectors: 1
-  m_Mesh: {fileID: 4300000, guid: b6029f861001466479c967c3577302ae, type: 2}
+  m_Mesh: {fileID: 4300000, guid: 30aafd57a4605d14cb966dcbbe123c8f, type: 2}
   m_Bones:
   - {fileID: 243204292}
   - {fileID: 188498758}
@@ -11868,8 +11868,8 @@ SkinnedMeshRenderer:
   m_BlendShapeWeights: []
   m_RootBone: {fileID: 243204292}
   m_AABB:
-    m_Center: {x: 0.00926204, y: 1.0279442, z: -0.021530923}
-    m_Extent: {x: 0.18802027, y: 0.12569463, z: 0.13247938}
+    m_Center: {x: 0.01171314, y: 1.0279442, z: -0.023705576}
+    m_Extent: {x: 0.203102, y: 0.12569463, z: 0.14316805}
   m_DirtyAABB: 0
 --- !u!1 &2045150254
 GameObject:
@@ -12615,9 +12615,29 @@ PrefabInstance:
       value: player
       objectReference: {fileID: 0}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
+      propertyPath: characterSkills.Array.size
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
+      propertyPath: 'characterSkills.Array.data[0]'
+      value: 
+      objectReference: {fileID: 11400000, guid: 780d384e9c660b14da50a8d8764e26e4, type: 2}
+    - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
+      propertyPath: 'characterSkills.Array.data[1]'
+      value: 
+      objectReference: {fileID: 11400000, guid: e288a344a0ee08f42bee7a0c4f10bd03, type: 2}
+    - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: 'characterSkills.Array.data[2]'
       value: 
+      objectReference: {fileID: 11400000, guid: 8041ddf7f5ced7248977ebb746a1a1f5, type: 2}
+    - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
+      propertyPath: 'characterSkills.Array.data[3]'
+      value: 
       objectReference: {fileID: 11400000, guid: 7a1a04a484344b3c8ae407632b4d4512, type: 2}
+    - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
+      propertyPath: 'characterSkills.Array.data[4]'
+      value: 
+      objectReference: {fileID: 11400000, guid: 8857ea3dcd9fe2d40af5ba89b021f793, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

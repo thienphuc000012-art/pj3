@@ -9,6 +9,7 @@ public enum OpenMenuType { None, Skills, Items }
 public class CombatManager : MonoBehaviour
 {
     public static CombatManager Instance;
+    private int screenSlashHitIndex;
     [Header("Turn VFX Cleanup")]
     [Min(0f)] public float turnVfxCleanupDelay = 1.5f;
     private Coroutine turnTransitionRoutine;
@@ -793,6 +794,7 @@ public class CombatManager : MonoBehaviour
         Vector3 originalPosition = attacker.transform.position;
         Quaternion originalRotation = attacker.transform.rotation;
         isAttackAnimationFinished = false;
+        screenSlashHitIndex = 0;
 
         if (action != null && action.isMelee && target != null && !action.isFriendlyAction && !action.isHeal)
         {
@@ -1118,6 +1120,12 @@ public class CombatManager : MonoBehaviour
         if (attacker.isPlayer)
         {
             if (currentTarget == null) return;
+            if (actionToUse.screenSlash && !actionToUse.isHeal && !actionToUse.isFriendlyAction)
+            {
+                var slash = GetComponent<ScreenSlashVfx>();
+                if (slash == null) slash = gameObject.AddComponent<ScreenSlashVfx>();
+                slash.Play(actionToUse, screenSlashHitIndex++);
+            }
 
             if (actionToUse.isFriendlyAction || actionToUse.isHeal)
             {

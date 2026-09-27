@@ -28,10 +28,20 @@ MonoBehaviour:
   buffAmount: 0
   buffDuration: 0
   isMelee: 1
+  screenSlash: 1
+  screenSlashColor: {r: 0.25, g: 0.8, b: 1, a: 1}
+  screenSlashDuration: 0.42
+  screenSlashWidth: 10
+  screenSlashAngle: -24
+  screenSlashCount: 1
+  screenSlashBurstTime: 0.45
+  screenSlashFinisherScale: 2
   vfxType: 0
   vfxPrefab: {fileID: 0}
   castVfxPrefab: {fileID: 0}
   hitVfxPrefab: {fileID: 0}
+  useCustomHitVfxOffset: 0
+  hitVfxOffset: {x: 0, y: 0, z: 0}
   hitVfxTiming: 0
   castVfxLifeTime: 5
   hitVfxLifeTime: 3
@@ -40,6 +50,7 @@ MonoBehaviour:
   parryWindowDuration: 0.3
   beamParryDelay: 0.1
   beamPlaybackSpeed: 1
+  beamParticleNames: []
   beamParticleStream: 0
   beamStreamParticleName: Flames
   beamStreamTravelTime: 0.45

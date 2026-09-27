@@ -43,6 +43,26 @@ public class ActionData : ScriptableObject
     [Header("Attack Distance Type")]
     public bool isMelee = true;
 
+    [Header("Screen Slash")]
+    [Tooltip("Draw a luminous screen-space cut on each melee damage event.")]
+    public bool screenSlash;
+    public Color screenSlashColor = new Color(.25f, .8f, 1f, 1f);
+    [Min(.1f)] public float screenSlashDuration = .42f;
+    [Min(1f)] public float screenSlashWidth = 10f;
+    [Range(-80f, 80f)] public float screenSlashAngle = -24f;
+    [Range(1, 24)] public int screenSlashCount = 1;
+    [Tooltip("Time spent releasing the cuts. Included in Screen Slash Duration.")]
+    [Min(0f)] public float screenSlashBurstTime = .45f;
+    [Range(1f, 3f)] public float screenSlashFinisherScale = 2f;
+    [Tooltip("Briefly split the live camera image along the slash, then restore it.")]
+    public bool screenSpaceSplit;
+    [Range(1, 6)] public int screenSplitFrames = 2;
+    [Range(0f, 40f)] public float screenSplitPixels = 18f;
+    [Tooltip("Keep all cuts open until the final portion of Screen Slash Duration.")]
+    public bool screenSplitHold;
+    [Range(.5f, .95f)] public float screenSplitRestoreStart = .8f;
+    [Range(.05f, 1f)] public float screenSlashTimeScale = 1f;
+
     // Append values so existing serialized actions keep their VFX behavior.
     public enum VfxType { None, Shoot, SpawnAtTarget, Beam }
 
