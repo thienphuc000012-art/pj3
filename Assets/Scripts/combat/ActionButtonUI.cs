@@ -13,6 +13,18 @@ public class ActionButtonUI : MonoBehaviour
 
     private ActionData currentAction;
 
+    void Update()
+    {
+        if (button == null || currentAction == null || CombatManager.Instance == null) return;
+        var unit = CombatManager.Instance.currentActiveUnit;
+        button.interactable = unit != null && unit.CanUseAction(currentAction);
+        if (currentAction.isUltimate && stainText != null)
+        {
+            stainText.text = "Ultimate " + (unit != null ? Mathf.FloorToInt(unit.UltimateEnergy) : 0) + "/100";
+            stainText.color = unit != null && unit.UltimateReady ? Color.yellow : Color.gray;
+        }
+    }
+
     public void Setup(ActionData action)
     {
         currentAction = action;

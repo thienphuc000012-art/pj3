@@ -125,6 +125,11 @@ public class CampaignSession : MonoBehaviour
     public void SetMenu(AdventureMenu menu)
     {
         if (Busy || !OnMap) return;
+        if (Menu == AdventureMenu.Rest && menu != AdventureMenu.Rest)
+        {
+            RestPoint?.GetComponent<RestPointPresentation>()?.End();
+            RestPoint = null;
+        }
         if (Menu == AdventureMenu.None && menu != AdventureMenu.None)
         {
             previousTimeScale = Time.timeScale;
@@ -205,6 +210,7 @@ public class CampaignSession : MonoBehaviour
         if (!IsNear(rest)) return;
         RestPoint = rest;
         SetMenu(AdventureMenu.Rest);
+        rest.GetComponent<RestPointPresentation>()?.Begin(MapPlayer);
     }
     public void RestAndSave()
     {

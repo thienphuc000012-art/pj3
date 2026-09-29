@@ -24,6 +24,7 @@ public class CombatManager : MonoBehaviour
         public bool impactDamagePrepared;
         public int impactRawDamage;
         public bool impactIsCrit;
+        public bool energyAwarded;
 
         // VFX Parry state cho Shoot / Beam.
         public bool parryWindowOpened;
@@ -652,6 +653,7 @@ public class CombatManager : MonoBehaviour
     public void OnSkillButtonClicked(ActionData skillAction)
     {
         if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
+        if (!currentActiveUnit.CanUseAction(skillAction)) return;
 
         if (currentStains + skillAction.stainChange < 0)
         {
@@ -697,6 +699,8 @@ public class CombatManager : MonoBehaviour
     public void OnActionSelected(ActionData action)
     {
         if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead || action == null) return;
+        if (!currentActiveUnit.CanUseAction(action) || currentTarget == null || currentTarget.IsDead) return;
+        if (currentStains + action.stainChange < 0) return;
         if (action.type == ActionData.ActionType.Item && CampaignSession.Instance != null && CampaignSession.Instance.InEncounter)
         {
             if (currentTarget == null || currentTarget.IsDead || !CampaignSession.Instance.ConsumeBattleItem(action)) return;
@@ -761,6 +765,11 @@ public class CombatManager : MonoBehaviour
     private IEnumerator ExecuteActionRoutine(BattleUnit attacker, BattleUnit target, ActionData action, bool endTurnAfter = true)
     {
         if (attacker == null || attacker.IsDead)
+        {
+            if (endTurnAfter) EndCurrentTurn();
+            yield break;
+        }
+        if (action == null || target == null || target.IsDead || !attacker.CommitActionEnergy(action))
         {
             if (endTurnAfter) EndCurrentTurn();
             yield break;
@@ -1120,6 +1129,7 @@ public class CombatManager : MonoBehaviour
         if (attacker.isPlayer)
         {
             if (currentTarget == null) return;
+            bool resolvedHit = false;
             if (actionToUse.screenSlash && !actionToUse.isHeal && !actionToUse.isFriendlyAction)
             {
                 var slash = GetComponent<ScreenSlashVfx>();
@@ -1133,6 +1143,8 @@ public class CombatManager : MonoBehaviour
 
                 foreach (var ally in targets)
                 {
+                    if (ally == null || ally.IsDead) continue;
+                    resolvedHit = true;
                     if (actionToUse.isHeal)
                     {
                         int hpBefore = ally.currentHP;
@@ -1154,6 +1166,8 @@ public class CombatManager : MonoBehaviour
 
                 foreach (var enemy in targets)
                 {
+                    if (enemy == null || enemy.IsDead) continue;
+                    resolvedHit = true;
                     // Melee/explicit animation timing uses this event. Ranged
                     // impact-timed VFX is emitted by the visual arrival callback.
                     if (!UsesVfxImpact(actionToUse)) SpawnActionHitVFX(actionToUse, enemy);
@@ -1166,6 +1180,7 @@ public class CombatManager : MonoBehaviour
                     AdvancedUIManager.Instance.ShowDamageText(enemy.transform, actualDamageTaken, isCrit, false);
                 }
             }
+            if (resolvedHit) attacker.GainUltimateFromHit(actionToUse);
         }
         else
         {
@@ -1579,6 +1594,13 @@ public class CombatManager : MonoBehaviour
                 false,
                 isCrit
             );
+            // AoE projectiles are one volley; each callback is already guarded
+            // against duplicate impacts. A normal projectile awards on arrival.
+            if (!action.isAoE || !actionState.energyAwarded)
+            {
+                attacker.GainUltimateFromHit(action);
+                actionState.energyAwarded = true;
+            }
 
             int actualDamageTaken =
                 hpBefore -

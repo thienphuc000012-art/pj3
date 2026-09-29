@@ -16,6 +16,8 @@ MonoBehaviour:
   description: 
   icon: {fileID: 21300000, guid: 5095f88fc7d044b45a5bd236e31ef517, type: 3}
   type: 1
+  isUltimate: 0
+  ultimateEnergyGain: 100
   power: 7
   damageMultiplier: 1
   isHeal: 0
@@ -28,14 +30,38 @@ MonoBehaviour:
   buffAmount: 0
   buffDuration: 0
   isMelee: 0
+  screenSlash: 0
+  screenSlashColor: {r: 0.25, g: 0.8, b: 1, a: 1}
+  screenSlashDuration: 0.42
+  screenSlashWidth: 10
+  screenSlashAngle: -24
+  screenSlashCount: 1
+  screenSlashBurstTime: 0.45
+  screenSlashFinisherScale: 2
+  screenSpaceSplit: 0
+  screenSplitFrames: 2
+  screenSplitPixels: 18
+  screenSplitHold: 0
+  screenSplitRestoreStart: 0.8
+  screenSlashTimeScale: 1
   vfxType: 1
   vfxPrefab: {fileID: 153592, guid: 0986516cedd19504bbce8b3532461869, type: 3}
   castVfxPrefab: {fileID: 1242068248825616, guid: 7d198579e899cf8458cc959937ec8d6b, type: 3}
   hitVfxPrefab: {fileID: 1369401709340560, guid: e0e6c9ae18e69094888cb90cd4a2fb61, type: 3}
+  useCustomHitVfxOffset: 0
+  hitVfxOffset: {x: 0, y: 0, z: 0}
   hitVfxTiming: 0
   castVfxLifeTime: 5
   hitVfxLifeTime: 3
+  useVfxParry: 1
+  parryOpenBeforeImpact: 0.25
+  parryWindowDuration: 0.3
+  beamParryDelay: 0.1
   beamPlaybackSpeed: 1
+  beamParticleNames: []
+  beamParticleStream: 0
+  beamStreamParticleName: Flames
+  beamStreamTravelTime: 0.45
   projectileMoveMode: 2
   vfxSpeed: 5
   vfxLifeTime: 5

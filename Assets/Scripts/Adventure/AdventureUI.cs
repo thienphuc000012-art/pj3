@@ -67,6 +67,13 @@ public class AdventureUI : MonoBehaviour
         }
         bool main = S.Menu == AdventureMenu.Main, party = S.Menu == AdventureMenu.Party, rest = S.Menu == AdventureMenu.Rest;
         bool detail = rest && (restPage == 1 || restPage == 2);
+        view.Active("Menu/Background", !rest);
+        view.Active("Menu/Pattern", !rest);
+        foreach (string panel in new[] { "Rest", "Attributes", "Skills", "Craft" })
+        {
+            var backdrop = view.transform.Find("Menu/" + panel + "/Backdrop");
+            if (backdrop != null) backdrop.gameObject.SetActive(!rest);
+        }
         view.Active("Menu/Preview", false);
         view.Active("Menu/DetailPreview", false);
         if (detail && S.Data.party.Count > 0)

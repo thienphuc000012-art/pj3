@@ -50,6 +50,18 @@ public class MapGameSetup : MonoBehaviour
     }
     WorldInteraction CreatePoint(string id, string label, WorldInteractionKind kind, Vector3 position, Color color, int xp, List<ItemStack> rewards)
     {
+        if (kind == WorldInteractionKind.RestPoint)
+        {
+            var campfire = Resources.Load<GameObject>("Adventure/CampfireRestPoint");
+            if (campfire != null)
+            {
+                var instance = Instantiate(campfire, position, Quaternion.identity, transform);
+                instance.name = label;
+                var rest = instance.GetComponent<WorldInteraction>();
+                rest.persistentId = id; rest.savedWorldId = ""; rest.displayName = label;
+                return rest;
+            }
+        }
         var obj = new GameObject(label); obj.transform.SetParent(transform); obj.transform.position = position;
         var point = obj.AddComponent<WorldInteraction>(); point.persistentId = id; point.displayName = label; point.kind = kind; point.experience = xp;
         if (rewards != null) point.rewards = rewards;

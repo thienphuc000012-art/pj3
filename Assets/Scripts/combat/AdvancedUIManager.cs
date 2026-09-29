@@ -136,6 +136,7 @@ public class AdvancedUIManager : MonoBehaviour
             if (hud != null && hud.gameObject != null && hud.gameObject.activeInHierarchy)
             {
                 hud.UpdateBuffBlinking(buffBlinkAlpha);
+                hud.AnimateUltimate(Time.unscaledDeltaTime);
             }
         }
     }
@@ -380,6 +381,58 @@ public class PartyHUDUnit
     public Image shieldFill;
     public TextMeshProUGUI hpText;
     public TextMeshProUGUI nameText;
+    public Image ultimateFill;
+
+    public void EnsureUltimateBar()
+    {
+        if (ultimateFill != null || gameObject == null || hpFill == null) return;
+        var root = gameObject.GetComponent<RectTransform>();
+        if (root == null) return;
+        var existing = root.Find("Ultimate Energy/Fill");
+        if (existing != null) { ultimateFill = existing.GetComponent<Image>(); return; }
+        Canvas.ForceUpdateCanvases();
+        var bounds = RectTransformUtility.CalculateRelativeRectTransformBounds(root, hpFill.rectTransform);
+        var bar = new GameObject("Ultimate Energy", typeof(RectTransform), typeof(Image));
+        var rect = bar.GetComponent<RectTransform>(); rect.SetParent(root, false);
+        rect.anchorMin = rect.anchorMax = new Vector2(.5f, .5f);
+        rect.sizeDelta = new Vector2(Mathf.Max(40, bounds.size.x), 8);
+        rect.localPosition = new Vector3(bounds.center.x, bounds.min.y - 10, 0);
+        var background = bar.GetComponent<Image>(); background.color = new Color(.08f, .1f, .14f); background.raycastTarget = false;
+        var fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
+        var fillRect = fill.GetComponent<RectTransform>(); fillRect.SetParent(rect, false);
+        fillRect.anchorMin = Vector2.zero; fillRect.anchorMax = Vector2.one;
+        fillRect.offsetMin = fillRect.offsetMax = Vector2.zero;
+        ultimateFill = fill.GetComponent<Image>(); ultimateFill.sprite = hpFill.sprite;
+        ultimateFill.type = Image.Type.Filled; ultimateFill.fillMethod = Image.FillMethod.Horizontal;
+        ultimateFill.fillOrigin = 0; ultimateFill.fillAmount = 0; ultimateFill.raycastTarget = false;
+        ultimateFill.color = new Color(.95f, .65f, .12f);
+        if (nameText != null)
+        {
+            Vector3 position = root.InverseTransformPoint(nameText.transform.position);
+            position.y = bounds.min.y - 22 - nameText.rectTransform.rect.height * (1 - nameText.rectTransform.pivot.y);
+            nameText.transform.position = root.TransformPoint(position);
+        }
+    }
+
+    [Min(.01f)] public float ultimateFillDuration = .35f;
+    float ultimateTarget, ultimateStart, ultimateElapsed;
+    public void AnimateUltimate(float deltaTime)
+    {
+        if (ultimateFill == null) return;
+        ultimateElapsed += Mathf.Max(0, deltaTime);
+        float t = Mathf.Clamp01(ultimateElapsed / Mathf.Max(.01f, ultimateFillDuration));
+        ultimateFill.fillAmount = Mathf.Lerp(ultimateStart, ultimateTarget, Mathf.SmoothStep(0, 1, t));
+        ultimateFill.color = ultimateFill.fillAmount >= .999f ? new Color(1f, .9f, .35f) : new Color(.95f, .65f, .12f);
+    }
+    void OnUltimateChanged(float amount)
+    {
+        if (ultimateFill == null) return;
+        ultimateStart = ultimateFill.fillAmount;
+        ultimateTarget = amount / 100f;
+        ultimateElapsed = 0;
+        // Spending an Ultimate clears immediately; gains animate upwards.
+        if (ultimateTarget < ultimateStart) ultimateStart = ultimateFill.fillAmount = ultimateTarget;
+    }
 
     // --- THÊM MỚI: Biến chứa Icon Buff ---
     [Header("Buff UI")]
@@ -405,7 +458,16 @@ public class PartyHUDUnit
 
     public void BindUnit(BattleUnit unit)
     {
+        if (boundUnit != null)
+        {
+            boundUnit.OnStatsChanged -= OnStatsChangedHandler;
+            boundUnit.OnUltimateEnergyChanged -= OnUltimateChanged;
+        }
         boundUnit = unit;
+        EnsureUltimateBar();
+        boundUnit.OnUltimateEnergyChanged += OnUltimateChanged;
+        OnUltimateChanged(boundUnit.UltimateEnergy);
+        AnimateUltimate(ultimateFillDuration);
         if (nameText != null) nameText.text = unit.unitName;
 
         boundUnit.OnStatsChanged -= OnStatsChangedHandler;

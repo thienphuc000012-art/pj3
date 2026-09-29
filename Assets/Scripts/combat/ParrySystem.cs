@@ -65,6 +65,8 @@ public class ParrySystem : MonoBehaviour
                 // CombatManager đang dùng cùng một parrySuccessful cho toàn bộ
                 // targets của AoE, nên true = cả Party chặn đòn.
                 parrySuccessful = true;
+                foreach (var member in combat.playerParty)
+                    if (member != null && !member.IsDead) member.AddUltimateEnergy(member.parryUltimateGain);
                 combat.GetComponent<BattleResultPanel>()?.RecordParry();
                 isParryWindowOpen = false;
 
@@ -108,6 +110,7 @@ public class ParrySystem : MonoBehaviour
         if (isParryWindowOpen)
         {
             parrySuccessful = true;
+            targetPlayer.AddUltimateEnergy(targetPlayer.parryUltimateGain);
             combat.GetComponent<BattleResultPanel>()?.RecordParry();
             isParryWindowOpen = false;
 

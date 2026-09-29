@@ -40,6 +40,37 @@ public class BattleUnit : MonoBehaviour
     public string unitName;
     public int maxHP = 100;
 
+    [Header("Ultimate Energy")]
+    [Range(0, 100)] public float parryUltimateGain = 15f;
+    [Range(0, 100), Tooltip("Energy gained per 100% of maximum HP actually lost. Shield damage does not charge.")]
+    public float damageUltimateGain = 50f;
+    public float UltimateEnergy { get; private set; }
+    public bool UltimateReady => !IsDead && UltimateEnergy >= 100f;
+    public event Action<float> OnUltimateEnergyChanged;
+    public void AddUltimateEnergy(float amount)
+    {
+        if (!isPlayer || IsDead || float.IsNaN(amount) || amount <= 0) return;
+        UltimateEnergy = Mathf.Clamp(UltimateEnergy + amount, 0, 100);
+        OnUltimateEnergyChanged?.Invoke(UltimateEnergy);
+    }
+    public bool CanUseAction(ActionData action) => action != null && !IsDead && (!isPlayer || !action.isUltimate || UltimateReady);
+    public bool CommitActionEnergy(ActionData action)
+    {
+        if (!CanUseAction(action)) return false;
+        if (!isPlayer) return true;
+        if (action.isUltimate)
+        {
+            UltimateEnergy = 0;
+            OnUltimateEnergyChanged?.Invoke(0);
+        }
+        return true;
+    }
+    public void GainUltimateFromHit(ActionData action)
+    {
+        if (action != null && !action.isUltimate && action.type != ActionData.ActionType.Item)
+            AddUltimateEnergy(action.ultimateEnergyGain);
+    }
+
     [Header("Base Stats")]
     public int baseAtk = 10;
     public int baseDef = 5;
@@ -373,7 +404,9 @@ public class BattleUnit : MonoBehaviour
         }
         activeBuffs.RemoveAll(b => b.amount <= 0 && b.stat == ActionData.BuffStat.Shield);
 
+        int hpLost = Mathf.Min(currentHP, finalDamage);
         currentHP = Mathf.Max(0, currentHP - finalDamage);
+        if (hpLost > 0) AddUltimateEnergy(damageUltimateGain * hpLost / Mathf.Max(1f, maxHP));
 
         UpdateUI();
         if (IsDead)

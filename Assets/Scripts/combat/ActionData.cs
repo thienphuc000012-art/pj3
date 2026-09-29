@@ -13,6 +13,12 @@ public class ActionData : ScriptableObject
     public enum ActionType { Attack, Skill, Item }
     public ActionType type;
 
+    [Header("Ultimate Energy")]
+    [Tooltip("Requires a full personal Ultimate gauge and consumes it on use.")]
+    public bool isUltimate;
+    [Range(0, 100), Tooltip("Percentage points gained per resolved hit (or heal/buff event). Multi-hit combos charge each hit; Items and Ultimates never charge.")]
+    public float ultimateEnergyGain = 10f;
+
     public int power;
 
     [Header("Damage Scaling")]

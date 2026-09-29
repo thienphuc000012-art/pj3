@@ -114,6 +114,7 @@ public class WorldInteractionEditor : Editor
         // ========================================================
 
         point.kind = kind;
+        if (kind == WorldInteractionKind.RestPoint) RestPointSetup.Configure(point);
 
 
         point.displayName =
