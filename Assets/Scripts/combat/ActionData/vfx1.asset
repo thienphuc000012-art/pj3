@@ -16,26 +16,52 @@ MonoBehaviour:
   description: 
   icon: {fileID: 21300000, guid: 5095f88fc7d044b45a5bd236e31ef517, type: 3}
   type: 1
+  isUltimate: 0
+  ultimateEnergyGain: 10
   power: 7
   damageMultiplier: 1
   isHeal: 0
   animationTriggerName: Attack1
   isFriendlyAction: 0
-  isAoE: 1
+  isAoE: 0
   isSelfOnly: 0
   stainChange: 0
   buffStat: 0
   buffAmount: 0
   buffDuration: 0
   isMelee: 0
+  screenSlash: 0
+  screenSlashColor: {r: 0.25, g: 0.8, b: 1, a: 1}
+  screenSlashDuration: 0.42
+  screenSlashWidth: 10
+  screenSlashAngle: -24
+  screenSlashCount: 1
+  screenSlashBurstTime: 0.45
+  screenSlashFinisherScale: 2
+  screenSpaceSplit: 0
+  screenSplitFrames: 2
+  screenSplitPixels: 18
+  screenSplitHold: 0
+  screenSplitRestoreStart: 0.8
+  screenSlashTimeScale: 1
   vfxType: 1
   vfxPrefab: {fileID: 1748139164946814, guid: 7c0271f8dd3c5e047bf01c5dc512b215, type: 3}
   castVfxPrefab: {fileID: 1935630441017222, guid: 5356fbc1702eb3840aaa8b7071bb831f, type: 3}
   hitVfxPrefab: {fileID: 145962, guid: 7c051a19bdaa6dc4c96e1b5142e6779a, type: 3}
+  useCustomHitVfxOffset: 0
+  hitVfxOffset: {x: 0, y: 0, z: 0}
   hitVfxTiming: 0
   castVfxLifeTime: 5
   hitVfxLifeTime: 3
+  useVfxParry: 1
+  parryOpenBeforeImpact: 0.25
+  parryWindowDuration: 0.3
+  beamParryDelay: 0.1
   beamPlaybackSpeed: 1
+  beamParticleNames: []
+  beamParticleStream: 0
+  beamStreamParticleName: Flames
+  beamStreamTravelTime: 0.45
   projectileMoveMode: 0
   vfxSpeed: 15
   vfxLifeTime: 5

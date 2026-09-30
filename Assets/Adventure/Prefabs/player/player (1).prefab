@@ -541,7 +541,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b1b644f7366dfa4479bf9ea3f8bc3278, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -1.6
+      value: 10.45
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b1b644f7366dfa4479bf9ea3f8bc3278, type: 3}
       propertyPath: m_LocalPosition.y
@@ -594,6 +594,10 @@ PrefabInstance:
     - target: {fileID: -8283582461199502711, guid: b1b644f7366dfa4479bf9ea3f8bc3278, type: 3}
       propertyPath: m_Layer
       value: 7
+      objectReference: {fileID: 0}
+    - target: {fileID: -8181547672137286831, guid: b1b644f7366dfa4479bf9ea3f8bc3278, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 1.477
       objectReference: {fileID: 0}
     - target: {fileID: -8081066866831979452, guid: b1b644f7366dfa4479bf9ea3f8bc3278, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
@@ -1421,6 +1425,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BattleUnit
   unitName: p1
   maxHP: 100
+  parryUltimateGain: 15
+  damageUltimateGain: 50
   baseAtk: 10
   baseDef: 5
   baseCrit: 10
@@ -1442,6 +1448,15 @@ MonoBehaviour:
   phase2AnimationTriggerName: Phase2
   phase2IntroDuration: 2.5
   phase2IntroPlayed: 0
+  baseIdleClip: {fileID: 0}
+  phase2IdleClip: {fileID: 0}
+  idleStateName: Base Layer.Idle
+  idleVfx: []
+  phase2IdleVfx: []
+  baseHitClip: {fileID: 0}
+  criticalHitClip: {fileID: 0}
+  phase2HitClip: {fileID: 0}
+  phase2CriticalHitClip: {fileID: 0}
   lastTarget: {fileID: 0}
   speed: 10
   unitPortrait: {fileID: 21300000, guid: 82361fa11de5cc34386d1b5565ad8f5a, type: 3}
@@ -1496,9 +1511,9 @@ CapsuleCollider:
   m_Enabled: 1
   serializedVersion: 2
   m_Radius: 0.87
-  m_Height: 1
+  m_Height: 3.0048733
   m_Direction: 1
-  m_Center: {x: -0.03, y: 0.9, z: 0.06}
+  m_Center: {x: -0.029999971, y: 1.5324366, z: 0.060000002}
 --- !u!114 &3836589646047855661
 MonoBehaviour:
   m_ObjectHideFlags: 0

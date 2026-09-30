@@ -3,6 +3,14 @@
 public class BattleUnit_AnimationEvents : MonoBehaviour
 {
     public BattleUnit ownerUnit;
+    void Awake() { ResolveOwner(); }
+    void OnValidate() { ResolveOwner(); }
+    public void ResolveOwner()
+    {
+        // The receiver lives on the Animator; its unit is normally on the
+        // same object or a parent. Preserve explicit assignments.
+        if (ownerUnit == null) ownerUnit = GetComponentInParent<BattleUnit>(true);
+    }
     [Header("Sword Trail")]
     public SwordBladeTrail swordTrail;
     public void AnimEvent_OpenParry()
