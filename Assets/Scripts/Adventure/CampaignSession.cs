@@ -102,8 +102,14 @@ public class CampaignSession : MonoBehaviour
     }
     public BattleUnit Template(PartyMemberProgress member) => Config.startingParty[member.prefabIndex];
     public int MaxHP(PartyMemberProgress member) => Template(member).maxHP + member.hpBonus;
-    public bool IsNear(WorldInteraction point) => MapPlayer != null && point != null &&
-        point.gameObject.activeInHierarchy && Vector3.Distance(MapPlayer.transform.position, point.transform.position) <= point.range;
+    public bool IsNear(WorldInteraction point)
+    {
+        if (MapPlayer == null || point == null || !point.gameObject.activeInHierarchy) return false;
+        var patrol = point.GetComponent<EnemyEncounterBehaviour>();
+        if (point.kind == WorldInteractionKind.Encounter && patrol != null && patrol.enabled)
+            return patrol.CanInteract(MapPlayer.transform, point.range);
+        return Vector3.Distance(MapPlayer.transform.position, point.transform.position) <= point.range;
+    }
     void Update()
     {
         if (!OnMap || MapPlayer == null || Busy || MapChunkStreamer.MovementBlocked) return;

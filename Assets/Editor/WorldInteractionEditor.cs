@@ -114,6 +114,7 @@ public class WorldInteractionEditor : Editor
         // ========================================================
 
         point.kind = kind;
+        if (kind == WorldInteractionKind.Encounter) Undo.AddComponent<EnemyEncounterBehaviour>(obj);
         if (kind == WorldInteractionKind.RestPoint) RestPointSetup.Configure(point);
 
 
@@ -333,6 +334,8 @@ public class WorldInteractionEditor : Editor
         // ========================================================
 
         serializedObject.ApplyModifiedProperties();
+        if (kind == WorldInteractionKind.Encounter && point.GetComponent<EnemyEncounterBehaviour>() == null && GUILayout.Button("Add Patrol / Chase Behaviour"))
+            Undo.AddComponent<EnemyEncounterBehaviour>(point.gameObject);
 
 
         // ========================================================

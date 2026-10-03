@@ -35,11 +35,7 @@ public class MapGameSetup : MonoBehaviour
             var point = CreatePoint("starter-enemy", "Tấn công quái", WorldInteractionKind.Encounter, Ground(origin + new Vector3(0, 0, 9)), Color.red, 100,
                 new List<ItemStack> { new ItemStack("herb", 2), new ItemStack("ore", 2) });
             point.enemyPrefabs.Add(config.demoEnemy);
-            var model = Instantiate(config.demoEnemy, point.transform.position, Quaternion.identity, point.transform);
-            model.gameObject.SetActive(true);
-            foreach (var behaviour in model.GetComponentsInChildren<MonoBehaviour>()) behaviour.enabled = false;
-            foreach (var collider in model.GetComponentsInChildren<Collider>()) collider.enabled = false;
-            if (model.animator != null) model.animator.applyRootMotion = false;
+            point.gameObject.AddComponent<EnemyEncounterBehaviour>();
         }
     }
     Vector3 Ground(Vector3 position)
