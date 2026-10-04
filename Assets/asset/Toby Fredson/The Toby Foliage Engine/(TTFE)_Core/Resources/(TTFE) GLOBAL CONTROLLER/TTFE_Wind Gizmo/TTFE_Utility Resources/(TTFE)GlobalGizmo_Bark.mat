@@ -12,20 +12,27 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
-  - _RECEIVE_SHADOWS_OFF
   - _WINDTYPE_GENTLEBREEZE
   m_InvalidKeywords:
+  - _ADD_PRECOMPUTED_VELOCITY
   - _AO_ON
   - _CENTEROFMASS_ON
+  - _CONSERVATIVE_DEPTH_OFFSET
+  - _DEPTHOFFSET_ON
   - _DIRECTIONALWIND_ON
+  - _DISABLE_SSR_TRANSPARENT
   - _MASKROOTS_ON
-  - _RECEIVESHADOWS_OFF
+  - _PREVENTBARKSTRETCHING_ON
+  - _WINDTYPE_STRONGWIND
   m_LightmapFlags: 0
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
-  stringTagMap: {}
-  disabledShaderPasses: []
+  m_CustomRenderQueue: 2225
+  stringTagMap:
+    MotionVector: User
+  disabledShaderPasses:
+  - TransparentBackface
+  - MOTIONVECTORS
   m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
@@ -108,19 +115,35 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _AddPrecomputedVelocity: 1
     - _AlphaCutoff: 0.5
+    - _AlphaCutoffEnable: 0
+    - _AlphaDstBlend: 0
+    - _AlphaSrcBlend: 1
+    - _AlphaToMask: 0
+    - _AlphaToMaskInspectorValue: 0
     - _Ao: 1
     - _Aointensity: 1
-    - _BranchWindLarge: 20
-    - _BranchWindSmall: 20
+    - _BlendMode: 0
+    - _BranchWindLarge: 1
+    - _BranchWindSmall: 1
     - _BumpScale: 1
     - _CenterofMass: 1
+    - _ConservativeDepthOffsetEnable: 1
+    - _CullMode: 2
+    - _CullModeForward: 2
     - _Cutoff: 0.5
     - _DEBUGVisualizeWindMask: 0
+    - _DepthOffsetEnable: 1
     - _DetailNormalMapScale: 1
     - _Directionalwind: 1
+    - _DoubleSidedEnable: 0
+    - _DoubleSidedGIMode: 0
+    - _DoubleSidedNormalMode: 2
     - _DstBlend: 0
-    - _EnvironmentReflections: 1
+    - _DstBlend2: 0
+    - _EnableBlendModePreserveSpecularLighting: 1
+    - _EnableFogOnTransparent: 1
     - _GentleBreeze: 0
     - _GlobalWindStrength: 1
     - _GlossMapScale: 1
@@ -132,32 +155,57 @@ Material:
     - _Mode: 0
     - _NormalIntensity: 1
     - _OcclusionStrength: 1
+    - _OpaqueCullMode: 2
     - _Parallax: 0.02
+    - _PerPixelSorting: 0
     - _PivotSway: 0
     - _PivotSwayPower: 1
-    - _PreventBarkStretching: 0
+    - _PreventBarkStretching: 1
     - _PreventStrecthing_Offset: -0.2
     - _PreventStrecthing_Scale: 5
-    - _QueueControl: 0
-    - _QueueOffset: 0
     - _Radius: 2
-    - _ReceiveShadows: 0
+    - _ReceivesSSR: 1
+    - _ReceivesSSRTransparent: 0
+    - _RenderQueueType: 1
+    - _RequireSplitLighting: 0
     - _SelfShading: 0
     - _SimplePivotSway: 0
     - _SmoothnessTextureChannel: 0
     - _Smoothnessintensity: 1
     - _SpecularHighlights: 1
     - _SrcBlend: 1
+    - _StencilRef: 0
+    - _StencilRefDepth: 8
+    - _StencilRefDistortionVec: 4
+    - _StencilRefGBuffer: 10
+    - _StencilRefMV: 40
+    - _StencilWriteMask: 6
+    - _StencilWriteMaskDepth: 9
+    - _StencilWriteMaskDistortionVec: 4
+    - _StencilWriteMaskGBuffer: 15
+    - _StencilWriteMaskMV: 41
+    - _SupportDecals: 1
+    - _SurfaceType: 0
+    - _TransparentBackfaceEnable: 0
+    - _TransparentCullMode: 2
+    - _TransparentSortPriority: 0
+    - _TransparentWritingMotionVec: 0
+    - _TransparentZWrite: 0
     - _UVSec: 0
+    - _UseShadowThreshold: 0
     - _VertexAo1: 1
     - _VisuliseMask: 0
-    - _WindType: 0
+    - _WindType: 1
+    - _ZTestDepthEqualForOpaque: 3
+    - _ZTestGBuffer: 4
+    - _ZTestTransparent: 4
     - _ZWrite: 1
     - __dirty: 0
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
-    - _Color2: {r: 0.21960765, g: 0.55294114, b: 0.19999981, a: 1}
-    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _Color2: {r: 0.21960759, g: 0.55294114, b: 0.19999975, a: 1}
+    - _DoubleSidedConstants: {r: 1, g: 1, b: -1, a: 0}
+    - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
     - _Offset: {r: 1, g: 1, b: 0, a: 0}
     - _Tiling: {r: 1, g: 1, b: 0, a: 0}
   m_BuildTextureStacks: []
