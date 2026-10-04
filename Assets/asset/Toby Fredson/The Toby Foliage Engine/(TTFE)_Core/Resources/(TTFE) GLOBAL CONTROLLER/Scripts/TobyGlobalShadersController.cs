@@ -34,6 +34,18 @@ namespace TobyFredson
 			}
 		}
 
+        private void OnEnable() { SetGlobalShaderProperties(); }
+        private void OnValidate() { if (isActiveAndEnabled) SetGlobalShaderProperties(); }
+        private void OnDisable()
+        {
+            // Reset ownership when a scene/controller goes away; another active controller can take over.
+            foreach (var controller in FindObjectsByType<TobyGlobalShadersController>(FindObjectsSortMode.None))
+                if (controller != this && controller.isActiveAndEnabled) { controller.SetGlobalShaderProperties(); return; }
+            Shader.SetGlobalFloat("_TTFEControllerWindActive", 0f);
+        }
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetWindOverride() { Shader.SetGlobalFloat("_TTFEControllerWindActive", 0f); }
+
 		protected void Start()
 		{
 			SetGlobalShaderProperties();
@@ -75,7 +87,9 @@ namespace TobyFredson
 		#region Private Methods
 		private void SetGlobalShaderProperties()
 		{
-			Shader.SetGlobalFloat(TobyConstants.SHADER_VAR_FLOAT_SEASON, season);
+			Shader.SetGlobalFloat("_TTFEControllerWindStrength", windType == TobyWindType.WindOff ? 0f : Mathf.Max(0f, windStrength));
+            Shader.SetGlobalFloat("_TTFEControllerWindActive", 1f);
+            Shader.SetGlobalFloat(TobyConstants.SHADER_VAR_FLOAT_SEASON, season);
 
 			if (windType == TobyWindType.WindOff)
 			{
