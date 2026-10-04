@@ -6,6 +6,9 @@ public class MapGameSetup : MonoBehaviour
     public CampaignConfig config;
     public PlayerScript player;
     public bool createStarterInteractions = true;
+    [Header("Game Progress")]
+    [Tooltip("Bật để chơi lại từ đầu mỗi lần bắt đầu Play từ mapgame. Bản lưu cũ được sao lưu. Không reset khi quay về map từ combat hoặc dịch chuyển nhanh. Tắt để tiếp tục bản lưu.")]
+    public bool startNewGame;
     private System.Collections.IEnumerator Start()
     {
         if (config == null) config = Resources.Load<CampaignConfig>("Adventure/CampaignConfig");
@@ -13,7 +16,7 @@ public class MapGameSetup : MonoBehaviour
         if (config == null || player == null) { Debug.LogError("MapGameSetup requires campaign config and map player."); yield break; }
         // Use the original spawn for sample placement, even after loading a save.
         Vector3 origin = player.transform.position;
-        var session = CampaignSession.Ensure(config);
+        var session = CampaignSession.Ensure(config, startNewGame);
         session.BindMap(player);
         var streaming = GetComponent<MapChunkStreamer>();
         if (streaming != null)

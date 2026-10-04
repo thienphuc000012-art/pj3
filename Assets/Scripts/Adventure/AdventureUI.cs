@@ -39,14 +39,14 @@ public class AdventureUI : MonoBehaviour
         if (S.Busy) return;
         if (previousMenu != S.Menu)
         {
-            restPage = 0; selectedSkill = 0; CloseSkillChange(); previousMenu = S.Menu;
+            restPage = 0; selectedSkill = 0; CloseSkillChange(); CloseTravel(); previousMenu = S.Menu;
             if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
         }
         selectedMember = Mathf.Clamp(selectedMember, 0, Mathf.Max(0, S.Data.party.Count - 1));
         bool menuOpen = S.Menu != AdventureMenu.None;
         if (S.Menu != AdventureMenu.Main) foreach (var card in cardStages) card.Hide();
-        if (menuOpen && !skillDialogOpen && !skillContextOpen && S.Menu != AdventureMenu.Inventory && S.Menu != AdventureMenu.Main && Input.GetKeyDown(KeyCode.Q)) SelectMember(-1);
-        if (menuOpen && !skillDialogOpen && !skillContextOpen && S.Menu != AdventureMenu.Inventory && S.Menu != AdventureMenu.Main && Input.GetKeyDown(KeyCode.R)) SelectMember(1);
+        if (menuOpen && !(travelPanel != null && travelPanel.activeSelf) && !skillDialogOpen && !skillContextOpen && S.Menu != AdventureMenu.Inventory && S.Menu != AdventureMenu.Main && Input.GetKeyDown(KeyCode.Q)) SelectMember(-1);
+        if (menuOpen && !(travelPanel != null && travelPanel.activeSelf) && !skillDialogOpen && !skillContextOpen && S.Menu != AdventureMenu.Inventory && S.Menu != AdventureMenu.Main && Input.GetKeyDown(KeyCode.R)) SelectMember(1);
         view.Active("HUD", !menuOpen); view.Active("Menu", menuOpen);
         view.Active("Toast", Time.unscaledTime < S.MessageUntil);
         view.Text("Toast/Message", S.Message ?? "");
@@ -114,6 +114,7 @@ public class AdventureUI : MonoBehaviour
     }
     void Bind()
     {
+        BuildFastTravelUI();
         view.Click("Menu/Back", () => { if (!HandleBack()) S.SetMenu(AdventureMenu.None); });
         view.Click("Menu/Party/Overview/Party", () => S.SetMenu(AdventureMenu.Party));
         view.Click("Menu/Party/Overview/Inventory", () => S.SetMenu(AdventureMenu.Inventory));
@@ -140,6 +141,103 @@ public class AdventureUI : MonoBehaviour
             if (selectedSkill < skills.Length) S.UnlockSkill(selectedMember, skills[selectedSkill]);
         });
     }
+    GameObject travelPanel, travelDialog;
+    RectTransform travelContent;
+    Button travelButtonTemplate;
+    TMPro.TMP_Text travelQuestion;
+    string travelDestination;
+    void CloseTravel()
+    {
+        if (travelPanel != null) travelPanel.SetActive(false);
+        if (travelDialog != null) travelDialog.SetActive(false);
+        travelDestination = null;
+    }
+    static RectTransform TravelRect(GameObject obj, Transform parent, Vector2 min, Vector2 max)
+    {
+        obj.transform.SetParent(parent, false);
+        var rect = obj.GetComponent<RectTransform>();
+        rect.anchorMin = min; rect.anchorMax = max; rect.offsetMin = rect.offsetMax = Vector2.zero;
+        return rect;
+    }
+    Button TravelButton(Transform parent, string name, string label, Vector2 min, Vector2 max, UnityEngine.Events.UnityAction action)
+    {
+        var button = Instantiate(travelButtonTemplate, parent); button.name = name;
+        TravelRect(button.gameObject, parent, min, max);
+        button.onClick = new Button.ButtonClickedEvent(); button.onClick.AddListener(action);
+        button.GetComponentInChildren<TMPro.TMP_Text>(true).text = label;
+        button.gameObject.SetActive(true); return button;
+    }
+    TMPro.TMP_Text TravelText(Transform parent, string name, string text, Vector2 min, Vector2 max)
+    {
+        var source = travelButtonTemplate.GetComponentInChildren<TMPro.TMP_Text>(true);
+        var label = Instantiate(source, parent); label.name = name;
+        TravelRect(label.gameObject, parent, min, max);
+        label.text = text; label.raycastTarget = false;
+        label.alignment = TMPro.TextAlignmentOptions.MidlineLeft;
+        label.gameObject.SetActive(true); return label;
+    }
+    GameObject TravelPanel(string name, Transform parent, Vector2 min, Vector2 max)
+    {
+        var panel = new GameObject(name, typeof(RectTransform), typeof(Image));
+        TravelRect(panel, parent, min, max);
+        panel.GetComponent<Image>().color = new Color(.015f, .025f, .045f, .98f);
+        return panel;
+    }
+    void BuildFastTravelUI()
+    {
+        var rest = view.Node("Menu/Rest");
+        travelButtonTemplate = view.Component<Button>("Menu/Rest/Save");
+        // Insert a fifth action while keeping the existing authored button style and spacing.
+        var save = (RectTransform)travelButtonTemplate.transform;
+        var attributes = view.Component<RectTransform>("Menu/Rest/Attributes");
+        var step = attributes.anchoredPosition - save.anchoredPosition;
+        var entry = Instantiate(travelButtonTemplate, rest); entry.name = "FastTravel";
+        ((RectTransform)entry.transform).anchoredPosition = attributes.anchoredPosition;
+        entry.GetComponentInChildren<TMPro.TMP_Text>(true).text = "Di chuyển nhanh";
+        entry.onClick = new Button.ButtonClickedEvent(); entry.onClick.AddListener(OpenTravel);
+        foreach (var path in new[] { "Attributes", "Skills", "Craft" })
+            view.Component<RectTransform>("Menu/Rest/" + path).anchoredPosition += step;
+        travelPanel = TravelPanel("FastTravelList", view.Node("Menu"), Vector2.zero, Vector2.one);
+        travelPanel.GetComponent<Image>().color = new Color(0,0,0,.7f);
+        var listBox = TravelPanel("Box", travelPanel.transform, new Vector2(.2f,.15f), new Vector2(.8f,.85f));
+        TravelText(listBox.transform, "Title", "DI CHUYỂN NHANH - Điểm nghỉ đã mở khóa", new Vector2(.05f,.86f), new Vector2(.95f,.98f));
+        var scrollObj = new GameObject("List", typeof(RectTransform), typeof(ScrollRect), typeof(Image), typeof(RectMask2D));
+        var viewport = TravelRect(scrollObj, listBox.transform, new Vector2(.05f,.18f), new Vector2(.95f,.84f));
+        scrollObj.GetComponent<Image>().color = new Color(0,0,0,.15f);
+        var contentObj = new GameObject("Content", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+        travelContent = TravelRect(contentObj, viewport, new Vector2(0,1), Vector2.one);
+        travelContent.pivot = new Vector2(.5f,1);
+        var layout = contentObj.GetComponent<VerticalLayoutGroup>(); layout.spacing = 10; layout.childControlHeight = true; layout.childForceExpandHeight = false;
+        contentObj.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        var scroll = scrollObj.GetComponent<ScrollRect>(); scroll.viewport = viewport; scroll.content = travelContent; scroll.horizontal = false;
+        TravelButton(listBox.transform, "Back", "Trở lại", new Vector2(.6f,.03f), new Vector2(.95f,.14f), CloseTravel);
+        travelDialog = TravelPanel("FastTravelConfirmation", view.Node("Menu"), Vector2.zero, Vector2.one);
+        travelDialog.GetComponent<Image>().color = new Color(0,0,0,.8f);
+        var box = TravelPanel("Box", travelDialog.transform, new Vector2(.25f,.32f), new Vector2(.75f,.68f));
+        travelQuestion = TravelText(box.transform, "Question", "", new Vector2(.06f,.45f), new Vector2(.94f,.92f));
+        TravelButton(box.transform, "Yes", "Có", new Vector2(.08f,.12f), new Vector2(.46f,.35f), () => { if (S.FastTravel(travelDestination)) CloseTravel(); });
+        TravelButton(box.transform, "No", "Không", new Vector2(.54f,.12f), new Vector2(.92f,.35f), () => travelDialog.SetActive(false));
+        CloseTravel();
+    }
+    void OpenTravel()
+    {
+        if (!S.CanUpgrade) return;
+        foreach (Transform child in travelContent) { child.gameObject.SetActive(false); Destroy(child.gameObject); }
+        foreach (var point in S.Data.unlockedRestPoints.Where(x => x != null).OrderBy(x => x.displayName))
+        {
+            var destination = point;
+            bool current = point.id == S.RestPoint.Id;
+            var row = TravelButton(travelContent, "Destination", point.displayName + (current ? " (Hiện tại)" : ""), Vector2.zero, Vector2.one, () => {
+                travelDestination = destination.id;
+                travelQuestion.text = "Bạn có chắc muốn dịch chuyển đến " + destination.displayName + "?";
+                travelDialog.SetActive(true); travelDialog.transform.SetAsLastSibling();
+            });
+            var size = row.gameObject.AddComponent<LayoutElement>(); size.preferredHeight = 58; size.minHeight = 48;
+            row.interactable = !current;
+        }
+        travelPanel.SetActive(true); travelPanel.transform.SetAsLastSibling();
+    }
+
     void SelectMember(int direction)
     {
         if (S.Data.party.Count == 0) return;
@@ -161,6 +259,8 @@ public class AdventureUI : MonoBehaviour
     }
     public bool HandleBack()
     {
+        if (travelDialog != null && travelDialog.activeSelf) { travelDialog.SetActive(false); return true; }
+        if (travelPanel != null && travelPanel.activeSelf) { CloseTravel(); return true; }
         if (skillContextOpen || skillDialogOpen) { CloseSkillChange(); return true; }
         if (S.Menu == AdventureMenu.Party || S.Menu == AdventureMenu.Inventory) { S.SetMenu(AdventureMenu.Main); return true; }
         if (S.Menu == AdventureMenu.Rest && restPage > 0) { restPage = 0; ResetStatDraft(); return true; }

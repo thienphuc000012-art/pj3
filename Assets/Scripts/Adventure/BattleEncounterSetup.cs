@@ -41,6 +41,52 @@ public class BattleEncounterSetup : MonoBehaviour
     [Tooltip("Phải giống Combat Setup ID trên WorldInteraction ở map.")]
     public string setupId = "default";
 
+    [Header("Battle Map Objects")]
+    [Tooltip("Kéo các object gốc của map đấu trong scene combattest vào đây (địa hình, props, collider, đèn riêng). Khi chọn encounter này, chỉ các map trong danh sách này được bật; map thuộc setup khác sẽ tắt. Để trống ở tất cả setup để giữ cách hoạt động cũ. Không đặt các map lồng nhau hoặc chứa CombatManager, Canvas hay nhân vật.")]
+    public List<GameObject> battleMapObjects = new List<GameObject>();
+
+    // Resolve all desired states before changing objects: shared maps stay enabled.
+    public void ApplyBattleMap()
+    {
+        var allMaps = new HashSet<GameObject>();
+        var selectedMaps = new HashSet<GameObject>();
+        foreach (var setup in FindObjectsByType<BattleEncounterSetup>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (setup.gameObject.scene != gameObject.scene || setup.battleMapObjects == null) continue;
+            foreach (var map in setup.battleMapObjects)
+            {
+                if (map == null) continue;
+                if (map.scene != gameObject.scene ||
+                    map.GetComponentInChildren<CombatManager>(true) != null ||
+                    map.GetComponentInChildren<BattleUnit>(true) != null ||
+                    map.GetComponentInChildren<Canvas>(true) != null)
+                {
+                    Debug.LogError("[Battle Map] Chỉ gán nhóm môi trường cùng scene, không chứa CombatManager, nhân vật hoặc Canvas: " + map.name, map);
+                    return;
+                }
+                allMaps.Add(map);
+                if (setup == this) selectedMaps.Add(map);
+            }
+        }
+        foreach (var map in allMaps)
+            foreach (var other in allMaps)
+                if (map != other && map.transform.IsChildOf(other.transform))
+                {
+                    Debug.LogError("[Battle Map] Các nhóm map không được lồng nhau: " + map.name + " / " + other.name, map);
+                    return;
+                }
+        foreach (var map in allMaps)
+        {
+#if UNITY_EDITOR
+            if (!Application.isPlaying) UnityEditor.Undo.RecordObject(map, "Preview battle map");
+#endif
+            map.SetActive(selectedMaps.Contains(map));
+        }
+    }
+
+    [ContextMenu("Preview This Battle Map")]
+    void PreviewBattleMap() => ApplyBattleMap();
+
     [Header("Enemy Setup - thứ tự phải giống enemyPrefabs")]
     public List<EnemyCombatSetup> enemies = new List<EnemyCombatSetup>();
 

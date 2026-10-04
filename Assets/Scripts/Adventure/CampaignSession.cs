@@ -41,13 +41,13 @@ public class CampaignSession : MonoBehaviour
         public string combatSetupId;
     }
 
-    public static CampaignSession Ensure(CampaignConfig config)
+    public static CampaignSession Ensure(CampaignConfig config, bool startNewGame = false)
     {
         if (Instance != null) return Instance;
         var obj = new GameObject("Campaign Session");
         var session = obj.AddComponent<CampaignSession>();
         session.Config = config;
-        session.LoadOrCreate();
+        session.LoadOrCreate(startNewGame);
         obj.AddComponent<AdventureUI>();
         return session;
     }
@@ -58,9 +58,23 @@ public class CampaignSession : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
     void OnDestroy() { if (Instance == this) { Instance = null; Time.timeScale = previousTimeScale; } }
-    void LoadOrCreate()
+    void LoadOrCreate(bool startNewGame = false)
     {
-        if (File.Exists(SavePath))
+        if (startNewGame && File.Exists(SavePath))
+        {
+            try
+            {
+                string backup = SavePath + ".before-new-game-" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fffffff") + ".bak";
+                File.Copy(SavePath, backup);
+                Debug.Log("Đã sao lưu tiến trình trước khi chơi mới: " + backup);
+            }
+            catch (Exception e)
+            {
+                startNewGame = false;
+                Debug.LogError("Không thể sao lưu tiến trình; tiếp tục bản lưu hiện tại: " + e.Message);
+            }
+        }
+        if (!startNewGame && File.Exists(SavePath))
         {
             try
             {
@@ -72,7 +86,9 @@ public class CampaignSession : MonoBehaviour
             }
             catch (Exception e) { Debug.LogWarning("Could not read adventure save: " + e.Message); }
         }
-        if (Data != null) { Data.MigrateSkillUnlocks(); return; }
+        if (Data != null) { Data.MigrateSkillUnlocks();
+            if (Data.unlockedRestPoints == null) Data.unlockedRestPoints = new List<UnlockedRestPoint>();
+            return; }
         Data = new CampaignSave();
         for (int i = 0; i < Config.startingParty.Count; i++)
             if (Config.startingParty[i] != null)
@@ -98,7 +114,15 @@ public class CampaignSession : MonoBehaviour
     public void RefreshWorld()
     {
         worldPoints = FindObjectsByType<WorldInteraction>(FindObjectsSortMode.None);
-        foreach (var point in worldPoints) if (point.IsConsumed) point.gameObject.SetActive(false);
+        foreach (var point in worldPoints)
+        {
+            if (point.IsConsumed) point.gameObject.SetActive(false);
+            if (point.kind == WorldInteractionKind.RestPoint)
+            {
+                var known = Data.unlockedRestPoints.Find(x => x != null && x.id == point.Id);
+                if (known != null) known.displayName = point.displayName;
+            }
+        }
     }
     public BattleUnit Template(PartyMemberProgress member) => Config.startingParty[member.prefabIndex];
     public int MaxHP(PartyMemberProgress member) => Template(member).maxHP + member.hpBonus;
@@ -171,9 +195,9 @@ public class CampaignSession : MonoBehaviour
         MapPlayer.transform.SetPositionAndRotation(position, rotation);
         if (controller != null) controller.enabled = enabledBefore;
     }
-    public bool Save()
+    public bool Save(bool capturePosition = true)
     {
-        CapturePosition();
+        if (capturePosition) CapturePosition();
         try
         {
             string temp = SavePath + ".tmp";
@@ -213,11 +237,36 @@ public class CampaignSession : MonoBehaviour
     }
     public void OpenRest(WorldInteraction rest)
     {
-        if (!IsNear(rest)) return;
+        if (Busy || Menu != AdventureMenu.None || rest == null || rest.kind != WorldInteractionKind.RestPoint || !IsNear(rest)) return;
+        var unlocked = Data.unlockedRestPoints.Find(x => x.id == rest.Id);
+        if (unlocked == null) { unlocked = new UnlockedRestPoint { id = rest.Id }; Data.unlockedRestPoints.Add(unlocked); }
+        unlocked.displayName = rest.displayName;
+        // Record the player's reachable standing position, never the campfire's collider center.
+        unlocked.position = MapPlayer.transform.position;
+        unlocked.rotation = MapPlayer.transform.rotation;
+        Save();
         RestPoint = rest;
         SetMenu(AdventureMenu.Rest);
         rest.GetComponent<RestPointPresentation>()?.Begin(MapPlayer);
     }
+    public bool FastTravel(string id)
+    {
+        if (!CanUpgrade || Menu != AdventureMenu.Rest || LoadingScreen.IsLoading || RestPoint.Id == id) return false;
+        var destination = Data.unlockedRestPoints.Find(x => x != null && x.id == id);
+        if (destination == null) return false;
+        if (!Application.CanStreamedLevelBeLoaded(Config.mapScene) || !Application.CanStreamedLevelBeLoaded(LoadingScreen.SceneName))
+        { Notify("Thiếu scene map hoặc Loading trong Build Settings."); return false; }
+        var oldPosition = Data.position; var oldRotation = Data.rotation; bool hadPosition = Data.hasPosition;
+        Data.position = destination.position; Data.rotation = destination.rotation; Data.hasPosition = true;
+        if (!Save(false)) { Data.position = oldPosition; Data.rotation = oldRotation; Data.hasPosition = hadPosition; return false; }
+        SetMenu(AdventureMenu.None);
+        if (!LoadingScreen.Load(Config.mapScene))
+        { Data.position = oldPosition; Data.rotation = oldRotation; Data.hasPosition = hadPosition; Save(false); Notify("Không thể dịch chuyển."); return false; }
+        Busy = true; Nearest = null;
+        Notify("Đã đến " + destination.displayName);
+        return true;
+    }
+
     public void RestAndSave()
     {
         if (!CanUpgrade) return;
@@ -328,6 +377,7 @@ public class CampaignSession : MonoBehaviour
 
         BattleEncounterSetup battleSetup = FindBattleEncounterSetup(encounter.combatSetupId, manager);
         manager.activeEncounterSetup = battleSetup;
+        if (battleSetup != null) battleSetup.ApplyBattleMap();
 
         var oldPlayers = manager.playerParty.ToArray();
         var oldEnemies = manager.enemyParty.ToArray();

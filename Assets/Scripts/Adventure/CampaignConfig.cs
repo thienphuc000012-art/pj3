@@ -144,6 +144,14 @@ public class PartyMemberProgress
 }
 
 [Serializable]
+public class UnlockedRestPoint
+{
+    public string id, displayName;
+    public Vector3 position;
+    public Quaternion rotation = Quaternion.identity;
+}
+
+[Serializable]
 public class CampaignSave
 {
     public int version = 2;
@@ -158,6 +166,7 @@ public class CampaignSave
     public List<PartyMemberProgress> party = new List<PartyMemberProgress>();
     public List<ItemStack> inventory = new List<ItemStack>();
     public List<string> collected = new List<string>();
+    public List<UnlockedRestPoint> unlockedRestPoints = new List<UnlockedRestPoint>();
     public Vector3 position;
     public Quaternion rotation = Quaternion.identity;
     public Vector3 checkpoint;
