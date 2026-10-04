@@ -1,0 +1,222 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: RoseBushBranchesRHEWP
+  m_Shader: {fileID: 4800000, guid: 5437410a7c7f86e48b62033f9673d912, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords:
+  - _WINDTYPE_GENTLEBREEZE
+  m_InvalidKeywords:
+  - _ALPHATEST_ON
+  - _BRANCHMASKR_ON
+  - _MASKROOTS_ON
+  - _NORMALBACKFACEFIXBRANCH_ON
+  - _SEASONVERTEXCOLORR_ON
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _AlbedoMap:
+        m_Texture: {fileID: 2800000, guid: 79f8224e2d51ff940bef5b32f772adaa, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BumpMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailAlbedoMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailMask:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailNormalMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _EmissionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MaskMapRGBA:
+        m_Texture: {fileID: 2800000, guid: 0357e9ac5ad8a7a489b9ecf8c09275f3, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MetallicGlossMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NoiseMapGrayscale:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NormalMap:
+        m_Texture: {fileID: 2800000, guid: e602a9bb8c1c9ed4098e75e38e582b5e, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _OcclusionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ParallaxMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SpecularMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SpecularMapGrayscale:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _WindNoise:
+        m_Texture: {fileID: 2800000, guid: b77f7b8226e9ef748a6e3a9c7a1b77f6, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _texcoord:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_Lightmaps:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_LightmapsInd:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_ShadowMasks:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _ADVANCEDSETTINGS: 0
+    - _AlphaClip: 1
+    - _AlphaClipping: 0.4
+    - _AlphaCutoff: 0.5
+    - _AmbientOcclusionIntensity: 1
+    - _BackfaceCulling: 0
+    - _BranchMaskR: 1
+    - _BranchMaskRadious: 0.5
+    - _BranchMaskScale: 0
+    - _BranchSwayPower: 1
+    - _BranchWindLarge: 20
+    - _BranchWindSmall: 5
+    - _BumpScale: 1
+    - _CenterofMass: 0
+    - _ColorVariation: 0
+    - _ContinuousWindGentle: 0
+    - _Cutoff: 0.4
+    - _DetailNormalMapScale: 1
+    - _DownwardStrength: -2
+    - _DryLeavesOffset: 1
+    - _DryLeavesScale: 0
+    - _DstBlend: 0
+    - _EmissionIntensity: 0
+    - _EnvironmentReflections: 1
+    - _FACERENDERING: 0
+    - _GlobalFlutterIntensity: 1
+    - _GlobalWindStrength: 1
+    - _GlossMapScale: 1
+    - _Glossiness: 0.5
+    - _GlossyReflections: 1
+    - _GrassSwayPowerGentleWind: 2
+    - _Hardness: 1
+    - _LeafFlutter: 1
+    - _LightDetectBackface: 0
+    - _MaskRoots: 1
+    - _MaskRootsAuto: 0
+    - _Metallic: 0
+    - _MobileShadingWorldUp: 0
+    - _Mode: 0
+    - _MotionBendingGentleRandom: 1
+    - _NormalBackFaceFixBranch: 1
+    - _NormalIntenisty: 1
+    - _NormalIntensity: 1
+    - _NormalizeSeasons: 0
+    - _OcclusionStrength: 1
+    - _Parallax: 0.02
+    - _PivotRandomness: 2
+    - _PivotRandomnessStrength: 2
+    - _PivotSway: 1
+    - _PivotSwayPower: 1
+    - _QueueControl: 0
+    - _QueueOffset: 0
+    - _Radius: 1
+    - _RandomColorScale: 1
+    - _ReceiveShadows: 1
+    - _RootsHardness: 1
+    - _RootsPosition: 0
+    - _RootsRadius: 1
+    - _SEASONSETTINGS: 0
+    - _SHADINGSETTINGS: 0
+    - _SeasonChangeGlobal: -2
+    - _SeasonVertexColorR: 1
+    - _SelfShadingVertexColor: 0
+    - _SmoothnessIntensity: 1
+    - _SmoothnessTextureChannel: 0
+    - _SpecularBackfaceOcclusion: 0
+    - _SpecularBackfaceOcclusion1: 0
+    - _SpecularBias: 1
+    - _SpecularHighlights: 1
+    - _SpecularMapOffset: 0
+    - _SpecularMapScale: 1
+    - _SpecularONOff: 1
+    - _SpecularPower: 1
+    - _SpecularScale: -5
+    - _SpecularStrength: 2
+    - _Specularpower: 1
+    - _SrcBlend: 1
+    - _StrongWindSpeed: 1
+    - _SwitchVGreenToRGBA: 0
+    - _TBCVMapIntenisty: 2
+    - _TBCVMapOffset: -0.35
+    - _TEXTUREMAPS: 0
+    - _TEXTUREMAPS1: 0
+    - _TEXTURESETTINGS: 0
+    - _TTFETREEFOLIAGESHADERMOBILE: 0
+    - _TranslucencyFluffiness: 0
+    - _TranslucencyPower: 1.2
+    - _TranslucencyRange: 1
+    - _TranslucencyTreeTangents: 0
+    - _TrunkHeightandThickness: 0.01
+    - _UVSec: 0
+    - _VertexAo: 0
+    - _VertexColorPower: 0.8
+    - _VertexLighting: 1.4
+    - _VertexShadow: 0.5
+    - _WINDMASKSETTINGS1: 0
+    - _WindType: 0
+    - _WorldUp: 0
+    - _ZWrite: 1
+    - _ZaWorldoScale: 1
+    - __dirty: 1
+    m_Colors:
+    - _AlbedoColor: {r: 1, g: 1, b: 1, a: 0}
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _DryLeafColor: {r: 0.5568628, g: 0.37306848, b: 0.17647055, a: 0}
+    - _EmColor: {r: 1, g: 1, b: 1, a: 0}
+    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

@@ -1,0 +1,276 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: PineLeavesRHEWP
+  m_Shader: {fileID: 4800000, guid: 5437410a7c7f86e48b62033f9673d912, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords:
+  - _MOBILESHADINGWORLDUP_ON
+  - _WINDTYPE_GENTLEBREEZE
+  m_InvalidKeywords:
+  - _BRANCHMASKR_ON
+  - _LIGHTDETECTBACKFACE_ON
+  - _MASKROOTS_ON
+  - _SEASONVERTEXCOLORR_ON
+  - _SELFSHADINGVERTEXCOLOR_ON
+  - _SPECULARBACKFACEOCCLUSION_ON
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _AlbedoMap:
+        m_Texture: {fileID: 2800000, guid: 1d8ab24ce52c8324f83c7861241d41c0, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BumpMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BumpSpecMap:
+        m_Texture: {fileID: 2800000, guid: 5c8af1db30d705546b25841fb264791f, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailAlbedoMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailMask:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailNormalMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _EmissionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 2800000, guid: e761c42a262e22945adf65bf1af49370, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MaskMap:
+        m_Texture: {fileID: 2800000, guid: 5bda2a1aef124bd478b33298ffe6aac0, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MaskMapRGBA:
+        m_Texture: {fileID: 2800000, guid: 53f8aa3668347bb42a91a3d720ebaea2, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MetallicGlossMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NoiseMapGrayscale:
+        m_Texture: {fileID: 2800000, guid: d20e25474e5f9224793eb095a4d2cb9c, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NormalMap:
+        m_Texture: {fileID: 2800000, guid: 10a37b7f983215e4a9326c7908b88ea4, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _OcclusionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ParallaxMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SpecularMap:
+        m_Texture: {fileID: 2800000, guid: 95cec169578fc2c4b8c892b8a163ec7e, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _TranslucencyMap:
+        m_Texture: {fileID: 2800000, guid: 5bda2a1aef124bd478b33298ffe6aac0, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _WindNoise:
+        m_Texture: {fileID: 2800000, guid: b77f7b8226e9ef748a6e3a9c7a1b77f6, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _texcoord:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_Lightmaps:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_LightmapsInd:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_ShadowMasks:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _ADVANCEDSETTINGS: 0
+    - _AlbedoLightness: 1
+    - _AlphaClip: 0.4
+    - _AlphaClipping: 0.4
+    - _AlphaCutoff: 0.5
+    - _AmbientOcclusion: 1
+    - _AmbientOcclusionIntensity: 1
+    - _AnimateNormal: 0
+    - _BackfaceCulling: 0
+    - _BendAmount: 1
+    - _BranchBending: 1
+    - _BranchMaskR: 1
+    - _BranchMaskRadious: 0.5
+    - _BranchMaskScale: 0.1
+    - _BranchSwayPower: 1
+    - _BranchWindLarge: 1
+    - _BranchWindSmall: 5
+    - _BumpScale: 1
+    - _CenterofMass: 0
+    - _ColorVariation: 0.17
+    - _Culling: 0
+    - _Cutoff: 0.4
+    - _Cutout: 0.4
+    - _DetailNormalMapScale: 1
+    - _DownwardStrength: -0.5
+    - _DryLeavesOffset: -0.2
+    - _DryLeavesScale: 8
+    - _DstBlend: 0
+    - _EdgeFlutterInfluence: 0.25
+    - _EmissionIntensity: 0
+    - _EnableLeafTurbulence: 0
+    - _EnableTransFade: 0
+    - _EnvironmentReflections: 1
+    - _FACERENDERING: 0
+    - _FadeOutWind: 0
+    - _GG: 0
+    - _GlobalFlutterIntensity: 7
+    - _GlobalWindPower: 4
+    - _GlobalWindStrength: 1
+    - _GlossMapScale: 1
+    - _Glossiness: 0.5
+    - _GlossyReflections: 1
+    - _GrassSwayPowerGentleWind: 1
+    - _Hardness: 1
+    - _IsBark: 0
+    - _LODTerrain: 1
+    - _LeafColorvariatoion: 5
+    - _LeafFlutter: 1
+    - _LeafTurbulence: 0.02
+    - _LightDetectBackface: 1
+    - _MaskRoots: 1
+    - _MaskRootsAuto: 0
+    - _Metallic: 0
+    - _MobileShadingWorldUp: 1
+    - _Mode: 0
+    - _MotionBendingGentleRandom: 0.1
+    - _NormalBackFaceFixBranch: 0
+    - _NormalIntenisty: 1
+    - _NormalIntensity: 1
+    - _NormalizeSeasons: 0
+    - _OcclusionStrength: 1
+    - _Parallax: 0.02
+    - _PivotRandomness: 1
+    - _PivotRandomnessStrength: 0.5
+    - _PivotSway: 1
+    - _PivotSwayPower: 1
+    - _QueueControl: 0
+    - _QueueOffset: 0
+    - _Radius: 1
+    - _RandomColorScale: 1
+    - _ReceiveShadows: 1
+    - _RootsHardness: 1
+    - _RootsPosition: 0
+    - _RootsRadius: 2
+    - _SEASONSETTINGS: 0
+    - _SHADINGSETTINGS: 0
+    - _SP: 1
+    - _SeasonChangeGlobal: -2
+    - _SeasonVertexColorR: 1
+    - _SelfShadingVertexColor: 1
+    - _Shininess: 0.1
+    - _SmoothnessIntensity: 1
+    - _SmoothnessTextureChannel: 0
+    - _SpecularBackfaceOcclusion: 1
+    - _SpecularBackfaceOcclusion1: 1
+    - _SpecularBias: 1
+    - _SpecularHighlights: 1
+    - _SpecularMapOffset: -0.2
+    - _SpecularMapScale: 1
+    - _SpecularONOff: 1
+    - _SpecularPower: 1
+    - _SpecularScale: 1
+    - _SpecularStrength: 1
+    - _Specularpower: 1
+    - _SrcBlend: 1
+    - _StrongWindSpeed: 1
+    - _SwitchVGreenToRGBA: 0
+    - _TBCVMapIntenisty: 2
+    - _TBCVMapOffset: -0.35
+    - _TEXTUREMAPS: 0
+    - _TEXTUREMAPS1: 0
+    - _TEXTURESETTINGS: 0
+    - _TRANZ: 0
+    - _TTFETREEFOLIAGESHADERMOBILE: 0
+    - _TimeOffset: 0.25
+    - _ToggleSwitch0: 0
+    - _TransAmbient: 0.1
+    - _TransDirect: 0.9
+    - _TransNormal: 0.5
+    - _TransNormalDistortion: 0.1
+    - _TransScattering: 2
+    - _TransShadow: 0.5
+    - _TransStrength: 1
+    - _Translucency: 1
+    - _TranslucencyPower: 1.2
+    - _TranslucencyRange: 1
+    - _TranslucencyStrength: 1
+    - _TranslucencyTreeTangents: 1
+    - _TrunkHeightandThickness: 0.01
+    - _TumbleFrequency: 1
+    - _TumbleStrength: 0.002
+    - _UVSec: 0
+    - _VertexAo: 1
+    - _VertexAointensity: 0
+    - _VertexColorPower: 1
+    - _VertexLighting: 1.5
+    - _VertexShadow: 0.8
+    - _ViewDependency: 0.7
+    - _WINDMASKSETTINGS1: 0
+    - _WindAngley: 100
+    - _WindDirection: 1.569
+    - _WindPower: 0.89
+    - _WindScale: 1
+    - _WindType: 0
+    - _WorldFrequency: 0.04
+    - _WorldUp: 1
+    - _ZWrite: 1
+    - _ZaWorldoScale: 1
+    - __dirty: 1
+    - _sssssssssss: 0
+    - _taz: 1
+    m_Colors:
+    - _AlbedoColor: {r: 1, g: 1, b: 1, a: 0}
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _DryLeafColor: {r: 1, g: 0.6817161, b: 0.48584908, a: 0}
+    - _EmColor: {r: 1, g: 1, b: 1, a: 0}
+    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _HueVariation: {r: 0.9, g: 0.5, b: 0, a: 0.1}
+    - _MainColor: {r: 0.39215687, g: 0.39215687, b: 0.39215687, a: 1}
+    - _SpecularColor: {r: 0.39215687, g: 0.39215687, b: 0.39215687, a: 1}
+    - _TranslucencyColor: {r: 1, g: 1, b: 1, a: 0}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
