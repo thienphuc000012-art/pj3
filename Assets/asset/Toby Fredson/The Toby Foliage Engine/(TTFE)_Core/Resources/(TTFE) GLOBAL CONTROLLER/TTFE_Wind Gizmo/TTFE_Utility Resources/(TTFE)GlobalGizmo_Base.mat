@@ -12,7 +12,6 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
-  - _DOUBLESIDED_ON
   - _SELFSHADINGVERTEXCOLOR_ON
   - _WINDTYPE_GENTLEBREEZE
   m_InvalidKeywords:
@@ -21,6 +20,7 @@ Material:
   - _DEPTHOFFSET_ON
   - _DISABLE_DECALS
   - _DISABLE_SSR_TRANSPARENT
+  - _DOUBLESIDED_ON
   - _EMISSION
   - _MASKROOTS_ON
   - _NORMALISESEASONS_ON
@@ -35,7 +35,6 @@ Material:
     MotionVector: User
   disabledShaderPasses:
   - TransparentBackface
-  - MOTIONVECTORS
   m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
@@ -128,6 +127,7 @@ Material:
     m_Floats:
     - _AOPOZ: 0
     - _AddPrecomputedVelocity: 1
+    - _AlphaClip: 0.4
     - _AlphaCutoff: 0.5
     - _AlphaCutoffEnable: 0
     - _AlphaDstBlend: 0
@@ -169,6 +169,7 @@ Material:
     - _DstBlend: 0
     - _EnableBlendModePreserveSpecularLighting: 1
     - _EnableFogOnTransparent: 1
+    - _EnvironmentReflections: 1
     - _FlutterTangentMode: 0
     - _GlobalFlutterIntensity: 1
     - _GlobalWindStrength: 1
@@ -202,10 +203,13 @@ Material:
     - _PreventStrecthing_Scale: 5
     - _QuadScatterOnlybasiccards: 0
     - _Quadscatterpower: 1
+    - _QueueControl: 0
+    - _QueueOffset: 0
     - _Radius: 50
     - _Radius2: 100
     - _RandomContrast: 0
     - _RandomContrastOnOff: 0
+    - _ReceiveShadows: 1
     - _ReceivesSSR: 1
     - _ReceivesSSRTransparent: 0
     - _RenderQueueType: 1
@@ -218,8 +222,13 @@ Material:
     - _SmoothnessTextureChannel: 0
     - _SpecularBackfaceOcclusion: 0
     - _SpecularBackfaceOcclusion1: 0
+    - _SpecularBias: 1
     - _SpecularHighlights: 1
+    - _SpecularMapOffset: 0
+    - _SpecularMapScale: 1
     - _SpecularPower: 1
+    - _SpecularScale: -5
+    - _SpecularStrength: 2
     - _Specularpower: 1
     - _SrcBlend: 1
     - _StencilRef: 0
@@ -266,13 +275,13 @@ Material:
     - _AlbedoColor: {r: 1, g: 1, b: 1, a: 0}
     - _Color: {r: 0.09411765, g: 0.32941177, b: 0, a: 1}
     - _DiffusionProfileAsset: {r: 0, g: 0, b: 0, a: 0}
-    - _DiffusionProfile_Asset: {r: -1.4871875e-20, g: -5.074476e-36, b: -3.8101293e-12,
-        a: 7.172459e+28}
+    - _DiffusionProfile_Asset: {r: -1.4871875e-20, g: -5.074476e-36, b: -3.8101293e-12, a: 7.172459e+28}
     - _Diffusion_Asset: {r: -1.4871875e-20, g: -5.074476e-36, b: -3.8101293e-12, a: 7.172459e+28}
     - _DoubleSidedConstants: {r: 1, g: 1, b: 1, a: 0}
     - _DryLeafColor: {r: 1, g: 0.2850455, b: 0, a: 0}
     - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
+  m_AllowLocking: 1
 --- !u!114 &6615630400668522557
 MonoBehaviour:
   m_ObjectHideFlags: 11

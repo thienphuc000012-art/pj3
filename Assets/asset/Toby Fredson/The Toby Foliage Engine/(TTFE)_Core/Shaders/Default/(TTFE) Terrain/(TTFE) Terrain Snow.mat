@@ -9,25 +9,28 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: (TTFE) Terrain Snow
   m_Shader: {fileID: 4800000, guid: 0f55ffeb4fde7b2419f649d730c22898, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
-  - _ADD_PRECOMPUTED_VELOCITY
-  - _DISABLE_SSR_TRANSPARENT
   - _TERRAIN_INSTANCED_PERPIXEL_NORMAL
   m_InvalidKeywords:
+  - _ADD_PRECOMPUTED_VELOCITY
   - _COLORMAP_ON
   - _CONSERVATIVE_DEPTH_OFFSET
   - _DEPTHOFFSET_ON
+  - _DISABLE_SSR_TRANSPARENT
   - _MASKROOTS_ON
   - _SNOWSLOPE_ON
   - _WINDTYPE_GENTLEBREEZE
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: 2225
+  m_CustomRenderQueue: 1900
   stringTagMap:
     MotionVector: User
   disabledShaderPasses:
   - TransparentBackface
+  m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
@@ -223,6 +226,7 @@ Material:
     - _EnableFog: 1
     - _EnableFogOnTransparent: 1
     - _EnableInstancedPerPixelNormal: 1
+    - _EnvironmentReflections: 1
     - _FogFill: 1
     - _FogHeight: 1
     - _FogSmoothness: 1
@@ -245,7 +249,10 @@ Material:
     - _NormalScale6: 1
     - _NormalScale7: 1
     - _OpaqueCullMode: 2
+    - _QueueControl: 0
+    - _QueueOffset: 0
     - _REF: 0
+    - _ReceiveShadows: 1
     - _ReceivesSSR: 1
     - _ReceivesSSRTransparent: 0
     - _RenderQueueType: 1
@@ -297,6 +304,7 @@ Material:
     - _SnowSplatRMax: 1
     - _SnowSplatRMin: -0.5
     - _SnowSplatRSplatBias: 1
+    - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _StencilRef: 4
     - _StencilRefDepth: 8
@@ -324,13 +332,13 @@ Material:
     - _ZWrite: 1
     - __dirty: 0
     m_Colors:
-    - _DiffusionProfile_Asset: {r: 4.4115656e-26, g: 1.0555703e+22, b: 1.0579199e-15,
-        a: 2.834454e+34}
+    - _DiffusionProfile_Asset: {r: 4.4115656e-26, g: 1.0555703e+22, b: 1.0579199e-15, a: 2.834454e+34}
     - _DoubleSidedConstants: {r: 1, g: 1, b: 1, a: 0}
     - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
     - _SnowColor: {r: 1, g: 1, b: 1, a: 0}
     - _SnowMainUVs: {r: 0.002, g: 0.002, b: 0, a: 0}
   m_BuildTextureStacks: []
+  m_AllowLocking: 1
 --- !u!114 &1837156920406118798
 MonoBehaviour:
   m_ObjectHideFlags: 11
