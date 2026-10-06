@@ -812,10 +812,8 @@ public class CombatManager : MonoBehaviour
                 ? meleeSlot.position
                 : GetMeleeAttackPosition(attacker, target);
 
-            // Choose the attack facing BEFORE jumping. Turning only on landing
-            // makes JumpForward and the following attack visibly face different directions.
-            // Use the landing position so an offset melee slot cannot introduce a second turn.
-            FaceAttackTarget(attacker, target, attackPosition);
+            if (!attacker.isPlayer)
+                FaceEnemyAttackTarget(attacker, target, attackPosition);
             attacker.animator.Play("JumpForward");
             yield return StartCoroutine(MoveToPosition(attacker.transform, attackPosition, 0.35f));
 
@@ -834,8 +832,8 @@ public class CombatManager : MonoBehaviour
         }
         else
         {
-            if (action != null && target != null && !action.isFriendlyAction && !action.isHeal)
-                FaceAttackTarget(attacker, target, attacker.transform.position);
+            if (!attacker.isPlayer && action != null && target != null && !action.isFriendlyAction && !action.isHeal)
+                FaceEnemyAttackTarget(attacker, target, attacker.transform.position);
             string animTrigger = action != null ? action.animationTriggerName : "Attack";
             attacker.animator.SetTrigger(animTrigger);
 
@@ -868,7 +866,8 @@ public class CombatManager : MonoBehaviour
         StopBeamVFX(attacker);
         FinishCastVFX(attacker);
         attacker.transform.position = originalPosition;
-        attacker.transform.rotation = originalRotation;
+        if (!attacker.isPlayer)
+            attacker.transform.rotation = originalRotation;
 
         if (!attacker.IsDead && attacker.animator != null)
         {
@@ -1053,9 +1052,9 @@ public class CombatManager : MonoBehaviour
         return attackPosition;
     }
 
-    private void FaceAttackTarget(BattleUnit attacker, BattleUnit target, Vector3 attackPosition)
+    private void FaceEnemyAttackTarget(BattleUnit attacker, BattleUnit target, Vector3 attackPosition)
     {
-        if (attacker == null || target == null)
+        if (attacker == null || attacker.isPlayer || target == null)
             return;
 
         Vector3 direction = target.transform.position - attackPosition;

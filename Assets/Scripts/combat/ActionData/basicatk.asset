@@ -16,7 +16,9 @@ MonoBehaviour:
   description: 
   icon: {fileID: 21300000, guid: 779ff2d03c859954d928e76c8725151c, type: 3}
   type: 0
-  power: 50
+  isUltimate: 0
+  ultimateEnergyGain: 10
+  power: 10
   damageMultiplier: 1
   isHeal: 0
   animationTriggerName: attack
@@ -36,6 +38,12 @@ MonoBehaviour:
   screenSlashCount: 1
   screenSlashBurstTime: 0.45
   screenSlashFinisherScale: 2
+  screenSpaceSplit: 0
+  screenSplitFrames: 2
+  screenSplitPixels: 18
+  screenSplitHold: 0
+  screenSplitRestoreStart: 0.8
+  screenSlashTimeScale: 1
   vfxType: 0
   vfxPrefab: {fileID: 0}
   castVfxPrefab: {fileID: 0}

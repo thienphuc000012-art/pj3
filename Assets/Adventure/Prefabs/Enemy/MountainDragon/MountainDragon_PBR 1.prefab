@@ -2336,7 +2336,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleUnit
   unitName: MountainDragon
-  maxHP: 100
+  maxHP: 1000000
+  parryUltimateGain: 15
+  damageUltimateGain: 50
   baseAtk: 10
   baseDef: 5
   baseCrit: 10
@@ -2360,6 +2362,8 @@ MonoBehaviour:
   baseIdleClip: {fileID: 7400000, guid: 16f8dbc1c530bf048a4536d0c96c80a4, type: 2}
   phase2IdleClip: {fileID: 7400000, guid: 4d85ea0e96c902e49ab794273ffac155, type: 2}
   idleStateName: Base Layer.Idle
+  idleVfx: []
+  phase2IdleVfx: []
   baseHitClip: {fileID: 7400000, guid: 67e8a65f415aa0946bae5b43dc5238dc, type: 2}
   criticalHitClip: {fileID: 7400000, guid: 1d817ce00d810154aa2443796be8e974, type: 2}
   phase2HitClip: {fileID: 7400000, guid: d974287ba23ecb348b5dd2d05770c032, type: 2}

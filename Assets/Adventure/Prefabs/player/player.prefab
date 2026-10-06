@@ -2085,7 +2085,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleUnit
   unitName: p1
-  maxHP: 100
+  maxHP: 10000000
+  parryUltimateGain: 15
+  damageUltimateGain: 50
   baseAtk: 10
   baseDef: 5
   baseCrit: 10
@@ -2103,6 +2105,15 @@ MonoBehaviour:
   phase2AnimationTriggerName: Phase2
   phase2IntroDuration: 2.5
   phase2IntroPlayed: 0
+  baseIdleClip: {fileID: 0}
+  phase2IdleClip: {fileID: 0}
+  idleStateName: Base Layer.Idle
+  idleVfx: []
+  phase2IdleVfx: []
+  baseHitClip: {fileID: 0}
+  criticalHitClip: {fileID: 0}
+  phase2HitClip: {fileID: 0}
+  phase2CriticalHitClip: {fileID: 0}
   lastTarget: {fileID: 0}
   speed: 17
   unitPortrait: {fileID: 21300000, guid: 82361fa11de5cc34386d1b5565ad8f5a, type: 3}
