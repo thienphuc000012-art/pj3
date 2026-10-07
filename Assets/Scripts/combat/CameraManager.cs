@@ -9,6 +9,8 @@ public class CameraManager : MonoBehaviour
     [Header("Camera Transition Settings")]
     [Tooltip("Thời gian lia camera (giây). Chỉnh số này nhỏ lại (VD: 0.3 - 0.5) để cam lia nhanh hơn.")]
     public float transitionSpeed = 0.4f; // --- THÊM MỚI: Tốc độ lia cam ---
+    [Min(0f), Tooltip("Thời gian lia camera khi bắt đầu Ultimate (giây).")]
+    public float ultimateTransitionDuration = 0.8f;
 
     [Header("Battle Start Camera (Camera tổng thể đầu trận)")]
     public CinemachineCamera battleStartCam;
@@ -77,10 +79,12 @@ public class CameraManager : MonoBehaviour
         }
     }
 
-    public void SwitchToPlayerActionCam(int playerIndex)
+    public void SwitchToPlayerActionCam(int playerIndex, bool ultimate = false)
     {
-        // QUAN TRỌNG: Ép cắt ngay lập tức (Instant Cut) từ Targeting Cam sang Action Cam
-        SetInstantCutBlend();
+        if (ultimate && mainBrain != null)
+            mainBrain.DefaultBlend = new CinemachineBlendDefinition(
+                CinemachineBlendDefinition.Styles.EaseInOut, Mathf.Max(0f, ultimateTransitionDuration));
+        else SetInstantCutBlend();
         ResetAllCams();
 
         for (int i = 0; i < playerActionCams.Count; i++)

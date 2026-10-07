@@ -3084,6 +3084,10 @@ PrefabInstance:
       value: player (3)
       objectReference: {fileID: 0}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
+      propertyPath: speed
+      value: 66
+      objectReference: {fileID: 0}
+    - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: unitName
       value: kakaka
       objectReference: {fileID: 0}
@@ -3097,24 +3101,24 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: characterSkills.Array.size
-      value: 5
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: 'characterSkills.Array.data[0]'
       value: 
-      objectReference: {fileID: 11400000, guid: 780d384e9c660b14da50a8d8764e26e4, type: 2}
+      objectReference: {fileID: 11400000, guid: e288a344a0ee08f42bee7a0c4f10bd03, type: 2}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: 'characterSkills.Array.data[1]'
       value: 
-      objectReference: {fileID: 11400000, guid: e288a344a0ee08f42bee7a0c4f10bd03, type: 2}
+      objectReference: {fileID: 11400000, guid: 8041ddf7f5ced7248977ebb746a1a1f5, type: 2}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: 'characterSkills.Array.data[2]'
       value: 
-      objectReference: {fileID: 11400000, guid: 8041ddf7f5ced7248977ebb746a1a1f5, type: 2}
+      objectReference: {fileID: 11400000, guid: 9c2d4533a27c9f542afeed2d9c8c4450, type: 2}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: 'characterSkills.Array.data[3]'
       value: 
-      objectReference: {fileID: 11400000, guid: 7a1a04a484344b3c8ae407632b4d4512, type: 2}
+      objectReference: {fileID: 11400000, guid: bfae87a977bf73f4c86d8a2fcf86b009, type: 2}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: 'characterSkills.Array.data[4]'
       value: 
@@ -6030,6 +6034,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraManager
   transitionSpeed: 1
+  ultimateTransitionDuration: 0.8
   battleStartCam: {fileID: 290278560}
   playerPartyCams:
   - {fileID: 1827950276}
@@ -9437,7 +9442,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 7caca4445e732f448bfb7b0130e732f0, type: 2}
   - {fileID: 11400000, guid: dbd7032cce897c64ea880078e9861bfc, type: 2}
   - {fileID: 11400000, guid: 99b6c9a674c4d3f4c8e8536e4e21634d, type: 2}
-  - {fileID: 11400000, guid: 240a5ba6b16727542a312bbfd7b8bae7, type: 2}
+  - {fileID: 11400000, guid: 85f12953be2c5a1418884f7f366e142d, type: 2}
   isBoss: 0
   actionsPerTurn: 1
   baseActionPattern: []

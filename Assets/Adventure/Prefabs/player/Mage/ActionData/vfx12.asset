@@ -10,45 +10,44 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 532a234c595fb3944bb8626c21ed8968, type: 3}
-  m_Name: AttackSlashCombo
+  m_Name: vfx12
   m_EditorClassIdentifier: Assembly-CSharp::ActionData
-  actionName: Attack Slash Combo
-  description: 'Two-hit sword combo: attack followed by slashattack. Power applies
-    to each hit.'
-  icon: {fileID: 21300000, guid: 6a87424763ff5c643869f820b6d9a526, type: 3}
+  actionName: b
+  description: anbfaklfbafbna
+  icon: {fileID: 21300000, guid: 742198cc0ec8f0143b32a726fe61f028, type: 3}
   type: 1
-  isUltimate: 1
+  isUltimate: 0
   ultimateEnergyGain: 10
-  power: 15
+  power: 5
   damageMultiplier: 1
   isHeal: 0
-  animationTriggerName: AttackCombo
+  animationTriggerName: Attack12
   isFriendlyAction: 0
   isAoE: 0
   isSelfOnly: 0
   stainChange: 0
-  buffStat: 0
-  buffAmount: 0
-  buffDuration: 0
+  buffStat: 3
+  buffAmount: 100
+  buffDuration: 2
   isMelee: 0
-  screenSlash: 1
-  screenSlashColor: {r: 0.72, g: 0.86, b: 0.94, a: 1}
-  screenSlashDuration: 1.6
-  screenSlashWidth: 6
+  screenSlash: 0
+  screenSlashColor: {r: 0.25, g: 0.8, b: 1, a: 1}
+  screenSlashDuration: 0.42
+  screenSlashWidth: 10
   screenSlashAngle: -24
-  screenSlashCount: 12
-  screenSlashBurstTime: 0.18
-  screenSlashFinisherScale: 2.2
-  screenSpaceSplit: 1
-  screenSplitFrames: 1
+  screenSlashCount: 1
+  screenSlashBurstTime: 0.45
+  screenSlashFinisherScale: 2
+  screenSpaceSplit: 0
+  screenSplitFrames: 2
   screenSplitPixels: 18
-  screenSplitHold: 1
+  screenSplitHold: 0
   screenSplitRestoreStart: 0.8
-  screenSlashTimeScale: 0.22
-  vfxType: 0
-  vfxPrefab: {fileID: 0}
-  castVfxPrefab: {fileID: 0}
-  hitVfxPrefab: {fileID: 0}
+  screenSlashTimeScale: 1
+  vfxType: 1
+  vfxPrefab: {fileID: 1033462822675242, guid: 43dbb3bbd1afeb24692c1d8f8b260845, type: 3}
+  castVfxPrefab: {fileID: 1632418803800030, guid: 2e25952a6622a194083ac4dabc23a7b3, type: 3}
+  hitVfxPrefab: {fileID: 167520, guid: f3b6bcc909e8cd2498f7c7e6191e0e98, type: 3}
   useCustomHitVfxOffset: 0
   hitVfxOffset: {x: 0, y: 0, z: 0}
   hitVfxTiming: 0
@@ -64,7 +63,7 @@ MonoBehaviour:
   beamStreamParticleName: Flames
   beamStreamTravelTime: 0.45
   projectileMoveMode: 0
-  vfxSpeed: 55
+  vfxSpeed: 15
   vfxLifeTime: 5
   projectileStartOffset: {x: 0, y: 0, z: 0}
   projectileTargetOffset: {x: 0, y: 1, z: 0}

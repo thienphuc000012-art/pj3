@@ -84,6 +84,7 @@ public class CombatManager : MonoBehaviour
 
     private void OnDisable()
     {
+        GetComponent<UltimateCinematic>()?.End();
         if (turnTransitionRoutine != null)
         {
             StopCoroutine(turnTransitionRoutine);
@@ -459,6 +460,7 @@ public class CombatManager : MonoBehaviour
 
     private void CompleteBattle(bool victory)
     {
+        GetComponent<UltimateCinematic>()?.End();
         state = victory ? CombatState.Won : CombatState.Lost;
         AdvancedUIManager.Instance.ToggleAllUI(false);
         ClearCombatVFX();
@@ -774,6 +776,30 @@ public class CombatManager : MonoBehaviour
             if (endTurnAfter) EndCurrentTurn();
             yield break;
         }
+        UltimateCinematic cinematic = null;
+        int cinematicTicket = 0;
+        if (action.isUltimate)
+        {
+            cinematic = GetComponent<UltimateCinematic>();
+            if (cinematic == null) cinematic = gameObject.AddComponent<UltimateCinematic>();
+            cinematicTicket = cinematic.Begin(attacker, target, playerParty.Concat(enemyParty));
+        }
+        try
+        {
+            yield return ExecuteActionBody(attacker, target, action);
+            if (cinematic != null && state != CombatState.Won && state != CombatState.Lost)
+                yield return cinematic.Transition(false);
+        }
+        finally
+        {
+            if (cinematic != null) cinematic.End(cinematicTicket);
+        }
+        if (endTurnAfter && isActiveAndEnabled && state != CombatState.Won && state != CombatState.Lost)
+            EndCurrentTurn();
+    }
+
+    private IEnumerator ExecuteActionBody(BattleUnit attacker, BattleUnit target, ActionData action)
+    {
         state = CombatState.Executing;
         castStarted.Clear();
         vfxLaunched.Clear();
@@ -790,9 +816,17 @@ public class CombatManager : MonoBehaviour
             int playerIndex = playerParty.IndexOf(attacker);
             if (playerIndex >= 0)
             {
-                CameraManager.Instance.SetInstantCutBlendForAction();
-                CameraManager.Instance.SwitchToPlayerActionCam(playerIndex);
+                CameraManager.Instance.SwitchToPlayerActionCam(playerIndex, action.isUltimate);
             }
+        }
+
+        if (action.isUltimate)
+        {
+            var cinematic = GetComponent<UltimateCinematic>();
+            if (cinematic != null)
+                yield return cinematic.Transition(true, attacker.isPlayer && CameraManager.Instance != null
+                    ? CameraManager.Instance.ultimateTransitionDuration : 0f);
+            if (attacker == null || attacker.IsDead) yield break;
         }
 
         if (action != null && attacker.isPlayer)
@@ -823,7 +857,6 @@ public class CombatManager : MonoBehaviour
             yield return new WaitUntil(() => isAttackAnimationFinished || attacker == null || attacker.IsDead);
             if (attacker == null || attacker.IsDead)
             {
-                if (endTurnAfter) EndCurrentTurn();
                 yield break;
             }
 
@@ -840,7 +873,6 @@ public class CombatManager : MonoBehaviour
             yield return new WaitUntil(() => isAttackAnimationFinished || attacker == null || attacker.IsDead);
             if (attacker == null || attacker.IsDead)
             {
-                if (endTurnAfter) EndCurrentTurn();
                 yield break;
             }
         }
@@ -874,11 +906,6 @@ public class CombatManager : MonoBehaviour
             attacker.ReturnToCombatIdle();
         }
 
-        // --- CẬP NHẬT: Chỉ chuyển lượt nếu được cho phép (Boss đánh multi-hit sẽ cấm cờ này lại) ---
-        if (endTurnAfter)
-        {
-            EndCurrentTurn();
-        }
     }
 
     private Transform GetEncounterMeleeSlot(BattleUnit attacker, BattleUnit target)
