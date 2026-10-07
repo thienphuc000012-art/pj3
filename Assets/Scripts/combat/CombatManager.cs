@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -2242,6 +2242,8 @@ public class CombatManager : MonoBehaviour
         yield return new WaitForSeconds(Mathf.Max(0f, turnVfxCleanupDelay));
         ClearCombatVFX();
         turnTransitionRoutine = null;
+        if (AdvancedUIManager.Instance != null)
+            AdvancedUIManager.Instance.DrainDamageAtTurnEnd();
 
         SetupPositions();
         AdvancedUIManager.Instance.RemoveFirstPortrait();

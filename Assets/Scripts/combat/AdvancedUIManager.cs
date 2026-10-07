@@ -32,6 +32,40 @@ public class AdvancedUIManager : MonoBehaviour
     [Header("Boss / Enemy HP Bar (Top Screen)")]
     public GameObject enemyHudPanel;
     public Image enemyHpFill;
+    [Tooltip("Image viền nằm trên HP Fill. Để trống sẽ tự tạo khi chạy.")]
+    public Image enemyHpBorder;
+    [Header("HP Damage Trail")]
+    [Min(0.05f)] public float enemyHpDrainDuration = 0.8f;
+    [Min(0.05f)] public float playerHpDrainDuration = 0.8f;
+    private Image enemyHpDamageTrail;
+    private sealed class DamageTrailState
+    {
+        public float actual, shown, start, elapsed;
+        public bool draining;
+        public System.Action<int, int, int> listener;
+        public void Receive(int hp, int max, int shield)
+        {
+            float next = max > 0 ? Mathf.Clamp01((float)hp / max) : 0f;
+            if (next < actual) draining = false; // Hold every new hit until its turn ends.
+            if (next > actual && draining)
+            {
+                start = Mathf.Max(shown, next);
+                elapsed = 0f;
+            }
+            actual = next;
+            shown = Mathf.Max(shown, actual); // Healing never leaves white over restored HP.
+        }
+    }
+    private readonly Dictionary<BattleUnit, DamageTrailState> damageStates = new Dictionary<BattleUnit, DamageTrailState>();
+    [Tooltip("Lề trái / dưới của viền HP tự tạo, tính từ panel HP.")]
+    public Vector2 enemyHpBorderOffsetMin = new Vector2(-25.45506f, -55.93742f);
+    [Tooltip("Lề phải / trên của viền HP tự tạo, tính từ panel HP.")]
+    public Vector2 enemyHpBorderOffsetMax = new Vector2(0.000041008f, 44.18607f);
+    private BattleUnit boundEnemy;
+    private Sprite defaultEnemyBorder;
+    private Color defaultEnemyBorderColor;
+    private bool defaultEnemyBorderEnabled;
+    private bool enemyBorderInitialized;
     public TextMeshProUGUI enemyNameText;
     public TextMeshProUGUI enemyHpText;
 
@@ -100,6 +134,8 @@ public class AdvancedUIManager : MonoBehaviour
 
     void Update()
     {
+        UpdateEnemyBinding();
+        UpdateDamageTrails();
         // 1. Nhấp nháy Stain
         if (stainIcons != null)
         {
@@ -230,9 +266,15 @@ public class AdvancedUIManager : MonoBehaviour
     public void RegisterEnemyHP(BattleUnit enemy)
     {
         if (enemy == null) return;
-
+        TrackDamage(enemy);
+        if (CombatManager.Instance != null)
+            foreach (var unit in CombatManager.Instance.enemyParty)
+                if (unit != null) TrackDamage(unit);
+        if (boundEnemy != null) boundEnemy.OnStatsChanged -= UpdateEnemyHPUISafe;
+        boundEnemy = enemy;
         enemy.OnStatsChanged -= UpdateEnemyHPUISafe;
         enemy.OnStatsChanged += UpdateEnemyHPUISafe;
+        ApplyEnemyBorder(enemy);
         UpdateEnemyHPUISafe(enemy.currentHP, enemy.maxHP, enemy.GetTotalShield());
 
         if (enemyNameText != null) enemyNameText.text = enemy.unitName;
@@ -245,6 +287,134 @@ public class AdvancedUIManager : MonoBehaviour
             enemyHudPanel.SetActive(!isStartingGame);
     }
 
+    private void UpdateEnemyBinding()
+    {
+        var combat = CombatManager.Instance;
+        if (combat == null || combat.state == CombatState.Won || combat.state == CombatState.Lost) return;
+        BattleUnit enemy = combat.currentTarget;
+        if (enemy == null || enemy.isPlayer)
+            enemy = combat.currentActiveUnit != null && !combat.currentActiveUnit.isPlayer ? combat.currentActiveUnit : boundEnemy;
+        if (enemy != null && !enemy.isPlayer && enemy != boundEnemy) RegisterEnemyHP(enemy);
+    }
+
+    private void ApplyEnemyBorder(BattleUnit enemy)
+    {
+        if (!enemyBorderInitialized)
+        {
+            if (enemyHpBorder == null && enemyHpFill != null)
+            {
+                var go = new GameObject("Enemy HP Border", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                var rect = go.GetComponent<RectTransform>();
+                // The existing fill's parent is the shared HP background.
+                rect.SetParent(enemyHpFill.transform.parent, false);
+                rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
+                rect.offsetMin = enemyHpBorderOffsetMin;
+                rect.offsetMax = enemyHpBorderOffsetMax;
+                rect.SetAsLastSibling();
+                enemyHpBorder = go.GetComponent<Image>();
+                enemyHpBorder.raycastTarget = false;
+                enemyHpBorder.enabled = false;
+            }
+            if (enemyHpBorder == null || enemyHpBorder == enemyHpFill) return;
+            defaultEnemyBorder = enemyHpBorder.sprite;
+            defaultEnemyBorderColor = enemyHpBorder.color;
+            defaultEnemyBorderEnabled = enemyHpBorder.enabled;
+            enemyBorderInitialized = true;
+        }
+        bool custom = enemy.enemyHpBorderSprite != null;
+        enemyHpBorder.sprite = custom ? enemy.enemyHpBorderSprite : defaultEnemyBorder;
+        enemyHpBorder.color = custom ? Color.white : defaultEnemyBorderColor;
+        enemyHpBorder.enabled = custom || defaultEnemyBorderEnabled;
+    }
+
+    private void OnDestroy()
+    {
+        if (boundEnemy != null) boundEnemy.OnStatsChanged -= UpdateEnemyHPUISafe;
+        foreach (var pair in damageStates)
+            if (pair.Key != null) pair.Key.OnStatsChanged -= pair.Value.listener;
+    }
+
+    private void TrackDamage(BattleUnit unit)
+    {
+        if (damageStates.ContainsKey(unit)) return;
+        float hp = unit.maxHP > 0 ? Mathf.Clamp01((float)unit.currentHP / unit.maxHP) : 0f;
+        var data = new DamageTrailState { actual = hp, shown = hp };
+        data.listener = data.Receive;
+        unit.OnStatsChanged += data.listener;
+        damageStates.Add(unit, data);
+    }
+
+    // Called after outgoing turn VFX have finished, before the next actor starts.
+    public void DrainDamageAtTurnEnd()
+    {
+        foreach (var data in damageStates.Values)
+        {
+            data.start = data.shown;
+            data.elapsed = 0f;
+            data.draining = true;
+        }
+    }
+
+    private void UpdateDamageTrails()
+    {
+        foreach (var pair in damageStates)
+        {
+            var data = pair.Value;
+            float duration = pair.Key != null && pair.Key.isPlayer ? playerHpDrainDuration : enemyHpDrainDuration;
+            if (!data.draining) continue;
+            data.elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(data.elapsed / Mathf.Max(0.05f, duration));
+            data.shown = Mathf.Lerp(data.start, data.actual, Mathf.SmoothStep(0f, 1f, t));
+            if (t >= 1f) data.draining = false;
+        }
+        if (boundEnemy != null && damageStates.TryGetValue(boundEnemy, out var enemy))
+            RenderDamageTrail(enemyHpFill, ref enemyHpDamageTrail, enemy.shown);
+        foreach (var hud in partyHUDList)
+        {
+            if (hud == null || hud.BoundUnit == null) continue;
+            if (damageStates.TryGetValue(hud.BoundUnit, out var player))
+                RenderDamageTrail(hud.hpFill, ref hud.damageTrail, player.shown);
+        }
+    }
+
+    private static void RenderDamageTrail(Image fill, ref Image trail, float shown)
+    {
+        if (fill == null) return;
+        if (trail == null)
+        {
+            var go = new GameObject("HP Damage Trail", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(LayoutElement));
+            go.layer = fill.gameObject.layer;
+            go.GetComponent<LayoutElement>().ignoreLayout = true;
+            trail = go.GetComponent<Image>();
+            trail.rectTransform.SetParent(fill.transform.parent, false);
+            trail.raycastTarget = false;
+            trail.color = Color.white;
+        }
+        var source = fill.rectTransform;
+        var rect = trail.rectTransform;
+        rect.anchorMin = source.anchorMin;
+        rect.anchorMax = source.anchorMax;
+        rect.pivot = source.pivot;
+        rect.sizeDelta = source.sizeDelta;
+        rect.anchoredPosition3D = source.anchoredPosition3D;
+        rect.localRotation = source.localRotation;
+        rect.localScale = source.localScale;
+        // White under the red fill: only the lost HP segment remains visible.
+        if (rect.GetSiblingIndex() != source.GetSiblingIndex() - 1)
+        {
+            rect.SetSiblingIndex(source.GetSiblingIndex());
+            source.SetSiblingIndex(rect.GetSiblingIndex() + 1);
+        }
+        trail.sprite = fill.sprite;
+        trail.type = fill.type;
+        trail.fillMethod = fill.fillMethod;
+        trail.fillOrigin = fill.fillOrigin;
+        trail.fillClockwise = fill.fillClockwise;
+        trail.preserveAspect = fill.preserveAspect;
+        trail.enabled = fill.enabled;
+        trail.fillAmount = shown;
+    }
+
     void UpdateEnemyHPUISafe(int current, int max, int shield)
     {
         if (enemyHpFill != null) enemyHpFill.fillAmount = (float)current / max;
@@ -254,12 +424,37 @@ public class AdvancedUIManager : MonoBehaviour
 
     public void RegisterPartyHP(List<BattleUnit> playerList)
     {
+        // Layout Groups use sibling order, not the serialized HUD list order.
+        // Party slots run right to left, while the HUD layout runs left to right.
+        // Keep each card bound to its party slot, but reverse the visual order.
+        var orderedParents = new Dictionary<Transform, List<Transform>>();
+        foreach (var hud in partyHUDList)
+        {
+            if (hud == null || hud.gameObject == null) continue;
+            Transform card = hud.gameObject.transform;
+            if (card.parent == null) continue;
+            if (!orderedParents.TryGetValue(card.parent, out var cards))
+                orderedParents.Add(card.parent, cards = new List<Transform>());
+            if (!cards.Contains(card)) cards.Add(card);
+        }
+        foreach (var group in orderedParents)
+        {
+            // Retain unrelated children in their existing slots.
+            var slots = new List<int>();
+            foreach (var card in group.Value) slots.Add(card.GetSiblingIndex());
+            slots.Sort();
+            group.Value.Reverse();
+            for (int i = 0; i < group.Value.Count; i++) group.Value[i].SetSiblingIndex(slots[i]);
+            if (group.Key is RectTransform rect) LayoutRebuilder.MarkLayoutForRebuild(rect);
+        }
+
         for (int i = 0; i < partyHUDList.Count; i++)
         {
             if (partyHUDList[i] == null) continue;
 
             if (i < playerList.Count && playerList[i] != null)
             {
+                TrackDamage(playerList[i]);
                 partyHUDList[i].BindUnit(playerList[i]);
             }
             else
@@ -454,6 +649,8 @@ public class PartyHUDUnit
         public int maxDuration;
     }
 
+    [System.NonSerialized] public Image damageTrail;
+    public BattleUnit BoundUnit => boundUnit;
     private BattleUnit boundUnit;
 
     public void BindUnit(BattleUnit unit)

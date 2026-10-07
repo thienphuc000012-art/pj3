@@ -39,6 +39,9 @@ public class BattleUnit : MonoBehaviour
 {
     public string unitName;
     public int maxHP = 100;
+    [Header("Enemy HP Appearance")]
+    [Tooltip("Ảnh viền HP riêng của enemy. Để trống dùng viền mặc định; HP Fill vẫn dùng chung.")]
+    public Sprite enemyHpBorderSprite;
 
     [Header("Ultimate Energy")]
     [Range(0, 100)] public float parryUltimateGain = 15f;
