@@ -84,6 +84,12 @@ public class CombatManager : MonoBehaviour
 
     private void OnDisable()
     {
+        acceptingActionAnimationEvents = false;
+        if (battleCompletionRoutine != null)
+        {
+            StopCoroutine(battleCompletionRoutine);
+            battleCompletionRoutine = null;
+        }
         GetComponent<UltimateCinematic>()?.End();
         if (turnTransitionRoutine != null)
         {
@@ -458,16 +464,32 @@ public class CombatManager : MonoBehaviour
         }
     }
 
+    private Coroutine battleCompletionRoutine;
+    private bool battleCompletionStarted;
+
     private void CompleteBattle(bool victory)
     {
+        if (battleCompletionStarted) return;
+        battleCompletionStarted = true;
+        acceptingActionAnimationEvents = false;
+        isTransitioningTurn = true;
         GetComponent<UltimateCinematic>()?.End();
         state = victory ? CombatState.Won : CombatState.Lost;
         AdvancedUIManager.Instance.ToggleAllUI(false);
+        battleCompletionRoutine = StartCoroutine(CompleteBattleAfterDeath(victory));
+    }
+
+    private IEnumerator CompleteBattleAfterDeath(bool victory)
+    {
+        // Death animations keep running together. Already-finished deaths return immediately.
+        foreach (var unit in playerParty.Concat(enemyParty).Where(u => u != null && u.IsDead).Distinct().ToArray())
+            if (unit != null) yield return unit.WaitForDeathAnimation();
         ClearCombatVFX();
         if (CampaignSession.Instance != null && CampaignSession.Instance.InEncounter)
             CampaignSession.Instance.FinishBattle(this, victory);
         else Debug.Log(victory ? "WIN!" : "LOSE!");
         GetComponent<BattleResultPanel>().Show(victory);
+        battleCompletionRoutine = null;
     }
 
     void StartNextUnitTurn()
@@ -495,6 +517,18 @@ public class CombatManager : MonoBehaviour
             return;
         }
 
+        if (currentActiveUnit.HasParalysis)
+        {
+            state = CombatState.Executing;
+            AdvancedUIManager.Instance.ShowActionMenu(false);
+            turnTransitionRoutine = StartCoroutine(PresentParalysisTurn(currentActiveUnit));
+            return;
+        }
+        BeginActiveUnitTurn();
+    }
+
+    private void BeginActiveUnitTurn()
+    {
         ResetMenuAnimations();
 
         if (currentActiveUnit.isPlayer)
@@ -520,6 +554,25 @@ public class CombatManager : MonoBehaviour
             AdvancedUIManager.Instance.ShowActionMenu(false);
             StartCoroutine(EnemyAICore());
         }
+    }
+
+    private IEnumerator FocusDebuffCamera(BattleUnit unit)
+    {
+        if (CameraManager.Instance == null) yield break;
+        CameraManager.Instance.SwitchToDebuffCam(unit);
+        yield return new WaitForSeconds(Mathf.Max(0f, CameraManager.Instance.transitionSpeed));
+    }
+
+    private IEnumerator PresentParalysisTurn(BattleUnit unit)
+    {
+        yield return FocusDebuffCamera(unit);
+        if (unit == null || currentActiveUnit != unit) yield break;
+        bool skip = unit.RollParalysisAtTurnStart();
+        yield return unit.WaitForDebuffPresentation(false);
+        turnTransitionRoutine = null;
+        if (unit == null || currentActiveUnit != unit || state == CombatState.Won || state == CombatState.Lost) yield break;
+        if (skip || unit.IsDead) EndCurrentTurn();
+        else BeginActiveUnitTurn();
     }
 
     // --- THÊM MỚI: Coroutine đợi camera lia xong ---
@@ -741,6 +794,9 @@ public class CombatManager : MonoBehaviour
 
         // Lấy chiêu theo Action Pattern (Không random)
         selectedAction = currentActiveUnit.GetNextAction();
+        if (selectedAction != null && (selectedAction.isFriendlyAction || selectedAction.isHeal))
+            currentTarget = selectedAction.isSelfOnly ? currentActiveUnit : enemyParty.FirstOrDefault(u => u != null && !u.IsDead);
+
 
         // Enemy dùng skill AoE -> dùng camera AoE riêng.
         // Skill thường -> ưu tiên Action Camera riêng của chính enemy này.
@@ -784,6 +840,9 @@ public class CombatManager : MonoBehaviour
             if (cinematic == null) cinematic = gameObject.AddComponent<UltimateCinematic>();
             cinematicTicket = cinematic.Begin(attacker, target, playerParty.Concat(enemyParty));
         }
+        animationActionOwner = attacker;
+        animationActionData = action;
+        acceptingActionAnimationEvents = false;
         try
         {
             yield return ExecuteActionBody(attacker, target, action);
@@ -792,14 +851,36 @@ public class CombatManager : MonoBehaviour
         }
         finally
         {
+            acceptingActionAnimationEvents = false;
+            animationActionOwner = null;
+            animationActionData = null;
             if (cinematic != null) cinematic.End(cinematicTicket);
         }
         if (endTurnAfter && isActiveAndEnabled && state != CombatState.Won && state != CombatState.Lost)
             EndCurrentTurn();
     }
 
+    private BattleUnit animationActionOwner;
+    private ActionData animationActionData;
+    private bool acceptingActionAnimationEvents;
+
+    public bool CanAcceptActionAnimationEvent(BattleUnit unit)
+    {
+        return acceptingActionAnimationEvents && isActiveAndEnabled &&
+            state == CombatState.Executing && unit != null && !unit.IsDead &&
+            unit == animationActionOwner && unit == currentActiveUnit && animationActionData != null;
+    }
+
+    private readonly HashSet<BattleUnit> statusTargetsThisAction = new HashSet<BattleUnit>();
+    private void ApplyActionStatus(BattleUnit target, ActionData action)
+    {
+        if (target != null && !target.IsDead && statusTargetsThisAction.Add(target))
+            target.ApplyStatusAction(action);
+    }
+
     private IEnumerator ExecuteActionBody(BattleUnit attacker, BattleUnit target, ActionData action)
     {
+        statusTargetsThisAction.Clear();
         state = CombatState.Executing;
         castStarted.Clear();
         vfxLaunched.Clear();
@@ -808,7 +889,7 @@ public class CombatManager : MonoBehaviour
         // Enemy action mới bắt đầu -> xóa kết quả Parry còn sót lại từ action trước.
         if (!attacker.isPlayer && ParrySystem.Instance != null)
         {
-            ParrySystem.Instance.ResetParryState();
+            ParrySystem.Instance?.ResetParryState();
         }
 
         if (attacker.isPlayer)
@@ -852,9 +933,11 @@ public class CombatManager : MonoBehaviour
             yield return StartCoroutine(MoveToPosition(attacker.transform, attackPosition, 0.35f));
 
             string animTrigger = !string.IsNullOrEmpty(action.animationTriggerName) ? action.animationTriggerName : "Attack";
+            acceptingActionAnimationEvents = true;
             attacker.animator.SetTrigger(animTrigger);
 
             yield return new WaitUntil(() => isAttackAnimationFinished || attacker == null || attacker.IsDead);
+            acceptingActionAnimationEvents = false;
             if (attacker == null || attacker.IsDead)
             {
                 yield break;
@@ -868,9 +951,11 @@ public class CombatManager : MonoBehaviour
             if (!attacker.isPlayer && action != null && target != null && !action.isFriendlyAction && !action.isHeal)
                 FaceEnemyAttackTarget(attacker, target, attacker.transform.position);
             string animTrigger = action != null ? action.animationTriggerName : "Attack";
+            acceptingActionAnimationEvents = true;
             attacker.animator.SetTrigger(animTrigger);
 
             yield return new WaitUntil(() => isAttackAnimationFinished || attacker == null || attacker.IsDead);
+            acceptingActionAnimationEvents = false;
             if (attacker == null || attacker.IsDead)
             {
                 yield break;
@@ -892,7 +977,7 @@ public class CombatManager : MonoBehaviour
             !attacker.isPlayer &&
             ParrySystem.Instance != null)
         {
-            ParrySystem.Instance.ResetParryState();
+            ParrySystem.Instance?.ResetParryState();
         }
 
         StopBeamVFX(attacker);
@@ -1114,9 +1199,8 @@ public class CombatManager : MonoBehaviour
 
     public void ApplyDamageFromAnimation(BattleUnit attacker)
     {
-        if (state == CombatState.Won || state == CombatState.Lost) return;
-        if (attacker == null || attacker.IsDead) return;
-        ActionData actionToUse = selectedAction != null ? selectedAction : attacker.defaultAttack;
+        if (!CanAcceptActionAnimationEvent(attacker)) return;
+        ActionData actionToUse = animationActionData;
         if (actionToUse == null) return;
 
         // ============================================================
@@ -1140,7 +1224,7 @@ public class CombatManager : MonoBehaviour
             return;
         }
 
-        int totalAtk = attacker.baseAtk + attacker.GetBuffValue(ActionData.BuffStat.Atk);
+        int totalAtk = attacker.GetTotalAttack();
         float calculatedDamage = (totalAtk * actionToUse.damageMultiplier) + actionToUse.power;
         int rawDamage = Mathf.RoundToInt(calculatedDamage);
 
@@ -1150,6 +1234,30 @@ public class CombatManager : MonoBehaviour
         if (isCrit && !actionToUse.isFriendlyAction)
         {
             rawDamage = Mathf.RoundToInt(rawDamage * attacker.GetCritDamageMultiplier());
+        }
+
+        if (actionToUse.isFriendlyAction || actionToUse.isHeal)
+        {
+            var team = attacker.isPlayer ? playerParty : enemyParty;
+            var targets = actionToUse.isSelfOnly ? new List<BattleUnit> { attacker } :
+                actionToUse.isAoE ? team.Where(u => u != null && !u.IsDead).ToList() : new List<BattleUnit> { currentTarget };
+            bool resolved = false;
+            foreach (var ally in targets)
+            {
+                if (ally == null || ally.IsDead) continue;
+                ApplyActionStatus(ally, actionToUse);
+                if (actionToUse.isHeal)
+                {
+                    int before = ally.currentHP;
+                    ally.Heal(Mathf.Max(0, rawDamage));
+                    AdvancedUIManager.Instance.ShowDamageText(ally.transform, ally.currentHP - before, false, true);
+                }
+                if (actionToUse.buffStat != ActionData.BuffStat.None)
+                    ally.AddBuff(actionToUse.buffStat, actionToUse.buffAmount, actionToUse.buffDuration);
+                resolved = true;
+            }
+            if (resolved) attacker.GainUltimateFromHit(actionToUse);
+            return;
         }
 
         if (attacker.isPlayer)
@@ -1163,30 +1271,6 @@ public class CombatManager : MonoBehaviour
                 slash.Play(actionToUse, screenSlashHitIndex++);
             }
 
-            if (actionToUse.isFriendlyAction || actionToUse.isHeal)
-            {
-                List<BattleUnit> targets = actionToUse.isAoE ? playerParty.Where(u => u.currentHP > 0).ToList() : new List<BattleUnit> { currentTarget };
-
-                foreach (var ally in targets)
-                {
-                    if (ally == null || ally.IsDead) continue;
-                    resolvedHit = true;
-                    if (actionToUse.isHeal)
-                    {
-                        int hpBefore = ally.currentHP;
-                        int healAmount = rawDamage > 0 ? rawDamage : actionToUse.power;
-                        ally.Heal(healAmount);
-
-                        int actualHeal = ally.currentHP - hpBefore;
-                        AdvancedUIManager.Instance.ShowDamageText(ally.transform, actualHeal, false, true);
-                    }
-                    if (actionToUse.buffStat != ActionData.BuffStat.None)
-                    {
-                        ally.AddBuff(actionToUse.buffStat, actionToUse.buffAmount, actionToUse.buffDuration);
-                    }
-                }
-            }
-            else
             {
                 List<BattleUnit> targets = actionToUse.isAoE ? enemyParty.Where(u => u.currentHP > 0).ToList() : new List<BattleUnit> { currentTarget };
 
@@ -1199,7 +1283,8 @@ public class CombatManager : MonoBehaviour
                     if (!UsesVfxImpact(actionToUse)) SpawnActionHitVFX(actionToUse, enemy);
 
                     int hpBefore = enemy.currentHP;
-                    enemy.TakeDamage(rawDamage, false, isCrit);
+                    if (!actionToUse.statusOnly) enemy.TakeDamage(rawDamage, false, isCrit);
+                    ApplyActionStatus(enemy, actionToUse);
                     int actualDamageTaken = hpBefore - enemy.currentHP;
                     GetComponent<BattleResultPanel>()?.RecordDamage(true, actualDamageTaken);
 
@@ -1210,14 +1295,16 @@ public class CombatManager : MonoBehaviour
         }
         else
         {
-            bool parried = ParrySystem.Instance.parrySuccessful;
+            bool parried = ParrySystem.Instance != null && ParrySystem.Instance.parrySuccessful;
             vfxActionState.parried = parried;
             List<BattleUnit> targets = actionToUse.isAoE ? playerParty.Where(u => u.currentHP > 0).ToList() : new List<BattleUnit> { currentTarget };
 
             foreach (var ally in targets)
             {
+                if (ally == null || ally.IsDead) continue;
                 int hpBefore = ally.currentHP;
-                ally.TakeDamage(rawDamage, parried, isCrit);
+                if (!actionToUse.statusOnly) ally.TakeDamage(rawDamage, parried, isCrit);
+                if (!parried) ApplyActionStatus(ally, actionToUse);
                 int actualDamageTaken = hpBefore - ally.currentHP;
                 GetComponent<BattleResultPanel>()?.RecordDamage(false, actualDamageTaken);
 
@@ -1228,7 +1315,7 @@ public class CombatManager : MonoBehaviour
                     AdvancedUIManager.Instance.ShowDamageText(ally.transform, actualDamageTaken, isCrit, false);
                 }
             }
-            ParrySystem.Instance.ResetParryState();
+            ParrySystem.Instance?.ResetParryState();
         }
     }
 
@@ -1550,8 +1637,7 @@ public class CombatManager : MonoBehaviour
         }
 
         int totalAtk =
-            attacker.baseAtk +
-            attacker.GetBuffValue(ActionData.BuffStat.Atk);
+            attacker.GetTotalAttack();
 
         float calculatedDamage =
             (totalAtk * action.damageMultiplier) +
@@ -1615,11 +1701,8 @@ public class CombatManager : MonoBehaviour
                 target.currentHP;
 
             // DAMAGE xảy ra đúng lúc VFX impact.
-            target.TakeDamage(
-                rawDamage,
-                false,
-                isCrit
-            );
+            if (!action.statusOnly) target.TakeDamage(rawDamage, false, isCrit);
+            ApplyActionStatus(target, action);
             // AoE projectiles are one volley; each callback is already guarded
             // against duplicate impacts. A normal projectile awards on arrival.
             if (!action.isAoE || !actionState.energyAwarded)
@@ -1673,11 +1756,8 @@ public class CombatManager : MonoBehaviour
         int playerHpBefore =
             target.currentHP;
 
-        target.TakeDamage(
-            rawDamage,
-            parried,
-            isCrit
-        );
+        if (!action.statusOnly) target.TakeDamage(rawDamage, parried, isCrit);
+        if (!parried) ApplyActionStatus(target, action);
 
         int playerDamageTaken =
             playerHpBefore -
@@ -1985,10 +2065,8 @@ public class CombatManager : MonoBehaviour
 
     public void PlayCastVFXFromAnimation(BattleUnit attacker)
     {
-        if (attacker == null || attacker.IsDead || castStarted.Contains(attacker) || vfxLaunched.Contains(attacker)) return;
-        ActionData currentAction = attacker.isPlayer
-            ? selectedAction
-            : (selectedAction != null ? selectedAction : attacker.defaultAttack);
+        if (!CanAcceptActionAnimationEvent(attacker) || castStarted.Contains(attacker) || vfxLaunched.Contains(attacker)) return;
+        ActionData currentAction = animationActionData;
 
         if (currentAction != null && currentAction.castVfxPrefab != null)
         {
@@ -2047,11 +2125,8 @@ public class CombatManager : MonoBehaviour
 
     public void PlayVFXFromAnimation(BattleUnit attacker)
     {
-        if (attacker == null || attacker.IsDead) return;
-
-        ActionData currentAction = attacker.isPlayer
-            ? selectedAction
-            : (selectedAction != null ? selectedAction : attacker.defaultAttack);
+        if (!CanAcceptActionAnimationEvent(attacker)) return;
+        ActionData currentAction = animationActionData;
 
         if (currentAction != null && currentAction.vfxPrefab != null)
         {
@@ -2241,10 +2316,24 @@ public class CombatManager : MonoBehaviour
         // The next unit cannot create new effects until this cleanup finishes.
         yield return new WaitForSeconds(Mathf.Max(0f, turnVfxCleanupDelay));
         ClearCombatVFX();
+        if (currentActiveUnit != null && !currentActiveUnit.IsDead)
+        {
+            var affected = currentActiveUnit;
+            bool hasDamage = affected.HasDamagingDebuff;
+            if (hasDamage) yield return FocusDebuffCamera(affected);
+            if (affected != null)
+            {
+                affected.TickDebuffsAtTurnEnd();
+                // Include lethal ticks: finish their VFX before the result camera/panel.
+                if (hasDamage) yield return affected.WaitForDebuffPresentation(true);
+            }
+        }
         turnTransitionRoutine = null;
         if (AdvancedUIManager.Instance != null)
             AdvancedUIManager.Instance.DrainDamageAtTurnEnd();
 
+        if (enemyParty.All(e => e == null || e.IsDead)) { CompleteBattle(true); yield break; }
+        if (playerParty.All(p => p == null || p.IsDead)) { CompleteBattle(false); yield break; }
         SetupPositions();
         AdvancedUIManager.Instance.RemoveFirstPortrait();
         currentTimelineIndex++;

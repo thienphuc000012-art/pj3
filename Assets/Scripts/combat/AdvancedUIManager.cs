@@ -34,6 +34,9 @@ public class AdvancedUIManager : MonoBehaviour
     public Image enemyHpFill;
     [Tooltip("Image viền nằm trên HP Fill. Để trống sẽ tự tạo khi chạy.")]
     public Image enemyHpBorder;
+    [Tooltip("BuffContainer của enemy. Để trống sẽ tự tạo dưới tên enemy khi có debuff.")]
+    public Transform enemyBuffContainer;
+    private readonly DebuffIconUI enemyDebuffIcon = new DebuffIconUI();
     [Header("HP Damage Trail")]
     [Min(0.05f)] public float enemyHpDrainDuration = 0.8f;
     [Min(0.05f)] public float playerHpDrainDuration = 0.8f;
@@ -135,6 +138,7 @@ public class AdvancedUIManager : MonoBehaviour
     void Update()
     {
         UpdateEnemyBinding();
+        enemyDebuffIcon.Blink(Mathf.PingPong(Time.time * 5f, 0.7f) + 0.3f);
         UpdateDamageTrails();
         // 1. Nhấp nháy Stain
         if (stainIcons != null)
@@ -417,6 +421,23 @@ public class AdvancedUIManager : MonoBehaviour
 
     void UpdateEnemyHPUISafe(int current, int max, int shield)
     {
+        if (enemyBuffContainer == null && boundEnemy != null && boundEnemy.activeDebuffs.Count > 0 && enemyNameText != null)
+        {
+            var go = new GameObject("BuffContainer Enemy", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            go.layer = enemyNameText.gameObject.layer;
+            var rect = go.GetComponent<RectTransform>();
+            rect.SetParent(enemyNameText.transform, false);
+            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.anchoredPosition = new Vector2(0f, -6f);
+            rect.sizeDelta = new Vector2(180f, 36f);
+            var layout = go.GetComponent<HorizontalLayoutGroup>();
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.childControlWidth = layout.childControlHeight = false;
+            layout.childForceExpandWidth = layout.childForceExpandHeight = false;
+            enemyBuffContainer = rect;
+        }
+        enemyDebuffIcon.Refresh(boundEnemy, enemyBuffContainer);
         if (enemyHpFill != null) enemyHpFill.fillAmount = (float)current / max;
         if (enemyHpText != null)
             enemyHpText.text = shield > 0 ? $"{current}/{max} <color=yellow>[+{shield}]</color>" : $"{current} / {max}";
@@ -571,6 +592,7 @@ public class AdvancedUIManager : MonoBehaviour
 [System.Serializable]
 public class PartyHUDUnit
 {
+    private readonly DebuffIconUI debuffIcon = new DebuffIconUI();
     public GameObject gameObject;
     public Image hpFill;
     public Image shieldFill;
@@ -675,6 +697,7 @@ public class PartyHUDUnit
 
     void OnStatsChangedHandler(int current, int max, int shield)
     {
+        debuffIcon.Refresh(boundUnit, buffContainer);
         if (hpFill != null) hpFill.fillAmount = (float)current / max;
 
         if (shieldFill != null)
@@ -811,6 +834,7 @@ public class PartyHUDUnit
     // --- Nhấp nháy Buff Icon sắp hết hạn ---
     public void UpdateBuffBlinking(float currentAlpha)
     {
+        debuffIcon.Blink(currentAlpha);
         for (int i = 0; i < spawnedBuffIcons.Count; i++)
         {
             if (spawnedBuffIcons[i] == null)
@@ -836,5 +860,67 @@ public class PartyHUDUnit
                     Color.white;
             }
         }
+    }
+}
+
+// Separate from buff stack icons: debuffs have one slot and display remaining turns.
+public sealed class DebuffIconUI
+{
+    private Image image;
+    private TextMeshProUGUI label;
+    private int turns;
+    private Color tint;
+
+    public void Refresh(BattleUnit unit, Transform container)
+    {
+        var effect = unit != null && !unit.IsDead && unit.activeDebuffs.Count > 0 ? unit.activeDebuffs[0] : null;
+        if (effect == null || container == null)
+        {
+            if (image != null) image.gameObject.SetActive(false);
+            return;
+        }
+        if (image == null)
+        {
+            var manager = AdvancedUIManager.Instance;
+            var go = manager != null && manager.buffIconPrefab != null
+                ? UnityEngine.Object.Instantiate(manager.buffIconPrefab, container)
+                : new GameObject("Debuff Icon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.transform.SetParent(container, false);
+            image = go.GetComponent<Image>();
+            if (image == null) image = go.AddComponent<Image>();
+            if (image.rectTransform.sizeDelta == Vector2.zero) image.rectTransform.sizeDelta = new Vector2(36, 36);
+            label = go.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (label == null)
+            {
+                var text = new GameObject("Turns", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+                text.transform.SetParent(go.transform, false);
+                label = text.GetComponent<TextMeshProUGUI>();
+                label.rectTransform.anchorMin = Vector2.zero; label.rectTransform.anchorMax = Vector2.one;
+                label.rectTransform.offsetMin = label.rectTransform.offsetMax = Vector2.zero;
+            }
+            image.raycastTarget = false;
+            label.raycastTarget = false;
+        }
+        image.gameObject.name = "Debuff " + effect.settings.type;
+        image.gameObject.SetActive(true);
+        image.transform.SetAsLastSibling();
+        image.sprite = effect.settings.icon;
+        image.type = Image.Type.Simple;
+        image.preserveAspect = true;
+        turns = effect.remainingTurns;
+        bool hasIcon = image.sprite != null;
+        tint = hasIcon ? Color.white : new Color(0.3f, 0.12f, 0.12f, 1f);
+        image.color = tint;
+        label.gameObject.SetActive(true);
+        label.text = hasIcon ? turns.ToString() : effect.settings.type + "\n" + turns;
+        label.fontSize = hasIcon ? 16 : 10;
+        label.alignment = hasIcon ? TextAlignmentOptions.BottomRight : TextAlignmentOptions.Center;
+        label.color = Color.white;
+    }
+
+    public void Blink(float alpha)
+    {
+        if (image != null && image.gameObject.activeSelf)
+            image.color = new Color(tint.r, tint.g, tint.b, turns <= 1 ? alpha : 1f);
     }
 }

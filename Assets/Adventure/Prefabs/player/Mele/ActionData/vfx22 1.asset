@@ -1,0 +1,86 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 532a234c595fb3944bb8626c21ed8968, type: 3}
+  m_Name: vfx22 1
+  m_EditorClassIdentifier: Assembly-CSharp::ActionData
+  actionName: b
+  description: anbfaklfbafbna
+  icon: {fileID: 21300000, guid: 742198cc0ec8f0143b32a726fe61f028, type: 3}
+  type: 1
+  isUltimate: 0
+  ultimateEnergyGain: 10
+  power: 0
+  damageMultiplier: 0
+  isHeal: 0
+  animationTriggerName: Anim22
+  isFriendlyAction: 1
+  isAoE: 0
+  isSelfOnly: 1
+  stainChange: 0
+  buffStat: 0
+  buffAmount: 0
+  buffDuration: 2
+  debuffs:
+  - type: 0
+    icon: {fileID: 21300000, guid: 8d8f748a80ac02544aed64c6df465219, type: 3}
+    applyChance: 100
+    turns: 99
+    burnDamage: 10
+    burnAttackReductionPercent: 5
+    paralysisSkipChance: 0
+    poisonMaxHpPercent: 0
+    turnVfxPrefab: {fileID: 181074, guid: 363f0247579e53d4c85225375440bd67, type: 3}
+    turnVfxLocalOffset: {x: 0, y: 0, z: 0}
+    turnVfxLifetime: 2
+  cleanse: 0
+  statusOnly: 0
+  isMelee: 0
+  screenSlash: 0
+  screenSlashColor: {r: 0.25, g: 0.8, b: 1, a: 1}
+  screenSlashDuration: 0.42
+  screenSlashWidth: 10
+  screenSlashAngle: -24
+  screenSlashCount: 1
+  screenSlashBurstTime: 0.45
+  screenSlashFinisherScale: 2
+  screenSpaceSplit: 0
+  screenSplitFrames: 2
+  screenSplitPixels: 18
+  screenSplitHold: 0
+  screenSplitRestoreStart: 0.8
+  screenSlashTimeScale: 1
+  vfxType: 2
+  vfxPrefab: {fileID: 121928, guid: 313e5c5f850e5be429d4a6787a725f73, type: 3}
+  castVfxPrefab: {fileID: 0}
+  hitVfxPrefab: {fileID: 0}
+  useCustomHitVfxOffset: 0
+  hitVfxOffset: {x: 0, y: 0, z: 0}
+  hitVfxTiming: 0
+  castVfxLifeTime: 5
+  hitVfxLifeTime: 3
+  useVfxParry: 1
+  parryOpenBeforeImpact: 0.25
+  parryWindowDuration: 0.3
+  beamParryDelay: 0.1
+  beamPlaybackSpeed: 1
+  beamParticleNames: []
+  beamParticleStream: 0
+  beamStreamParticleName: Flames
+  beamStreamTravelTime: 0.45
+  projectileMoveMode: 0
+  vfxSpeed: 15
+  vfxLifeTime: 5
+  projectileStartOffset: {x: 0, y: 0, z: 0}
+  projectileTargetOffset: {x: 0, y: 1, z: 0}
+  curveHeight: 2
+  curveSideOffset: 0
+  rfxUseGravity: 0

@@ -3161,6 +3161,10 @@ PrefabInstance:
       value: 66
       objectReference: {fileID: 0}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
+      propertyPath: baseAtk
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: unitName
       value: kakaka
       objectReference: {fileID: 0}
@@ -3174,12 +3178,12 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: characterSkills.Array.size
-      value: 4
+      value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: 'characterSkills.Array.data[0]'
       value: 
-      objectReference: {fileID: 11400000, guid: e288a344a0ee08f42bee7a0c4f10bd03, type: 2}
+      objectReference: {fileID: 11400000, guid: 33022203843e92e4abf48d874edd3a86, type: 2}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: 'characterSkills.Array.data[1]'
       value: 
@@ -3195,7 +3199,7 @@ PrefabInstance:
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: 'characterSkills.Array.data[4]'
       value: 
-      objectReference: {fileID: 11400000, guid: bfae87a977bf73f4c86d8a2fcf86b009, type: 2}
+      objectReference: {fileID: 11400000, guid: 48e3c62249d02184a81587ede334f145, type: 2}
     - target: {fileID: 2019018332671450448, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: m_IsActive
       value: 1

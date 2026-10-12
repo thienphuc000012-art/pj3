@@ -119,6 +119,20 @@ public class CameraManager : MonoBehaviour
         }
     }
 
+    public void SwitchToDebuffCam(BattleUnit unit)
+    {
+        if (unit == null || CombatManager.Instance == null) return;
+        int index = unit.isPlayer ? CombatManager.Instance.playerParty.IndexOf(unit) : CombatManager.Instance.enemyParty.IndexOf(unit);
+        CinemachineCamera camera = null;
+        if (unit.isPlayer && index >= 0 && index < playerHitCams.Count) camera = playerHitCams[index];
+        var targets = unit.isPlayer ? playerTargetCams : enemyTargetCams;
+        if (camera == null && index >= 0 && index < targets.Count) camera = targets[index];
+        if (camera == null) return; // Retain the current view when no dedicated camera exists.
+        SetFastBlend();
+        ResetAllCams();
+        camera.Priority = 20;
+    }
+
     public void SwitchToEnemyPhase2Cam()
     {
         SetFastBlend();

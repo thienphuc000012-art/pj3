@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -128,6 +128,7 @@ public class BattleUnit : MonoBehaviour
 
     private void LateUpdate()
     {
+        ObserveDeathAnimation();
         int phase = -1;
         if (!IsDead && animator != null && animator.isActiveAndEnabled &&
             animator.runtimeAnimatorController != null && !string.IsNullOrEmpty(idleStateName))
@@ -262,10 +263,62 @@ public class BattleUnit : MonoBehaviour
     public Sprite unitPortrait;
     public int currentHP { get; private set; }
     public bool IsDead => currentHP <= 0;
+    [Header("Death Presentation")]
+    [Tooltip("Tên state chết trong Animator. Controller hiện tại dùng death.")]
+    public string deathStateName = "death";
+    [Min(1f), Tooltip("Giới hạn chờ nếu Animator thiếu state chết hoặc bị dừng.")]
+    public float deathAnimationTimeout = 30f;
+    private bool deathStateSeen;
+    private bool deathAnimationFinished;
+
+    private void ObserveDeathAnimation()
+    {
+        if (!IsDead || deathAnimationFinished || animator == null || !animator.isActiveAndEnabled || animator.runtimeAnimatorController == null) return;
+        var current = animator.GetCurrentAnimatorStateInfo(0);
+        bool dying = (!string.IsNullOrEmpty(deathStateName) && current.IsName(deathStateName)) ||
+            current.IsName("Die") || current.IsName("Death") || current.IsTag("Death");
+        if (dying)
+        {
+            deathStateSeen = true;
+            if (current.normalizedTime >= 1f) deathAnimationFinished = true;
+        }
+        else if (deathStateSeen) deathAnimationFinished = true;
+    }
+
+    public System.Collections.IEnumerator WaitForDeathAnimation()
+    {
+        if (!IsDead || animator == null || !animator.isActiveAndEnabled || animator.runtimeAnimatorController == null) yield break;
+        var deathAnimator = animator;
+        var originalCulling = deathAnimator.cullingMode;
+        deathAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+        float deadline = Time.unscaledTime + Mathf.Max(1f, deathAnimationTimeout);
+        try
+        {
+            // Give the queued Die trigger a chance to enter the death state.
+            yield return null;
+            while (this != null && IsDead && deathAnimator != null && deathAnimator.isActiveAndEnabled)
+            {
+                ObserveDeathAnimation();
+                if (deathAnimationFinished) yield break;
+                if (Time.unscaledTime >= deadline)
+                {
+                    Debug.LogWarning($"[{unitName}] Không thấy animation chết kết thúc. Kiểm tra Death State Name / Animator speed.", this);
+                    yield break;
+                }
+                yield return null;
+            }
+        }
+        finally
+        {
+            if (deathAnimator != null) deathAnimator.cullingMode = originalCulling;
+        }
+    }
     public void SetPersistentHP(int hp)
     {
         currentHP = Mathf.Clamp(hp, 0, maxHP);
+        deathStateSeen = deathAnimationFinished = false;
         activeBuffs.Clear();
+        activeDebuffs.Clear();
         if (IsDead && animator != null) animator.SetTrigger("Die");
         UpdateUI();
     }
@@ -365,6 +418,109 @@ public class BattleUnit : MonoBehaviour
         UpdateUI();
     }
 
+    [Serializable]
+    public class ActiveDebuff
+    {
+        public ActionData.DebuffSettings settings;
+        public int remainingTurns;
+    }
+    [NonSerialized] public List<ActiveDebuff> activeDebuffs = new List<ActiveDebuff>();
+    private readonly List<GameObject> debuffVfxInstances = new List<GameObject>();
+    public bool HasParalysis => activeDebuffs.Any(d => d.settings.type == ActionData.DebuffType.Paralysis);
+    public bool HasDamagingDebuff => activeDebuffs.Any(d =>
+        (d.settings.type == ActionData.DebuffType.Burn && d.settings.burnDamage > 0) ||
+        (d.settings.type == ActionData.DebuffType.Poison && d.settings.poisonMaxHpPercent > 0));
+
+    public System.Collections.IEnumerator WaitForDebuffPresentation(bool includeHit)
+    {
+        var clip = includeHit ? ResolveHitReactionClip(false) : null;
+        float remaining = includeHit ? Mathf.Max(0.5f, clip != null ? clip.length / Mathf.Max(0.01f, animator != null ? animator.speed : 1f) : 0f) : 0.3f;
+        do
+        {
+            yield return null;
+            remaining -= Time.deltaTime;
+            debuffVfxInstances.RemoveAll(vfx => vfx == null || !vfx.activeInHierarchy);
+        } while (remaining > 0f || debuffVfxInstances.Count > 0);
+    }
+
+    public void ApplyStatusAction(ActionData action)
+    {
+        if (IsDead || action == null) return;
+        if (action.cleanse == ActionData.CleanseType.RemoveDebuffs) activeDebuffs.Clear();
+        if (action.cleanse == ActionData.CleanseType.RemoveBuffs) activeBuffs.Clear();
+        // An occupied debuff slot blocks both replacement and duration refresh.
+        // Explicit cleansing above can free the slot before applying a new effect.
+        if (activeDebuffs.Count == 0 && action.debuffs != null)
+            foreach (var effect in action.debuffs)
+            {
+                if (effect == null || effect.turns <= 0 || UnityEngine.Random.value * 100f >= effect.applyChance) continue;
+                activeDebuffs.Add(new ActiveDebuff { settings = effect, remainingTurns = effect.turns });
+                break; // First successful entry wins when an action lists multiple debuffs.
+            }
+        UpdateUI();
+    }
+
+    public int GetTotalAttack()
+    {
+        float atk = Mathf.Max(0, baseAtk + GetBuffValue(ActionData.BuffStat.Atk));
+        foreach (var effect in activeDebuffs)
+            if (effect.settings.type == ActionData.DebuffType.Burn)
+                atk *= 1f - Mathf.Clamp01(effect.settings.burnAttackReductionPercent / 100f);
+        return Mathf.Max(0, Mathf.RoundToInt(atk));
+    }
+
+    public bool RollParalysisAtTurnStart()
+    {
+        if (IsDead) return false;
+        foreach (var effect in activeDebuffs)
+            if (effect.settings.type == ActionData.DebuffType.Paralysis)
+            {
+                PlayDebuffVfx(effect.settings);
+                return UnityEngine.Random.value * 100f < effect.settings.paralysisSkipChance;
+            }
+        return false;
+    }
+
+    public void TickDebuffsAtTurnEnd()
+    {
+        if (IsDead) return;
+        foreach (var effect in activeDebuffs.ToArray())
+        {
+            var settings = effect.settings;
+            int damage = settings.type == ActionData.DebuffType.Burn ? Mathf.Max(0, settings.burnDamage) :
+                settings.type == ActionData.DebuffType.Poison ? Mathf.CeilToInt(maxHP * Mathf.Clamp01(settings.poisonMaxHpPercent / 100f)) : 0;
+            if (damage > 0 && !IsDead)
+            {
+                PlayDebuffVfx(settings);
+                int before = currentHP;
+                TakeDamage(damage, false, false, true);
+                AdvancedUIManager.Instance?.ShowDamageText(transform, before - currentHP, false, false);
+            }
+            effect.remainingTurns--;
+        }
+        activeDebuffs.RemoveAll(d => d.remainingTurns <= 0);
+        UpdateUI();
+    }
+
+    private void PlayDebuffVfx(ActionData.DebuffSettings settings)
+    {
+        if (settings.turnVfxPrefab == null) return;
+        var effect = Instantiate(settings.turnVfxPrefab, transform);
+        effect.transform.localPosition = settings.turnVfxLocalOffset;
+        effect.SetActive(true);
+        float lifetime = Mathf.Max(0.1f, settings.turnVfxLifetime);
+        foreach (var particles in effect.GetComponentsInChildren<ParticleSystem>())
+        {
+            var main = particles.main;
+            // Allow one-shot particles to finish; looping effects use the configured lifetime.
+            if (!main.loop)
+                lifetime = Mathf.Max(lifetime, (main.startDelay.constantMax + main.duration + main.startLifetime.constantMax) / Mathf.Max(0.01f, main.simulationSpeed));
+            particles.Play();
+        }
+        debuffVfxInstances.Add(effect);
+        Destroy(effect, lifetime);
+    }
+
     public int GetBuffValue(ActionData.BuffStat stat) => activeBuffs.Where(b => b.stat == stat).Sum(b => b.amount);
     public int GetTotalShield() => GetBuffValue(ActionData.BuffStat.Shield);
     public int GetCritChance() => Mathf.Clamp(baseCrit + GetBuffValue(ActionData.BuffStat.Crit), 0, 100);
@@ -377,7 +533,7 @@ public class BattleUnit : MonoBehaviour
         UpdateUI();
     }
 
-    public void TakeDamage(int rawDamage, bool isParried, bool isCritical = false)
+    public void TakeDamage(int rawDamage, bool isParried, bool isCritical = false, bool isDamageOverTime = false)
     {
         if (IsDead) return;
         // --- CẬP NHẬT: Nếu Parry thành công, chặn Damage và KHÔNG gọi lại SetTrigger("Parry") ---
@@ -388,9 +544,9 @@ public class BattleUnit : MonoBehaviour
         }
 
         int totalDef = baseDef + GetBuffValue(ActionData.BuffStat.Def);
-        int finalDamage = Mathf.Max(1, rawDamage - totalDef);
+        int finalDamage = isDamageOverTime ? Mathf.Max(0, rawDamage) : Mathf.Max(1, rawDamage - totalDef);
 
-        foreach (var buff in activeBuffs.Where(b => b.stat == ActionData.BuffStat.Shield).ToList())
+        foreach (var buff in activeBuffs.Where(b => !isDamageOverTime && b.stat == ActionData.BuffStat.Shield).ToList())
         {
             if (finalDamage <= 0) break;
 

@@ -46,6 +46,33 @@ public class ActionData : ScriptableObject
     [Tooltip("Number of rounds the buff lasts. Buffs of the same stat stack additively.")]
     [Min(1)] public int buffDuration = 1;
 
+    public enum DebuffType { Burn, Paralysis, Poison }
+    public enum CleanseType { None, RemoveDebuffs, RemoveBuffs }
+    [System.Serializable]
+    public class DebuffSettings
+    {
+        public DebuffType type;
+        [Tooltip("Icon hiển thị trong BuffContainer khi nhân vật đang dính debuff.")]
+        public Sprite icon;
+        [Range(0, 100)] public float applyChance = 100;
+        [Min(1)] public int turns = 3;
+        [Min(0)] public int burnDamage = 10;
+        [Range(0, 100)] public float burnAttackReductionPercent = 20;
+        [Range(0, 100)] public float paralysisSkipChance = 25;
+        [Range(0, 100)] public float poisonMaxHpPercent = 5;
+        [Tooltip("Burn/Poison: cuối lượt. Paralysis: đầu mỗi lượt còn tê liệt.")]
+        public GameObject turnVfxPrefab;
+        public Vector3 turnVfxLocalOffset = Vector3.up;
+        [Tooltip("Thời gian hiển thị VFX và giữ camera. VFX lặp dừng ở mốc này; particle một lần được chờ thêm nếu chưa kết thúc.")]
+        [Min(0.1f)] public float turnVfxLifetime = 2;
+    }
+    [Header("Debuffs & Cleanse")]
+    [Tooltip("Tối đa 1 debuff mỗi nhân vật. Đang có debuff thì không nhận debuff mới, không làm mới thời gian. Khi trống, lấy debuff đầu tiên dính theo thứ tự danh sách. Parry chặn debuff.")]
+    public DebuffSettings[] debuffs = new DebuffSettings[0];
+    public CleanseType cleanse;
+    [Tooltip("Bật cho skill chỉ gây trạng thái/xóa hiệu ứng, không gây damage trực tiếp. Friendly Action chọn đồng minh.")]
+    public bool statusOnly;
+
     [Header("Attack Distance Type")]
     public bool isMelee = true;
 

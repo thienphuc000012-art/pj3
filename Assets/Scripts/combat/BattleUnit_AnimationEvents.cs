@@ -15,6 +15,7 @@ public class BattleUnit_AnimationEvents : MonoBehaviour
     public SwordBladeTrail swordTrail;
     public void AnimEvent_OpenParry()
     {
+        if (CombatManager.Instance == null || !CombatManager.Instance.CanAcceptActionAnimationEvent(ownerUnit)) return;
         if (ownerUnit == null || ownerUnit.IsDead)
             return;
 
@@ -37,6 +38,7 @@ public class BattleUnit_AnimationEvents : MonoBehaviour
 
     public void AnimEvent_CloseParry()
     {
+        if (CombatManager.Instance == null || !CombatManager.Instance.CanAcceptActionAnimationEvent(ownerUnit)) return;
         if (ownerUnit == null || ownerUnit.IsDead)
             return;
 
@@ -59,6 +61,7 @@ public class BattleUnit_AnimationEvents : MonoBehaviour
 
     public void AnimEvent_DealDamage()
     {
+        if (CombatManager.Instance == null || !CombatManager.Instance.CanAcceptActionAnimationEvent(ownerUnit)) return;
         if (ownerUnit == null || ownerUnit.IsDead)
             return;
 
@@ -94,6 +97,7 @@ public class BattleUnit_AnimationEvents : MonoBehaviour
 
     public void AnimEvent_EndAttack()
     {
+        if (CombatManager.Instance == null || !CombatManager.Instance.CanAcceptActionAnimationEvent(ownerUnit)) return;
         if (ownerUnit == null || ownerUnit.IsDead) return;
         if (ownerUnit != null) Debug.Log($"[Animation Event] {ownerUnit.unitName} ĐÃ ĐÁNH XONG HOÀN TOÀN!");
 
@@ -107,6 +111,7 @@ public class BattleUnit_AnimationEvents : MonoBehaviour
 
     public void AnimEvent_PlayVFX()
     {
+        if (CombatManager.Instance == null || !CombatManager.Instance.CanAcceptActionAnimationEvent(ownerUnit)) return;
         if (ownerUnit == null || ownerUnit.IsDead) return;
         if (ownerUnit != null && CombatManager.Instance != null)
         {
@@ -115,6 +120,7 @@ public class BattleUnit_AnimationEvents : MonoBehaviour
     }
     public void AnimEvent_PlayCastVFX()
     {
+        if (CombatManager.Instance == null || !CombatManager.Instance.CanAcceptActionAnimationEvent(ownerUnit)) return;
         if (ownerUnit == null || ownerUnit.IsDead) return;
         if (ownerUnit != null && CombatManager.Instance != null)
         {
@@ -123,6 +129,7 @@ public class BattleUnit_AnimationEvents : MonoBehaviour
     }
     public void AnimEvent_StartTrail()
     {
+        if (CombatManager.Instance == null || !CombatManager.Instance.CanAcceptActionAnimationEvent(ownerUnit)) return;
         if (ownerUnit == null || ownerUnit.IsDead) return;
         if (swordTrail != null)
         {
