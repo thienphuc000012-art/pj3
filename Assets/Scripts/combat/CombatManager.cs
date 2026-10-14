@@ -665,7 +665,7 @@ public class CombatManager : MonoBehaviour
         }
 
         AdvancedUIManager.Instance.ShowActionMenu(false); // Ẩn 3 nút đi
-        AdvancedUIManager.Instance.PopulateSubMenu(currentActiveUnit.characterSkills);
+        AdvancedUIManager.Instance.PopulateSkillSubMenu(currentActiveUnit.characterSkills);
     }
 
     public void OnItemsClicked()

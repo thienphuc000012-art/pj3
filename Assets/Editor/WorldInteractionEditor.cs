@@ -333,7 +333,28 @@ public class WorldInteractionEditor : Editor
         // APPLY
         // ========================================================
 
-        serializedObject.ApplyModifiedProperties();
+        if (kind == WorldInteractionKind.Pickup)
+        {
+            EditorGUILayout.Space(6);
+            EditorGUILayout.LabelField("Model 3D của item", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("pickupModelPrefab"), new GUIContent("Model Prefab"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("pickupModelPosition"), new GUIContent("Vị trí model"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("pickupModelRotation"), new GUIContent("Góc xoay model"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("pickupModelScale"), new GUIContent("Kích thước model"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("pickupAnimationState"), new GUIContent("Animation nhặt item"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("pickupUseAnimationEvent"), new GUIContent("Nhặt bằng Animation Event"));
+            if (!serializedObject.FindProperty("pickupUseAnimationEvent").boolValue)
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("pickupMoment"), new GUIContent("Mốc nhặt trong animation"));
+            else EditorGUILayout.HelpBox("Thêm Animation Event tên AnimEvent_PickupItem tại frame tay chạm item trong clip pickupitem.", MessageType.Info);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("pickupAnimationTimeout"), new GUIContent("Giới hạn chờ animation"));
+            EditorGUILayout.HelpBox("Kéo prefab model từ Project vào đây. Model hiển thị trong Scene và tự ẩn khi nhặt item. Phần Rewards quyết định vật phẩm nhận được.", MessageType.Info);
+        }
+        bool changed = serializedObject.ApplyModifiedProperties();
+        if (kind == WorldInteractionKind.Pickup && !EditorApplication.isPlaying)
+        {
+            bool updateModel = GUILayout.Button("Cập nhật model 3D");
+            if (changed || updateModel) UpdatePickupModel(point);
+        }
         if (kind == WorldInteractionKind.Encounter && point.GetComponent<EnemyEncounterBehaviour>() == null && GUILayout.Button("Add Patrol / Chase Behaviour"))
             Undo.AddComponent<EnemyEncounterBehaviour>(point.gameObject);
 
@@ -506,6 +527,37 @@ public class WorldInteractionEditor : Editor
                     );
             }
         }
+    }
+
+    static void UpdatePickupModel(WorldInteraction point)
+    {
+        var prefab = point.pickupModelPrefab;
+        if (prefab != null && (!EditorUtility.IsPersistent(prefab) || prefab.GetComponentInChildren<WorldInteraction>(true) != null))
+        {
+            Debug.LogWarning("Hãy chọn prefab model từ Project, không chứa WorldInteraction để tránh tạo điểm nhặt lồng nhau.", point);
+            return;
+        }
+        Undo.RecordObject(point, "Update pickup model");
+        if (point.pickupModelInstance != null && point.pickupModelSource != prefab)
+        {
+            Undo.DestroyObjectImmediate(point.pickupModelInstance);
+            point.pickupModelInstance = null;
+        }
+        if (point.pickupModelInstance == null && prefab != null)
+        {
+            point.pickupModelInstance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, point.transform);
+            Undo.RegisterCreatedObjectUndo(point.pickupModelInstance, "Create pickup model");
+            point.pickupModelInstance.name = "Pickup Model";
+        }
+        point.pickupModelSource = prefab;
+        if (point.pickupModelInstance != null)
+        {
+            Undo.RecordObject(point.pickupModelInstance.transform, "Move pickup model");
+            point.ApplyPickupModelTransform();
+            PrefabUtility.RecordPrefabInstancePropertyModifications(point.pickupModelInstance.transform);
+        }
+        PrefabUtility.RecordPrefabInstancePropertyModifications(point);
+        EditorUtility.SetDirty(point);
     }
 
 

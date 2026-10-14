@@ -87,6 +87,42 @@ public class ActionButtonUI : MonoBehaviour
         }
     }
 
+    public void SetupEmpty(string slotName)
+    {
+        currentAction = null;
+        if (nameText != null) nameText.text = slotName;
+        if (infoText != null) infoText.text = "Chưa trang bị";
+        if (stainText != null) stainText.text = "";
+        if (iconImage != null) iconImage.gameObject.SetActive(false);
+        if (button != null)
+        {
+            button.onClick.RemoveAllListeners();
+            button.interactable = false;
+        }
+    }
+
+    public void FitFixedSlot()
+    {
+        void Place(RectTransform rect, Vector2 min, Vector2 max, Vector2 offsetMin, Vector2 offsetMax)
+        {
+            rect.anchorMin = min; rect.anchorMax = max;
+            rect.offsetMin = offsetMin; rect.offsetMax = offsetMax;
+        }
+        if (iconImage != null)
+            Place(iconImage.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(8, -48), new Vector2(48, -8));
+        if (nameText != null)
+            Place(nameText.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(56, -46), new Vector2(-170, -6));
+        if (stainText != null)
+            Place(stainText.rectTransform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-162, -46), new Vector2(-8, -6));
+        if (infoText != null)
+        {
+            Place(infoText.rectTransform, Vector2.zero, Vector2.one, new Vector2(56, 6), new Vector2(-8, -48));
+            infoText.enableAutoSizing = true;
+            infoText.fontSizeMin = 12; infoText.fontSizeMax = 20;
+            infoText.overflowMode = TextOverflowModes.Ellipsis;
+        }
+    }
+
     private void OnClick()
     {
         if (CombatManager.Instance != null && currentAction != null)

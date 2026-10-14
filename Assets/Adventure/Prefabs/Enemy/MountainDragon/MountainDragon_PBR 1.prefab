@@ -2336,7 +2336,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleUnit
   unitName: MountainDragon
-  maxHP: 1000000
+  maxHP: 10
+  enemyHpBorderSprite: {fileID: 0}
   parryUltimateGain: 15
   damageUltimateGain: 50
   baseAtk: 10
@@ -2371,6 +2372,8 @@ MonoBehaviour:
   lastTarget: {fileID: 0}
   speed: 30
   unitPortrait: {fileID: 21300000, guid: f69696d136baf5c43a75bed5e7a43833, type: 3}
+  deathStateName: death
+  deathAnimationTimeout: 30
   isPlayer: 0
   handTransform: {fileID: 4837277974282150624}
   leftHandTransform: {fileID: 0}

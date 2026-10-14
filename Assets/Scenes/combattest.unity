@@ -712,6 +712,7 @@ MonoBehaviour:
   enemyHudPanel: {fileID: 1019893777}
   enemyHpFill: {fileID: 1563397434}
   enemyHpBorder: {fileID: 0}
+  enemyBuffContainer: {fileID: 0}
   enemyHpDrainDuration: 0.8
   playerHpDrainDuration: 0.8
   enemyHpBorderOffsetMin: {x: -25.45506, y: -55.93742}
@@ -8219,8 +8220,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 490.8819, y: -7.1847}
-  m_SizeDelta: {x: 681.691, y: 701.63}
+  m_AnchoredPosition: {x: 443.6636, y: -7.1848}
+  m_SizeDelta: {x: 587.2546, y: 701.63}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1723221046
 MonoBehaviour:
@@ -9938,6 +9939,8 @@ MonoBehaviour:
   lastTarget: {fileID: 0}
   speed: 55
   unitPortrait: {fileID: 0}
+  deathStateName: death
+  deathAnimationTimeout: 30
   isPlayer: 1
   handTransform: {fileID: 0}
   leftHandTransform: {fileID: 0}

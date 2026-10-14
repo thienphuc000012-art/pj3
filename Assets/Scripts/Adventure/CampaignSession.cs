@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -25,6 +25,89 @@ public class CampaignSession : MonoBehaviour
     public List<ItemStack> ResultRewards => encounter?.rewards ?? new List<ItemStack>();
     public bool OnMap => Config != null && SceneManager.GetActiveScene().name == Config.mapScene;
     public bool CanUpgrade => OnMap && RestPoint != null && IsNear(RestPoint) && !Busy;
+    public void BeginItemPickup(WorldInteraction point)
+    {
+        if (Busy || Menu != AdventureMenu.None || !OnMap || MapPlayer == null || point == null ||
+            point.kind != WorldInteractionKind.Pickup || point.IsConsumed || !IsNear(point)) return;
+        Busy = true;
+        Nearest = null;
+        StartCoroutine(PlayItemPickup(point));
+    }
+
+    private IEnumerator PlayItemPickup(WorldInteraction point)
+    {
+        var player = MapPlayer;
+        var animator = player != null ? player.animator : null;
+        int oldState = 0;
+        var oldCulling = animator != null ? animator.cullingMode : AnimatorCullingMode.AlwaysAnimate;
+        bool played = false;
+        bool collected = false;
+        PickupAnimationEvents receiver = null;
+        Action collect = () =>
+        {
+            if (collected || !OnMap || MapPlayer != player || point == null || !point.isActiveAndEnabled || point.IsConsumed) return;
+            point.CompleteCollection();
+            collected = point.IsConsumed;
+        };
+        try
+        {
+            if (animator != null && animator.isActiveAndEnabled && animator.runtimeAnimatorController != null)
+            {
+                string stateName = string.IsNullOrWhiteSpace(point.pickupAnimationState) ? "Base Layer.pickupitem" : point.pickupAnimationState;
+                int stateHash = Animator.StringToHash(stateName);
+                if (!animator.HasState(0, stateHash)) stateHash = Animator.StringToHash("pickupitem");
+                if (animator.HasState(0, stateHash))
+                {
+                    oldState = animator.GetCurrentAnimatorStateInfo(0).fullPathHash;
+                    animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+                    animator.SetFloat("movementvalue", 0f);
+                    receiver = animator.GetComponent<PickupAnimationEvents>();
+                    if (receiver == null) receiver = animator.gameObject.AddComponent<PickupAnimationEvents>();
+                    receiver.OnPickupMoment = () =>
+                    {
+                        if (!point.pickupUseAnimationEvent) return;
+                        var active = animator.GetCurrentAnimatorStateInfo(0);
+                        if (active.fullPathHash == stateHash || active.shortNameHash == stateHash) collect();
+                    };
+                    animator.Play(stateHash, 0, 0f);
+                    played = true;
+                    float deadline = Time.unscaledTime + Mathf.Max(0.1f, point.pickupAnimationTimeout);
+                    bool entered = false;
+                    yield return null;
+                    while (point != null && (collected || point.isActiveAndEnabled) && player != null && animator != null && animator.isActiveAndEnabled && OnMap)
+                    {
+                        var state = animator.GetCurrentAnimatorStateInfo(0);
+                        bool picking = state.fullPathHash == stateHash || state.shortNameHash == stateHash;
+                        if (picking)
+                        {
+                            entered = true;
+                            if (!point.pickupUseAnimationEvent && state.normalizedTime >= Mathf.Clamp01(point.pickupMoment)) collect();
+                            if (state.normalizedTime >= 1f) break;
+                        }
+                        else if (entered) break;
+                        if (Time.unscaledTime >= deadline) break;
+                        yield return null;
+                    }
+                }
+                else Debug.LogWarning("Item Pickup: không tìm thấy state pickupitem trong Animator của player. Hãy lưu PlayerController2.", point);
+            }
+            if (!played) collect(); // Preserve pickups on characters without a pickup animation.
+            else if (!collected && point != null && point.pickupUseAnimationEvent)
+                Debug.LogWarning("Item Pickup: chưa nhận event AnimEvent_PickupItem; item vẫn ở map để nhặt lại.", point);
+        }
+        finally
+        {
+            if (receiver != null) receiver.OnPickupMoment = null;
+            if (animator != null && played)
+            {
+                animator.cullingMode = oldCulling;
+                int locomotion = Animator.StringToHash("Base Layer.Basic Movement");
+                if (animator.HasState(0, locomotion)) animator.CrossFadeInFixedTime(locomotion, 0.1f);
+                else if (oldState != 0 && animator.HasState(0, oldState)) animator.CrossFadeInFixedTime(oldState, 0.1f);
+            }
+            Busy = false;
+        }
+    }
     private WorldInteraction[] worldPoints = new WorldInteraction[0];
     private EncounterData encounter;
     private float previousTimeScale = 1;

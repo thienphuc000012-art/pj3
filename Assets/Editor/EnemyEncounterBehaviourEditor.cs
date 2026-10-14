@@ -15,7 +15,7 @@ public class EnemyEncounterBehaviourEditor : Editor
     {
         DrawDefaultInspector();
         var ai = (EnemyEncounterBehaviour)target;
-        EditorGUILayout.HelpBox("Patrol Radius = vùng phát hiện và tuần tra. Leash Radius = giới hạn đuổi. Gán Enemy trong trận trên WorldInteraction, rồi tạo model bên dưới. Ground cần Bake NavMesh; Flying dùng collider trên Obstacle Layers. Attack Range không vượt Khoảng cách tương tác.", MessageType.Info);
+        EditorGUILayout.HelpBox("View Distance / View Angle = tầm và góc nhìn hình nón phía trước, raycast kiểm tra vật cản. Patrol Radius = vùng tuần tra. Leash Radius = giới hạn đuổi. Sight Memory Seconds = thời gian nhớ vị trí nhìn thấy cuối cùng. Gán Enemy trong trận trên WorldInteraction, rồi tạo model bên dưới. Ground cần Bake NavMesh; Flying dùng collider trên Obstacle Layers. Attack Range không vượt Khoảng cách tương tác.", MessageType.Info);
         using (new EditorGUI.DisabledScope(Application.isPlaying))
         {
             if (GUILayout.Button("Create Map Model + Move Layer")) CreateModel(ai);

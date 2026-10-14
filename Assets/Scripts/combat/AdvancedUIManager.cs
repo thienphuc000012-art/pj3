@@ -14,6 +14,80 @@ public class AdvancedUIManager : MonoBehaviour
     public GameObject subMenuPanel;
     public Transform subMenuContent;
     public GameObject actionButtonPrefab;
+    private RectTransform fixedSkillContent;
+    private ScrollRect subMenuScroll;
+    private bool subMenuScrollInitiallyEnabled;
+    private bool subMenuScrollCaptured;
+
+    private void SetFixedSkillMode(bool skills)
+    {
+        if (!subMenuScrollCaptured)
+        {
+            subMenuScroll = subMenuPanel.GetComponent<ScrollRect>();
+            subMenuScrollInitiallyEnabled = subMenuScroll != null && subMenuScroll.enabled;
+            subMenuScrollCaptured = true;
+        }
+        if (subMenuScroll != null)
+        {
+            subMenuScroll.StopMovement();
+            subMenuScroll.enabled = skills ? false : subMenuScrollInitiallyEnabled;
+        }
+        subMenuContent.gameObject.SetActive(!skills);
+        if (skills && fixedSkillContent == null)
+        {
+            var go = new GameObject("Fixed Skill Slots", typeof(RectTransform));
+            go.layer = subMenuContent.gameObject.layer;
+            fixedSkillContent = go.GetComponent<RectTransform>();
+            fixedSkillContent.SetParent(subMenuContent.parent, false);
+            fixedSkillContent.anchorMin = Vector2.zero;
+            fixedSkillContent.anchorMax = Vector2.one;
+            fixedSkillContent.offsetMin = fixedSkillContent.offsetMax = Vector2.zero;
+        }
+        if (fixedSkillContent != null) fixedSkillContent.gameObject.SetActive(skills);
+    }
+
+    public void PopulateSkillSubMenu(List<ActionData> actions)
+    {
+        if (subMenuPanel == null || subMenuContent == null || actionButtonPrefab == null) return;
+        subMenuPanel.SetActive(true);
+        SetFixedSkillMode(true);
+        foreach (Transform child in fixedSkillContent)
+        {
+            child.gameObject.SetActive(false);
+            Destroy(child.gameObject);
+        }
+        var slots = new ActionData[5];
+        int normalIndex = 0;
+        if (actions != null)
+            foreach (var action in actions)
+            {
+                if (action == null) continue;
+                if (action.isUltimate)
+                {
+                    if (slots[4] == null) slots[4] = action;
+                }
+                else if (normalIndex < 4) slots[normalIndex++] = action;
+            }
+        for (int i = 0; i < slots.Length; i++)
+        {
+            var go = Instantiate(actionButtonPrefab, fixedSkillContent);
+            go.name = i == 4 ? "Ultimate Slot" : "Skill Slot " + (i + 1);
+            var rect = go.GetComponent<RectTransform>();
+            var fitter = go.GetComponent<ContentSizeFitter>();
+            if (fitter != null) fitter.enabled = false;
+            rect.anchorMin = new Vector2(0f, 1f - (i + 1) / 5f);
+            rect.anchorMax = new Vector2(1f, 1f - i / 5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.offsetMin = new Vector2(6f, 4f);
+            rect.offsetMax = new Vector2(-6f, -4f);
+            rect.localScale = Vector3.one;
+            var button = go.GetComponent<ActionButtonUI>();
+            if (button == null) continue;
+            if (slots[i] != null) button.Setup(slots[i]);
+            else button.SetupEmpty(i == 4 ? "Ultimate" : "Skill " + (i + 1));
+            button.FitFixedSlot();
+        }
+    }
 
     [Header("Hints")]
     public GameObject changeTargetHintText;
@@ -200,6 +274,7 @@ public class AdvancedUIManager : MonoBehaviour
     {
         if (subMenuPanel == null) return;
         subMenuPanel.SetActive(true);
+        SetFixedSkillMode(false);
 
         foreach (Transform child in subMenuContent)
         {

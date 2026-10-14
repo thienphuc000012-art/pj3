@@ -23,6 +23,16 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
     [Header("Territory (world units)")]
     [Min(1)] public float patrolRadius = 12;
     [Min(1)] public float leashRadius = 20;
+    [Header("Front Vision Cone")]
+    [Min(.1f)] public float viewDistance = 12f;
+    [Range(1f, 179f), Tooltip("Góc mở toàn bộ hình nón phía trước enemy.")]
+    public float viewAngle = 90f;
+    [Min(0f), Tooltip("Thời gian đi tới vị trí nhìn thấy cuối cùng sau khi mất dấu player.")]
+    public float sightMemorySeconds = 1f;
+    [Tooltip("Hiện thêm vùng tuần tra / giới hạn đuổi dạng vòng tròn.")]
+    public bool showTerritoryGizmos;
+    private float lastSeenTime = float.NegativeInfinity;
+    private Vector3 lastSeenPosition;
     [Tooltip("Optional world-space patrol points. Empty = random positions within Patrol Radius.")]
     public Transform[] waypoints;
     [Min(0)] public float idleSeconds = 2;
@@ -130,6 +140,15 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
             if (!hit.transform.IsChildOf(transform) && !hit.transform.IsChildOf(target)) return false;
         return true;
     }
+    public bool InVisionCone(Vector3 targetPosition)
+    {
+        Vector3 eye = transform.position + Vector3.up * (!airborne ? bodyHeight * .5f : 0);
+        Vector3 delta = targetPosition - eye;
+        float distance = delta.magnitude;
+        if (distance > Mathf.Max(.1f, viewDistance)) return false;
+        if (distance < .001f) return true;
+        return Vector3.Dot(transform.forward, delta / distance) >= Mathf.Cos(Mathf.Clamp(viewAngle, 1f, 179f) * .5f * Mathf.Deg2Rad);
+    }
     void Update()
     {
         if (!initialized) return;
@@ -151,14 +170,15 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
             return;
         }
         float territory = Mathf.Max(patrolRadius, leashRadius);
-        bool detected = HorizontalDistance(home, player.position) <= patrolRadius && Visible(player);
-        bool chasing = CurrentActivity == Activity.Chase && HorizontalDistance(home, player.position) <= territory;
+        bool detected = HorizontalDistance(home, player.position) <= territory && InVisionCone(player.position + Vector3.up) && Visible(player);
+        if (detected) { lastSeenTime = Time.time; lastSeenPosition = player.position; }
+        bool chasing = CurrentActivity == Activity.Chase && Time.time - lastSeenTime < sightMemorySeconds && HorizontalDistance(home, player.position) <= territory;
         if ((detected || chasing) && HorizontalDistance(home, transform.position) <= territory)
         {
-            if (CanInteract(player, Mathf.Min(attackRange, point.range)) && Time.time >= nextAttack)
+            if (detected && CanInteract(player, Mathf.Min(attackRange, point.range)) && Time.time >= nextAttack)
             { CurrentActivity = Activity.Attack; attackAt = Time.time + attackWindup; StopMovement(); Play(attackState, flyAttackState); return; }
             CurrentActivity = Activity.Chase;
-            destination = player.position + (airborne ? Vector3.up * flightHeight : Vector3.zero);
+            destination = lastSeenPosition + (airborne ? Vector3.up * flightHeight : Vector3.zero);
             Move(runSpeed); return;
         }
         if (CurrentActivity == Activity.Chase || HorizontalDistance(home, transform.position) > territory)
@@ -346,12 +366,30 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
     }
     void Idle() { CurrentActivity = Activity.Idle; idleUntil = Time.time + idleSeconds; StopMovement(); Play(idleState, flyIdleState); }
     void StopMovement() { if (agent != null && agent.enabled && agent.isOnNavMesh) agent.isStopped = true; }
-    void OnDisable() { StopMovement(); }
+    void OnDisable() { StopMovement(); lastSeenTime = float.NegativeInfinity; }
     void OnDrawGizmosSelected()
     {
         Vector3 center = Application.isPlaying && initialized ? home : transform.position;
-        Gizmos.color = Color.cyan; Gizmos.DrawWireSphere(center, patrolRadius);
-        Gizmos.color = Color.yellow; Gizmos.DrawWireSphere(center, Mathf.Max(patrolRadius, leashRadius));
-        Gizmos.color = Color.red; Gizmos.DrawWireSphere(transform.position, attackRange);
+        if (showTerritoryGizmos)
+        {
+            Gizmos.color = Color.cyan; Gizmos.DrawWireSphere(center, patrolRadius);
+            Gizmos.color = Color.yellow; Gizmos.DrawWireSphere(center, Mathf.Max(patrolRadius, leashRadius));
+        }
+        Gizmos.color = Color.green;
+        Vector3 eye = transform.position + Vector3.up * (!airborne ? bodyHeight * .5f : 0);
+        float halfAngle = Mathf.Clamp(viewAngle, 1f, 179f) * .5f * Mathf.Deg2Rad;
+        float distance = Mathf.Max(.1f, viewDistance);
+        Vector3 previous = Vector3.zero;
+        for (int i = 0; i <= 32; i++)
+        {
+            float angle = i * Mathf.PI * 2f / 32f;
+            Vector3 direction = transform.forward * Mathf.Cos(halfAngle) +
+                (transform.right * Mathf.Cos(angle) + transform.up * Mathf.Sin(angle)) * Mathf.Sin(halfAngle);
+            Vector3 edge = eye + direction * distance;
+            if (i > 0) Gizmos.DrawLine(previous, edge);
+            if (i % 8 == 0) Gizmos.DrawLine(eye, edge);
+            previous = edge;
+        }
+        Gizmos.DrawLine(eye, eye + transform.forward * distance);
     }
 }
