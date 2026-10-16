@@ -16,7 +16,9 @@ public class CombatManager : MonoBehaviour
     private readonly List<CombatBeamVfx> activeBeams = new List<CombatBeamVfx>();
     private readonly List<GameObject> pendingVfxImpacts = new List<GameObject>();
     private readonly Dictionary<BattleUnit, List<GameObject>> castInstances = new Dictionary<BattleUnit, List<GameObject>>();
+    private readonly Dictionary<BattleUnit, List<GameObject>> ultimateAuraInstances = new Dictionary<BattleUnit, List<GameObject>>();
     private readonly HashSet<BattleUnit> castStarted = new HashSet<BattleUnit>();
+    private readonly HashSet<BattleUnit> ultimateAuraStarted = new HashSet<BattleUnit>();
     private readonly HashSet<BattleUnit> vfxLaunched = new HashSet<BattleUnit>();
     private sealed class VfxActionState
     {
@@ -62,10 +64,21 @@ public class CombatManager : MonoBehaviour
             vfx.SetActive(false);
             Destroy(vfx);
         }
+        foreach (List<GameObject> auras in ultimateAuraInstances.Values)
+        {
+            foreach (GameObject aura in auras)
+            {
+                if (aura == null) continue;
+                aura.SetActive(false);
+                Destroy(aura);
+            }
+        }
         activeBeams.Clear();
         pendingVfxImpacts.Clear();
         castInstances.Clear();
+        ultimateAuraInstances.Clear();
         castStarted.Clear();
+        ultimateAuraStarted.Clear();
         vfxLaunched.Clear();
     }
 
@@ -851,6 +864,7 @@ public class CombatManager : MonoBehaviour
         }
         finally
         {
+            FinishUltimateAuraVFX(attacker);
             acceptingActionAnimationEvents = false;
             animationActionOwner = null;
             animationActionData = null;
@@ -883,6 +897,7 @@ public class CombatManager : MonoBehaviour
         statusTargetsThisAction.Clear();
         state = CombatState.Executing;
         castStarted.Clear();
+        ultimateAuraStarted.Clear();
         vfxLaunched.Clear();
         vfxActionState = new VfxActionState();
 
@@ -908,6 +923,7 @@ public class CombatManager : MonoBehaviour
                 yield return cinematic.Transition(true, attacker.isPlayer && CameraManager.Instance != null
                     ? CameraManager.Instance.ultimateTransitionDuration : 0f);
             if (attacker == null || attacker.IsDead) yield break;
+            SpawnUltimateAuraVFX(attacker, action);
         }
 
         if (action != null && attacker.isPlayer)
@@ -2118,6 +2134,8 @@ public class CombatManager : MonoBehaviour
         if (!CanAcceptActionAnimationEvent(attacker) || castStarted.Contains(attacker) || vfxLaunched.Contains(attacker)) return;
         ActionData currentAction = animationActionData;
 
+        SpawnUltimateAuraVFX(attacker, currentAction);
+
         if (currentAction != null && currentAction.castVfxPrefab != null)
         {
             castStarted.Add(attacker);
@@ -2130,6 +2148,51 @@ public class CombatManager : MonoBehaviour
             if (instances.Count == 0)
                 instances.Add(SpawnCastVFXAtPoint(attacker.transform, currentAction));
         }
+    }
+
+    private void SpawnUltimateAuraVFX(BattleUnit attacker, ActionData action)
+    {
+        if (attacker == null || action == null || !action.isUltimate ||
+            action.ultimateAuraVfxPrefab == null || !ultimateAuraStarted.Add(attacker))
+            return;
+
+        GameObject staging = new GameObject("Ultimate Aura Setup");
+        staging.SetActive(false);
+        GameObject aura = Instantiate(
+            action.ultimateAuraVfxPrefab,
+            attacker.transform.position,
+            attacker.transform.rotation,
+            staging.transform);
+        aura.SetActive(false);
+        SetVfxPlaybackSpeed(aura, action.ultimateAuraVfxPlaybackSpeed);
+        aura.transform.SetParent(attacker.transform, true);
+        aura.transform.localPosition = action.ultimateAuraVfxLocalOffset;
+        if (!ultimateAuraInstances.TryGetValue(attacker, out List<GameObject> instances))
+        {
+            instances = new List<GameObject>(1);
+            ultimateAuraInstances[attacker] = instances;
+        }
+        instances.Add(aura);
+
+        aura.SetActive(true);
+        Destroy(staging);
+    }
+
+    private void FinishUltimateAuraVFX(BattleUnit attacker)
+    {
+        if (attacker == null || !ultimateAuraInstances.TryGetValue(attacker, out List<GameObject> instances))
+            return;
+
+        foreach (GameObject aura in instances)
+        {
+            if (aura == null) continue;
+            foreach (ParticleSystem particles in aura.GetComponentsInChildren<ParticleSystem>(true))
+                if (particles.main.loop)
+                    particles.Stop(false, ParticleSystemStopBehavior.StopEmitting);
+
+            Destroy(aura, GetVfxLifeTime(aura, 2f));
+        }
+        ultimateAuraInstances.Remove(attacker);
     }
 
     private GameObject SpawnCastVFXAtPoint(Transform spawnPoint, ActionData currentAction)

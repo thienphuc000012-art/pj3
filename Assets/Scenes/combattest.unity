@@ -6817,6 +6817,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ParrySystem
   parryCooldown: 1
+  parrySuccessVfxPrefab: {fileID: 1921079115439858272, guid: 87eb9501cd1bc2940a389607e9cf4849, type: 3}
+  parrySuccessVfxLocalOffset: {x: 0, y: 1, z: 1}
+  parrySuccessVfxLocalEuler: {x: 0, y: 0, z: 0}
+  parrySuccessVfxPlaybackSpeed: 1
+  parrySuccessVfxLifetime: 1.5
 --- !u!4 &1249418310 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5671563766227246005, guid: 29bd5ad3c78cd094c863d5edc42c97bc, type: 3}
@@ -9921,9 +9926,9 @@ MonoBehaviour:
   defaultAttack: {fileID: 11400000, guid: 39755a63f54e7974396bbbf389df346c, type: 2}
   characterSkills:
   - {fileID: 11400000, guid: 7caca4445e732f448bfb7b0130e732f0, type: 2}
-  - {fileID: 11400000, guid: dbd7032cce897c64ea880078e9861bfc, type: 2}
-  - {fileID: 11400000, guid: 99b6c9a674c4d3f4c8e8536e4e21634d, type: 2}
-  - {fileID: 11400000, guid: 85f12953be2c5a1418884f7f366e142d, type: 2}
+  - {fileID: 11400000, guid: cfff066c7c479f147bfc4367cc34a26b, type: 2}
+  - {fileID: 11400000, guid: 13a4bf5805814754a886519a71ab305a, type: 2}
+  - {fileID: 11400000, guid: 240a5ba6b16727542a312bbfd7b8bae7, type: 2}
   - {fileID: 11400000, guid: 6466aedd6465cd34aa83297bb5bb802f, type: 2}
   isBoss: 0
   actionsPerTurn: 1
@@ -9942,7 +9947,7 @@ MonoBehaviour:
   phase2HitClip: {fileID: 0}
   phase2CriticalHitClip: {fileID: 0}
   lastTarget: {fileID: 0}
-  speed: 1000
+  speed: 1
   unitPortrait: {fileID: 0}
   deathStateName: death
   deathAnimationTimeout: 30

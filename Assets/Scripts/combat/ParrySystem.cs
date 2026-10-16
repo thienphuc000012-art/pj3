@@ -9,6 +9,17 @@ public class ParrySystem : MonoBehaviour
 
     [Header("Parry Anti-Spam")]
     public float parryCooldown = 0.5f; // Thời gian nghỉ giữa 2 lần bấm Parry (giây)
+    [Header("Successful Parry VFX")]
+    [Tooltip("Prefab hiệu ứng phát khi parry đúng thời điểm. Gán prefab tại đây.")]
+    public GameObject parrySuccessVfxPrefab;
+    [Tooltip("Vị trí cục bộ của VFX tính từ nhân vật parry.")]
+    public Vector3 parrySuccessVfxLocalOffset = new Vector3(0f, 1f, 0f);
+    [Tooltip("Góc xoay cục bộ của VFX so với nhân vật parry.")]
+    public Vector3 parrySuccessVfxLocalEuler;
+    [Min(0.01f), Tooltip("Tốc độ phát hạt của VFX parry.")]
+    public float parrySuccessVfxPlaybackSpeed = 1f;
+    [Min(0.1f), Tooltip("Thời gian tối thiểu trước khi tự xóa VFX parry.")]
+    public float parrySuccessVfxLifetime = 1.5f;
     private float lastParryTime = -99f;
 
     void Awake() { Instance = this; }
@@ -66,7 +77,11 @@ public class ParrySystem : MonoBehaviour
                 // targets của AoE, nên true = cả Party chặn đòn.
                 parrySuccessful = true;
                 foreach (var member in combat.playerParty)
-                    if (member != null && !member.IsDead) member.AddUltimateEnergy(member.parryUltimateGain);
+                {
+                    if (member == null || member.IsDead) continue;
+                    member.AddUltimateEnergy(member.parryUltimateGain);
+                    SpawnParrySuccessVFX(member);
+                }
                 combat.GetComponent<BattleResultPanel>()?.RecordParry();
                 isParryWindowOpen = false;
 
@@ -111,6 +126,7 @@ public class ParrySystem : MonoBehaviour
         {
             parrySuccessful = true;
             targetPlayer.AddUltimateEnergy(targetPlayer.parryUltimateGain);
+            SpawnParrySuccessVFX(targetPlayer);
             combat.GetComponent<BattleResultPanel>()?.RecordParry();
             isParryWindowOpen = false;
 
@@ -123,6 +139,44 @@ public class ParrySystem : MonoBehaviour
         {
             parrySuccessful = false;
         }
+    }
+
+    private void SpawnParrySuccessVFX(BattleUnit player)
+    {
+        if (player == null || parrySuccessVfxPrefab == null) return;
+
+        // Stage inactive so the playback speed is applied before any particles emit.
+        GameObject staging = new GameObject("Parry Success VFX Setup");
+        staging.SetActive(false);
+        GameObject effect = Instantiate(
+            parrySuccessVfxPrefab,
+            player.transform.position,
+            player.transform.rotation,
+            staging.transform);
+        effect.SetActive(false);
+
+        float speed = Mathf.Max(0.01f, parrySuccessVfxPlaybackSpeed);
+        foreach (ParticleSystem particles in effect.GetComponentsInChildren<ParticleSystem>(true))
+        {
+            var main = particles.main;
+            main.simulationSpeed = speed;
+        }
+
+        effect.transform.SetParent(player.transform, true);
+        effect.transform.localPosition = parrySuccessVfxLocalOffset;
+        effect.transform.localRotation = Quaternion.Euler(parrySuccessVfxLocalEuler);
+        effect.SetActive(true);
+        Destroy(staging);
+
+        float lifetime = Mathf.Max(0.1f, parrySuccessVfxLifetime);
+        foreach (ParticleSystem particles in effect.GetComponentsInChildren<ParticleSystem>(true))
+        {
+            var main = particles.main;
+            if (main.loop) continue;
+            float duration = main.startDelay.constantMax + main.duration + main.startLifetime.constantMax;
+            lifetime = Mathf.Max(lifetime, duration / speed);
+        }
+        Destroy(effect, lifetime);
     }
 
     public void OpenWindow()

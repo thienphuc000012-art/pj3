@@ -50,6 +50,10 @@ MonoBehaviour:
   screenSlashTimeScale: 0.22
   vfxType: 0
   vfxPrefab: {fileID: 0}
+  vfxPlaybackSpeed: 1
+  ultimateAuraVfxPrefab: {fileID: 1921079115439858272, guid: baf94f94b38f50249bbdb361991e9031, type: 3}
+  ultimateAuraVfxLocalOffset: {x: 0, y: 1, z: 0}
+  ultimateAuraVfxPlaybackSpeed: 1
   castVfxPrefab: {fileID: 0}
   hitVfxPrefab: {fileID: 0}
   useCustomHitVfxOffset: 0
@@ -79,3 +83,5 @@ MonoBehaviour:
   swordSlashVfxLocalEuler: {x: 0, y: 0, z: 0}
   swordSlashVfxScale: {x: 1, y: 1, z: 1}
   swordSlashVfxLifetime: 2
+  swordSlashTravelsToTarget: 1
+  swordSlashTravelSpeed: 24

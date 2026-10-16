@@ -112,6 +112,12 @@ public class ActionData : ScriptableObject
     public GameObject vfxPrefab;
     [Min(0.01f), Tooltip("Runtime playback multiplier for every Particle System in the main VFX prefab and its children. This is separate from the Scene view preview speed.")]
     public float vfxPlaybackSpeed = 1f;
+    [Tooltip("Optional aura spawned on the character using this Ultimate when the Ultimate starts.")]
+    public GameObject ultimateAuraVfxPrefab;
+    [Tooltip("Local offset from the Ultimate caster's root for the optional aura VFX.")]
+    public Vector3 ultimateAuraVfxLocalOffset = new Vector3(0f, 1f, 0f);
+    [Min(0.01f), Tooltip("Particle playback multiplier for the optional Ultimate aura. Defaults to the prefab's normal speed.")]
+    public float ultimateAuraVfxPlaybackSpeed = 1f;
     public GameObject castVfxPrefab;
     public GameObject hitVfxPrefab;
     [Tooltip("Use a separate position for Hit VFX, for example the target root for a full-body effect. Otherwise uses Projectile Target Offset.")]
