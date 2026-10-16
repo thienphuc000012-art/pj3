@@ -17,7 +17,7 @@ MonoBehaviour:
   icon: {fileID: 21300000, guid: 742198cc0ec8f0143b32a726fe61f028, type: 3}
   type: 1
   isUltimate: 0
-  ultimateEnergyGain: 10
+  ultimateEnergyGain: 100
   power: 5
   damageMultiplier: 1
   isHeal: 0
@@ -29,6 +29,9 @@ MonoBehaviour:
   buffStat: 3
   buffAmount: 100
   buffDuration: 2
+  debuffs: []
+  cleanse: 0
+  statusOnly: 0
   isMelee: 0
   screenSlash: 0
   screenSlashColor: {r: 0.25, g: 0.8, b: 1, a: 1}
@@ -46,6 +49,7 @@ MonoBehaviour:
   screenSlashTimeScale: 1
   vfxType: 1
   vfxPrefab: {fileID: 195834, guid: 88dfa986f2cbd1b49be7b927c0f51e08, type: 3}
+  vfxPlaybackSpeed: 1
   castVfxPrefab: {fileID: 1546378701820074, guid: 2b93d4e4c4cc7394a8922e7e1e9ff2d2, type: 3}
   hitVfxPrefab: {fileID: 1837398281301428, guid: c6bff702ea33dbd43b35ea3d6db5f838, type: 3}
   useCustomHitVfxOffset: 0
@@ -70,3 +74,10 @@ MonoBehaviour:
   curveHeight: 2
   curveSideOffset: 0
   rfxUseGravity: 0
+  swordSlashVfxPrefab: {fileID: 0}
+  swordSlashVfxLocalOffset: {x: 0, y: 0, z: 0}
+  swordSlashVfxLocalEuler: {x: 0, y: 0, z: 0}
+  swordSlashVfxScale: {x: 1, y: 1, z: 1}
+  swordSlashVfxLifetime: 2
+  swordSlashTravelsToTarget: 1
+  swordSlashTravelSpeed: 24

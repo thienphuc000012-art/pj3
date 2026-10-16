@@ -1224,6 +1224,11 @@ public class CombatManager : MonoBehaviour
             return;
         }
 
+        // Sword slash VFX is synchronized to the same animation event that
+        // resolves a melee hit. Each event in a multi-hit combo gets one slash.
+        if (!actionToUse.isFriendlyAction && !actionToUse.isHeal && currentTarget != null)
+            SpawnSwordSlashVFX(attacker, currentTarget, actionToUse);
+
         int totalAtk = attacker.GetTotalAttack();
         float calculatedDamage = (totalAtk * actionToUse.damageMultiplier) + actionToUse.power;
         int rawDamage = Mathf.RoundToInt(calculatedDamage);
@@ -1321,7 +1326,7 @@ public class CombatManager : MonoBehaviour
 
     private void PlayVFX(BattleUnit attacker, BattleUnit target, ActionData action)
     {
-        if (attacker == null || attacker.IsDead || action == null || action.vfxPrefab == null || target == null) return;
+        if (attacker == null || attacker.IsDead || action == null || target == null) return;
 
         List<BattleUnit> targetList = new List<BattleUnit>();
 
@@ -1351,6 +1356,20 @@ public class CombatManager : MonoBehaviour
             targetList.Add(target);
         }
 
+        // A Shoot/Beam action's optional sword slash is a separate projectile.
+        // Launch it from the current sword pose at cast time; the regular VFX
+        // callback still owns damage timing and hit effects.
+        if ((action.vfxType == ActionData.VfxType.Shoot || action.vfxType == ActionData.VfxType.Beam) &&
+            action.swordSlashTravelsToTarget &&
+            action.swordSlashVfxPrefab != null &&
+            !action.isFriendlyAction && !action.isHeal)
+        {
+            foreach (BattleUnit u in targetList.Where(u => u != null && u.currentHP > 0))
+                SpawnSwordSlashVFX(attacker, u, action);
+        }
+
+        if (action.vfxPrefab == null) return;
+
         // =========================================================
         // VFX SINH TRỰC TIẾP TẠI TARGET
         // =========================================================
@@ -1358,10 +1377,22 @@ public class CombatManager : MonoBehaviour
         {
             foreach (BattleUnit u in targetList.Where(u => u != null && u.currentHP > 0))
             {
-                // Giữ đúng hành vi cũ: SpawnAtTarget sinh ngay tại transform.position của target.
-                GameObject vfx = Instantiate(action.vfxPrefab, u.transform.position, u.transform.rotation);
+                // Configure while inactive so Play On Awake particles start at
+                // the ActionData runtime speed on their first frame.
+                GameObject staging = new GameObject("Combat VFX Setup");
+                staging.SetActive(false);
+                GameObject vfx = Instantiate(
+                    action.vfxPrefab,
+                    u.transform.position,
+                    u.transform.rotation,
+                    staging.transform);
+                vfx.SetActive(false);
+                SetVfxPlaybackSpeed(vfx, action.vfxPlaybackSpeed);
                 TrackCombatVFX(vfx);
-                Destroy(vfx, 2f);
+                vfx.transform.SetParent(null, true);
+                vfx.SetActive(true);
+                Destroy(staging);
+                Destroy(vfx, GetVfxLifeTime(vfx, 2f));
             }
 
             return;
@@ -1392,6 +1423,7 @@ public class CombatManager : MonoBehaviour
             staging.SetActive(false);
             GameObject vfx = Instantiate(action.vfxPrefab, startPos, rotation, staging.transform);
             vfx.SetActive(false);
+            SetVfxPlaybackSpeed(vfx, action.vfxPlaybackSpeed);
 
             if (action.vfxType == ActionData.VfxType.Beam)
             {
@@ -1511,6 +1543,17 @@ public class CombatManager : MonoBehaviour
         vfx.SetActive(true);
         Destroy(staging);
         Destroy(vfx, Mathf.Max(0.1f, lifetime));
+    }
+
+    private static void SetVfxPlaybackSpeed(GameObject vfx, float speed)
+    {
+        if (vfx == null) return;
+        float playbackSpeed = Mathf.Max(0.01f, speed);
+        foreach (ParticleSystem particles in vfx.GetComponentsInChildren<ParticleSystem>(true))
+        {
+            var main = particles.main;
+            main.simulationSpeed = playbackSpeed;
+        }
     }
 
     private static bool UsesVfxImpactDamage(ActionData action)
@@ -1679,6 +1722,13 @@ public class CombatManager : MonoBehaviour
         {
             return;
         }
+
+        // For projectile/beam actions, wait until the visual impact confirms
+        // the hit before showing an explicitly configured sword slash.
+        if (!action.isFriendlyAction && !action.isHeal &&
+            !((action.vfxType == ActionData.VfxType.Shoot || action.vfxType == ActionData.VfxType.Beam) &&
+              action.swordSlashTravelsToTarget))
+            SpawnSwordSlashVFX(attacker, target, action);
 
         PrepareVfxImpactDamage(
             attacker,
@@ -2128,7 +2178,11 @@ public class CombatManager : MonoBehaviour
         if (!CanAcceptActionAnimationEvent(attacker)) return;
         ActionData currentAction = animationActionData;
 
-        if (currentAction != null && currentAction.vfxPrefab != null)
+        if (currentAction != null &&
+            (currentAction.vfxPrefab != null ||
+             ((currentAction.vfxType == ActionData.VfxType.Shoot || currentAction.vfxType == ActionData.VfxType.Beam) &&
+              currentAction.swordSlashTravelsToTarget &&
+              currentAction.swordSlashVfxPrefab != null)))
         {
             // Handle clips with a missing or later cast event without playing
             // the cast again after the projectile has already launched.
@@ -2278,6 +2332,305 @@ public class CombatManager : MonoBehaviour
         Vector3 hitOffset = action.useCustomHitVfxOffset ? action.hitVfxOffset : action.projectileTargetOffset;
         Vector3 hitPosition = target.transform.position + hitOffset;
         SpawnHitVFX(action.hitVfxPrefab, hitPosition, action.hitVfxLifeTime);
+    }
+
+    private void SpawnSwordSlashVFX(BattleUnit attacker, BattleUnit target, ActionData action)
+    {
+        if (attacker == null || action == null || action.swordSlashVfxPrefab == null) return;
+
+        SwordBladeTrail swordTrail = null;
+        if (attacker.animator != null)
+        {
+            BattleUnit_AnimationEvents animationEvents =
+                attacker.animator.GetComponent<BattleUnit_AnimationEvents>();
+            if (animationEvents != null)
+                swordTrail = animationEvents.swordTrail;
+        }
+
+        if (swordTrail == null)
+        {
+            // Ignore trails under hidden/stowed weapons. Their points remain
+            // readable in Unity but do not represent the sword used by this hit.
+            swordTrail = attacker.GetComponentInChildren<SwordBladeTrail>();
+        }
+
+        Vector3 position = attacker.transform.position;
+        Vector3 bladeAxis = attacker.transform.up;
+        Vector3 swingDirection = Vector3.zero;
+        bool hasSwordPose = swordTrail != null &&
+            swordTrail.TryGetSlashPose(out position, out bladeAxis, out swingDirection);
+
+        if (!hasSwordPose)
+        {
+            // An animation-event reference can point to a disabled weapon trail.
+            // Try the active weapon hierarchy before falling back to the hand.
+            SwordBladeTrail[] activeTrails = attacker.GetComponentsInChildren<SwordBladeTrail>();
+            for (int i = 0; i < activeTrails.Length; i++)
+            {
+                if (activeTrails[i] != swordTrail &&
+                    activeTrails[i].TryGetSlashPose(out position, out bladeAxis, out swingDirection))
+                {
+                    swordTrail = activeTrails[i];
+                    hasSwordPose = true;
+                    break;
+                }
+            }
+        }
+
+        if (!hasSwordPose)
+        {
+            Transform anchor = attacker.VfxOrigin != null ? attacker.VfxOrigin : attacker.transform;
+            position = anchor.position;
+            bladeAxis = anchor.up;
+            swingDirection = Vector3.zero;
+        }
+
+        float swordLength = hasSwordPose
+            ? Vector3.Distance(swordTrail.pointBase.position, swordTrail.pointTip.position)
+            : 0.75f;
+        // The package effect is authored at a much larger scale than the game
+        // sword. Fit its roughly three-unit arc to the current blade length.
+        float swordFitScale = Mathf.Clamp(swordLength * 0.5f, 0.25f, 1f);
+
+        bool travelingSlash = (action.vfxType == ActionData.VfxType.Shoot ||
+            action.vfxType == ActionData.VfxType.Beam) &&
+            action.swordSlashTravelsToTarget && target != null;
+        Vector3 targetPosition = target != null
+            ? target.GetVfxTargetPosition(action.projectileTargetOffset)
+            : position + attacker.transform.forward;
+        Vector3 towardTarget = targetPosition - position;
+        if (towardTarget.sqrMagnitude < 0.0001f)
+            towardTarget = attacker.transform.forward;
+        towardTarget.Normalize();
+
+        // The prefab is a planar slash: its local Y follows the sword, while
+        // its local X follows the blade's recent sweep. Their cross product
+        // gives the slash plane normal and keeps the arc in the animation plane.
+        swingDirection = Vector3.ProjectOnPlane(swingDirection, bladeAxis);
+        if (swingDirection.sqrMagnitude < 0.0004f)
+            swingDirection = Vector3.Cross(bladeAxis, towardTarget);
+        if (swingDirection.sqrMagnitude < 0.0004f)
+            swingDirection = Vector3.ProjectOnPlane(attacker.transform.right, bladeAxis);
+        if (swingDirection.sqrMagnitude < 0.0004f)
+            swingDirection = Vector3.Cross(bladeAxis, Vector3.up);
+        swingDirection.Normalize();
+
+        Vector3 slashNormal = Vector3.Cross(swingDirection, bladeAxis).normalized;
+        if (slashNormal.sqrMagnitude < 0.0004f)
+            slashNormal = towardTarget;
+        if (Vector3.Dot(slashNormal, towardTarget) < 0f)
+            slashNormal = -slashNormal;
+
+        if (travelingSlash)
+        {
+            // Keep the slash visible as it travels forward: its long local
+            // mesh axis follows the flight path and its second axis stays upright.
+            swingDirection = towardTarget;
+            bladeAxis = Vector3.ProjectOnPlane(Vector3.up, swingDirection);
+            if (bladeAxis.sqrMagnitude < 0.0004f)
+                bladeAxis = Vector3.ProjectOnPlane(attacker.transform.right, swingDirection);
+            bladeAxis.Normalize();
+            slashNormal = Vector3.Cross(swingDirection, bladeAxis).normalized;
+        }
+
+        Quaternion rotation = GetSwordSlashRotation(
+            action.swordSlashVfxPrefab,
+            swingDirection,
+            bladeAxis,
+            slashNormal) * Quaternion.Euler(action.swordSlashVfxLocalEuler);
+        position += rotation * action.swordSlashVfxLocalOffset;
+        GameObject slashVfx = Instantiate(action.swordSlashVfxPrefab, position, rotation);
+        float slashScale = travelingSlash ? 1f : swordFitScale;
+        slashVfx.transform.localScale = Vector3.Scale(
+            slashVfx.transform.localScale,
+            action.swordSlashVfxScale * slashScale);
+
+        // Free Slash VFX keeps Play On Awake disabled so it can be placed in
+        // the demo selector. Start its root system here; child systems follow.
+        ParticleSystem rootParticles = slashVfx.GetComponent<ParticleSystem>();
+        if (rootParticles != null)
+        {
+            rootParticles.Play(true);
+        }
+        else
+        {
+            foreach (ParticleSystem particles in slashVfx.GetComponentsInChildren<ParticleSystem>(true))
+                particles.Play(false);
+        }
+
+        TrackCombatVFX(slashVfx);
+        if (travelingSlash)
+        {
+            StartCoroutine(MoveSwordSlashVFXRoutine(
+                slashVfx,
+                target,
+                targetPosition,
+                Mathf.Max(0.1f, action.swordSlashTravelSpeed),
+                action.projectileTargetOffset,
+                action.swordSlashVfxLifetime,
+                action.swordSlashVfxLocalEuler));
+        }
+        else
+        {
+            Destroy(slashVfx, GetVfxLifeTime(slashVfx, action.swordSlashVfxLifetime));
+        }
+    }
+
+    private static Quaternion GetSwordSlashRotation(
+        GameObject slashPrefab,
+        Vector3 worldLongAxis,
+        Vector3 worldShortAxis,
+        Vector3 worldNormal)
+    {
+        worldLongAxis.Normalize();
+        worldShortAxis = Vector3.ProjectOnPlane(worldShortAxis, worldLongAxis).normalized;
+        if (worldShortAxis.sqrMagnitude < 0.0004f)
+            worldShortAxis = Vector3.ProjectOnPlane(Vector3.up, worldLongAxis).normalized;
+        Vector3 calculatedNormal = Vector3.Cross(worldLongAxis, worldShortAxis).normalized;
+        if (worldNormal.sqrMagnitude > 0.0004f && Vector3.Dot(calculatedNormal, worldNormal) < 0f)
+            worldShortAxis = -worldShortAxis;
+        worldNormal = Vector3.Cross(worldLongAxis, worldShortAxis).normalized;
+        if (worldNormal.sqrMagnitude < 0.0004f)
+            return Quaternion.LookRotation(worldLongAxis, Vector3.up);
+
+        Quaternion worldFrame = Quaternion.LookRotation(worldNormal, worldShortAxis);
+        if (slashPrefab == null)
+            return worldFrame;
+
+        Mesh bestMesh = null;
+        Transform bestMeshTransform = null;
+        float bestPlanarArea = 0f;
+        foreach (ParticleSystemRenderer renderer in slashPrefab.GetComponentsInChildren<ParticleSystemRenderer>(true))
+        {
+            if (renderer.renderMode != ParticleSystemRenderMode.Mesh || renderer.mesh == null)
+                continue;
+
+            Vector3 extents = renderer.mesh.bounds.extents;
+            float[] dimensions = { extents.x, extents.y, extents.z };
+            System.Array.Sort(dimensions);
+            float area = dimensions[1] * dimensions[2];
+            if (area > bestPlanarArea)
+            {
+                bestPlanarArea = area;
+                bestMesh = renderer.mesh;
+                bestMeshTransform = renderer.transform;
+            }
+        }
+
+        // The projectile slash is supplied as an FBX mesh rather than a
+        // ParticleSystem prefab, so inspect MeshFilters too.
+        foreach (MeshFilter filter in slashPrefab.GetComponentsInChildren<MeshFilter>(true))
+        {
+            if (filter.sharedMesh == null) continue;
+
+            Vector3 extents = filter.sharedMesh.bounds.extents;
+            float[] dimensions = { extents.x, extents.y, extents.z };
+            System.Array.Sort(dimensions);
+            float area = dimensions[1] * dimensions[2];
+            if (area > bestPlanarArea)
+            {
+                bestPlanarArea = area;
+                bestMesh = filter.sharedMesh;
+                bestMeshTransform = filter.transform;
+            }
+        }
+
+        if (bestMesh == null || bestMeshTransform == null || bestPlanarArea < 0.0001f)
+            return worldFrame;
+
+        // The package contains slash meshes whose flat plane is not always XY.
+        // Read the actual mesh bounds, then rotate its longest axis along the
+        // sword sweep (or projectile path) and its plane normal into the hit plane.
+        Vector3 meshExtents = bestMesh.bounds.extents;
+        int normalAxis = meshExtents.x <= meshExtents.y && meshExtents.x <= meshExtents.z ? 0 :
+            meshExtents.y <= meshExtents.z ? 1 : 2;
+        int longAxis = -1;
+        float longestExtent = -1f;
+        for (int axis = 0; axis < 3; axis++)
+        {
+            if (axis == normalAxis) continue;
+            float extent = axis == 0 ? meshExtents.x : axis == 1 ? meshExtents.y : meshExtents.z;
+            if (extent > longestExtent)
+            {
+                longestExtent = extent;
+                longAxis = axis;
+            }
+        }
+
+        Vector3 meshNormal = AxisVector(normalAxis);
+        Vector3 meshLongAxis = AxisVector(longAxis);
+        Vector3 meshShortAxis = Vector3.Cross(meshNormal, meshLongAxis).normalized;
+        if (meshShortAxis.sqrMagnitude < 0.0004f)
+            return worldFrame;
+
+        Quaternion meshFrame = Quaternion.LookRotation(meshNormal, meshShortAxis);
+        Quaternion rendererRelativeRotation =
+            Quaternion.Inverse(slashPrefab.transform.rotation) * bestMeshTransform.rotation;
+        return worldFrame * Quaternion.Inverse(meshFrame) * Quaternion.Inverse(rendererRelativeRotation);
+    }
+
+    private static Vector3 AxisVector(int axis)
+    {
+        switch (axis)
+        {
+            case 0: return Vector3.right;
+            case 1: return Vector3.up;
+            default: return Vector3.forward;
+        }
+    }
+
+    private IEnumerator MoveSwordSlashVFXRoutine(
+        GameObject slashVfx,
+        BattleUnit target,
+        Vector3 targetPosition,
+        float speed,
+        Vector3 targetOffset,
+        float lifetime,
+        Vector3 localEulerCorrection)
+    {
+        if (slashVfx == null) yield break;
+
+        speed = Mathf.Max(0.1f, speed);
+        while (slashVfx != null)
+        {
+            if (target != null && !target.IsDead)
+                targetPosition = target.GetVfxTargetPosition(targetOffset);
+
+            Vector3 currentPosition = slashVfx.transform.position;
+            Vector3 direction = targetPosition - currentPosition;
+            if (direction.sqrMagnitude <= 0.01f) break;
+
+            Vector3 nextPosition = Vector3.MoveTowards(
+                currentPosition,
+                targetPosition,
+                speed * Time.deltaTime);
+            slashVfx.transform.position = nextPosition;
+            direction = nextPosition - currentPosition;
+
+            if (direction.sqrMagnitude > 0.0001f)
+            {
+                Vector3 longAxis = direction.normalized;
+                Vector3 shortAxis = Vector3.ProjectOnPlane(Vector3.up, longAxis);
+                if (shortAxis.sqrMagnitude < 0.0004f)
+                    shortAxis = Vector3.ProjectOnPlane(Vector3.right, longAxis);
+                Vector3 normal = Vector3.Cross(longAxis, shortAxis).normalized;
+                slashVfx.transform.rotation = GetSwordSlashRotation(
+                    slashVfx,
+                    longAxis,
+                    shortAxis,
+                    normal) * Quaternion.Euler(localEulerCorrection);
+            }
+
+            if ((targetPosition - nextPosition).sqrMagnitude <= 0.01f) break;
+            yield return null;
+        }
+
+        if (slashVfx != null)
+        {
+            slashVfx.transform.position = targetPosition;
+            bool hasParticles = slashVfx.GetComponentInChildren<ParticleSystem>(true) != null;
+            Destroy(slashVfx, hasParticles ? GetVfxLifeTime(slashVfx, lifetime) : 0.05f);
+        }
     }
 
     private void SpawnHitVFX(GameObject hitPrefab, Vector3 position, float lifetime)

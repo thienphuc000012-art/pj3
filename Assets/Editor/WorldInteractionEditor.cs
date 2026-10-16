@@ -8,6 +8,9 @@ using UnityEngine;
 [CustomEditor(typeof(WorldInteraction))]
 public class WorldInteractionEditor : Editor
 {
+    private const string DefaultChestPrefabPath = "Assets/asset/chest/B-01/Free Treasure Chest/Prefabs/Gold Chest.prefab";
+    private const string DefaultChestOpenAnimationPath = "Assets/asset/chest/B-01/Free Treasure Chest/open.anim";
+
     // ============================================================
     // CREATE MENU
     // ============================================================
@@ -116,6 +119,7 @@ public class WorldInteractionEditor : Editor
         point.kind = kind;
         if (kind == WorldInteractionKind.Encounter) Undo.AddComponent<EnemyEncounterBehaviour>(obj);
         if (kind == WorldInteractionKind.RestPoint) RestPointSetup.Configure(point);
+        if (kind == WorldInteractionKind.Chest) AssignDefaultChestAssets(point);
 
 
         point.displayName =
@@ -140,6 +144,8 @@ public class WorldInteractionEditor : Editor
         {
             point.combatSetupId = "default";
         }
+
+        if (kind == WorldInteractionKind.Chest) UpdatePickupModel(point);
 
 
         EditorUtility.SetDirty(point);
@@ -333,27 +339,53 @@ public class WorldInteractionEditor : Editor
         // APPLY
         // ========================================================
 
-        if (kind == WorldInteractionKind.Pickup)
+        if (kind == WorldInteractionKind.Pickup || kind == WorldInteractionKind.Chest)
         {
             EditorGUILayout.Space(6);
-            EditorGUILayout.LabelField("Model 3D của item", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("pickupModelPrefab"), new GUIContent("Model Prefab"));
+            bool chest = kind == WorldInteractionKind.Chest;
+            EditorGUILayout.LabelField(chest ? "Model 3D và animation của rương" : "Model 3D của item", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("pickupModelPrefab"), new GUIContent(chest ? "Chest Model Prefab" : "Model Prefab"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("pickupModelPosition"), new GUIContent("Vị trí model"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("pickupModelRotation"), new GUIContent("Góc xoay model"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("pickupModelScale"), new GUIContent("Kích thước model"));
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("pickupAnimationState"), new GUIContent("Animation nhặt item"));
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("pickupUseAnimationEvent"), new GUIContent("Nhặt bằng Animation Event"));
-            if (!serializedObject.FindProperty("pickupUseAnimationEvent").boolValue)
-                EditorGUILayout.PropertyField(serializedObject.FindProperty("pickupMoment"), new GUIContent("Mốc nhặt trong animation"));
-            else EditorGUILayout.HelpBox("Thêm Animation Event tên AnimEvent_PickupItem tại frame tay chạm item trong clip pickupitem.", MessageType.Info);
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("pickupAnimationTimeout"), new GUIContent("Giới hạn chờ animation"));
-            EditorGUILayout.HelpBox("Kéo prefab model từ Project vào đây. Model hiển thị trong Scene và tự ẩn khi nhặt item. Phần Rewards quyết định vật phẩm nhận được.", MessageType.Info);
+            if (chest)
+            {
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("chestOpenAnimation"), new GUIContent("Chest open animation"));
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("chestPlayerAnimationState"), new GUIContent("Animation openchest của player"));
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("chestUseAnimationEvent"), new GUIContent("Mở bằng Animation Event"));
+                if (!serializedObject.FindProperty("chestUseAnimationEvent").boolValue)
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("chestOpenMoment"), new GUIContent("Mốc mở rương trong animation"));
+                else EditorGUILayout.HelpBox("Thêm Animation Event tên AnimEvent_OpenChest tại frame player chạm rương trong clip openchest.", MessageType.Info);
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("requireFrontAccess"), new GUIContent("Chỉ mở từ phía trước"));
+                if (serializedObject.FindProperty("requireFrontAccess").boolValue)
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("chestFrontAccessHalfAngle"), new GUIContent("Góc tiếp cận phía trước"));
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("chestOpenDuration"), new GUIContent("Thời gian mở rương"));
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("chestLidPath"), new GUIContent("Tên / path nắp rương"));
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("chestAnimateLidFallback"), new GUIContent("Mở nắp dự phòng"));
+                if (serializedObject.FindProperty("chestAnimateLidFallback").boolValue)
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("chestLidOpenRotation"), new GUIContent("Góc mở nắp"));
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("pickupAnimationTimeout"), new GUIContent("Giới hạn chờ animation"));
+                EditorGUILayout.HelpBox("Chest mới tự dùng Gold Chest và clip open. Hướng forward của object rương xác định mặt trước. Clip open hiện chưa có đường cong chuyển động, nên nắp Top_Lod được mở bằng góc dự phòng. Rương đã mở sẽ biến mất và tiếp tục được ẩn sau khi tải save.", MessageType.Info);
+            }
+            else
+            {
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("pickupAnimationState"), new GUIContent("Animation nhặt item"));
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("pickupUseAnimationEvent"), new GUIContent("Nhặt bằng Animation Event"));
+                if (!serializedObject.FindProperty("pickupUseAnimationEvent").boolValue)
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("pickupMoment"), new GUIContent("Mốc nhặt trong animation"));
+                else EditorGUILayout.HelpBox("Thêm Animation Event tên AnimEvent_PickupItem tại frame tay chạm item trong clip pickupitem.", MessageType.Info);
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("pickupAnimationTimeout"), new GUIContent("Giới hạn chờ animation"));
+                EditorGUILayout.HelpBox("Kéo prefab model từ Project vào đây. Model hiển thị trong Scene và tự ẩn khi nhặt item. Phần Rewards quyết định vật phẩm nhận được.", MessageType.Info);
+            }
         }
         bool changed = serializedObject.ApplyModifiedProperties();
-        if (kind == WorldInteractionKind.Pickup && !EditorApplication.isPlaying)
+        if ((kind == WorldInteractionKind.Pickup || kind == WorldInteractionKind.Chest) && !EditorApplication.isPlaying)
         {
-            bool updateModel = GUILayout.Button("Cập nhật model 3D");
+            bool useDefaultChest = kind == WorldInteractionKind.Chest && GUILayout.Button("Dùng Gold Chest mặc định");
+            if (useDefaultChest) AssignDefaultChestAssets(point);
+            bool updateModel = GUILayout.Button(kind == WorldInteractionKind.Chest ? "Cập nhật model rương" : "Cập nhật model 3D");
             if (changed || updateModel) UpdatePickupModel(point);
+            if (useDefaultChest) UpdatePickupModel(point);
         }
         if (kind == WorldInteractionKind.Encounter && point.GetComponent<EnemyEncounterBehaviour>() == null && GUILayout.Button("Add Patrol / Chase Behaviour"))
             Undo.AddComponent<EnemyEncounterBehaviour>(point.gameObject);
@@ -529,6 +561,19 @@ public class WorldInteractionEditor : Editor
         }
     }
 
+    static void AssignDefaultChestAssets(WorldInteraction point)
+    {
+        if (point == null) return;
+        Undo.RecordObject(point, "Assign default chest assets");
+        point.pickupModelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(DefaultChestPrefabPath);
+        point.chestOpenAnimation = AssetDatabase.LoadAssetAtPath<AnimationClip>(DefaultChestOpenAnimationPath);
+        point.chestPlayerAnimationState = "Base Layer.openchest";
+        point.chestLidPath = "Top_Lod";
+        point.chestAnimateLidFallback = true;
+        point.chestLidOpenRotation = new Vector3(-105f, 0f, 0f);
+        EditorUtility.SetDirty(point);
+    }
+
     static void UpdatePickupModel(WorldInteraction point)
     {
         var prefab = point.pickupModelPrefab;
@@ -547,7 +592,7 @@ public class WorldInteractionEditor : Editor
         {
             point.pickupModelInstance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, point.transform);
             Undo.RegisterCreatedObjectUndo(point.pickupModelInstance, "Create pickup model");
-            point.pickupModelInstance.name = "Pickup Model";
+            point.pickupModelInstance.name = point.kind == WorldInteractionKind.Chest ? "Chest Model" : "Pickup Model";
         }
         point.pickupModelSource = prefab;
         if (point.pickupModelInstance != null)

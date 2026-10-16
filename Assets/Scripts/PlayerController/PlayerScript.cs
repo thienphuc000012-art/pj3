@@ -147,6 +147,15 @@ public class PlayerScript : MonoBehaviour
             animator.applyRootMotion = true;
     }
 
+    public void FaceTowards(Vector3 worldPosition)
+    {
+        Vector3 direction = worldPosition - transform.position;
+        direction.y = 0f;
+        if (direction.sqrMagnitude < 0.0001f) return;
+        requiredRotation = Quaternion.LookRotation(direction.normalized);
+        transform.rotation = requiredRotation;
+    }
+
     private void OnAnimatorMove()
     {
         if (CampaignSession.InputBlocked) return;

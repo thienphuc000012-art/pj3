@@ -5,5 +5,7 @@ using UnityEngine;
 public sealed class PickupAnimationEvents : MonoBehaviour
 {
     public Action OnPickupMoment;
+    public Action OnChestOpenMoment;
+    public void AnimEvent_OpenChest() => OnChestOpenMoment?.Invoke();
     public void AnimEvent_PickupItem() => OnPickupMoment?.Invoke();
 }

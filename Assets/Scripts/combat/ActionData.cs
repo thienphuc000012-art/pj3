@@ -110,6 +110,8 @@ public class ActionData : ScriptableObject
     [Header("VFX Settings")]
     public VfxType vfxType = VfxType.None;
     public GameObject vfxPrefab;
+    [Min(0.01f), Tooltip("Runtime playback multiplier for every Particle System in the main VFX prefab and its children. This is separate from the Scene view preview speed.")]
+    public float vfxPlaybackSpeed = 1f;
     public GameObject castVfxPrefab;
     public GameObject hitVfxPrefab;
     [Tooltip("Use a separate position for Hit VFX, for example the target root for a full-body effect. Otherwise uses Projectile Target Offset.")]
@@ -180,4 +182,18 @@ public class ActionData : ScriptableObject
     [Header("RFX4 Projectile Settings")]
     [Tooltip("Chỉ dùng khi Projectile Move Mode = RFX4Prefab.")]
     public bool rfxUseGravity = false;
+
+    [Header("Sword Slash VFX")]
+    [Tooltip("Optional slash effect played at each resolved sword hit. Leave empty for actions that are not sword strikes.")]
+    public GameObject swordSlashVfxPrefab;
+    [Tooltip("Small position correction relative to the sword midpoint and the automatically aligned slash plane.")]
+    public Vector3 swordSlashVfxLocalOffset = Vector3.zero;
+    [Tooltip("Small rotation correction after the slash has been aligned to the current sword swing.")]
+    public Vector3 swordSlashVfxLocalEuler = Vector3.zero;
+    public Vector3 swordSlashVfxScale = Vector3.one;
+    [Min(0.1f)] public float swordSlashVfxLifetime = 2f;
+    [Tooltip("Shoot/Beam actions with a Sword Slash VFX launch it from the sword toward the target.")]
+    public bool swordSlashTravelsToTarget = true;
+    [Min(0.1f), Tooltip("Travel speed for a sword slash used by a Shoot or Beam action.")]
+    public float swordSlashTravelSpeed = 24f;
 }

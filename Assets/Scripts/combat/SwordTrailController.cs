@@ -25,7 +25,89 @@ public class SwordBladeTrail : MonoBehaviour
         public float timeCreated;
     }
 
+    private struct BladePoseSample
+    {
+        public Vector3 basePos;
+        public Vector3 tipPos;
+        public float timeCreated;
+    }
+
     private List<FrameSnapshot> snapshots = new List<FrameSnapshot>();
+    private readonly Queue<BladePoseSample> motionHistory = new Queue<BladePoseSample>();
+
+    /// <summary>
+    /// Returns the current sword midpoint/axis and the recent sweep direction.
+    /// The slash origin stays centered between the configured blade points;
+    /// trail samples are used only to orient it along the swing.
+    /// </summary>
+    public bool TryGetSlashPose(out Vector3 midpoint, out Vector3 bladeAxis, out Vector3 swingDirection)
+    {
+        midpoint = transform.position;
+        bladeAxis = transform.up;
+        swingDirection = Vector3.zero;
+
+        if (!isActiveAndEnabled || !gameObject.activeInHierarchy ||
+            pointBase == null || pointTip == null ||
+            !pointBase.gameObject.activeInHierarchy || !pointTip.gameObject.activeInHierarchy)
+            return false;
+
+        Vector3 basePosition = pointBase.position;
+        Vector3 tipPosition = pointTip.position;
+        Vector3 blade = tipPosition - basePosition;
+        midpoint = (basePosition + tipPosition) * 0.5f;
+        if (blade.sqrMagnitude > 0.0001f)
+            bladeAxis = blade.normalized;
+
+        Vector3 relativeSweep = Vector3.zero;
+        if (isEmitting && snapshots.Count > 1)
+        {
+            FrameSnapshot newestTrailPoint = snapshots[0];
+            FrameSnapshot oldestTrailPoint = snapshots[snapshots.Count - 1];
+            relativeSweep =
+                (newestTrailPoint.tipPos - oldestTrailPoint.tipPos) -
+                (newestTrailPoint.basePos - oldestTrailPoint.basePos);
+        }
+        else if (motionHistory.Count > 1)
+        {
+            BladePoseSample oldest = motionHistory.Peek();
+            BladePoseSample newest = default;
+            foreach (BladePoseSample sample in motionHistory)
+            {
+                newest = sample;
+            }
+
+            relativeSweep =
+                (newest.tipPos - oldest.tipPos) -
+                (newest.basePos - oldest.basePos);
+        }
+
+        // A translating sword may move both points together; use its midpoint
+        // motion if rotation around the hand was too small to determine a swing.
+        if (relativeSweep.sqrMagnitude < 0.0004f)
+        {
+            if (isEmitting && snapshots.Count > 1)
+            {
+                Vector3 oldestMidpoint = (snapshots[snapshots.Count - 1].basePos + snapshots[snapshots.Count - 1].tipPos) * 0.5f;
+                Vector3 newestMidpoint = (snapshots[0].basePos + snapshots[0].tipPos) * 0.5f;
+                relativeSweep = newestMidpoint - oldestMidpoint;
+            }
+            else if (motionHistory.Count > 1)
+            {
+                BladePoseSample oldest = motionHistory.Peek();
+                BladePoseSample newest = default;
+                foreach (BladePoseSample sample in motionHistory)
+                    newest = sample;
+                Vector3 oldestMidpoint = (oldest.basePos + oldest.tipPos) * 0.5f;
+                Vector3 newestMidpoint = (newest.basePos + newest.tipPos) * 0.5f;
+                relativeSweep = newestMidpoint - oldestMidpoint;
+            }
+        }
+
+        if (relativeSweep.sqrMagnitude >= 0.0004f)
+            swingDirection = relativeSweep.normalized;
+
+        return true;
+    }
 
     void Awake()
     {
@@ -53,6 +135,18 @@ public class SwordBladeTrail : MonoBehaviour
     void LateUpdate()
     {
         if (pointBase == null || pointTip == null) return;
+
+        motionHistory.Enqueue(new BladePoseSample
+        {
+            basePos = pointBase.position,
+            tipPos = pointTip.position,
+            timeCreated = Time.time
+        });
+        while (motionHistory.Count > 1 &&
+               (Time.time - motionHistory.Peek().timeCreated > 0.18f || motionHistory.Count > 16))
+        {
+            motionHistory.Dequeue();
+        }
 
         // Xóa các điểm đã quá thời gian tồn tại
         snapshots.RemoveAll(s => Time.time - s.timeCreated > trailTime);

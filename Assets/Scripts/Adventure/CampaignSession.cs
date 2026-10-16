@@ -28,7 +28,7 @@ public class CampaignSession : MonoBehaviour
     public void BeginItemPickup(WorldInteraction point)
     {
         if (Busy || Menu != AdventureMenu.None || !OnMap || MapPlayer == null || point == null ||
-            point.kind != WorldInteractionKind.Pickup || point.IsConsumed || !IsNear(point)) return;
+            (point.kind != WorldInteractionKind.Pickup && point.kind != WorldInteractionKind.Chest) || point.IsConsumed || !IsNear(point)) return;
         Busy = true;
         Nearest = null;
         StartCoroutine(PlayItemPickup(point));
@@ -40,32 +40,58 @@ public class CampaignSession : MonoBehaviour
         var animator = player != null ? player.animator : null;
         int oldState = 0;
         var oldCulling = animator != null ? animator.cullingMode : AnimatorCullingMode.AlwaysAnimate;
+        bool oldApplyRootMotion = animator != null && animator.applyRootMotion;
         bool played = false;
         bool collected = false;
+        bool chest = point.kind == WorldInteractionKind.Chest;
+        bool opening = false;
+        float chestStartedAt = 0f;
+        float chestFinishedAt = 0f;
+        bool useAnimationEvent = chest ? point.chestUseAnimationEvent : point.pickupUseAnimationEvent;
+        float interactionMoment = chest ? point.chestOpenMoment : point.pickupMoment;
         PickupAnimationEvents receiver = null;
         Action collect = () =>
         {
             if (collected || !OnMap || MapPlayer != player || point == null || !point.isActiveAndEnabled || point.IsConsumed) return;
+            if (chest)
+            {
+                if (!opening)
+                {
+                    opening = true;
+                    chestStartedAt = Time.time;
+                    chestFinishedAt = chestStartedAt + point.PlayChestOpen();
+                }
+                return;
+            }
             point.CompleteCollection();
             collected = point.IsConsumed;
         };
         try
         {
+            if (chest && player != null) player.FaceTowards(point.transform.position);
             if (animator != null && animator.isActiveAndEnabled && animator.runtimeAnimatorController != null)
             {
-                string stateName = string.IsNullOrWhiteSpace(point.pickupAnimationState) ? "Base Layer.pickupitem" : point.pickupAnimationState;
+                string stateName = chest ? point.chestPlayerAnimationState : point.pickupAnimationState;
+                if (string.IsNullOrWhiteSpace(stateName)) stateName = chest ? "Base Layer.openchest" : "Base Layer.pickupitem";
                 int stateHash = Animator.StringToHash(stateName);
-                if (!animator.HasState(0, stateHash)) stateHash = Animator.StringToHash("pickupitem");
+                if (!animator.HasState(0, stateHash)) stateHash = Animator.StringToHash(chest ? "openchest" : "pickupitem");
                 if (animator.HasState(0, stateHash))
                 {
                     oldState = animator.GetCurrentAnimatorStateInfo(0).fullPathHash;
                     animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+                    if (chest) animator.applyRootMotion = false;
                     animator.SetFloat("movementvalue", 0f);
                     receiver = animator.GetComponent<PickupAnimationEvents>();
                     if (receiver == null) receiver = animator.gameObject.AddComponent<PickupAnimationEvents>();
                     receiver.OnPickupMoment = () =>
                     {
-                        if (!point.pickupUseAnimationEvent) return;
+                        if (chest || !point.pickupUseAnimationEvent) return;
+                        var active = animator.GetCurrentAnimatorStateInfo(0);
+                        if (active.fullPathHash == stateHash || active.shortNameHash == stateHash) collect();
+                    };
+                    receiver.OnChestOpenMoment = () =>
+                    {
+                        if (!chest || !point.chestUseAnimationEvent) return;
                         var active = animator.GetCurrentAnimatorStateInfo(0);
                         if (active.fullPathHash == stateHash || active.shortNameHash == stateHash) collect();
                     };
@@ -81,7 +107,7 @@ public class CampaignSession : MonoBehaviour
                         if (picking)
                         {
                             entered = true;
-                            if (!point.pickupUseAnimationEvent && state.normalizedTime >= Mathf.Clamp01(point.pickupMoment)) collect();
+                            if (!useAnimationEvent && state.normalizedTime >= Mathf.Clamp01(interactionMoment)) collect();
                             if (state.normalizedTime >= 1f) break;
                         }
                         else if (entered) break;
@@ -89,18 +115,35 @@ public class CampaignSession : MonoBehaviour
                         yield return null;
                     }
                 }
-                else Debug.LogWarning("Item Pickup: không tìm thấy state pickupitem trong Animator của player. Hãy lưu PlayerController2.", point);
+                else Debug.LogWarning("Pickup/Chest: không tìm thấy state tương tác trong Animator của player. Hãy lưu PlayerController2.", point);
             }
             if (!played) collect(); // Preserve pickups on characters without a pickup animation.
-            else if (!collected && point != null && point.pickupUseAnimationEvent)
-                Debug.LogWarning("Item Pickup: chưa nhận event AnimEvent_PickupItem; item vẫn ở map để nhặt lại.", point);
+            if (chest && opening)
+            {
+                while (Time.time < chestFinishedAt && OnMap && point != null && point.isActiveAndEnabled && MapPlayer == player)
+                {
+                    point.SetChestOpenProgress(Mathf.InverseLerp(chestStartedAt, chestFinishedAt, Time.time));
+                    yield return null;
+                }
+                if (OnMap && point != null && point.isActiveAndEnabled && MapPlayer == player)
+                {
+                    point.FinishChestOpen();
+                    point.CompleteCollection(requireRange: false);
+                    collected = point.IsConsumed;
+                }
+            }
+            if (!collected && point != null && useAnimationEvent)
+                Debug.LogWarning(chest
+                    ? "Chest: chưa nhận event AnimEvent_OpenChest; rương vẫn ở map để mở lại."
+                    : "Item Pickup: chưa nhận event AnimEvent_PickupItem; item vẫn ở map để nhặt lại.", point);
         }
         finally
         {
-            if (receiver != null) receiver.OnPickupMoment = null;
+            if (receiver != null) { receiver.OnPickupMoment = null; receiver.OnChestOpenMoment = null; }
             if (animator != null && played)
             {
                 animator.cullingMode = oldCulling;
+                if (chest) animator.applyRootMotion = oldApplyRootMotion;
                 int locomotion = Animator.StringToHash("Base Layer.Basic Movement");
                 if (animator.HasState(0, locomotion)) animator.CrossFadeInFixedTime(locomotion, 0.1f);
                 else if (oldState != 0 && animator.HasState(0, oldState)) animator.CrossFadeInFixedTime(oldState, 0.1f);
@@ -215,7 +258,8 @@ public class CampaignSession : MonoBehaviour
         var patrol = point.GetComponent<EnemyEncounterBehaviour>();
         if (point.kind == WorldInteractionKind.Encounter && patrol != null && patrol.enabled)
             return patrol.CanInteract(MapPlayer.transform, point.range);
-        return Vector3.Distance(MapPlayer.transform.position, point.transform.position) <= point.range;
+        if (Vector3.Distance(MapPlayer.transform.position, point.transform.position) > point.range) return false;
+        return point.kind != WorldInteractionKind.Chest || point.IsPlayerInFront(MapPlayer.transform);
     }
     void Update()
     {
