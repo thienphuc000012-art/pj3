@@ -3158,6 +3158,10 @@ PrefabInstance:
       value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
+      propertyPath: baseActionPattern.Array.size
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: 'characterSkills.Array.data[0]'
       value: 
       objectReference: {fileID: 11400000, guid: 6de9ab5777c744e44b2765fd39d350a3, type: 2}
@@ -3177,6 +3181,10 @@ PrefabInstance:
       propertyPath: 'characterSkills.Array.data[4]'
       value: 
       objectReference: {fileID: 11400000, guid: 0d35c71ebbc4e1444a787ed6badd0fdd, type: 2}
+    - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
+      propertyPath: startingBattleEffects.Array.size
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 2019018332671450448, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: m_IsActive
       value: 1
@@ -3314,6 +3322,78 @@ MonoBehaviour:
     - {fileID: 977478719}
     targetCamera: {fileID: 15947508}
     actionCamera: {fileID: 0}
+  playerStartingEffects:
+  - overridePrefabEffects: 1
+    effects:
+    - kind: 1
+      buffStat: 0
+      buffAmount: 0
+      buffDuration: 0
+      debuff:
+        type: 2
+        icon: {fileID: 21300000, guid: ba2d1473cd3fd564ab25da7df5e4eaf5, type: 3}
+        applyChance: 100
+        turns: 25
+        burnDamage: 0
+        burnAttackReductionPercent: 0
+        paralysisSkipChance: 0
+        poisonMaxHpPercent: 1.2
+        turnVfxPrefab: {fileID: 1369401709340560, guid: e0e6c9ae18e69094888cb90cd4a2fb61, type: 3}
+        turnVfxLocalOffset: {x: 0, y: 0, z: 0}
+        turnVfxLifetime: 0
+  - overridePrefabEffects: 1
+    effects:
+    - kind: 1
+      buffStat: 0
+      buffAmount: 0
+      buffDuration: 0
+      debuff:
+        type: 2
+        icon: {fileID: 21300000, guid: ba2d1473cd3fd564ab25da7df5e4eaf5, type: 3}
+        applyChance: 100
+        turns: 25
+        burnDamage: 0
+        burnAttackReductionPercent: 0
+        paralysisSkipChance: 0
+        poisonMaxHpPercent: 1.2
+        turnVfxPrefab: {fileID: 1369401709340560, guid: e0e6c9ae18e69094888cb90cd4a2fb61, type: 3}
+        turnVfxLocalOffset: {x: 0, y: 0, z: 0}
+        turnVfxLifetime: 0
+    - kind: 1
+      buffStat: 0
+      buffAmount: 0
+      buffDuration: 0
+      debuff:
+        type: 2
+        icon: {fileID: 21300000, guid: ba2d1473cd3fd564ab25da7df5e4eaf5, type: 3}
+        applyChance: 100
+        turns: 25
+        burnDamage: 0
+        burnAttackReductionPercent: 0
+        paralysisSkipChance: 0
+        poisonMaxHpPercent: 1.2
+        turnVfxPrefab: {fileID: 1369401709340560, guid: e0e6c9ae18e69094888cb90cd4a2fb61, type: 3}
+        turnVfxLocalOffset: {x: 0, y: 0, z: 0}
+        turnVfxLifetime: 0
+  enemyStartingEffects:
+  - overridePrefabEffects: 1
+    effects:
+    - kind: 0
+      buffStat: 1
+      buffAmount: 7
+      buffDuration: 18
+      debuff:
+        type: 0
+        icon: {fileID: 0}
+        applyChance: 0
+        turns: 0
+        burnDamage: 0
+        burnAttackReductionPercent: 0
+        paralysisSkipChance: 0
+        poisonMaxHpPercent: 0
+        turnVfxPrefab: {fileID: 0}
+        turnVfxLocalOffset: {x: 0, y: 0, z: 0}
+        turnVfxLifetime: 0
   battleStartCamera: {fileID: 290278560}
   enemyAoECamera: {fileID: 1743900281}
   enemyPhase2Camera: {fileID: 1954148720}
@@ -9912,6 +9992,78 @@ MonoBehaviour:
     - {fileID: 830158820}
     targetCamera: {fileID: 526245869}
     actionCamera: {fileID: 0}
+  playerStartingEffects:
+  - overridePrefabEffects: 1
+    effects:
+    - kind: 1
+      buffStat: 0
+      buffAmount: 0
+      buffDuration: 0
+      debuff:
+        type: 0
+        icon: {fileID: 21300000, guid: b40e39269ddc391439852a99d5c4f81b, type: 3}
+        applyChance: 100
+        turns: 61
+        burnDamage: 5
+        burnAttackReductionPercent: 5.7
+        paralysisSkipChance: 0
+        poisonMaxHpPercent: 0
+        turnVfxPrefab: {fileID: 1769391663779456, guid: d8dc9cc283ad7df45ae1b14f1fe58dbc, type: 3}
+        turnVfxLocalOffset: {x: 0, y: 0, z: 0}
+        turnVfxLifetime: 0
+  - overridePrefabEffects: 1
+    effects:
+    - kind: 1
+      buffStat: 0
+      buffAmount: 0
+      buffDuration: 0
+      debuff:
+        type: 0
+        icon: {fileID: 21300000, guid: b40e39269ddc391439852a99d5c4f81b, type: 3}
+        applyChance: 100
+        turns: 61
+        burnDamage: 5
+        burnAttackReductionPercent: 5.7
+        paralysisSkipChance: 0
+        poisonMaxHpPercent: 0
+        turnVfxPrefab: {fileID: 1769391663779456, guid: d8dc9cc283ad7df45ae1b14f1fe58dbc, type: 3}
+        turnVfxLocalOffset: {x: 0, y: 0, z: 0}
+        turnVfxLifetime: 0
+    - kind: 1
+      buffStat: 0
+      buffAmount: 0
+      buffDuration: 0
+      debuff:
+        type: 0
+        icon: {fileID: 21300000, guid: b40e39269ddc391439852a99d5c4f81b, type: 3}
+        applyChance: 100
+        turns: 61
+        burnDamage: 5
+        burnAttackReductionPercent: 5.7
+        paralysisSkipChance: 0
+        poisonMaxHpPercent: 0
+        turnVfxPrefab: {fileID: 1769391663779456, guid: d8dc9cc283ad7df45ae1b14f1fe58dbc, type: 3}
+        turnVfxLocalOffset: {x: 0, y: 0, z: 0}
+        turnVfxLifetime: 0
+  enemyStartingEffects:
+  - overridePrefabEffects: 1
+    effects:
+    - kind: 0
+      buffStat: 1
+      buffAmount: 7
+      buffDuration: 29
+      debuff:
+        type: 0
+        icon: {fileID: 0}
+        applyChance: 0
+        turns: 0
+        burnDamage: 0
+        burnAttackReductionPercent: 0
+        paralysisSkipChance: 0
+        poisonMaxHpPercent: 0
+        turnVfxPrefab: {fileID: 0}
+        turnVfxLocalOffset: {x: 0, y: 0, z: 0}
+        turnVfxLifetime: 0
   battleStartCamera: {fileID: 290278560}
   enemyAoECamera: {fileID: 1743900281}
   enemyPhase2Camera: {fileID: 1954148720}
@@ -10003,6 +10155,7 @@ MonoBehaviour:
   isBoss: 0
   actionsPerTurn: 1
   baseActionPattern: []
+  startingBattleEffects: []
   bossPhases: []
   phase2AnimationTriggerName: Phase2
   phase2IntroDuration: 2.5
@@ -10609,12 +10762,24 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
+      propertyPath: idleVfx.Array.size
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: enemyHpBorderSprite
       value: 
       objectReference: {fileID: 478957485, guid: 7eb202d07eec93a418208953fbaeedea, type: 3}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
+      propertyPath: bossPhases.Array.size
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: characterSkills.Array.size
       value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
+      propertyPath: baseActionPattern.Array.size
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: 'characterSkills.Array.data[0]'
@@ -10636,6 +10801,18 @@ PrefabInstance:
       propertyPath: 'characterSkills.Array.data[4]'
       value: 
       objectReference: {fileID: 11400000, guid: bfae87a977bf73f4c86d8a2fcf86b009, type: 2}
+    - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
+      propertyPath: 'baseActionPattern.Array.data[0]'
+      value: 
+      objectReference: {fileID: 11400000, guid: e288a344a0ee08f42bee7a0c4f10bd03, type: 2}
+    - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
+      propertyPath: 'baseActionPattern.Array.data[1]'
+      value: 
+      objectReference: {fileID: 11400000, guid: fcb0cc7c27be4104a89d579861c52117, type: 2}
+    - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
+      propertyPath: bossPhases.Array.data[0].phaseActionPattern.Array.size
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 2019018332671450448, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: m_IsActive
       value: 1

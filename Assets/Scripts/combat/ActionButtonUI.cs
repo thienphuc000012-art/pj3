@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Serialization;
 using TMPro;
 
 public class ActionButtonUI : MonoBehaviour
@@ -7,7 +8,8 @@ public class ActionButtonUI : MonoBehaviour
     [Header("UI References")]
     public TextMeshProUGUI nameText;       // Tên kỹ năng
     public TextMeshProUGUI infoText;       // THAY ĐỔI: Sẽ dùng để hiển thị Mô tả (Description)
-    public TextMeshProUGUI stainText;      // Hiển thị Stain (+ hoặc -)
+    [FormerlySerializedAs("stainText"), Tooltip("Shows item quantity for items, or Stain/Ultimate resource for actions.")]
+    public TextMeshProUGUI resourceText;
     public Image iconImage;                // Icon kỹ năng
     public Button button;
 
@@ -15,14 +17,12 @@ public class ActionButtonUI : MonoBehaviour
 
     void Update()
     {
-        if (button == null || currentAction == null || CombatManager.Instance == null) return;
-        var unit = CombatManager.Instance.currentActiveUnit;
-        button.interactable = unit != null && unit.CanUseAction(currentAction);
-        if (currentAction.isUltimate && stainText != null)
-        {
-            stainText.text = "Ultimate " + (unit != null ? Mathf.FloorToInt(unit.UltimateEnergy) : 0) + "/100";
-            stainText.color = unit != null && unit.UltimateReady ? Color.yellow : Color.gray;
-        }
+        if (currentAction == null) return;
+        var manager = CombatManager.Instance;
+        var unit = manager != null ? manager.currentActiveUnit : null;
+        if (button != null && manager != null)
+            button.interactable = unit != null && unit.CanUseAction(currentAction);
+        UpdateResourceText(unit);
     }
 
     public void Setup(ActionData action)
@@ -44,25 +44,8 @@ public class ActionButtonUI : MonoBehaviour
             iconImage.gameObject.SetActive(false);
         }
 
-        // 3. Hiển thị số lượng Stain
-        if (stainText != null)
-        {
-            if (action.stainChange > 0)
-            {
-                stainText.text = $"+{action.stainChange} Stain";
-                stainText.color = Color.cyan; // Màu xanh dương cho hồi Stain
-            }
-            else if (action.stainChange < 0)
-            {
-                stainText.text = $"{action.stainChange} Stain"; // Đã có sẵn dấu trừ
-                stainText.color = new Color(1f, 0.4f, 0.4f); // Màu đỏ cho tiêu hao Stain
-            }
-            else
-            {
-                stainText.text = "0 Stain";
-                stainText.color = Color.white;
-            }
-        }
+        // Items show their owned quantity in this label; other actions keep Stain cost/gain.
+        UpdateResourceText(CombatManager.Instance != null ? CombatManager.Instance.currentActiveUnit : null);
 
         // 4. Hiển thị Mô tả (Description) thay vì các thông số khô khan
         if (infoText != null)
@@ -87,12 +70,51 @@ public class ActionButtonUI : MonoBehaviour
         }
     }
 
+    private void UpdateResourceText(BattleUnit unit)
+    {
+        if (resourceText == null || currentAction == null) return;
+
+        if (currentAction.type == ActionData.ActionType.Item)
+        {
+            int count = 1;
+            if (CampaignSession.Instance != null &&
+                CampaignSession.Instance.TryGetBattleItemCount(currentAction, out int ownedCount))
+                count = ownedCount;
+            resourceText.text = "x" + Mathf.Max(0, count);
+            resourceText.color = Color.white;
+            return;
+        }
+
+        if (currentAction.isUltimate)
+        {
+            resourceText.text = "Ultimate " + (unit != null ? Mathf.FloorToInt(unit.UltimateEnergy) : 0) + "/100";
+            resourceText.color = unit != null && unit.UltimateReady ? Color.yellow : Color.gray;
+            return;
+        }
+
+        if (currentAction.stainChange > 0)
+        {
+            resourceText.text = $"+{currentAction.stainChange} Stain";
+            resourceText.color = Color.cyan;
+        }
+        else if (currentAction.stainChange < 0)
+        {
+            resourceText.text = $"{currentAction.stainChange} Stain";
+            resourceText.color = new Color(1f, 0.4f, 0.4f);
+        }
+        else
+        {
+            resourceText.text = "0 Stain";
+            resourceText.color = Color.white;
+        }
+    }
+
     public void SetupEmpty(string slotName)
     {
         currentAction = null;
         if (nameText != null) nameText.text = slotName;
         if (infoText != null) infoText.text = "Chưa trang bị";
-        if (stainText != null) stainText.text = "";
+        if (resourceText != null) resourceText.text = "";
         if (iconImage != null) iconImage.gameObject.SetActive(false);
         if (button != null)
         {
@@ -112,8 +134,8 @@ public class ActionButtonUI : MonoBehaviour
             Place(iconImage.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(8, -48), new Vector2(48, -8));
         if (nameText != null)
             Place(nameText.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(56, -46), new Vector2(-170, -6));
-        if (stainText != null)
-            Place(stainText.rectTransform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-162, -46), new Vector2(-8, -6));
+        if (resourceText != null)
+            Place(resourceText.rectTransform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-162, -46), new Vector2(-8, -6));
         if (infoText != null)
         {
             Place(infoText.rectTransform, Vector2.zero, Vector2.one, new Vector2(56, 6), new Vector2(-8, -48));

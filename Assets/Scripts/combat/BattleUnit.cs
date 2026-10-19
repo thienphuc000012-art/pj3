@@ -11,6 +11,17 @@ public class ActiveBuff
     public int duration;
 }
 
+[Serializable]
+public class BattleStartEffect
+{
+    public enum EffectKind { Buff, Debuff }
+    public EffectKind kind;
+    public ActionData.BuffStat buffStat = ActionData.BuffStat.Atk;
+    public int buffAmount = 10;
+    [Min(1)] public int buffDuration = 3;
+    public ActionData.DebuffSettings debuff = new ActionData.DebuffSettings();
+}
+
 [System.Serializable]
 public class BossPhase
 {
@@ -93,11 +104,18 @@ public class BattleUnit : MonoBehaviour
     [Tooltip("Chuỗi kỹ năng Quái sẽ dùng LẦN LƯỢT (VD: Đánh thường -> Skill -> Đánh thường -> Lặp lại)")]
     public List<ActionData> baseActionPattern;
 
+    [Header("Starting Battle Effects")]
+    [Tooltip("Các buff/debuff được áp dụng lên chính nhân vật này khi trận bắt đầu. Cấu hình trực tiếp trên BattleUnit của player hoặc enemy.")]
+    public List<BattleStartEffect> startingBattleEffects = new List<BattleStartEffect>();
+    private bool startingBattleEffectsApplied;
+
     [Tooltip("Danh sách các Phase của Boss (Nhập theo thứ tự giảm dần: 0.7 -> 0.5 -> 0.2)")]
     public List<BossPhase> bossPhases;
 
     private int currentPhaseIndex = -1; // -1 = Phase 1/base, bossPhases[0] = Phase 2
     private int currentPatternIndex = 0; // Đếm số thứ tự chiêu thức trong chuỗi
+    private int enemyTurnNumber;
+    private readonly Dictionary<ActionData, int> enemyActionReadyTurns = new Dictionary<ActionData, int>();
 
     [Header("Phase 2 Intro")]
     [Tooltip("Tên Trigger trong Animator chạy đúng 1 lần khi Boss bắt đầu Phase 2.")]
@@ -423,18 +441,71 @@ public class BattleUnit : MonoBehaviour
             }
         }
 
-        // Nếu có setup chuỗi kỹ năng thì đánh theo thứ tự
+        // Follow the configured sequence, skipping actions that are still cooling down.
         if (currentPattern != null && currentPattern.Count > 0)
         {
-            ActionData action = currentPattern[currentPatternIndex];
-
-            currentPatternIndex++;
-            if (currentPatternIndex >= currentPattern.Count) currentPatternIndex = 0; // Xoay vòng lại từ đầu
-
-            return action;
+            int startIndex = Mathf.Clamp(currentPatternIndex, 0, currentPattern.Count - 1);
+            for (int offset = 0; offset < currentPattern.Count; offset++)
+            {
+                int index = (startIndex + offset) % currentPattern.Count;
+                ActionData candidate = currentPattern[index];
+                if (!IsEnemyActionReady(candidate)) continue;
+                currentPatternIndex = (index + 1) % currentPattern.Count;
+                return candidate;
+            }
         }
 
-        return defaultAttack; // Fallback nếu quên không set kỹ năng
+        return IsEnemyActionReady(defaultAttack) ? defaultAttack : null;
+    }
+
+    public void BeginEnemyTurn() => enemyTurnNumber++;
+
+    public void ResetEnemyActionCooldowns()
+    {
+        enemyTurnNumber = 0;
+        enemyActionReadyTurns.Clear();
+    }
+
+    public bool IsEnemyActionReady(ActionData action)
+    {
+        return action != null &&
+               (!enemyActionReadyTurns.TryGetValue(action, out int readyTurn) || enemyTurnNumber >= readyTurn);
+    }
+
+    public void RecordEnemyActionUse(ActionData action)
+    {
+        if (action == null || action.enemyCooldownTurns <= 0) return;
+        enemyActionReadyTurns[action] = enemyTurnNumber + action.enemyCooldownTurns;
+    }
+
+    public void ApplyStartingBattleEffects()
+    {
+        if (startingBattleEffectsApplied) return;
+        startingBattleEffectsApplied = true;
+        if (IsDead || startingBattleEffects == null) return;
+
+        bool hasDebuff = activeDebuffs.Count > 0;
+        foreach (var effect in startingBattleEffects)
+        {
+            if (effect == null) continue;
+            if (effect.kind == BattleStartEffect.EffectKind.Buff)
+            {
+                AddBuff(effect.buffStat, effect.buffAmount, effect.buffDuration);
+                continue;
+            }
+
+            // Keep the one-debuff-per-unit rule: the first successful initial debuff owns the slot.
+            if (hasDebuff || effect.debuff == null || effect.debuff.turns <= 0) continue;
+            float applyChance = Mathf.Clamp(effect.debuff.applyChance, 0f, 100f);
+            if (applyChance <= 0f || (applyChance < 100f && UnityEngine.Random.value * 100f >= applyChance)) continue;
+            activeDebuffs.Add(new ActiveDebuff
+            {
+                settings = effect.debuff,
+                remainingTurns = effect.debuff.turns
+            });
+            hasDebuff = true;
+        }
+        UpdateUI();
     }
 
     public void AddBuff(ActionData.BuffStat stat, int amount, int duration)

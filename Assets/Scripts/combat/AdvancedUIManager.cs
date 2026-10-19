@@ -7,6 +7,7 @@ using UnityEngine.EventSystems;
 public class AdvancedUIManager : MonoBehaviour
 {
     public static AdvancedUIManager Instance;
+    private bool battleUIVisible;
 
     [Header("Action Menu (Fixed Position)")]
     public RectTransform actionMenuPanel;
@@ -360,6 +361,7 @@ public class AdvancedUIManager : MonoBehaviour
         CreateStatusTooltip();
 
         if (enemyHudPanel != null) enemyHudPanel.SetActive(false);
+        if (enemyBuffContainer != null) enemyBuffContainer.gameObject.SetActive(false);
         if (turnOrderContainer != null) turnOrderContainer.gameObject.SetActive(false);
         if (changeTargetHintText != null) changeTargetHintText.SetActive(false);
 
@@ -374,8 +376,9 @@ public class AdvancedUIManager : MonoBehaviour
 
         foreach (var hud in partyHUDList)
         {
-            if (hud != null && hud.gameObject != null)
-                hud.gameObject.SetActive(false);
+            if (hud == null) continue;
+            if (hud.buffContainer != null) hud.buffContainer.gameObject.SetActive(false);
+            if (hud.gameObject != null) hud.gameObject.SetActive(false);
         }
 
         ShowActionMenu(false);
@@ -738,6 +741,9 @@ public class AdvancedUIManager : MonoBehaviour
         {
             layout = enemyBuffContainer.gameObject.AddComponent<HorizontalLayoutGroup>();
         }
+        // This container may be outside the main enemy panel in the Canvas.
+        // Keep it synchronized with the battle HUD visibility state.
+        enemyBuffContainer.gameObject.SetActive(battleUIVisible);
         // Icons flow left-to-right, starting at the left edge of the container.
         layout.childAlignment = TextAnchor.MiddleLeft;
         layout.spacing = 4f;
@@ -908,6 +914,8 @@ public class AdvancedUIManager : MonoBehaviour
 
     public void ToggleAllUI(bool isShow)
     {
+        battleUIVisible = isShow;
+        if (!isShow) HideStatusTooltip();
         ShowActionMenu(isShow);
         if (!isShow) ToggleChangeTargetHint(false);
 
@@ -920,14 +928,17 @@ public class AdvancedUIManager : MonoBehaviour
             else
                 enemyHudPanel.SetActive(false);
         }
+        if (enemyBuffContainer != null)
+            enemyBuffContainer.gameObject.SetActive(isShow && boundEnemy != null && !boundEnemy.IsDead);
 
         for (int i = 0; i < partyHUDList.Count; i++)
         {
-            if (partyHUDList[i] != null && partyHUDList[i].gameObject != null)
-            {
-                bool shouldShow = isShow && CombatManager.Instance != null && i < CombatManager.Instance.playerParty.Count && CombatManager.Instance.playerParty[i] != null;
-                partyHUDList[i].gameObject.SetActive(shouldShow);
-            }
+            PartyHUDUnit hud = partyHUDList[i];
+            if (hud == null) continue;
+            bool shouldShow = isShow && hud.gameObject != null && CombatManager.Instance != null &&
+                              i < CombatManager.Instance.playerParty.Count && CombatManager.Instance.playerParty[i] != null;
+            if (hud.buffContainer != null) hud.buffContainer.gameObject.SetActive(shouldShow);
+            if (hud.gameObject != null) hud.gameObject.SetActive(shouldShow);
         }
 
         if (isShow && CombatManager.Instance != null) RegisterPartyHP(CombatManager.Instance.playerParty);

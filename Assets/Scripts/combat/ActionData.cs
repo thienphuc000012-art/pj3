@@ -37,6 +37,10 @@ public class ActionData : ScriptableObject
     [Tooltip("Dương (+) là hồi Stain, Âm (-) là tốn Stain. (Vd: Attack = 1, Skill = -1)")]
     public int stainChange = 0;
 
+    [Header("Enemy AI Cooldown")]
+    [Min(0), Tooltip("Cooldown chỉ áp dụng cho Enemy AI. 2 nghĩa là dùng ở lượt Enemy 1 thì sẵn sàng dùng lại ở lượt Enemy 3. 0 = không cooldown.")]
+    public int enemyCooldownTurns;
+
     // Preserve serialized values used by existing skill assets.
     public enum BuffStat { None = 0, Atk = 1, Def = 2, Crit = 3, Shield = 4, CritDamage = 5 }
     [Header("Buff & Shield Settings")]

@@ -35,6 +35,16 @@ public class EnemyCombatSetup
     }
 }
 
+[Serializable]
+public class BattleUnitStartingEffectsSetup
+{
+    [Tooltip("Bật để thay thế hiệu ứng khởi đầu trên prefab bằng cấu hình riêng của encounter này. Để tắt sẽ dùng cấu hình trên BattleUnit.")]
+    public bool overridePrefabEffects;
+
+    [Tooltip("Các buff/debuff áp dụng riêng cho unit ở vị trí này khi trận bắt đầu.")]
+    public List<BattleStartEffect> effects = new List<BattleStartEffect>();
+}
+
 public class BattleEncounterSetup : MonoBehaviour
 {
     [Header("Encounter Setup ID")]
@@ -89,6 +99,27 @@ public class BattleEncounterSetup : MonoBehaviour
 
     [Header("Enemy Setup - thứ tự phải giống enemyPrefabs")]
     public List<EnemyCombatSetup> enemies = new List<EnemyCombatSetup>();
+
+    [Header("Starting Battle Effects theo encounter")]
+    [Tooltip("Element 0 áp dụng cho playerParty[0], element 1 cho playerParty[1], ... Chỉ ghi đè hiệu ứng trên prefab khi bật Override Prefab Effects.")]
+    public List<BattleUnitStartingEffectsSetup> playerStartingEffects = new List<BattleUnitStartingEffectsSetup>();
+    [Tooltip("Element 0 áp dụng cho enemyParty[0], element 1 cho enemyParty[1], ... Có thể cấu hình riêng từng enemy trong encounter này.")]
+    public List<BattleUnitStartingEffectsSetup> enemyStartingEffects = new List<BattleUnitStartingEffectsSetup>();
+
+    public void ApplyStartingEffects(BattleUnit unit, bool isPlayer, int unitIndex)
+    {
+        if (unit == null) return;
+
+        List<BattleUnitStartingEffectsSetup> setups = isPlayer ? playerStartingEffects : enemyStartingEffects;
+        if (setups == null || unitIndex < 0 || unitIndex >= setups.Count) return;
+
+        BattleUnitStartingEffectsSetup setup = setups[unitIndex];
+        if (setup == null || !setup.overridePrefabEffects) return;
+
+        unit.startingBattleEffects = setup.effects != null
+            ? new List<BattleStartEffect>(setup.effects)
+            : new List<BattleStartEffect>();
+    }
 
     [Header("Optional Cameras cho Encounter")]
     [Tooltip("Nếu để trống sẽ dùng Battle Start Camera mặc định trong CameraManager.")]

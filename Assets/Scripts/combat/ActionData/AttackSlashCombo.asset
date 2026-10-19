@@ -27,9 +27,13 @@ MonoBehaviour:
   isAoE: 0
   isSelfOnly: 0
   stainChange: 0
+  enemyCooldownTurns: 0
   buffStat: 0
   buffAmount: 0
   buffDuration: 0
+  debuffs: []
+  cleanse: 0
+  statusOnly: 0
   isMelee: 0
   screenSlash: 1
   screenSlashColor: {r: 0.72, g: 0.86, b: 0.94, a: 1}
@@ -47,6 +51,10 @@ MonoBehaviour:
   screenSlashTimeScale: 0.22
   vfxType: 0
   vfxPrefab: {fileID: 0}
+  vfxPlaybackSpeed: 1
+  ultimateAuraVfxPrefab: {fileID: 0}
+  ultimateAuraVfxLocalOffset: {x: 0, y: 1, z: 0}
+  ultimateAuraVfxPlaybackSpeed: 1
   castVfxPrefab: {fileID: 0}
   hitVfxPrefab: {fileID: 0}
   useCustomHitVfxOffset: 0
@@ -76,3 +84,5 @@ MonoBehaviour:
   swordSlashVfxLocalEuler: {x: 0, y: 0, z: 0}
   swordSlashVfxScale: {x: 1, y: 1, z: 1}
   swordSlashVfxLifetime: 2
+  swordSlashTravelsToTarget: 1
+  swordSlashTravelSpeed: 24

@@ -181,6 +181,12 @@ public class CombatManager : MonoBehaviour
         state = CombatState.Start;
         SetupPositions();
 
+        foreach (var unit in playerParty.Concat(enemyParty).Where(unit => unit != null))
+        {
+            unit.ResetEnemyActionCooldowns();
+            unit.ApplyStartingBattleEffects();
+        }
+
         currentStains = maxStains;
         AdvancedUIManager.Instance.UpdateStainsUI(currentStains, 0);
 
@@ -540,6 +546,8 @@ public class CombatManager : MonoBehaviour
             return;
         }
 
+        if (!currentActiveUnit.isPlayer) currentActiveUnit.BeginEnemyTurn();
+
         if (currentActiveUnit.HasParalysis)
         {
             state = CombatState.Executing;
@@ -855,6 +863,7 @@ public class CombatManager : MonoBehaviour
             if (endTurnAfter) EndCurrentTurn();
             yield break;
         }
+        if (!attacker.isPlayer) attacker.RecordEnemyActionUse(action);
         UltimateCinematic cinematic = null;
         int cinematicTicket = 0;
         if (action.isUltimate)

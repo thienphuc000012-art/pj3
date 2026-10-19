@@ -560,6 +560,7 @@ public class CampaignSession : MonoBehaviour
             var member = Data.party[i];
             var unit = Instantiate(Template(member), manager.playerSlots[i].position, manager.playerSlots[i].rotation);
             unit.gameObject.SetActive(true); unit.isPlayer = true;
+            if (battleSetup != null) battleSetup.ApplyStartingEffects(unit, true, i);
             unit.maxHP = MaxHP(member); unit.baseAtk += member.atkBonus; unit.baseDef += member.defBonus;
             unit.baseCrit += member.critBonus; unit.baseCritDamage += member.critDamageBonus;
             unit.SetPersistentHP(member.hp);
@@ -570,6 +571,7 @@ public class CampaignSession : MonoBehaviour
         {
             var unit = Instantiate(encounter.enemies[i], manager.enemySlots[i].position, manager.enemySlots[i].rotation);
             unit.gameObject.SetActive(true); unit.isPlayer = false; unit.SetPersistentHP(unit.maxHP);
+            if (battleSetup != null) battleSetup.ApplyStartingEffects(unit, false, i);
             manager.enemyParty.Add(unit);
         }
         RebindCameras(oldPlayers, oldEnemies, manager);
@@ -709,6 +711,15 @@ public class CampaignSession : MonoBehaviour
     public void RefreshBattleItems(CombatManager manager)
     {
         manager.inventoryItems = Config.items.Where(x => x.combatAction != null && Count(x.id) > 0).Select(x => x.combatAction).Distinct().ToList();
+    }
+    public bool TryGetBattleItemCount(ActionData action, out int count)
+    {
+        count = 0;
+        if (action == null || Config?.items == null) return false;
+        var item = Config.items.Find(x => x != null && x.combatAction == action);
+        if (item == null) return false;
+        count = Data != null ? Data.Count(item.id) : 0;
+        return true;
     }
     public bool ConsumeBattleItem(ActionData action)
     {
