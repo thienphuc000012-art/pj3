@@ -270,6 +270,8 @@ public class BattleUnit : MonoBehaviour
     public float deathAnimationTimeout = 30f;
     private bool deathStateSeen;
     private bool deathAnimationFinished;
+    private bool deathAnimationPending;
+    private bool deathAnimationTriggered;
 
     private void ObserveDeathAnimation()
     {
@@ -317,10 +319,34 @@ public class BattleUnit : MonoBehaviour
     {
         currentHP = Mathf.Clamp(hp, 0, maxHP);
         deathStateSeen = deathAnimationFinished = false;
+        deathAnimationPending = false;
+        deathAnimationTriggered = false;
         activeBuffs.Clear();
         activeDebuffs.Clear();
-        if (IsDead && animator != null) animator.SetTrigger("Die");
+        if (IsDead) StartDeathAnimation();
         UpdateUI();
+    }
+
+    public void PlayPendingDeathAnimation()
+    {
+        if (!IsDead || !deathAnimationPending) return;
+        deathAnimationPending = false;
+        StartDeathAnimation();
+    }
+
+    private void StartDeathAnimation()
+    {
+        if (deathAnimationTriggered) return;
+        deathAnimationTriggered = true;
+        deathStateSeen = false;
+        deathAnimationFinished = false;
+        if (animator == null) return;
+
+        // Discard queued attack/Hit/Parry triggers before entering the death state.
+        foreach (AnimatorControllerParameter parameter in animator.parameters)
+            if (parameter.type == AnimatorControllerParameterType.Trigger)
+                animator.ResetTrigger(parameter.nameHash);
+        animator.SetTrigger("Die");
     }
     public bool isPlayer;
 
@@ -433,8 +459,10 @@ public class BattleUnit : MonoBehaviour
 
     public System.Collections.IEnumerator WaitForDebuffPresentation(bool includeHit)
     {
-        var clip = includeHit ? ResolveHitReactionClip(false) : null;
-        float remaining = includeHit ? Mathf.Max(0.5f, clip != null ? clip.length / Mathf.Max(0.01f, animator != null ? animator.speed : 1f) : 0f) : 0.3f;
+        // Damage ticks are held by the configured VFX lifetime. Do not extend
+        // the camera hold to the full Hit clip; the animation can finish while
+        // the configured presentation window remains in control.
+        float remaining = includeHit ? 0f : 0.3f;
         do
         {
             yield return null;
@@ -511,13 +539,11 @@ public class BattleUnit : MonoBehaviour
         float lifetime = Mathf.Max(0.1f, settings.turnVfxLifetime);
         foreach (var particles in effect.GetComponentsInChildren<ParticleSystem>())
         {
-            var main = particles.main;
-            // Allow one-shot particles to finish; looping effects use the configured lifetime.
-            if (!main.loop)
-                lifetime = Mathf.Max(lifetime, (main.startDelay.constantMax + main.duration + main.startLifetime.constantMax) / Mathf.Max(0.01f, main.simulationSpeed));
             particles.Play();
         }
         debuffVfxInstances.Add(effect);
+        // Treat Turn Vfx Lifetime as the authoritative presentation/camera hold,
+        // even when child particles have a longer simulated lifetime.
         Destroy(effect, lifetime);
     }
 
@@ -572,14 +598,12 @@ public class BattleUnit : MonoBehaviour
         {
             foreach (SwordBladeTrail trail in GetComponentsInChildren<SwordBladeTrail>(true))
                 trail.StopTrail();
-            if (animator != null)
-            {
-                // Discard queued attack/Hit/Parry triggers before entering Die.
-                foreach (AnimatorControllerParameter parameter in animator.parameters)
-                    if (parameter.type == AnimatorControllerParameterType.Trigger)
-                        animator.ResetTrigger(parameter.nameHash);
-                animator.SetTrigger("Die");
-            }
+            deathStateSeen = false;
+            deathAnimationFinished = false;
+            deathAnimationTriggered = false;
+            deathAnimationPending = true;
+            // Outside a managed combat HUD there is no HP trail to wait for.
+            if (AdvancedUIManager.Instance == null) PlayPendingDeathAnimation();
         }
         else if (animator != null && finalDamage > 0)
         {

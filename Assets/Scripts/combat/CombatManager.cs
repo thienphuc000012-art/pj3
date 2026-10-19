@@ -488,15 +488,25 @@ public class CombatManager : MonoBehaviour
         isTransitioningTurn = true;
         GetComponent<UltimateCinematic>()?.End();
         state = victory ? CombatState.Won : CombatState.Lost;
-        AdvancedUIManager.Instance.ToggleAllUI(false);
+        AdvancedUIManager.Instance.ShowActionMenu(false);
+        AdvancedUIManager.Instance.ToggleChangeTargetHint(false);
         battleCompletionRoutine = StartCoroutine(CompleteBattleAfterDeath(victory));
     }
 
     private IEnumerator CompleteBattleAfterDeath(bool victory)
     {
-        // Death animations keep running together. Already-finished deaths return immediately.
+        // Keep the HUD visible through the HP drain and death animation.
         foreach (var unit in playerParty.Concat(enemyParty).Where(u => u != null && u.IsDead).Distinct().ToArray())
-            if (unit != null) yield return unit.WaitForDeathAnimation();
+        {
+            if (unit == null) continue;
+            if (AdvancedUIManager.Instance != null)
+                yield return AdvancedUIManager.Instance.WaitForDamageDrain(unit);
+            else
+                unit.PlayPendingDeathAnimation();
+            yield return unit.WaitForDeathAnimation();
+        }
+        if (AdvancedUIManager.Instance != null)
+            AdvancedUIManager.Instance.ToggleAllUI(false);
         ClearCombatVFX();
         if (CampaignSession.Instance != null && CampaignSession.Instance.InEncounter)
             CampaignSession.Instance.FinishBattle(this, victory);
@@ -2746,7 +2756,23 @@ public class CombatManager : MonoBehaviour
         }
         turnTransitionRoutine = null;
         if (AdvancedUIManager.Instance != null)
+        {
             AdvancedUIManager.Instance.DrainDamageAtTurnEnd();
+        }
+
+        // A lethal unit only enters its Die state after its own HP trail reaches
+        // the real HP value. Other units' nonlethal trails may continue as usual.
+        var deadUnits = playerParty.Concat(enemyParty)
+            .Where(unit => unit != null && unit.IsDead)
+            .Distinct()
+            .ToArray();
+        foreach (var unit in deadUnits)
+        {
+            if (AdvancedUIManager.Instance != null)
+                yield return AdvancedUIManager.Instance.WaitForDamageDrain(unit);
+            else
+                unit.PlayPendingDeathAnimation();
+        }
 
         if (enemyParty.All(e => e == null || e.IsDead)) { CompleteBattle(true); yield break; }
         if (playerParty.All(p => p == null || p.IsDead)) { CompleteBattle(false); yield break; }

@@ -2,6 +2,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.EventSystems;
 
 public class AdvancedUIManager : MonoBehaviour
 {
@@ -108,9 +109,18 @@ public class AdvancedUIManager : MonoBehaviour
     public Image enemyHpFill;
     [Tooltip("Image viền nằm trên HP Fill. Để trống sẽ tự tạo khi chạy.")]
     public Image enemyHpBorder;
-    [Tooltip("BuffContainer của enemy. Để trống sẽ tự tạo dưới tên enemy khi có debuff.")]
+    [Tooltip("BuffContainer Enemy độc lập với phần name. Để trống sẽ tự tạo làm object cùng cấp với name.")]
     public Transform enemyBuffContainer;
+    [Tooltip("RectTransform làm cha cho BuffContainer Enemy. Để trống sẽ dùng cùng vùng cha với HP/name.")]
+    public RectTransform enemyBuffContainerParent;
+    [Tooltip("Vị trí neo của BuffContainer Enemy trong RectTransform cha.")]
+    public Vector2 enemyBuffContainerAnchor = new Vector2(0.5f, 0f);
+    public Vector2 enemyBuffContainerPivot = new Vector2(0.5f, 1f);
+    [Tooltip("Vị trí tương đối theo anchor; có thể chỉnh trực tiếp trong Inspector.")]
+    public Vector2 enemyBuffContainerPosition = new Vector2(0f, -6f);
+    public Vector2 enemyBuffContainerSize = new Vector2(220f, 38f);
     private readonly DebuffIconUI enemyDebuffIcon = new DebuffIconUI();
+    private readonly List<GameObject> enemyBuffIcons = new List<GameObject>();
     [Header("HP Damage Trail")]
     [Min(0.05f)] public float enemyHpDrainDuration = 0.8f;
     [Min(0.05f)] public float playerHpDrainDuration = 0.8f;
@@ -166,6 +176,14 @@ public class AdvancedUIManager : MonoBehaviour
     public GameObject buffIconPrefab; // Prefab Image dùng làm Icon Buff
     public List<BuffSpriteMapping> buffSprites; // Map loại Buff với hình ảnh
 
+    [Header("Status Effect Info Panel")]
+    public Vector2 statusTooltipSize = new Vector2(300f, 120f);
+    public Vector2 statusTooltipPointerOffset = new Vector2(18f, -18f);
+    private Canvas statusTooltipCanvas;
+    private RectTransform statusTooltipRect;
+    private TextMeshProUGUI statusTooltipTitle;
+    private TextMeshProUGUI statusTooltipBody;
+
     [System.Serializable]
     public struct BuffSpriteMapping
     {
@@ -181,11 +199,165 @@ public class AdvancedUIManager : MonoBehaviour
         }
         return null;
     }
+
+    private void CreateStatusTooltip()
+    {
+        statusTooltipCanvas = GetComponentInParent<Canvas>();
+        if (statusTooltipCanvas == null) statusTooltipCanvas = FindAnyObjectByType<Canvas>();
+        if (statusTooltipCanvas == null) return;
+        statusTooltipCanvas = statusTooltipCanvas.rootCanvas;
+
+        var panel = new GameObject("Status Effect Info Panel", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(CanvasGroup));
+        panel.transform.SetParent(statusTooltipCanvas.transform, false);
+        statusTooltipRect = panel.GetComponent<RectTransform>();
+        statusTooltipRect.anchorMin = statusTooltipRect.anchorMax = new Vector2(0f, 1f);
+        statusTooltipRect.pivot = new Vector2(0f, 1f);
+        statusTooltipRect.sizeDelta = statusTooltipSize;
+        var background = panel.GetComponent<Image>();
+        background.color = new Color(0.015f, 0.035f, 0.045f, 0.96f);
+        background.raycastTarget = false;
+        var group = panel.GetComponent<CanvasGroup>();
+        group.interactable = false;
+        group.blocksRaycasts = false;
+
+        statusTooltipTitle = CreateTooltipText("Title", statusTooltipRect, 17f, FontStyles.Bold);
+        RectTransform titleRect = statusTooltipTitle.rectTransform;
+        titleRect.anchorMin = new Vector2(0f, 1f);
+        titleRect.anchorMax = new Vector2(1f, 1f);
+        titleRect.pivot = new Vector2(0f, 1f);
+        titleRect.offsetMin = new Vector2(12f, -37f);
+        titleRect.offsetMax = new Vector2(-12f, -8f);
+        statusTooltipTitle.color = new Color(0.95f, 0.78f, 0.42f);
+
+        statusTooltipBody = CreateTooltipText("Details", statusTooltipRect, 14f, FontStyles.Normal);
+        RectTransform bodyRect = statusTooltipBody.rectTransform;
+        bodyRect.anchorMin = Vector2.zero;
+        bodyRect.anchorMax = Vector2.one;
+        bodyRect.pivot = new Vector2(0f, 1f);
+        bodyRect.offsetMin = new Vector2(12f, 10f);
+        bodyRect.offsetMax = new Vector2(-12f, -42f);
+        statusTooltipBody.color = new Color(0.9f, 0.93f, 0.94f);
+        panel.SetActive(false);
+    }
+
+    private static TextMeshProUGUI CreateTooltipText(string objectName, RectTransform parent, float fontSize, FontStyles style)
+    {
+        var textObject = new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        textObject.transform.SetParent(parent, false);
+        var text = textObject.GetComponent<TextMeshProUGUI>();
+        text.fontSize = fontSize;
+        text.fontStyle = style;
+        text.textWrappingMode = TextWrappingModes.Normal;
+        text.overflowMode = TextOverflowModes.Overflow;
+        text.alignment = TextAlignmentOptions.TopLeft;
+        text.raycastTarget = false;
+        return text;
+    }
+
+    public void BindBuffTooltip(GameObject icon, ActionData.BuffStat stat, int amount, int stacks, int turns)
+    {
+        string name = GetBuffDisplayName(stat);
+        string value = stat == ActionData.BuffStat.Crit || stat == ActionData.BuffStat.CritDamage
+            ? $"+{amount}%"
+            : $"+{amount}";
+        string detail = stat == ActionData.BuffStat.Shield
+            ? $"Hấp thụ tối đa {amount} sát thương. Còn {turns} lượt."
+            : $"{name}: {value}. Còn {turns} lượt.";
+        if (stacks > 1) detail += $" ({stacks} cộng dồn)";
+        BindStatusTooltip(icon, name, detail);
+    }
+
+    public void BindDebuffTooltip(GameObject icon, BattleUnit.ActiveDebuff activeDebuff)
+    {
+        if (activeDebuff == null || activeDebuff.settings == null) return;
+        var settings = activeDebuff.settings;
+        string name;
+        string detail;
+        switch (settings.type)
+        {
+            case ActionData.DebuffType.Burn:
+                name = "Thiêu đốt";
+                detail = $"Trừ {settings.burnDamage} HP cuối lượt và giảm ATK {settings.burnAttackReductionPercent:0.#}%. Còn {activeDebuff.remainingTurns} lượt.";
+                break;
+            case ActionData.DebuffType.Paralysis:
+                name = "Tê liệt";
+                detail = $"Có {settings.paralysisSkipChance:0.#}% khả năng mất lượt. Còn {activeDebuff.remainingTurns} lượt.";
+                break;
+            default:
+                name = "Nhiễm độc";
+                detail = $"Mất {settings.poisonMaxHpPercent:0.#}% HP tối đa cuối lượt. Còn {activeDebuff.remainingTurns} lượt.";
+                break;
+        }
+        BindStatusTooltip(icon, name, detail);
+    }
+
+    private static string GetBuffDisplayName(ActionData.BuffStat stat)
+    {
+        switch (stat)
+        {
+            case ActionData.BuffStat.Atk: return "Tăng ATK";
+            case ActionData.BuffStat.Def: return "Tăng DEF";
+            case ActionData.BuffStat.Crit: return "Tăng tỷ lệ chí mạng";
+            case ActionData.BuffStat.Shield: return "Lá chắn";
+            case ActionData.BuffStat.CritDamage: return "Tăng sát thương chí mạng";
+            default: return "Hiệu ứng tăng cường";
+        }
+    }
+
+    private void BindStatusTooltip(GameObject icon, string title, string detail)
+    {
+        if (icon == null) return;
+        var graphic = icon.GetComponent<Graphic>();
+        if (graphic != null) graphic.raycastTarget = true;
+        foreach (var childText in icon.GetComponentsInChildren<TMP_Text>(true))
+            childText.raycastTarget = false;
+
+        var hover = icon.GetComponent<StatusTooltipHover>();
+        if (hover == null) hover = icon.AddComponent<StatusTooltipHover>();
+        hover.Configure(this, title, detail);
+    }
+
+    public void ShowStatusTooltip(string title, string detail, Vector2 pointerPosition)
+    {
+        if (statusTooltipRect == null || statusTooltipCanvas == null) return;
+        statusTooltipTitle.text = title;
+        statusTooltipBody.text = detail;
+        statusTooltipRect.sizeDelta = statusTooltipSize;
+        statusTooltipRect.SetAsLastSibling();
+        statusTooltipRect.gameObject.SetActive(true);
+
+        MoveStatusTooltip(pointerPosition);
+    }
+
+    public void MoveStatusTooltip(Vector2 pointerPosition)
+    {
+        if (statusTooltipRect == null || statusTooltipCanvas == null || !statusTooltipRect.gameObject.activeSelf) return;
+        float scale = Mathf.Max(0.01f, statusTooltipCanvas.scaleFactor);
+        Vector2 size = statusTooltipRect.rect.size * scale;
+        Vector2 screenPosition = pointerPosition + statusTooltipPointerOffset;
+        if (screenPosition.x + size.x > Screen.width - 8f)
+            screenPosition.x = pointerPosition.x - size.x - Mathf.Abs(statusTooltipPointerOffset.x);
+        if (screenPosition.y - size.y < 8f)
+            screenPosition.y = pointerPosition.y + size.y + Mathf.Abs(statusTooltipPointerOffset.y);
+        screenPosition.x = Mathf.Clamp(screenPosition.x, 8f, Mathf.Max(8f, Screen.width - size.x - 8f));
+        screenPosition.y = Mathf.Clamp(screenPosition.y, size.y + 8f, Screen.height - 8f);
+
+        RectTransform canvasRect = statusTooltipCanvas.transform as RectTransform;
+        Camera eventCamera = statusTooltipCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : statusTooltipCanvas.worldCamera;
+        if (canvasRect != null && RectTransformUtility.ScreenPointToWorldPointInRectangle(canvasRect, screenPosition, eventCamera, out Vector3 worldPosition))
+            statusTooltipRect.position = worldPosition;
+    }
+
+    public void HideStatusTooltip()
+    {
+        if (statusTooltipRect != null) statusTooltipRect.gameObject.SetActive(false);
+    }
     // ------------------------------------
 
     void Awake()
     {
         Instance = this;
+        CreateStatusTooltip();
 
         if (enemyHudPanel != null) enemyHudPanel.SetActive(false);
         if (turnOrderContainer != null) turnOrderContainer.gameObject.SetActive(false);
@@ -411,6 +583,7 @@ public class AdvancedUIManager : MonoBehaviour
         if (boundEnemy != null) boundEnemy.OnStatsChanged -= UpdateEnemyHPUISafe;
         foreach (var pair in damageStates)
             if (pair.Key != null) pair.Key.OnStatsChanged -= pair.Value.listener;
+        if (statusTooltipRect != null) Destroy(statusTooltipRect.gameObject);
     }
 
     private void TrackDamage(BattleUnit unit)
@@ -430,8 +603,25 @@ public class AdvancedUIManager : MonoBehaviour
         {
             data.start = data.shown;
             data.elapsed = 0f;
-            data.draining = true;
+            data.draining = data.shown > data.actual + 0.0001f;
         }
+
+        foreach (var pair in damageStates)
+            if (!pair.Value.draining && pair.Key != null)
+                pair.Key.PlayPendingDeathAnimation();
+    }
+
+    public System.Collections.IEnumerator WaitForDamageDrain(BattleUnit unit)
+    {
+        if (unit == null) yield break;
+        if (!damageStates.TryGetValue(unit, out DamageTrailState data))
+        {
+            unit.PlayPendingDeathAnimation();
+            yield break;
+        }
+
+        while (data.draining) yield return null;
+        unit.PlayPendingDeathAnimation();
     }
 
     private void UpdateDamageTrails()
@@ -444,7 +634,11 @@ public class AdvancedUIManager : MonoBehaviour
             data.elapsed += Time.deltaTime;
             float t = Mathf.Clamp01(data.elapsed / Mathf.Max(0.05f, duration));
             data.shown = Mathf.Lerp(data.start, data.actual, Mathf.SmoothStep(0f, 1f, t));
-            if (t >= 1f) data.draining = false;
+            if (t >= 1f)
+            {
+                data.draining = false;
+                if (pair.Key != null) pair.Key.PlayPendingDeathAnimation();
+            }
         }
         if (boundEnemy != null && damageStates.TryGetValue(boundEnemy, out var enemy))
             RenderDamageTrail(enemyHpFill, ref enemyHpDamageTrail, enemy.shown);
@@ -496,26 +690,108 @@ public class AdvancedUIManager : MonoBehaviour
 
     void UpdateEnemyHPUISafe(int current, int max, int shield)
     {
-        if (enemyBuffContainer == null && boundEnemy != null && boundEnemy.activeDebuffs.Count > 0 && enemyNameText != null)
-        {
-            var go = new GameObject("BuffContainer Enemy", typeof(RectTransform), typeof(HorizontalLayoutGroup));
-            go.layer = enemyNameText.gameObject.layer;
-            var rect = go.GetComponent<RectTransform>();
-            rect.SetParent(enemyNameText.transform, false);
-            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0f);
-            rect.pivot = new Vector2(0.5f, 1f);
-            rect.anchoredPosition = new Vector2(0f, -6f);
-            rect.sizeDelta = new Vector2(180f, 36f);
-            var layout = go.GetComponent<HorizontalLayoutGroup>();
-            layout.childAlignment = TextAnchor.MiddleCenter;
-            layout.childControlWidth = layout.childControlHeight = false;
-            layout.childForceExpandWidth = layout.childForceExpandHeight = false;
-            enemyBuffContainer = rect;
-        }
+        EnsureEnemyBuffContainer();
         enemyDebuffIcon.Refresh(boundEnemy, enemyBuffContainer);
+        RefreshEnemyBuffIcons();
         if (enemyHpFill != null) enemyHpFill.fillAmount = (float)current / max;
         if (enemyHpText != null)
             enemyHpText.text = shield > 0 ? $"{current}/{max} <color=yellow>[+{shield}]</color>" : $"{current} / {max}";
+    }
+
+    private void EnsureEnemyBuffContainer()
+    {
+        if (enemyBuffContainer == null)
+        {
+            if (boundEnemy == null || enemyNameText == null) return;
+            var go = new GameObject("BuffContainer Enemy", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            bool useNameRelativePlacement = enemyBuffContainerParent == null;
+            RectTransform parent = enemyBuffContainerParent != null
+                ? enemyBuffContainerParent
+                : enemyHpFill != null && enemyHpFill.transform.parent is RectTransform hpParent
+                    ? hpParent
+                    : enemyNameText.rectTransform.parent as RectTransform;
+            if (parent == null) parent = enemyNameText.rectTransform;
+            go.layer = parent.gameObject.layer;
+            var rect = go.GetComponent<RectTransform>();
+            rect.SetParent(parent, false);
+            rect.pivot = enemyBuffContainerPivot;
+            rect.sizeDelta = enemyBuffContainerSize;
+            if (useNameRelativePlacement)
+            {
+                RectTransform nameRect = enemyNameText.rectTransform;
+                rect.anchorMin = rect.anchorMax = nameRect.anchorMin;
+                rect.anchoredPosition = nameRect.anchoredPosition +
+                    new Vector2(0f, -nameRect.rect.height * (1f - nameRect.pivot.y)) +
+                    enemyBuffContainerPosition;
+                rect.SetSiblingIndex(nameRect.GetSiblingIndex() + 1);
+            }
+            else
+            {
+                rect.anchorMin = rect.anchorMax = enemyBuffContainerAnchor;
+                rect.anchoredPosition = enemyBuffContainerPosition;
+            }
+            enemyBuffContainer = rect;
+        }
+
+        var layout = enemyBuffContainer.GetComponent<HorizontalLayoutGroup>();
+        if (layout == null)
+        {
+            layout = enemyBuffContainer.gameObject.AddComponent<HorizontalLayoutGroup>();
+        }
+        // Icons flow left-to-right, starting at the left edge of the container.
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.spacing = 4f;
+        layout.childControlWidth = layout.childControlHeight = false;
+        layout.childForceExpandWidth = layout.childForceExpandHeight = false;
+    }
+
+    private void RefreshEnemyBuffIcons()
+    {
+        if (enemyBuffIcons.Count > 0) HideStatusTooltip();
+        foreach (GameObject icon in enemyBuffIcons)
+            if (icon != null) Destroy(icon);
+        enemyBuffIcons.Clear();
+        if (boundEnemy == null || boundEnemy.IsDead || enemyBuffContainer == null || buffIconPrefab == null) return;
+
+        var groups = new List<EnemyBuffDisplay>();
+        foreach (ActiveBuff buff in boundEnemy.activeBuffs)
+        {
+            if (buff == null || buff.stat == ActionData.BuffStat.None) continue;
+            EnemyBuffDisplay group = null;
+            foreach (var existing in groups)
+                if (existing.stat == buff.stat) { group = existing; break; }
+            if (group == null)
+            {
+                group = new EnemyBuffDisplay { stat = buff.stat };
+                groups.Add(group);
+            }
+            group.amount += buff.amount;
+            group.stacks++;
+            group.turns = Mathf.Max(group.turns, buff.duration);
+        }
+
+        foreach (var group in groups)
+        {
+            GameObject icon = Instantiate(buffIconPrefab, enemyBuffContainer);
+            icon.name = "Enemy Buff " + group.stat;
+            Image image = icon.GetComponent<Image>();
+            if (image == null) { Destroy(icon); continue; }
+            Sprite sprite = GetBuffSprite(group.stat);
+            if (sprite != null) image.sprite = sprite;
+            image.raycastTarget = true;
+            var stackText = icon.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (stackText != null) stackText.text = group.stacks > 1 ? "x" + group.stacks : "";
+            BindBuffTooltip(icon, group.stat, group.amount, group.stacks, group.turns);
+            enemyBuffIcons.Add(icon);
+        }
+    }
+
+    private sealed class EnemyBuffDisplay
+    {
+        public ActionData.BuffStat stat;
+        public int amount;
+        public int stacks;
+        public int turns;
     }
 
     public void RegisterPartyHP(List<BattleUnit> playerList)
@@ -664,6 +940,66 @@ public class AdvancedUIManager : MonoBehaviour
     }
 }
 
+public sealed class StatusTooltipHover : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+{
+    private AdvancedUIManager manager;
+    private string title;
+    private string detail;
+    private bool isHovered;
+    private RectTransform iconRect;
+    private Canvas iconCanvas;
+
+    public void Configure(AdvancedUIManager tooltipManager, string tooltipTitle, string tooltipDetail)
+    {
+        manager = tooltipManager;
+        title = tooltipTitle;
+        detail = tooltipDetail;
+        iconRect = transform as RectTransform;
+        iconCanvas = GetComponentInParent<Canvas>();
+    }
+
+    private void Update()
+    {
+        if (manager == null || iconRect == null || iconCanvas == null || !iconCanvas.isActiveAndEnabled)
+            return;
+
+        Camera eventCamera = iconCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : iconCanvas.worldCamera;
+        bool pointerInside = RectTransformUtility.RectangleContainsScreenPoint(iconRect, Input.mousePosition, eventCamera);
+        if (pointerInside && !isHovered)
+        {
+            isHovered = true;
+            manager.ShowStatusTooltip(title, detail, Input.mousePosition);
+        }
+        else if (!pointerInside && isHovered)
+        {
+            isHovered = false;
+            manager.HideStatusTooltip();
+        }
+        else if (pointerInside)
+        {
+            manager.MoveStatusTooltip(Input.mousePosition);
+        }
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        if (manager != null && !isHovered) manager.ShowStatusTooltip(title, detail, eventData.position);
+        isHovered = true;
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        isHovered = false;
+        if (manager != null) manager.HideStatusTooltip();
+    }
+
+    private void OnDisable()
+    {
+        if (isHovered && manager != null) manager.HideStatusTooltip();
+        isHovered = false;
+    }
+}
+
 [System.Serializable]
 public class PartyHUDUnit
 {
@@ -789,6 +1125,8 @@ public class PartyHUDUnit
         // --- BUFF UI: gộp các buff cùng BuffStat thành 1 icon ---
         if (boundUnit != null && buffContainer != null)
         {
+            if (spawnedBuffIcons.Count > 0)
+                AdvancedUIManager.Instance?.HideStatusTooltip();
             groupedBuffs.Clear();
 
             // =========================================================
@@ -899,7 +1237,16 @@ public class PartyHUDUnit
                         group.stackCount > 1
                         ? "x" + group.stackCount
                         : "";
+                    stackText.raycastTarget = false;
                 }
+
+                img.raycastTarget = true;
+                AdvancedUIManager.Instance.BindBuffTooltip(
+                    newIcon,
+                    group.stat,
+                    group.totalAmount,
+                    group.stackCount,
+                    group.maxDuration);
 
                 spawnedBuffIcons.Add(img);
             }
@@ -951,7 +1298,11 @@ public sealed class DebuffIconUI
         var effect = unit != null && !unit.IsDead && unit.activeDebuffs.Count > 0 ? unit.activeDebuffs[0] : null;
         if (effect == null || container == null)
         {
-            if (image != null) image.gameObject.SetActive(false);
+            if (image != null)
+            {
+                if (image.gameObject.activeSelf) AdvancedUIManager.Instance?.HideStatusTooltip();
+                image.gameObject.SetActive(false);
+            }
             return;
         }
         if (image == null)
@@ -973,7 +1324,7 @@ public sealed class DebuffIconUI
                 label.rectTransform.anchorMin = Vector2.zero; label.rectTransform.anchorMax = Vector2.one;
                 label.rectTransform.offsetMin = label.rectTransform.offsetMax = Vector2.zero;
             }
-            image.raycastTarget = false;
+            image.raycastTarget = true;
             label.raycastTarget = false;
         }
         image.gameObject.name = "Debuff " + effect.settings.type;
@@ -991,6 +1342,7 @@ public sealed class DebuffIconUI
         label.fontSize = hasIcon ? 16 : 10;
         label.alignment = hasIcon ? TextAlignmentOptions.BottomRight : TextAlignmentOptions.Center;
         label.color = Color.white;
+        AdvancedUIManager.Instance?.BindDebuffTooltip(image.gameObject, effect);
     }
 
     public void Blink(float alpha)

@@ -63,7 +63,7 @@ public class ActionData : ScriptableObject
         [Tooltip("Burn/Poison: cuối lượt. Paralysis: đầu mỗi lượt còn tê liệt.")]
         public GameObject turnVfxPrefab;
         public Vector3 turnVfxLocalOffset = Vector3.up;
-        [Tooltip("Thời gian hiển thị VFX và giữ camera. VFX lặp dừng ở mốc này; particle một lần được chờ thêm nếu chưa kết thúc.")]
+        [Tooltip("Thời gian hiển thị VFX và giữ camera sau khi debuff gây sát thương. Particle bị dọn khi hết thời gian này.")]
         [Min(0.1f)] public float turnVfxLifetime = 2;
     }
     [Header("Debuffs & Cleanse")]

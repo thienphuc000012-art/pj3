@@ -40,7 +40,7 @@ MonoBehaviour:
     poisonMaxHpPercent: 0
     turnVfxPrefab: {fileID: 181074, guid: 363f0247579e53d4c85225375440bd67, type: 3}
     turnVfxLocalOffset: {x: 0, y: 0, z: 0}
-    turnVfxLifetime: 2
+    turnVfxLifetime: 1
   cleanse: 0
   statusOnly: 0
   isMelee: 0
@@ -60,6 +60,10 @@ MonoBehaviour:
   screenSlashTimeScale: 1
   vfxType: 2
   vfxPrefab: {fileID: 121928, guid: 313e5c5f850e5be429d4a6787a725f73, type: 3}
+  vfxPlaybackSpeed: 1
+  ultimateAuraVfxPrefab: {fileID: 0}
+  ultimateAuraVfxLocalOffset: {x: 0, y: 1, z: 0}
+  ultimateAuraVfxPlaybackSpeed: 1
   castVfxPrefab: {fileID: 0}
   hitVfxPrefab: {fileID: 0}
   useCustomHitVfxOffset: 0
@@ -84,3 +88,10 @@ MonoBehaviour:
   curveHeight: 2
   curveSideOffset: 0
   rfxUseGravity: 0
+  swordSlashVfxPrefab: {fileID: 0}
+  swordSlashVfxLocalOffset: {x: 0, y: 0, z: 0}
+  swordSlashVfxLocalEuler: {x: 0, y: 0, z: 0}
+  swordSlashVfxScale: {x: 1, y: 1, z: 1}
+  swordSlashVfxLifetime: 2
+  swordSlashTravelsToTarget: 1
+  swordSlashTravelSpeed: 24

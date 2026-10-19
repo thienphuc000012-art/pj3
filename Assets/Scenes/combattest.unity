@@ -712,9 +712,14 @@ MonoBehaviour:
   enemyHudPanel: {fileID: 1019893777}
   enemyHpFill: {fileID: 1563397434}
   enemyHpBorder: {fileID: 0}
-  enemyBuffContainer: {fileID: 0}
-  enemyHpDrainDuration: 0.8
-  playerHpDrainDuration: 0.8
+  enemyBuffContainer: {fileID: 643845430}
+  enemyBuffContainerParent: {fileID: 643845430}
+  enemyBuffContainerAnchor: {x: 0.5, y: 0}
+  enemyBuffContainerPivot: {x: 0.5, y: 1}
+  enemyBuffContainerPosition: {x: 0, y: -6}
+  enemyBuffContainerSize: {x: 733.5805, y: 41.1999}
+  enemyHpDrainDuration: 0.85
+  playerHpDrainDuration: 0.85
   enemyHpBorderOffsetMin: {x: -25.45506, y: -55.93742}
   enemyHpBorderOffsetMax: {x: 0.000041008, y: 44.18607}
   enemyNameText: {fileID: 881428119}
@@ -757,6 +762,8 @@ MonoBehaviour:
     sprite: {fileID: 21300000, guid: 0a45aa171e6abe24f9c211decff6cd8b, type: 3}
   - stat: 5
     sprite: {fileID: 21300000, guid: 0a45aa171e6abe24f9c211decff6cd8b, type: 3}
+  statusTooltipSize: {x: 300, y: 120}
+  statusTooltipPointerOffset: {x: 18, y: -18}
 --- !u!114 &75075911
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2324,8 +2331,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 1484.2041, y: -856}
-  m_SizeDelta: {x: 242.6983, y: 30.5}
+  m_AnchoredPosition: {x: 1370.7798, y: -891.4264}
+  m_SizeDelta: {x: 267.8461, y: 59.7931}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &371314643
 MonoBehaviour:
@@ -3000,6 +3007,68 @@ Transform:
   m_Children: []
   m_Father: {fileID: 749982063}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &643845429
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 643845430}
+  - component: {fileID: 643845431}
+  m_Layer: 5
+  m_Name: BuffContainer Enemy
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &643845430
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 643845429}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1734649716}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: -4, y: -57}
+  m_SizeDelta: {x: 733.5805, y: 41.1999}
+  m_Pivot: {x: 0.5, y: 1}
+--- !u!114 &643845431
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 643845429}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30649d3a9faa99c48a7b1166b86bf2a0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.HorizontalLayoutGroup
+  m_Padding:
+    m_Left: 0
+    m_Right: 0
+    m_Top: 0
+    m_Bottom: 0
+  m_ChildAlignment: 4
+  m_Spacing: 4
+  m_ChildForceExpandWidth: 0
+  m_ChildForceExpandHeight: 0
+  m_ChildControlWidth: 0
+  m_ChildControlHeight: 0
+  m_ChildScaleWidth: 0
+  m_ChildScaleHeight: 0
+  m_ReverseArrangement: 0
 --- !u!1001 &670815484
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3091,7 +3160,7 @@ PrefabInstance:
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: 'characterSkills.Array.data[0]'
       value: 
-      objectReference: {fileID: 11400000, guid: dc5555eb84a54dd419a184fb494cc3dd, type: 2}
+      objectReference: {fileID: 11400000, guid: 6de9ab5777c744e44b2765fd39d350a3, type: 2}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: 'characterSkills.Array.data[1]'
       value: 
@@ -4387,7 +4456,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 13.712116, y: -63.061035}
+  m_AnchoredPosition: {x: -4, y: -120}
   m_SizeDelta: {x: 650.146, y: 29.252}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &881428118
@@ -6630,8 +6699,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 1778.2041, y: -856}
-  m_SizeDelta: {x: 242.6983, y: 30.5}
+  m_AnchoredPosition: {x: 1716.6156, y: -895.1301}
+  m_SizeDelta: {x: 279.8351, y: 52.3806}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1196199402
 MonoBehaviour:
@@ -8240,6 +8309,7 @@ RectTransform:
   - {fileID: 1563397432}
   - {fileID: 1371621003}
   - {fileID: 881428117}
+  - {fileID: 643845430}
   m_Father: {fileID: 1019893778}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
@@ -9947,7 +10017,7 @@ MonoBehaviour:
   phase2HitClip: {fileID: 0}
   phase2CriticalHitClip: {fileID: 0}
   lastTarget: {fileID: 0}
-  speed: 1
+  speed: 1000
   unitPortrait: {fileID: 0}
   deathStateName: death
   deathAnimationTimeout: 30
@@ -10538,6 +10608,10 @@ PrefabInstance:
       propertyPath: isPlayer
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
+      propertyPath: enemyHpBorderSprite
+      value: 
+      objectReference: {fileID: 478957485, guid: 7eb202d07eec93a418208953fbaeedea, type: 3}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: characterSkills.Array.size
       value: 5
