@@ -99,6 +99,7 @@ public class BattleUnit_AnimationEvents : MonoBehaviour
     {
         if (CombatManager.Instance == null || !CombatManager.Instance.CanAcceptActionAnimationEvent(ownerUnit)) return;
         if (ownerUnit == null || ownerUnit.IsDead) return;
+        ownerUnit.GetComponent<ClawAttackTrailController>()?.StopTrail();
         if (ownerUnit != null) Debug.Log($"[Animation Event] {ownerUnit.unitName} ĐÃ ĐÁNH XONG HOÀN TOÀN!");
 
         // Bật cờ lên để CombatManager biết là có thể cho nhảy về
@@ -139,6 +140,7 @@ public class BattleUnit_AnimationEvents : MonoBehaviour
 
     public void AnimEvent_StopTrail()
     {
+        ownerUnit?.GetComponent<ClawAttackTrailController>()?.StopTrail();
         if (swordTrail != null)
         {
             swordTrail.StopTrail();

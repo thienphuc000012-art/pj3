@@ -2336,7 +2336,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleUnit
   unitName: MountainDragon
-  maxHP: 10
+  maxHP: 100
   enemyHpBorderSprite: {fileID: 0}
   parryUltimateGain: 15
   damageUltimateGain: 50
@@ -2347,12 +2347,13 @@ MonoBehaviour:
   defaultAttack: {fileID: 0}
   characterSkills: []
   isBoss: 1
-  actionsPerTurn: 1
+  actionsPerTurn: 3
   baseActionPattern:
-  - {fileID: 11400000, guid: ce73fe8b2ef5e344cb6c4fb667f35f8c, type: 2}
   - {fileID: 11400000, guid: 69dbd3a077aeb01498301ee97db39328, type: 2}
   - {fileID: 11400000, guid: c6b5f15b0183a3a4cb6cc4b95e3fdd3b, type: 2}
   - {fileID: 11400000, guid: dfeef8d7d0b01eb4c9250ca57f29e113, type: 2}
+  - {fileID: 11400000, guid: ce73fe8b2ef5e344cb6c4fb667f35f8c, type: 2}
+  startingBattleEffects: []
   bossPhases:
   - hpPercentThreshold: 0.5
     actionsPerTurn: 1

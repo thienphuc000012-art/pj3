@@ -17999,6 +17999,11 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 1031154281, guid: abc00000000014629984655225578207, type: 3}
   m_PrefabInstance: {fileID: 758130750}
   m_PrefabAsset: {fileID: 0}
+--- !u!4 &789307955 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 6954722333931540948, guid: 34c9cae981207ec4e9ee2c9c116d9442, type: 3}
+  m_PrefabInstance: {fileID: 1749297309}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &802537253
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -650609,6 +650614,18 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8798339202372134501, guid: 34c9cae981207ec4e9ee2c9c116d9442, type: 3}
+      propertyPath: handTransform
+      value: 
+      objectReference: {fileID: 789307955}
+    - target: {fileID: 8798339202372134501, guid: 34c9cae981207ec4e9ee2c9c116d9442, type: 3}
+      propertyPath: actionsPerTurn
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8798339202372134501, guid: 34c9cae981207ec4e9ee2c9c116d9442, type: 3}
+      propertyPath: leftHandTransform
+      value: 
+      objectReference: {fileID: 2076468255}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -658587,6 +658604,11 @@ Transform:
   - {fileID: 1070058483}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!4 &2076468255 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3839410517709074254, guid: 34c9cae981207ec4e9ee2c9c116d9442, type: 3}
+  m_PrefabInstance: {fileID: 1749297309}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &2076489854
 PrefabInstance:
   m_ObjectHideFlags: 0

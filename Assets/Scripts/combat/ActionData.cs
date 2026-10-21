@@ -206,4 +206,14 @@ public class ActionData : ScriptableObject
     public bool swordSlashTravelsToTarget = true;
     [Min(0.1f), Tooltip("Travel speed for a sword slash used by a Shoot or Beam action.")]
     public float swordSlashTravelSpeed = 24f;
+
+    [Header("Enemy Claw Attack Trail")]
+    [Tooltip("Emit three fine, tapered claw streaks from the animated hand during this attack.")]
+    public bool useClawAttackTrailVfx;
+    public Color clawAttackTrailColor = new Color(.88f, .92f, .96f, 1f);
+    [Min(.05f)] public float clawAttackTrailLifetime = .14f;
+    [Tooltip("Trail width as a multiplier of the enemy's estimated hand width. 1 = about one hand-width before the per-line taper.")]
+    [Min(.1f)] public float clawAttackTrailWidth = 1f;
+    [Tooltip("Spacing between the three lines as a fraction of the estimated hand width.")]
+    [Min(0f)] public float clawAttackTrailHandSpread = .5f;
 }

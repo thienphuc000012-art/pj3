@@ -884,6 +884,7 @@ public class CombatManager : MonoBehaviour
         finally
         {
             FinishUltimateAuraVFX(attacker);
+            StopClawAttackTrail(attacker);
             acceptingActionAnimationEvents = false;
             animationActionOwner = null;
             animationActionData = null;
@@ -896,6 +897,20 @@ public class CombatManager : MonoBehaviour
     private BattleUnit animationActionOwner;
     private ActionData animationActionData;
     private bool acceptingActionAnimationEvents;
+
+    private static void StartClawAttackTrail(BattleUnit attacker, ActionData action)
+    {
+        if (attacker == null || action == null || attacker.isPlayer || !action.useClawAttackTrailVfx) return;
+        var trail = attacker.GetComponent<ClawAttackTrailController>();
+        if (trail == null) trail = attacker.gameObject.AddComponent<ClawAttackTrailController>();
+        trail.Begin(action);
+    }
+
+    private static void StopClawAttackTrail(BattleUnit attacker)
+    {
+        if (attacker == null) return;
+        attacker.GetComponent<ClawAttackTrailController>()?.StopTrail();
+    }
 
     public bool CanAcceptActionAnimationEvent(BattleUnit unit)
     {
@@ -969,9 +984,11 @@ public class CombatManager : MonoBehaviour
 
             string animTrigger = !string.IsNullOrEmpty(action.animationTriggerName) ? action.animationTriggerName : "Attack";
             acceptingActionAnimationEvents = true;
+            StartClawAttackTrail(attacker, action);
             attacker.animator.SetTrigger(animTrigger);
 
             yield return new WaitUntil(() => isAttackAnimationFinished || attacker == null || attacker.IsDead);
+            StopClawAttackTrail(attacker);
             acceptingActionAnimationEvents = false;
             if (attacker == null || attacker.IsDead)
             {
@@ -987,9 +1004,11 @@ public class CombatManager : MonoBehaviour
                 FaceEnemyAttackTarget(attacker, target, attacker.transform.position);
             string animTrigger = action != null ? action.animationTriggerName : "Attack";
             acceptingActionAnimationEvents = true;
+            StartClawAttackTrail(attacker, action);
             attacker.animator.SetTrigger(animTrigger);
 
             yield return new WaitUntil(() => isAttackAnimationFinished || attacker == null || attacker.IsDead);
+            StopClawAttackTrail(attacker);
             acceptingActionAnimationEvents = false;
             if (attacker == null || attacker.IsDead)
             {

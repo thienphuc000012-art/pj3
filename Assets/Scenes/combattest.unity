@@ -2825,11 +2825,11 @@ MonoBehaviour:
   - {fileID: 1109873111}
   - {fileID: 2114613866}
   enemyParty:
-  - {fileID: 1048706856}
+  - {fileID: 1993818482}
   allUnitsTimeline:
   - {fileID: 1109873111}
   - {fileID: 2114613866}
-  - {fileID: 1048706856}
+  - {fileID: 1993818482}
   playerSlots:
   - {fileID: 9973665}
   - {fileID: 904870882}
@@ -5632,17 +5632,6 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1029360366}
   m_Mesh: {fileID: 0}
---- !u!114 &1048706856 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
-  m_PrefabInstance: {fileID: 1348572419037447791}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5b5f2d10865edc14abb6dde67d2891ce, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BattleUnit
 --- !u!1 &1051414396
 GameObject:
   m_ObjectHideFlags: 0
@@ -6966,11 +6955,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ParrySystem
   parryCooldown: 1
-  parrySuccessVfxPrefab: {fileID: 1921079115439858272, guid: 87eb9501cd1bc2940a389607e9cf4849, type: 3}
+  parrySuccessVfxPrefab: {fileID: 7610566787042884159, guid: 9e4c74794b0f34e4ea245c77584489fe, type: 3}
+  useGeneratedRealisticParryVfx: 1
   parrySuccessVfxLocalOffset: {x: 0, y: 1, z: 1}
   parrySuccessVfxLocalEuler: {x: 0, y: 0, z: 0}
   parrySuccessVfxPlaybackSpeed: 1
   parrySuccessVfxLifetime: 1.5
+  parryHitStopDuration: 0.045
+  parryHitStopScale: 0.025
+  parrySlowMotionDuration: 0.18
+  parrySlowMotionScale: 0.3
+  parryImpactAudioClip: {fileID: 0}
+  parryImpactVolume: 0.32
 --- !u!4 &1249418310 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5671563766227246005, guid: 29bd5ad3c78cd094c863d5edc42c97bc, type: 3}
@@ -9835,6 +9831,17 @@ Transform:
   - {fileID: 482026045}
   m_Father: {fileID: 1527637406}
   m_LocalEulerAnglesHint: {x: 139.241, y: -48.151978, z: 44.557007}
+--- !u!114 &1993818482 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6754251023150294601, guid: 96659ae2a04725e4999e1124bc86d77c, type: 3}
+  m_PrefabInstance: {fileID: 5605441137817333379}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5f2d10865edc14abb6dde67d2891ce, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BattleUnit
 --- !u!114 &2012900699 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1261291682910884403, guid: 155475376c9e78b4595281d66a55e70d, type: 3}
@@ -10779,7 +10786,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: baseActionPattern.Array.size
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: 'characterSkills.Array.data[0]'
@@ -10804,7 +10811,7 @@ PrefabInstance:
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: 'baseActionPattern.Array.data[0]'
       value: 
-      objectReference: {fileID: 11400000, guid: e288a344a0ee08f42bee7a0c4f10bd03, type: 2}
+      objectReference: {fileID: 11400000, guid: cb1ea973c52a8d941b9b47b973b62017, type: 2}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: 'baseActionPattern.Array.data[1]'
       value: 
@@ -12094,7 +12101,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6754251023150294601, guid: 96659ae2a04725e4999e1124bc86d77c, type: 3}
       propertyPath: speed
-      value: 1
+      value: 10000
       objectReference: {fileID: 0}
     - target: {fileID: 6754251023150294601, guid: 96659ae2a04725e4999e1124bc86d77c, type: 3}
       propertyPath: idleVfx.Array.size
@@ -12123,23 +12130,23 @@ PrefabInstance:
     - target: {fileID: 6754251023150294601, guid: 96659ae2a04725e4999e1124bc86d77c, type: 3}
       propertyPath: 'baseActionPattern.Array.data[0]'
       value: 
-      objectReference: {fileID: 11400000, guid: a9b1dd6e41610a947a3c9e18b5da11f9, type: 2}
+      objectReference: {fileID: 11400000, guid: 69dbd3a077aeb01498301ee97db39328, type: 2}
     - target: {fileID: 6754251023150294601, guid: 96659ae2a04725e4999e1124bc86d77c, type: 3}
       propertyPath: 'baseActionPattern.Array.data[1]'
       value: 
-      objectReference: {fileID: 11400000, guid: ce73fe8b2ef5e344cb6c4fb667f35f8c, type: 2}
+      objectReference: {fileID: 11400000, guid: c6b5f15b0183a3a4cb6cc4b95e3fdd3b, type: 2}
     - target: {fileID: 6754251023150294601, guid: 96659ae2a04725e4999e1124bc86d77c, type: 3}
       propertyPath: 'baseActionPattern.Array.data[2]'
       value: 
-      objectReference: {fileID: 11400000, guid: 69dbd3a077aeb01498301ee97db39328, type: 2}
+      objectReference: {fileID: 11400000, guid: dfeef8d7d0b01eb4c9250ca57f29e113, type: 2}
     - target: {fileID: 6754251023150294601, guid: 96659ae2a04725e4999e1124bc86d77c, type: 3}
       propertyPath: 'baseActionPattern.Array.data[3]'
       value: 
-      objectReference: {fileID: 11400000, guid: c6b5f15b0183a3a4cb6cc4b95e3fdd3b, type: 2}
+      objectReference: {fileID: 11400000, guid: a9b1dd6e41610a947a3c9e18b5da11f9, type: 2}
     - target: {fileID: 6754251023150294601, guid: 96659ae2a04725e4999e1124bc86d77c, type: 3}
       propertyPath: 'baseActionPattern.Array.data[4]'
       value: 
-      objectReference: {fileID: 11400000, guid: dfeef8d7d0b01eb4c9250ca57f29e113, type: 2}
+      objectReference: {fileID: 11400000, guid: ce73fe8b2ef5e344cb6c4fb667f35f8c, type: 2}
     - target: {fileID: 6754251023150294601, guid: 96659ae2a04725e4999e1124bc86d77c, type: 3}
       propertyPath: idleVfx.Array.data[0].spawnPoint
       value: 

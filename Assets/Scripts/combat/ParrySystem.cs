@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+using UnityEngine;
+using System.Collections;
 
 public class ParrySystem : MonoBehaviour
 {
@@ -12,17 +13,52 @@ public class ParrySystem : MonoBehaviour
     [Header("Successful Parry VFX")]
     [Tooltip("Prefab hiệu ứng phát khi parry đúng thời điểm. Gán prefab tại đây.")]
     public GameObject parrySuccessVfxPrefab;
-    [Tooltip("Vị trí cục bộ của VFX tính từ nhân vật parry.")]
-    public Vector3 parrySuccessVfxLocalOffset = new Vector3(0f, 1f, 0f);
-    [Tooltip("Góc xoay cục bộ của VFX so với nhân vật parry.")]
+    [Tooltip("Ưu tiên prefab kim loại trắng PF_Parry_Impact trong Resources/Combat; bỏ chọn để dùng prefab được gán phía trên.")]
+    public bool useGeneratedRealisticParryVfx = true;
+    [Tooltip("Offset cục bộ từ nhân vật: X sang ngang, Y lên cao, Z hướng về phía enemy đang đánh.")]
+    public Vector3 parrySuccessVfxLocalOffset = new Vector3(0f, 1f, 0.25f);
+    [Tooltip("Góc xoay bổ sung sau khi prefab đã được căn theo pháp tuyến va chạm.")]
     public Vector3 parrySuccessVfxLocalEuler;
     [Min(0.01f), Tooltip("Tốc độ phát hạt của VFX parry.")]
     public float parrySuccessVfxPlaybackSpeed = 1f;
     [Min(0.1f), Tooltip("Thời gian tối thiểu trước khi tự xóa VFX parry.")]
     public float parrySuccessVfxLifetime = 1.5f;
-    private float lastParryTime = -99f;
 
-    void Awake() { Instance = this; }
+    [Header("Parry Impact Feedback")]
+    [Tooltip("Thời gian khựng gần như đứng hình ngay tại va chạm, tính theo thời gian thực.")]
+    [Range(0.01f, 0.12f)] public float parryHitStopDuration = 0.045f;
+    [Tooltip("Time Scale trong đoạn hit-stop.")]
+    [Range(0.01f, 0.15f)] public float parryHitStopScale = 0.025f;
+    [Tooltip("Thời lượng slow motion sau hit-stop, tính theo thời gian thực.")]
+    [Range(0.05f, 0.5f)] public float parrySlowMotionDuration = 0.18f;
+    [Tooltip("Time Scale trong đoạn slow motion sau hit-stop.")]
+    [Range(0.1f, 0.8f)] public float parrySlowMotionScale = 0.3f;
+    [Tooltip("Clip va chạm parry. Để trống sẽ dùng tiếng kim loại ngắn được tạo sẵn.")]
+    public AudioClip parryImpactAudioClip;
+    [Range(0f, 1f)] public float parryImpactVolume = 0.32f;
+
+    private float lastParryTime = -99f;
+    private Coroutine parryFeedbackRoutine;
+    private float timeScaleBeforeParryFeedback = 1f;
+
+    void Awake()
+    {
+        Instance = this;
+        if (useGeneratedRealisticParryVfx)
+        {
+            GameObject generatedPrefab = Resources.Load<GameObject>("Combat/PF_Parry_Impact");
+            if (generatedPrefab != null) parrySuccessVfxPrefab = generatedPrefab;
+        }
+        if (parryImpactAudioClip == null) parryImpactAudioClip = CreateMetallicParryClip();
+    }
+
+    private void OnDisable()
+    {
+        if (parryFeedbackRoutine == null) return;
+        StopCoroutine(parryFeedbackRoutine);
+        parryFeedbackRoutine = null;
+        Time.timeScale = timeScaleBeforeParryFeedback;
+    }
 
     void Update()
     {
@@ -76,12 +112,15 @@ public class ParrySystem : MonoBehaviour
                 // CombatManager đang dùng cùng một parrySuccessful cho toàn bộ
                 // targets của AoE, nên true = cả Party chặn đòn.
                 parrySuccessful = true;
+                bool impactSoundPlayed = false;
                 foreach (var member in combat.playerParty)
                 {
                     if (member == null || member.IsDead) continue;
                     member.AddUltimateEnergy(member.parryUltimateGain);
-                    SpawnParrySuccessVFX(member);
+                    SpawnParrySuccessVFX(member, combat.currentActiveUnit, !impactSoundPlayed);
+                    impactSoundPlayed = true;
                 }
+                PlayParryImpactFeedback();
                 combat.GetComponent<BattleResultPanel>()?.RecordParry();
                 isParryWindowOpen = false;
 
@@ -126,7 +165,8 @@ public class ParrySystem : MonoBehaviour
         {
             parrySuccessful = true;
             targetPlayer.AddUltimateEnergy(targetPlayer.parryUltimateGain);
-            SpawnParrySuccessVFX(targetPlayer);
+            SpawnParrySuccessVFX(targetPlayer, combat.currentActiveUnit);
+            PlayParryImpactFeedback();
             combat.GetComponent<BattleResultPanel>()?.RecordParry();
             isParryWindowOpen = false;
 
@@ -141,17 +181,30 @@ public class ParrySystem : MonoBehaviour
         }
     }
 
-    private void SpawnParrySuccessVFX(BattleUnit player)
+    private void SpawnParrySuccessVFX(BattleUnit player, BattleUnit attacker, bool playImpactSound = true)
     {
         if (player == null || parrySuccessVfxPrefab == null) return;
 
-        // Stage inactive so the playback speed is applied before any particles emit.
+        Vector3 towardAttacker = attacker != null
+            ? attacker.transform.position - player.transform.position
+            : player.transform.forward;
+        if (towardAttacker.sqrMagnitude < 0.0001f) towardAttacker = player.transform.forward;
+        towardAttacker.Normalize();
+        Vector3 normal = -towardAttacker;
+        Vector3 up = Mathf.Abs(Vector3.Dot(normal, Vector3.up)) > .98f ? Vector3.forward : Vector3.up;
+        Quaternion impactRotation = Quaternion.LookRotation(normal, up) * Quaternion.Euler(parrySuccessVfxLocalEuler);
+        Vector3 impactPosition = player.transform.position +
+                                 player.transform.right * parrySuccessVfxLocalOffset.x +
+                                 Vector3.up * parrySuccessVfxLocalOffset.y +
+                                 towardAttacker * parrySuccessVfxLocalOffset.z;
+
+        // Stage inactive so playback speed is applied before any particle emits.
         GameObject staging = new GameObject("Parry Success VFX Setup");
         staging.SetActive(false);
         GameObject effect = Instantiate(
             parrySuccessVfxPrefab,
-            player.transform.position,
-            player.transform.rotation,
+            impactPosition,
+            impactRotation,
             staging.transform);
         effect.SetActive(false);
 
@@ -162,11 +215,13 @@ public class ParrySystem : MonoBehaviour
             main.simulationSpeed = speed;
         }
 
-        effect.transform.SetParent(player.transform, true);
-        effect.transform.localPosition = parrySuccessVfxLocalOffset;
-        effect.transform.localRotation = Quaternion.Euler(parrySuccessVfxLocalEuler);
+        // Keep the impact at the contact point instead of making it follow the player.
+        effect.transform.SetParent(null, true);
         effect.SetActive(true);
         Destroy(staging);
+
+        if (playImpactSound && parryImpactAudioClip != null)
+            AudioSource.PlayClipAtPoint(parryImpactAudioClip, impactPosition, parryImpactVolume);
 
         float lifetime = Mathf.Max(0.1f, parrySuccessVfxLifetime);
         foreach (ParticleSystem particles in effect.GetComponentsInChildren<ParticleSystem>(true))
@@ -177,6 +232,56 @@ public class ParrySystem : MonoBehaviour
             lifetime = Mathf.Max(lifetime, duration / speed);
         }
         Destroy(effect, lifetime);
+    }
+
+    private void PlayParryImpactFeedback()
+    {
+        if (parryFeedbackRoutine != null)
+        {
+            StopCoroutine(parryFeedbackRoutine);
+            Time.timeScale = timeScaleBeforeParryFeedback;
+        }
+        timeScaleBeforeParryFeedback = Time.timeScale;
+        parryFeedbackRoutine = StartCoroutine(ParryImpactFeedbackRoutine());
+    }
+
+    private IEnumerator ParryImpactFeedbackRoutine()
+    {
+        Time.timeScale = Mathf.Min(timeScaleBeforeParryFeedback, parryHitStopScale);
+        yield return new WaitForSecondsRealtime(parryHitStopDuration);
+
+        Time.timeScale = Mathf.Min(timeScaleBeforeParryFeedback, parrySlowMotionScale);
+        yield return new WaitForSecondsRealtime(parrySlowMotionDuration);
+
+        Time.timeScale = timeScaleBeforeParryFeedback;
+        parryFeedbackRoutine = null;
+    }
+
+    private static AudioClip CreateMetallicParryClip()
+    {
+        const int sampleRate = 44100;
+        const float duration = .18f;
+        int sampleCount = Mathf.CeilToInt(sampleRate * duration);
+        var samples = new float[sampleCount];
+        uint noiseState = 0xA341316Cu;
+
+        for (int i = 0; i < sampleCount; i++)
+        {
+            float time = i / (float)sampleRate;
+            noiseState = noiseState * 1664525u + 1013904223u;
+            float noise = ((noiseState >> 8) / 8388607.5f) - 1f;
+            float attack = Mathf.Clamp01(time / .0025f);
+            float ring = Mathf.Sin(2f * Mathf.PI * 730f * time) * .46f +
+                         Mathf.Sin(2f * Mathf.PI * 1190f * time) * .30f +
+                         Mathf.Sin(2f * Mathf.PI * 1870f * time) * .16f;
+            float transient = noise * .18f * Mathf.Exp(-time * 190f);
+            float decay = Mathf.Exp(-time * 24f);
+            samples[i] = (ring * decay + transient) * attack * .45f;
+        }
+
+        AudioClip clip = AudioClip.Create("Parry Metal Impact", sampleCount, 1, sampleRate, false);
+        clip.SetData(samples, 0);
+        return clip;
     }
 
     public void OpenWindow()
