@@ -26,8 +26,9 @@ MonoBehaviour:
   isAoE: 0
   isSelfOnly: 1
   stainChange: 0
-  buffStat: 0
-  buffAmount: 0
+  enemyCooldownTurns: 0
+  buffStat: 1
+  buffAmount: 2
   buffDuration: 2
   debuffs:
   - type: 0
@@ -95,3 +96,8 @@ MonoBehaviour:
   swordSlashVfxLifetime: 2
   swordSlashTravelsToTarget: 1
   swordSlashTravelSpeed: 24
+  useClawAttackTrailVfx: 0
+  clawAttackTrailColor: {r: 0.88, g: 0.92, b: 0.96, a: 1}
+  clawAttackTrailLifetime: 0.14
+  clawAttackTrailWidth: 1
+  clawAttackTrailHandSpread: 0.5

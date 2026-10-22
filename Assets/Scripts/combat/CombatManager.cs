@@ -136,20 +136,13 @@ public class CombatManager : MonoBehaviour
     private int currentTimelineIndex = 0;
     private ActionData selectedAction;
 
-    [Header("Melee Attack Positions (Scene Slots)")]
-    public Transform[] playerMeleeSlots;
-    public Transform[] enemyMeleeSlots;
+    [Header("Melee Approach Position")]
+    [Min(0f), Tooltip("Khoảng cách dùng chung để Player dừng trước Enemy khi áp sát đánh.")]
+    public float meleeApproachDistance = 1.6f;
+    [Tooltip("Offset Player so với vị trí áp sát tự tính: X lệch ngang, Y độ cao, Z tiến/lùi theo hướng nhìn mục tiêu.")]
+    public Vector3 playerMeleePositionOffset;
 
     [HideInInspector] public BattleEncounterSetup activeEncounterSetup;
-
-    // true ở index nào thì enemyMeleeSlots[index] là slot thật đã được setup
-    // trong scene hoặc được BattleEncounterSetup override.
-    // Slot tự sinh chỉ để đủ kích thước mảng sẽ không vô tình thay đổi combat.
-    [HideInInspector] public bool[] enemyMeleeSlotConfigured;
-
-    // true ở index nào thì playerMeleeSlots[index] là slot thật đã được setup
-    // trong scene trước khi CampaignSession tự tạo slot còn thiếu.
-    [HideInInspector] public bool[] playerMeleeSlotConfigured;
 
     [HideInInspector] public bool isSelectingBuffTarget = false;
     [HideInInspector] public bool isSelectingSelfOnly = false;
@@ -972,13 +965,8 @@ public class CombatManager : MonoBehaviour
 
         if (action != null && action.isMelee && target != null && !action.isFriendlyAction && !action.isHeal)
         {
-            Transform meleeSlot = GetEncounterMeleeSlot(attacker, target);
-            Vector3 attackPosition = meleeSlot != null
-                ? meleeSlot.position
-                : GetMeleeAttackPosition(attacker, target);
-
-            if (!attacker.isPlayer)
-                FaceEnemyAttackTarget(attacker, target, attackPosition);
+            Vector3 attackPosition = GetMeleeAttackPosition(attacker, target);
+            FaceMeleeAttackTarget(attacker, target, attackPosition);
             attacker.animator.Play("JumpForward");
             yield return StartCoroutine(MoveToPosition(attacker.transform, attackPosition, 0.35f));
 
@@ -997,11 +985,10 @@ public class CombatManager : MonoBehaviour
 
             attacker.animator.Play("JumpBack");
             yield return StartCoroutine(MoveToPosition(attacker.transform, originalPosition, 0.35f));
+            attacker.transform.rotation = originalRotation;
         }
         else
         {
-            if (!attacker.isPlayer && action != null && target != null && !action.isFriendlyAction && !action.isHeal)
-                FaceEnemyAttackTarget(attacker, target, attacker.transform.position);
             string animTrigger = action != null ? action.animationTriggerName : "Attack";
             acceptingActionAnimationEvents = true;
             StartClawAttackTrail(attacker, action);
@@ -1047,180 +1034,42 @@ public class CombatManager : MonoBehaviour
 
     }
 
-    private Transform GetEncounterMeleeSlot(BattleUnit attacker, BattleUnit target)
-    {
-        if (attacker == null || target == null)
-            return null;
-
-        // ============================================================
-        // PLAYER -> ENEMY
-        // ============================================================
-        // Ưu tiên:
-        // 1. BattleEncounterSetup.Enemies[enemyIndex].playerMeleeSlot
-        // 2. CombatManager.enemyMeleeSlots[enemyIndex] đã setup sẵn
-        // ============================================================
-        if (attacker.isPlayer)
-        {
-            int enemyIndex = enemyParty.IndexOf(target);
-            if (enemyIndex < 0)
-                return null;
-
-            if (activeEncounterSetup != null)
-            {
-                EnemyCombatSetup enemySetup =
-                    activeEncounterSetup.GetEnemySetup(enemyIndex);
-
-                if (enemySetup != null &&
-                    enemySetup.playerMeleeSlot != null)
-                {
-                    return enemySetup.playerMeleeSlot;
-                }
-            }
-
-            if (TryGetConfiguredEnemyTargetMeleeSlot(
-                target,
-                out Transform enemyTargetSlot))
-            {
-                return enemyTargetSlot;
-            }
-
-            return null;
-        }
-
-        // ============================================================
-        // ENEMY -> PLAYER
-        // ============================================================
-        // Ưu tiên:
-        // 1. BattleEncounterSetup.Enemies[attackerEnemyIndex]
-        //      .enemyMeleeSlots[targetPlayerIndex]
-        // 2. CombatManager.playerMeleeSlots[targetPlayerIndex] đã setup sẵn
-        // ============================================================
-        int attackerEnemyIndex = enemyParty.IndexOf(attacker);
-        int targetPlayerIndex = playerParty.IndexOf(target);
-
-        if (attackerEnemyIndex < 0 || targetPlayerIndex < 0)
-            return null;
-
-        if (activeEncounterSetup != null)
-        {
-            EnemyCombatSetup attackerSetup =
-                activeEncounterSetup.GetEnemySetup(attackerEnemyIndex);
-
-            if (attackerSetup != null)
-            {
-                Transform encounterSlot =
-                    attackerSetup.GetEnemyMeleeSlot(targetPlayerIndex);
-
-                if (encounterSlot != null)
-                    return encounterSlot;
-            }
-        }
-
-        if (TryGetConfiguredPlayerTargetMeleeSlot(
-            target,
-            out Transform playerTargetSlot))
-        {
-            return playerTargetSlot;
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Slot đứng gần Enemy target khi Player lao tới đánh.
-    /// enemyMeleeSlots được index theo enemyParty.
-    /// </summary>
-    private bool TryGetConfiguredEnemyTargetMeleeSlot(
-        BattleUnit targetEnemy,
-        out Transform meleeSlot)
-    {
-        meleeSlot = null;
-
-        if (targetEnemy == null || targetEnemy.isPlayer)
-            return false;
-
-        int enemyIndex = enemyParty.IndexOf(targetEnemy);
-
-        if (enemyIndex < 0 ||
-            enemyMeleeSlots == null ||
-            enemyIndex >= enemyMeleeSlots.Length ||
-            enemyMeleeSlots[enemyIndex] == null)
-        {
-            return false;
-        }
-
-        if (enemyMeleeSlotConfigured == null ||
-            enemyIndex >= enemyMeleeSlotConfigured.Length ||
-            !enemyMeleeSlotConfigured[enemyIndex])
-        {
-            return false;
-        }
-
-        meleeSlot = enemyMeleeSlots[enemyIndex];
-        return true;
-    }
-
-    /// <summary>
-    /// Slot đứng gần Player target khi Enemy lao tới đánh.
-    /// playerMeleeSlots được index theo playerParty.
-    /// </summary>
-    private bool TryGetConfiguredPlayerTargetMeleeSlot(
-        BattleUnit targetPlayer,
-        out Transform meleeSlot)
-    {
-        meleeSlot = null;
-
-        if (targetPlayer == null || !targetPlayer.isPlayer)
-            return false;
-
-        int playerIndex = playerParty.IndexOf(targetPlayer);
-
-        if (playerIndex < 0 ||
-            playerMeleeSlots == null ||
-            playerIndex >= playerMeleeSlots.Length ||
-            playerMeleeSlots[playerIndex] == null)
-        {
-            return false;
-        }
-
-        if (playerMeleeSlotConfigured == null ||
-            playerIndex >= playerMeleeSlotConfigured.Length ||
-            !playerMeleeSlotConfigured[playerIndex])
-        {
-            return false;
-        }
-
-        meleeSlot = playerMeleeSlots[playerIndex];
-        return true;
-    }
-
     public Vector3 GetMeleeAttackPosition(BattleUnit attacker, BattleUnit target)
     {
-        if (attacker == null)
+        if (attacker == null || target == null)
             return Vector3.zero;
 
-        Transform encounterSlot = GetEncounterMeleeSlot(attacker, target);
-        if (encounterSlot != null)
-            return encounterSlot.position;
+        Vector3 directionToTarget = target.transform.position - attacker.transform.position;
+        directionToTarget.y = 0f;
+        if (directionToTarget.sqrMagnitude < .0001f)
+            directionToTarget = attacker.transform.forward;
+        directionToTarget.Normalize();
 
-        // Không có bất kỳ Melee Slot nào -> fallback cách tính tự động cũ.
-        if (target == null)
-            return attacker.transform.position;
+        float approachDistance = meleeApproachDistance;
+        Vector3 offset = playerMeleePositionOffset;
+        if (!attacker.isPlayer)
+        {
+            offset = Vector3.zero;
+            int enemyIndex = enemyParty.IndexOf(attacker);
+            EnemyCombatSetup enemySetup = activeEncounterSetup != null
+                ? activeEncounterSetup.GetEnemySetup(enemyIndex)
+                : null;
+            if (enemySetup != null)
+            {
+                approachDistance = enemySetup.meleeApproachDistance;
+                offset = enemySetup.meleePositionOffset;
+            }
+        }
 
-        Vector3 directionToTarget =
-            (target.transform.position - attacker.transform.position).normalized;
-
-        float stopDistance = 1.6f;
-
-        Vector3 attackPosition =
-            target.transform.position - (directionToTarget * stopDistance);
-
-        return attackPosition;
+        Vector3 approachPosition = target.transform.position - directionToTarget * approachDistance;
+        approachPosition.y = attacker.transform.position.y;
+        Quaternion facing = Quaternion.LookRotation(directionToTarget, Vector3.up);
+        return approachPosition + facing * offset;
     }
 
-    private void FaceEnemyAttackTarget(BattleUnit attacker, BattleUnit target, Vector3 attackPosition)
+    private void FaceMeleeAttackTarget(BattleUnit attacker, BattleUnit target, Vector3 attackPosition)
     {
-        if (attacker == null || attacker.isPlayer || target == null)
+        if (attacker == null || target == null)
             return;
 
         Vector3 direction = target.transform.position - attackPosition;

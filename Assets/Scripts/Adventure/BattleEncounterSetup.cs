@@ -10,13 +10,11 @@ public class EnemyCombatSetup
     [Tooltip("Vị trí và rotation đứng mặc định của enemy trong scene combat.")]
     public Transform spawnPoint;
 
-    [Header("Player Melee Slot -> đánh Enemy này")]
-    [Tooltip("Một vị trí duy nhất mà Player sẽ lao tới khi dùng đòn Melee lên enemy này.")]
-    public Transform playerMeleeSlot;
-
-    [Header("Enemy Melee Slots -> đánh từng Player")]
-    [Tooltip("Element 0 = vị trí enemy đứng khi đánh Player 0, Element 1 = Player 1, ...")]
-    public List<Transform> enemyMeleeSlots = new List<Transform>();
+    [Header("Melee khi Enemy này đánh Player")]
+    [Min(0f), Tooltip("Khoảng cách Enemy này dừng trước Player khi áp sát để đánh.")]
+    public float meleeApproachDistance = 1.6f;
+    [Tooltip("Độ lệch vị trí riêng của Enemy này: X lệch ngang, Y độ cao, Z tiến/lùi theo hướng Player.")]
+    public Vector3 meleePositionOffset;
 
     [Header("Camera khi Player chọn Enemy")]
     [Tooltip("Camera dùng khi Player đang chọn enemy này làm mục tiêu.")]
@@ -25,14 +23,6 @@ public class EnemyCombatSetup
     [Header("Camera khi Enemy hành động")]
     [Tooltip("Camera dùng khi chính enemy này tới lượt và thực hiện đòn đơn mục tiêu.")]
     public CinemachineCamera actionCamera;
-
-    public Transform GetEnemyMeleeSlot(int playerIndex)
-    {
-        if (playerIndex < 0 || playerIndex >= enemyMeleeSlots.Count)
-            return null;
-
-        return enemyMeleeSlots[playerIndex];
-    }
 }
 
 [Serializable]

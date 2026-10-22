@@ -514,41 +514,11 @@ public class CampaignSession : MonoBehaviour
         manager.playerParty.Clear(); manager.enemyParty.Clear(); manager.allUnitsTimeline.Clear();
         manager.playerSlots = ExpandSlots(manager.playerSlots, Data.party.Count, manager.transform, "Party slot");
 
-        // Ghi nhớ playerMeleeSlots thật đã setup trong scene.
-        // Enemy -> Player sẽ dùng đúng slot theo index của Player target.
-        bool[] playerMeleeSlotConfigured = new bool[Data.party.Count];
-        if (manager.playerMeleeSlots != null)
-        {
-            for (int i = 0; i < playerMeleeSlotConfigured.Length && i < manager.playerMeleeSlots.Length; i++)
-                playerMeleeSlotConfigured[i] = manager.playerMeleeSlots[i] != null;
-        }
-
-        manager.playerMeleeSlots = ExpandSlots(
-            manager.playerMeleeSlots,
-            Data.party.Count,
-            manager.transform,
-            "Party melee slot"
-        );
-        manager.playerMeleeSlotConfigured = playerMeleeSlotConfigured;
-
         manager.enemySlots = ExpandSlots(manager.enemySlots, encounter.enemies.Count, manager.transform, "Enemy slot");
-
-        // Ghi nhớ enemyMeleeSlots đã được setup sẵn trong scene trước khi ExpandSlots()
-        // tự tạo thêm slot còn thiếu. Slot setup sẵn vẫn được dùng như trước.
-        bool[] enemyMeleeSlotConfigured = new bool[encounter.enemies.Count];
-        if (manager.enemyMeleeSlots != null)
-        {
-            for (int i = 0; i < enemyMeleeSlotConfigured.Length && i < manager.enemyMeleeSlots.Length; i++)
-                enemyMeleeSlotConfigured[i] = manager.enemyMeleeSlots[i] != null;
-        }
-
-        manager.enemyMeleeSlots = ExpandSlots(manager.enemyMeleeSlots, encounter.enemies.Count, manager.transform, "Enemy melee slot");
-        manager.enemyMeleeSlotConfigured = enemyMeleeSlotConfigured;
 
         // Preset ghi vị trí spawn vào enemySlots trước khi spawn, vì
         // CombatManager.SetupPositions() sẽ tiếp tục lấy vị trí từ chính các slot này.
-        // CombatManager ưu tiên BattleEncounterSetup, sau đó fallback về
-        // playerMeleeSlots/enemyMeleeSlots thật đã setup sẵn trong scene.
+        // CombatManager tính melee position từ target; mỗi Enemy lấy offset riêng trong setup.
         ApplyEnemySpawnSetup(
             battleSetup,
             manager.enemySlots,
