@@ -746,9 +746,10 @@ public class AdvancedUIManager : MonoBehaviour
         enemyBuffContainer.gameObject.SetActive(battleUIVisible);
         // Icons flow left-to-right, starting at the left edge of the container.
         layout.childAlignment = TextAnchor.MiddleLeft;
-        layout.spacing = 4f;
+        layout.spacing = 0f;
         layout.childControlWidth = layout.childControlHeight = false;
         layout.childForceExpandWidth = layout.childForceExpandHeight = false;
+        layout.childScaleWidth = true;
     }
 
     private void RefreshEnemyBuffIcons()

@@ -2352,12 +2352,12 @@ MonoBehaviour:
     m_Top: 0
     m_Bottom: 0
   m_ChildAlignment: 0
-  m_Spacing: 0
-  m_ChildForceExpandWidth: 1
+  m_Spacing: -3
+  m_ChildForceExpandWidth: 0
   m_ChildForceExpandHeight: 1
   m_ChildControlWidth: 0
   m_ChildControlHeight: 0
-  m_ChildScaleWidth: 0
+  m_ChildScaleWidth: 1
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
 --- !u!1 &454338035
@@ -2825,11 +2825,11 @@ MonoBehaviour:
   - {fileID: 1109873111}
   - {fileID: 2114613866}
   enemyParty:
-  - {fileID: 1993818482}
+  - {fileID: 627121954}
   allUnitsTimeline:
   - {fileID: 1109873111}
   - {fileID: 2114613866}
-  - {fileID: 1993818482}
+  - {fileID: 627121954}
   playerSlots:
   - {fileID: 9973665}
   - {fileID: 904870882}
@@ -2976,6 +2976,17 @@ Transform:
   - {fileID: 290278559}
   m_Father: {fileID: 153795298}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &627121954 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
+  m_PrefabInstance: {fileID: 1348572419037447791}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5f2d10865edc14abb6dde67d2891ce, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BattleUnit
 --- !u!1 &630834219
 GameObject:
   m_ObjectHideFlags: 0
@@ -6789,12 +6800,12 @@ MonoBehaviour:
     m_Top: 0
     m_Bottom: 0
   m_ChildAlignment: 0
-  m_Spacing: 0
-  m_ChildForceExpandWidth: 1
+  m_Spacing: -3
+  m_ChildForceExpandWidth: 0
   m_ChildForceExpandHeight: 1
   m_ChildControlWidth: 0
   m_ChildControlHeight: 0
-  m_ChildScaleWidth: 0
+  m_ChildScaleWidth: 1
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
 --- !u!1 &1196395077
@@ -9831,17 +9842,6 @@ Transform:
   - {fileID: 482026045}
   m_Father: {fileID: 1527637406}
   m_LocalEulerAnglesHint: {x: 139.241, y: -48.151978, z: 44.557007}
---- !u!114 &1993818482 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 6754251023150294601, guid: 96659ae2a04725e4999e1124bc86d77c, type: 3}
-  m_PrefabInstance: {fileID: 5605441137817333379}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5b5f2d10865edc14abb6dde67d2891ce, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BattleUnit
 --- !u!114 &2012900699 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1261291682910884403, guid: 155475376c9e78b4595281d66a55e70d, type: 3}
