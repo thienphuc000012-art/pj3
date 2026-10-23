@@ -2295,6 +2295,8 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1956373212}
+  - {fileID: 1462361508}
+  - {fileID: 1507879753}
   - {fileID: 2115408759}
   - {fileID: 1892636935}
   - {fileID: 4694792}
@@ -2678,6 +2680,8 @@ MonoBehaviour:
   - {fileID: 1272870090}
   enemySlots:
   - {fileID: 1956373212}
+  - {fileID: 1462361508}
+  - {fileID: 1507879753}
   inventoryItems:
   - {fileID: 11400000, guid: ff83eafb89cc4d0489f523f4f3805d89, type: 2}
   currentStains: 0
@@ -3367,6 +3371,63 @@ Transform:
   - {fileID: 817520737}
   m_Father: {fileID: 1872934763}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &757168358
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 6232999512346628155, guid: 6fb5499ccbaf8d64687c1f4ae99a3df6, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6232999512346628155, guid: 6fb5499ccbaf8d64687c1f4ae99a3df6, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6232999512346628155, guid: 6fb5499ccbaf8d64687c1f4ae99a3df6, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6232999512346628155, guid: 6fb5499ccbaf8d64687c1f4ae99a3df6, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6232999512346628155, guid: 6fb5499ccbaf8d64687c1f4ae99a3df6, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6232999512346628155, guid: 6fb5499ccbaf8d64687c1f4ae99a3df6, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6232999512346628155, guid: 6fb5499ccbaf8d64687c1f4ae99a3df6, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6232999512346628155, guid: 6fb5499ccbaf8d64687c1f4ae99a3df6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6232999512346628155, guid: 6fb5499ccbaf8d64687c1f4ae99a3df6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6232999512346628155, guid: 6fb5499ccbaf8d64687c1f4ae99a3df6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6758707479630760577, guid: 6fb5499ccbaf8d64687c1f4ae99a3df6, type: 3}
+      propertyPath: m_Name
+      value: SKM_DKF_Full
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 6fb5499ccbaf8d64687c1f4ae99a3df6, type: 3}
 --- !u!1 &773909416
 GameObject:
   m_ObjectHideFlags: 0
@@ -7318,6 +7379,37 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!1 &1462361507
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1462361508}
+  m_Layer: 0
+  m_Name: EnemySlotBig (2)
+  m_TagString: Untagged
+  m_Icon: {fileID: 5132851093641282708, guid: 0000000000000000d000000000000000, type: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1462361508
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1462361507}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0.9659258, z: 0, w: 0.2588191}
+  m_LocalPosition: {x: -10, y: 2.87, z: 12.6}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 454338036}
+  m_LocalEulerAnglesHint: {x: 0, y: 150, z: 0}
 --- !u!1 &1466744283
 GameObject:
   m_ObjectHideFlags: 0
@@ -7451,6 +7543,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 138911933}
   m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
+--- !u!1 &1507879752
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1507879753}
+  m_Layer: 0
+  m_Name: EnemySlotBig (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 5132851093641282708, guid: 0000000000000000d000000000000000, type: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1507879753
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1507879752}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0.9659258, z: 0, w: 0.2588191}
+  m_LocalPosition: {x: -1, y: 2.87, z: 12.6}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 454338036}
+  m_LocalEulerAnglesHint: {x: 0, y: 150, z: 0}
 --- !u!1 &1512650708
 GameObject:
   m_ObjectHideFlags: 0
@@ -9045,7 +9168,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1835205078
 Transform:
   m_ObjectHideFlags: 0
@@ -9752,6 +9875,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BattleUnit
   unitName: Lauren
   maxHP: 100
+  isSummonedUnit: 0
+  summonOwner: {fileID: 0}
+  summonDeathOwnerMaxHpCostPercent: 0
   enemyHpBorderSprite: {fileID: 0}
   parryUltimateGain: 15
   damageUltimateGain: 50
@@ -10370,6 +10496,10 @@ PrefabInstance:
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: maxHP
       value: 100
+      objectReference: {fileID: 0}
+    - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
+      propertyPath: speed
+      value: 11111
       objectReference: {fileID: 0}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: isPlayer
@@ -12086,3 +12216,4 @@ SceneRoots:
   - {fileID: 702912642}
   - {fileID: 254298349}
   - {fileID: 4298611756806284037}
+  - {fileID: 757168358}

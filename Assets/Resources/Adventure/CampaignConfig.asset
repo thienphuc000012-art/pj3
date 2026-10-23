@@ -14,6 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CampaignConfig
   mapScene: mapgame
   battleScene: combattest
+  encounterBlackHoleVfxPrefab: {fileID: 3165652264736840632, guid: 31e1448bbc469064e89a752925fc2ea4, type: 3}
+  encounterVfxDuration: 1.5
+  encounterVfxScale: 1.5
+  initiativeSpeedBonus: 100
+  mapPlayerAttackTrigger: attack
+  mapPlayerAttackState: attack
+  mapPlayerHitTrigger: HIt
+  mapPlayerHitState: HIt
+  mapEnemyHitTrigger: Hit
+  mapEnemyHitState: hit
   startingParty:
   - {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
   - {fileID: 3158844213249854169, guid: 294942f0dd0ce6f42beba7c2a3fb2673, type: 3}
@@ -54,4 +64,11 @@ MonoBehaviour:
       count: 1
   defeatReturnsToCheckpoint: 1
   equippedSkillSlots: 4
-  skillUnlocks: []
+  skillUnlocks:
+  - skill: {fileID: 0}
+    cost: 0
+    initiallyUnlocked: 0
+    prerequisites:
+    - {fileID: 0}
+    - {fileID: 0}
+    - {fileID: 0}

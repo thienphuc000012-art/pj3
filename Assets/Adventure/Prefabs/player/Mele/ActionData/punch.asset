@@ -20,12 +20,24 @@ MonoBehaviour:
   ultimateEnergyGain: 10
   power: 0
   damageMultiplier: 0
+  useLifeSteal: 0
+  lifeStealPercent: 33.333
+  damageCondition: 0
+  damageMultiplierWhenCasterBurned: 2
+  damageMultiplierWhenCasterNotBurned: 0.5
+  damageMultiplierWhenTargetPoisoned: 1.5
+  damageMultiplierWhenTargetNotPoisoned: 1
+  ignoreBurnAttackReductionWhenEmpowered: 1
+  isSummonSkill: 0
+  summonPrefab: {fileID: 0}
+  summonCount: 1
   isHeal: 0
   animationTriggerName: punch
   isFriendlyAction: 0
   isAoE: 0
   isSelfOnly: 0
   stainChange: 0
+  enemyCooldownTurns: 0
   buffStat: 0
   buffAmount: 0
   buffDuration: 1
@@ -84,3 +96,8 @@ MonoBehaviour:
   swordSlashVfxLifetime: 2
   swordSlashTravelsToTarget: 1
   swordSlashTravelSpeed: 24
+  useClawAttackTrailVfx: 0
+  clawAttackTrailColor: {r: 0.88, g: 0.92, b: 0.96, a: 1}
+  clawAttackTrailLifetime: 0.14
+  clawAttackTrailWidth: 1
+  clawAttackTrailHandSpread: 0.5

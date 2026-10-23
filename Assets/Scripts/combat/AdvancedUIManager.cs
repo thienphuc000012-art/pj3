@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.EventSystems;
@@ -519,7 +520,7 @@ public class AdvancedUIManager : MonoBehaviour
 
     public void RegisterEnemyHP(BattleUnit enemy)
     {
-        if (enemy == null) return;
+        if (enemy == null || enemy.IsDead || enemy.isSummonedUnit) return;
         TrackDamage(enemy);
         if (CombatManager.Instance != null)
             foreach (var unit in CombatManager.Instance.enemyParty)
@@ -545,10 +546,24 @@ public class AdvancedUIManager : MonoBehaviour
     {
         var combat = CombatManager.Instance;
         if (combat == null || combat.state == CombatState.Won || combat.state == CombatState.Lost) return;
+
+        // Keep a dead summoner's HP panel bound until its white damage trail
+        // reaches the real HP value. Otherwise rebinding to another enemy hides
+        // the bar while the lethal HP drain is still being shown.
+        if (boundEnemy != null && boundEnemy.IsDead &&
+            damageStates.TryGetValue(boundEnemy, out DamageTrailState deadEnemyTrail) &&
+            (deadEnemyTrail.draining || deadEnemyTrail.shown > deadEnemyTrail.actual + 0.0001f))
+            return;
+
         BattleUnit enemy = combat.currentTarget;
-        if (enemy == null || enemy.isPlayer)
-            enemy = combat.currentActiveUnit != null && !combat.currentActiveUnit.isPlayer ? combat.currentActiveUnit : boundEnemy;
+        if (enemy == null || enemy.isPlayer || enemy.IsDead || enemy.isSummonedUnit)
+            enemy = combat.currentActiveUnit != null && !combat.currentActiveUnit.isPlayer &&
+                !combat.currentActiveUnit.IsDead && !combat.currentActiveUnit.isSummonedUnit
+                ? combat.currentActiveUnit
+                : combat.enemyParty.FirstOrDefault(unit => unit != null && !unit.IsDead && !unit.isSummonedUnit);
+        if (enemy == null && boundEnemy != null && !boundEnemy.IsDead) enemy = boundEnemy;
         if (enemy != null && !enemy.isPlayer && enemy != boundEnemy) RegisterEnemyHP(enemy);
+        else if (enemy == null && enemyHudPanel != null) enemyHudPanel.SetActive(false);
     }
 
     private void ApplyEnemyBorder(BattleUnit enemy)

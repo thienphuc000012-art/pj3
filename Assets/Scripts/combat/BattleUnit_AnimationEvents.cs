@@ -128,6 +128,14 @@ public class BattleUnit_AnimationEvents : MonoBehaviour
             CombatManager.Instance.PlayCastVFXFromAnimation(ownerUnit);
         }
     }
+
+    public void AnimEvent_SummonSpawnVFX()
+    {
+        if (CombatManager.Instance == null || !CombatManager.Instance.CanAcceptActionAnimationEvent(ownerUnit)) return;
+        if (ownerUnit == null || ownerUnit.IsDead) return;
+        CombatManager.Instance.PlaySummonSpawnVFXFromAnimation(ownerUnit);
+    }
+
     public void AnimEvent_StartTrail()
     {
         if (CombatManager.Instance == null || !CombatManager.Instance.CanAcceptActionAnimationEvent(ownerUnit)) return;

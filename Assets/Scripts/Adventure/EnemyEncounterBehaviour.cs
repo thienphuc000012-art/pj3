@@ -57,11 +57,12 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
     public string flyIdleState = "FlyStationary";
     public string flyMoveState = "FlyNormal";
     public string flyAttackState = "FlyStationarySpitFireBall";
+    public string EncounterAttackState => airborne ? flyAttackState : attackState;
     public Activity CurrentActivity { get; private set; }
     WorldInteraction point;
     NavMeshAgent agent;
     Vector3 home, destination, lastPosition;
-    float idleUntil, nextPath, stuckTime, attackAt, nextAttack;
+    float idleUntil, nextPath, stuckTime, nextAttack;
     int waypointIndex, animationHash;
     Vector3[] patrolPoints;
     bool initialized, warnedNavMesh;
@@ -160,13 +161,17 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
         var player = session.MapPlayer.transform;
         if (CurrentActivity == Activity.Attack)
         {
-            StopMovement(); Face(player.position);
-            if (Time.time >= attackAt)
+            StopMovement();
+            Face(player.position);
+            // Attack animation is owned by the encounter intro. Never leave the patrol AI
+            // in an attack loop while the session is waiting for its transition cooldown.
+            if (session.CanStartEncounter && CanInteract(player, Mathf.Min(attackRange, point.range)))
             {
-                nextAttack = Time.time + attackCooldown;
-                if (CanInteract(player, Mathf.Min(attackRange, point.range))) session.BeginEncounter(point);
-                Idle();
+                session.BeginEncounter(point, false);
+                if (session.Busy) return;
             }
+            CurrentActivity = Activity.Chase;
+            nextAttack = Time.time + attackCooldown;
             return;
         }
         float territory = Mathf.Max(patrolRadius, leashRadius);
@@ -175,8 +180,21 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
         bool chasing = CurrentActivity == Activity.Chase && Time.time - lastSeenTime < sightMemorySeconds && HorizontalDistance(home, player.position) <= territory;
         if ((detected || chasing) && HorizontalDistance(home, transform.position) <= territory)
         {
-            if (detected && CanInteract(player, Mathf.Min(attackRange, point.range)) && Time.time >= nextAttack)
-            { CurrentActivity = Activity.Attack; attackAt = Time.time + attackWindup; StopMovement(); Play(attackState, flyAttackState); return; }
+            if (CanInteract(player, Mathf.Min(attackRange, point.range)))
+            {
+                StopMovement();
+                if (Time.time >= nextAttack && session.CanStartEncounter)
+                {
+                    nextAttack = Time.time + attackCooldown;
+                    session.BeginEncounter(point, false);
+                    if (session.Busy)
+                    {
+                        CurrentActivity = Activity.Attack;
+                        return;
+                    }
+                }
+                return;
+            }
             CurrentActivity = Activity.Chase;
             destination = lastSeenPosition + (airborne ? Vector3.up * flightHeight : Vector3.zero);
             Move(runSpeed); return;
@@ -363,6 +381,12 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
         if (!mapAnimator.HasState(layer, hash)) return;
         if (animationHash == hash) return;
         animationHash = hash; mapAnimator.CrossFadeInFixedTime(hash, .15f, layer);
+    }
+    public void RestartEncounterAttack()
+    {
+        if (mapAnimator == null) return;
+        animationHash = 0;
+        Play(attackState, flyAttackState);
     }
     void Idle() { CurrentActivity = Activity.Idle; idleUntil = Time.time + idleSeconds; StopMovement(); Play(idleState, flyIdleState); }
     void StopMovement() { if (agent != null && agent.enabled && agent.isOnNavMesh) agent.isStopped = true; }

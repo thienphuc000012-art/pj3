@@ -24,6 +24,44 @@ public class ActionData : ScriptableObject
     [Header("Damage Scaling")]
     public float damageMultiplier = 1f;
 
+    [Header("Life Steal")]
+    [Tooltip("Heals the user based on HP damage actually dealt by this action.")]
+    public bool useLifeSteal;
+    [Range(0f, 100f), Tooltip("Healing percentage of HP damage dealt. 33.333 is one third.")]
+    public float lifeStealPercent = 33.333f;
+
+    public enum DamageCondition { None, CasterHasBurn, TargetHasPoison }
+    [Header("Conditional Damage")]
+    [Tooltip("Optional damage bonus condition: caster has Burn, or target has Poison.")]
+    public DamageCondition damageCondition;
+    [Min(0f), Tooltip("Multiplier for this skill while the caster is Burned. Burn's ATK reduction is ignored for this skill when enabled below.")]
+    public float damageMultiplierWhenCasterBurned = 2f;
+    [Min(0f), Tooltip("Multiplier for this skill while the caster is not Burned.")]
+    public float damageMultiplierWhenCasterNotBurned = 0.5f;
+    [Min(0f), Tooltip("Multiplier for this skill against a Poisoned target.")]
+    public float damageMultiplierWhenTargetPoisoned = 1.5f;
+    [Min(0f), Tooltip("Multiplier for this skill against a target that is not Poisoned.")]
+    public float damageMultiplierWhenTargetNotPoisoned = 1f;
+    [Tooltip("When the caster is Burned and this skill uses the Burn condition, ignore Burn's ATK reduction for this skill.")]
+    public bool ignoreBurnAttackReductionWhenEmpowered = true;
+
+    [Header("Summon")]
+    [Tooltip("Summons copies of this BattleUnit onto the caster's team after the skill animation finishes.")]
+    public bool isSummonSkill;
+    public BattleUnit summonPrefab;
+    [Range(1, 2), Tooltip("Maximum number of units to summon. Only available battle slots are filled.")]
+    public int summonCount = 2;
+    [Range(0f, 100f), Tooltip("When a summoned unit dies, remove this percentage of its summoner's original maximum HP. Set to 0 to disable the cost.")]
+    public float summonDeathOwnerMaxHpCostPercent = 10f;
+    [Tooltip("Optional effect spawned at the battle slot when each summon appears. Place the prefab pivot at ground level.")]
+    public GameObject summonSpawnVfxPrefab;
+    [Tooltip("Local offset from the battle slot, useful for placing the effect beneath the summoned unit's feet.")]
+    public Vector3 summonSpawnVfxLocalOffset;
+    [Min(0.1f), Tooltip("Fallback cleanup time for looping or non-particle summon effects.")]
+    public float summonSpawnVfxLifetime = 2f;
+    [Min(0f), Tooltip("Wait this long after spawning the effect before the summoned unit appears. Set to 0 for immediate appearance.")]
+    public float summonSpawnDelay = 0.65f;
+
     public bool isHeal;
     public string animationTriggerName = "Attack";
     public bool isFriendlyAction;

@@ -24,6 +24,7 @@ public class CampaignSession : MonoBehaviour
     public int ResultExperience => encounter?.xp ?? 0;
     public List<ItemStack> ResultRewards => encounter?.rewards ?? new List<ItemStack>();
     public bool OnMap => Config != null && SceneManager.GetActiveScene().name == Config.mapScene;
+    public bool CanStartEncounter => OnMap && !Busy && Menu == AdventureMenu.None && Time.unscaledTime >= encounterAllowedAt;
     public bool CanUpgrade => OnMap && RestPoint != null && IsNear(RestPoint) && !Busy;
     public void BeginItemPickup(WorldInteraction point)
     {
@@ -165,6 +166,19 @@ public class CampaignSession : MonoBehaviour
         public List<ItemStack> rewards;
         public List<BattleUnit> enemies;
         public string combatSetupId;
+        public bool playerInitiated;
+    }
+
+    private sealed class EncounterAnimationProgress
+    {
+        public Animator animator;
+        public string stateName;
+        public int stateHash;
+        public int layer;
+        public float startedAt;
+        public float fallbackDuration;
+        public bool entered;
+        public bool finished;
     }
 
     public static CampaignSession Ensure(CampaignConfig config, bool startNewGame = false)
@@ -479,7 +493,9 @@ public class CampaignSession : MonoBehaviour
         if (!CanCraft(recipe)) return;
         Data.TryCraft(recipe); Notify("Đã chế tạo " + recipe.displayName); Save();
     }
-    public void BeginEncounter(WorldInteraction point)
+    public void BeginEncounter(WorldInteraction point) => BeginEncounter(point, true);
+
+    public void BeginEncounter(WorldInteraction point, bool playerInitiated)
     {
         if (Busy || Menu != AdventureMenu.None || !IsNear(point) || Time.unscaledTime < encounterAllowedAt || point.IsConsumed) return;
         if (point.enemyPrefabs.Count == 0 || point.enemyPrefabs.Any(x => x == null) || !Data.party.Any(p => p.hp > 0))
@@ -492,11 +508,249 @@ public class CampaignSession : MonoBehaviour
             xp = point.experience,
             rewards = point.rewards.Select(x => new ItemStack(x.id, x.count)).ToList(),
             enemies = new List<BattleUnit>(point.enemyPrefabs),
-            combatSetupId = point.combatSetupId
+            combatSetupId = point.combatSetupId,
+            playerInitiated = playerInitiated
         };
         Busy = true;
-        if (!LoadingScreen.Load(Config.battleScene))
-        { encounter = null; Busy = false; Notify(LoadingScreen.Error); }
+        StartCoroutine(PlayEncounterTransition(point, playerInitiated));
+    }
+
+    private IEnumerator PlayEncounterTransition(WorldInteraction point, bool playerInitiated)
+    {
+        PlayerScript player = MapPlayer;
+        Animator playerAnimator = player != null ? player.animator : null;
+        EnemyEncounterBehaviour patrol = point != null ? point.GetComponent<EnemyEncounterBehaviour>() : null;
+        Animator enemyAnimator = patrol != null ? patrol.mapAnimator : point != null ? point.GetComponentInChildren<Animator>(true) : null;
+        Transform playerTransform = player != null ? player.transform : null;
+        Transform enemyTransform = point != null ? point.transform : null;
+        Vector3 playerStartPosition = playerTransform != null ? playerTransform.position : Vector3.zero;
+        Vector3 enemyStartPosition = enemyTransform != null ? enemyTransform.position : Vector3.zero;
+        Quaternion playerStartRotation = playerTransform != null ? playerTransform.rotation : Quaternion.identity;
+        Quaternion enemyStartRotation = enemyTransform != null ? enemyTransform.rotation : Quaternion.identity;
+        int playerStartState = playerAnimator != null && playerAnimator.layerCount > 0 ? playerAnimator.GetCurrentAnimatorStateInfo(0).fullPathHash : 0;
+        float playerStartNormalizedTime = playerAnimator != null && playerAnimator.layerCount > 0 ? playerAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime : 0f;
+        int enemyStartState = enemyAnimator != null && enemyAnimator.layerCount > 0 ? enemyAnimator.GetCurrentAnimatorStateInfo(0).fullPathHash : 0;
+        float enemyStartNormalizedTime = enemyAnimator != null && enemyAnimator.layerCount > 0 ? enemyAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime : 0f;
+        AnimatorCullingMode playerCulling = playerAnimator != null ? playerAnimator.cullingMode : AnimatorCullingMode.AlwaysAnimate;
+        AnimatorCullingMode enemyCulling = enemyAnimator != null ? enemyAnimator.cullingMode : AnimatorCullingMode.AlwaysAnimate;
+        float playerAnimatorSpeed = playerAnimator != null ? playerAnimator.speed : 1f;
+        float enemyAnimatorSpeed = enemyAnimator != null ? enemyAnimator.speed : 1f;
+        float encounterPreviousTimeScale = Time.timeScale;
+        bool loadingStarted = false;
+        GameObject blackHole = null;
+        EncounterAnimationProgress playerAction = null;
+        EncounterAnimationProgress enemyAction = null;
+
+        try
+        {
+            if (playerTransform != null && enemyTransform != null)
+            {
+                FaceMapActor(playerTransform, enemyStartPosition);
+                FaceMapActor(enemyTransform, playerStartPosition);
+            }
+            if (playerAnimator != null) playerAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            if (enemyAnimator != null) enemyAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+
+            if (playerInitiated)
+            {
+                playerAction = StartEncounterAnimation(playerAnimator, Config.mapPlayerAttackTrigger, Config.mapPlayerAttackState, .7f);
+                enemyAction = StartEncounterAnimation(enemyAnimator, Config.mapEnemyHitTrigger, Config.mapEnemyHitState, .7f);
+            }
+            else
+            {
+                playerAction = StartEncounterAnimation(playerAnimator, Config.mapPlayerHitTrigger, Config.mapPlayerHitState, .7f);
+                if (patrol != null)
+                {
+                    enemyAction = StartEncounterAnimation(patrol.mapAnimator, "", patrol.EncounterAttackState, .7f);
+                }
+                else enemyAction = new EncounterAnimationProgress { finished = true };
+            }
+
+            float animationDeadline = Time.unscaledTime + 3.5f;
+            bool playerAnimationFinished = false;
+            bool enemyAnimationFinished = false;
+            while (Time.unscaledTime < animationDeadline && (!playerAnimationFinished || !enemyAnimationFinished))
+            {
+                playerAnimationFinished = UpdateEncounterAnimation(playerAction);
+                enemyAnimationFinished = UpdateEncounterAnimation(enemyAction);
+                if (playerAnimationFinished && enemyAnimationFinished) break;
+                yield return null;
+            }
+
+            if (playerTransform == null || enemyTransform == null || !OnMap)
+                yield break;
+
+            // Hold the final frame of each one-shot reaction while the encounter VFX plays.
+            if (playerAnimator != null) playerAnimator.speed = 0f;
+            if (enemyAnimator != null) enemyAnimator.speed = 0f;
+            Time.timeScale = 0f;
+
+            Camera viewCamera = Camera.main;
+            if (Config.encounterBlackHoleVfxPrefab != null)
+            {
+                if (viewCamera != null)
+                {
+                    const float portalBaseDiameter = 7.57f;
+                    float cameraDistance = Mathf.Max(2.5f, viewCamera.nearClipPlane + .5f);
+                    float screenHeight = viewCamera.orthographic
+                        ? viewCamera.orthographicSize * 2f
+                        : cameraDistance * 2f * Mathf.Tan(viewCamera.fieldOfView * .5f * Mathf.Deg2Rad);
+                    float screenWidth = screenHeight * viewCamera.aspect;
+                    float screenFillScale = Mathf.Max(screenHeight, screenWidth) * 1.15f / portalBaseDiameter;
+                    blackHole = Instantiate(Config.encounterBlackHoleVfxPrefab, viewCamera.transform, false);
+                    blackHole.transform.localPosition = Vector3.forward * cameraDistance;
+                    blackHole.transform.localRotation = Quaternion.identity;
+                    blackHole.transform.localScale = Vector3.one * Mathf.Max(.1f, Config.encounterVfxScale, screenFillScale);
+                }
+                else
+                {
+                    Vector3 midpoint = (playerTransform.position + enemyTransform.position) * .5f + Vector3.up * .75f;
+                    blackHole = Instantiate(Config.encounterBlackHoleVfxPrefab, midpoint, Quaternion.identity);
+                    blackHole.transform.localScale = Vector3.one * Mathf.Max(.1f, Config.encounterVfxScale);
+                }
+                blackHole.SetActive(false);
+                PrepareEncounterVfxForUnscaledTime(blackHole);
+                blackHole.SetActive(true);
+                foreach (ParticleSystem particles in blackHole.GetComponentsInChildren<ParticleSystem>(true))
+                    if (particles != null && !particles.isPlaying) particles.Play(true);
+            }
+
+            // The world remains frozen; only the camera-facing encounter VFX advances.
+            float vfxDuration = Mathf.Max(0f, Config.encounterVfxDuration);
+            if (vfxDuration > 0f) yield return new WaitForSecondsRealtime(vfxDuration);
+
+            if (!LoadingScreen.Load(Config.battleScene))
+            {
+                encounter = null;
+                Notify(LoadingScreen.Error);
+                yield break;
+            }
+            loadingStarted = true;
+        }
+        finally
+        {
+            if (!loadingStarted)
+            {
+                if (blackHole != null) Destroy(blackHole);
+                if (playerTransform != null)
+                {
+                    playerTransform.rotation = playerStartRotation;
+                }
+                if (enemyTransform != null)
+                {
+                    enemyTransform.rotation = enemyStartRotation;
+                }
+                if (playerAnimator != null && playerStartState != 0 && playerAnimator.HasState(0, playerStartState))
+                    playerAnimator.Play(playerStartState, 0, playerStartNormalizedTime);
+                if (enemyAnimator != null && enemyStartState != 0 && enemyAnimator.HasState(0, enemyStartState))
+                    enemyAnimator.Play(enemyStartState, 0, enemyStartNormalizedTime);
+                if (playerAnimator != null) playerAnimator.speed = playerAnimatorSpeed;
+                if (enemyAnimator != null) enemyAnimator.speed = enemyAnimatorSpeed;
+                if (playerAnimator != null) playerAnimator.cullingMode = playerCulling;
+                if (enemyAnimator != null) enemyAnimator.cullingMode = enemyCulling;
+                Time.timeScale = encounterPreviousTimeScale;
+                if (OnMap)
+                {
+                    encounter = null;
+                    Busy = false;
+                }
+            }
+        }
+    }
+
+    private static void FaceMapActor(Transform actor, Vector3 target)
+    {
+        if (actor == null) return;
+        Vector3 direction = target - actor.position;
+        direction.y = 0f;
+        if (direction.sqrMagnitude > .001f) actor.rotation = Quaternion.LookRotation(direction.normalized, Vector3.up);
+    }
+
+    private static void PrepareEncounterVfxForUnscaledTime(GameObject effect)
+    {
+        if (effect == null) return;
+
+        foreach (ParticleSystem particles in effect.GetComponentsInChildren<ParticleSystem>(true))
+        {
+            var main = particles.main;
+            main.useUnscaledTime = true;
+            main.playOnAwake = false;
+            particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        }
+
+        foreach (Animator animator in effect.GetComponentsInChildren<Animator>(true))
+            animator.updateMode = AnimatorUpdateMode.UnscaledTime;
+    }
+
+    private static EncounterAnimationProgress StartEncounterAnimation(Animator animator, string triggerName, string stateName, float fallbackDuration)
+    {
+        var progress = new EncounterAnimationProgress
+        {
+            animator = animator,
+            stateName = string.IsNullOrWhiteSpace(stateName) ? "" : stateName.Substring(stateName.LastIndexOf('.') + 1),
+            stateHash = string.IsNullOrWhiteSpace(stateName) ? 0 : Animator.StringToHash(stateName.Substring(stateName.LastIndexOf('.') + 1)),
+            startedAt = Time.unscaledTime,
+            fallbackDuration = fallbackDuration,
+            finished = animator == null || !animator.isActiveAndEnabled
+        };
+        if (progress.finished) return progress;
+
+        bool hasTrigger = !string.IsNullOrWhiteSpace(triggerName) && animator.parameters.Any(x => x.name == triggerName && x.type == AnimatorControllerParameterType.Trigger);
+        if (TryFindAnimatorState(animator, progress.stateName, out _, out int reactionLayer))
+        {
+            progress.stateHash = Animator.StringToHash(progress.stateName);
+            progress.layer = reactionLayer;
+        }
+        if (hasTrigger)
+        {
+            animator.ResetTrigger(triggerName);
+            animator.SetTrigger(triggerName);
+            return progress;
+        }
+
+        if (TryFindAnimatorState(animator, progress.stateName, out int stateHash, out int layer))
+        {
+            progress.stateHash = Animator.StringToHash(progress.stateName);
+            progress.layer = layer;
+            progress.stateName = animator.GetLayerName(layer) + "." + progress.stateName;
+            animator.Play(stateHash, layer, 0f);
+        }
+        else progress.finished = true;
+        return progress;
+    }
+
+    private static bool TryFindAnimatorState(Animator animator, string shortName, out int stateHash, out int layer)
+    {
+        stateHash = 0; layer = 0;
+        if (animator == null || string.IsNullOrEmpty(shortName)) return false;
+        for (int i = 0; i < animator.layerCount; i++)
+        {
+            int fullHash = Animator.StringToHash(animator.GetLayerName(i) + "." + shortName);
+            int shortHash = Animator.StringToHash(shortName);
+            if (animator.HasState(i, fullHash)) { stateHash = fullHash; layer = i; return true; }
+            if (animator.HasState(i, shortHash)) { stateHash = shortHash; layer = i; return true; }
+        }
+        return false;
+    }
+
+    private static bool UpdateEncounterAnimation(EncounterAnimationProgress progress)
+    {
+        if (progress == null || progress.finished) return true;
+        if (progress.animator == null || !progress.animator.isActiveAndEnabled) { progress.finished = true; return true; }
+        float elapsed = Time.unscaledTime - progress.startedAt;
+        int layer = Mathf.Clamp(progress.layer, 0, Mathf.Max(0, progress.animator.layerCount - 1));
+        AnimatorStateInfo state = progress.animator.GetCurrentAnimatorStateInfo(layer);
+        bool inExpectedState = !string.IsNullOrEmpty(progress.stateName) &&
+            (state.IsName(progress.stateName) || state.shortNameHash == progress.stateHash);
+        if (inExpectedState)
+        {
+            progress.entered = true;
+            if (!progress.animator.IsInTransition(layer) && state.normalizedTime >= .98f) progress.finished = true;
+        }
+        else if (progress.entered && !progress.animator.IsInTransition(layer)) progress.finished = true;
+        else if (!progress.entered && elapsed >= progress.fallbackDuration + .35f) progress.finished = true;
+        if (elapsed >= 3.5f) progress.finished = true;
+        return progress.finished;
     }
     public void PrepareBattle(CombatManager manager)
     {
@@ -543,6 +797,13 @@ public class CampaignSession : MonoBehaviour
             unit.gameObject.SetActive(true); unit.isPlayer = false; unit.SetPersistentHP(unit.maxHP);
             if (battleSetup != null) battleSetup.ApplyStartingEffects(unit, false, i);
             manager.enemyParty.Add(unit);
+        }
+        int initiativeBonus = Mathf.Max(0, Config != null ? Config.initiativeSpeedBonus : 100);
+        if (initiativeBonus > 0)
+        {
+            List<BattleUnit> advantagedSide = encounter.playerInitiated ? manager.playerParty : manager.enemyParty;
+            foreach (BattleUnit unit in advantagedSide)
+                if (unit != null) unit.speed += initiativeBonus;
         }
         RebindCameras(oldPlayers, oldEnemies, manager);
 

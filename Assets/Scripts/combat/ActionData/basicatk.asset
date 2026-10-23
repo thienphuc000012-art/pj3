@@ -20,6 +20,22 @@ MonoBehaviour:
   ultimateEnergyGain: 10
   power: 10
   damageMultiplier: 1
+  useLifeSteal: 1
+  lifeStealPercent: 33.333
+  damageCondition: 0
+  damageMultiplierWhenCasterBurned: 2
+  damageMultiplierWhenCasterNotBurned: 0.5
+  damageMultiplierWhenTargetPoisoned: 1.5
+  damageMultiplierWhenTargetNotPoisoned: 1
+  ignoreBurnAttackReductionWhenEmpowered: 1
+  isSummonSkill: 0
+  summonPrefab: {fileID: 0}
+  summonCount: 2
+  summonDeathOwnerMaxHpCostPercent: 10
+  summonSpawnVfxPrefab: {fileID: 0}
+  summonSpawnVfxLocalOffset: {x: 0, y: 0, z: 0}
+  summonSpawnVfxLifetime: 2
+  summonSpawnDelay: 0.65
   isHeal: 0
   animationTriggerName: attack
   isFriendlyAction: 0

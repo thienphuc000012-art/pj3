@@ -8,6 +8,24 @@ public class CampaignConfig : ScriptableObject
 {
     public string mapScene = "mapgame";
     public string battleScene = "combattest";
+    [Header("Encounter Transition")]
+    [Tooltip("VFX encounter phát phủ khung hình trước khi chuyển sang trận đấu.")]
+    public GameObject encounterBlackHoleVfxPrefab;
+    [Min(0f)] public float encounterVfxDuration = 1.5f;
+    [Min(0.1f)] public float encounterVfxScale = 1.5f;
+    [Min(0)] public int initiativeSpeedBonus = 100;
+    [Tooltip("Trigger trên Animator player map khi player chủ động mở trận.")]
+    public string mapPlayerAttackTrigger = "attack";
+    [Tooltip("Tên state Attack tương ứng với trigger của player.")]
+    public string mapPlayerAttackState = "attack";
+    [Tooltip("Trigger trên Animator player map khi enemy mở trận.")]
+    public string mapPlayerHitTrigger = "Hit";
+    [Tooltip("Tên state Hit tương ứng với trigger của player.")]
+    public string mapPlayerHitState = "hit";
+    [Tooltip("Trigger Hit trên Animator model enemy map.")]
+    public string mapEnemyHitTrigger = "Hit";
+    [Tooltip("Tên state Hit tương ứng với trigger của enemy.")]
+    public string mapEnemyHitState = "hit";
     public List<BattleUnit> startingParty = new List<BattleUnit>();
     public List<PartyPreviewImage> partyPreviews = new List<PartyPreviewImage>();
     public Sprite PreviewImage(BattleUnit member) => partyPreviews?.Find(x => x != null && x.member == member)?.image;

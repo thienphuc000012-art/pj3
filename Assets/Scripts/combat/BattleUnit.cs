@@ -50,6 +50,10 @@ public class BattleUnit : MonoBehaviour
 {
     public string unitName;
     public int maxHP = 100;
+    [HideInInspector] public bool isSummonedUnit;
+    [HideInInspector] public BattleUnit summonOwner;
+    [HideInInspector] public float summonDeathOwnerMaxHpCostPercent;
+    private bool summonDeathCostApplied;
     [Header("Enemy HP Appearance")]
     [Tooltip("Ảnh viền HP riêng của enemy. Để trống dùng viền mặc định; HP Fill vẫn dùng chung.")]
     public Sprite enemyHpBorderSprite;
@@ -523,7 +527,9 @@ public class BattleUnit : MonoBehaviour
     }
     [NonSerialized] public List<ActiveDebuff> activeDebuffs = new List<ActiveDebuff>();
     private readonly List<GameObject> debuffVfxInstances = new List<GameObject>();
-    public bool HasParalysis => activeDebuffs.Any(d => d.settings.type == ActionData.DebuffType.Paralysis);
+    public bool HasDebuff(ActionData.DebuffType type) =>
+        activeDebuffs != null && activeDebuffs.Any(d => d != null && d.settings != null && d.settings.type == type);
+    public bool HasParalysis => HasDebuff(ActionData.DebuffType.Paralysis);
     public bool HasDamagingDebuff => activeDebuffs.Any(d =>
         (d.settings.type == ActionData.DebuffType.Burn && d.settings.burnDamage > 0) ||
         (d.settings.type == ActionData.DebuffType.Poison && d.settings.poisonMaxHpPercent > 0));
@@ -559,12 +565,17 @@ public class BattleUnit : MonoBehaviour
         UpdateUI();
     }
 
-    public int GetTotalAttack()
+    public int GetTotalAttack(bool ignoreBurnAttackReduction = false)
     {
         float atk = Mathf.Max(0, baseAtk + GetBuffValue(ActionData.BuffStat.Atk));
-        foreach (var effect in activeDebuffs)
-            if (effect.settings.type == ActionData.DebuffType.Burn)
-                atk *= 1f - Mathf.Clamp01(effect.settings.burnAttackReductionPercent / 100f);
+        if (!ignoreBurnAttackReduction)
+        {
+            foreach (var effect in activeDebuffs)
+            {
+                if (effect != null && effect.settings != null && effect.settings.type == ActionData.DebuffType.Burn)
+                    atk *= 1f - Mathf.Clamp01(effect.settings.burnAttackReductionPercent / 100f);
+            }
+        }
         return Mathf.Max(0, Mathf.RoundToInt(atk));
     }
 
@@ -667,6 +678,8 @@ public class BattleUnit : MonoBehaviour
         UpdateUI();
         if (IsDead)
         {
+            ApplySummonDeathCost();
+            CombatManager.Instance?.KillSummonsOwnedBy(this);
             foreach (SwordBladeTrail trail in GetComponentsInChildren<SwordBladeTrail>(true))
                 trail.StopTrail();
             deathStateSeen = false;
@@ -683,6 +696,17 @@ public class BattleUnit : MonoBehaviour
                 animator.ResetTrigger("Parry");
             animator.SetTrigger("Hit");
         }
+    }
+
+    private void ApplySummonDeathCost()
+    {
+        if (!isSummonedUnit || summonDeathCostApplied) return;
+        summonDeathCostApplied = true;
+        if (summonOwner == null || summonOwner.IsDead || summonDeathOwnerMaxHpCostPercent <= 0f) return;
+
+        int hpCost = Mathf.CeilToInt(summonOwner.maxHP * Mathf.Clamp(summonDeathOwnerMaxHpCostPercent, 0f, 100f) / 100f);
+        if (hpCost > 0)
+            summonOwner.TakeDamage(hpCost, false, false, true);
     }
     public void Heal(int amount)
     {

@@ -734,6 +734,12 @@ public class CombatManager : MonoBehaviour
         if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
         if (!currentActiveUnit.CanUseAction(skillAction)) return;
 
+        if (skillAction.isSummonSkill && !CanSummonUnits(currentActiveUnit, skillAction))
+        {
+            Debug.LogWarning($"[Summon] {skillAction.actionName} cannot be used: assign a summon prefab and leave at least one battle slot empty.", skillAction);
+            return;
+        }
+
         if (currentStains + skillAction.stainChange < 0)
         {
             Debug.LogWarning($"[Hệ thống] Không đủ Stain để sử dụng {skillAction.actionName}!");
@@ -741,7 +747,7 @@ public class CombatManager : MonoBehaviour
         }
 
         selectedAction = skillAction;
-        isSelectingSelfOnly = skillAction.isSelfOnly;
+        isSelectingSelfOnly = skillAction.isSelfOnly || skillAction.isSummonSkill;
         isSelectingBuffTarget = skillAction.isFriendlyAction || isSelectingSelfOnly;
         currentOpenMenu = OpenMenuType.None;
 
@@ -818,8 +824,21 @@ public class CombatManager : MonoBehaviour
 
         // Lấy chiêu theo Action Pattern (Không random)
         selectedAction = currentActiveUnit.GetNextAction();
-        if (selectedAction != null && (selectedAction.isFriendlyAction || selectedAction.isHeal))
-            currentTarget = selectedAction.isSelfOnly ? currentActiveUnit : enemyParty.FirstOrDefault(u => u != null && !u.IsDead);
+        if (selectedAction != null && (selectedAction.isFriendlyAction || selectedAction.isHeal || selectedAction.isSummonSkill))
+            currentTarget = selectedAction.isSelfOnly || selectedAction.isSummonSkill
+                ? currentActiveUnit
+                : enemyParty.FirstOrDefault(u => u != null && !u.IsDead);
+
+        if (selectedAction != null && selectedAction.isSummonSkill && !CanSummonUnits(currentActiveUnit, selectedAction))
+        {
+            selectedAction = currentActiveUnit.defaultAttack;
+            currentTarget = livePlayers[Random.Range(0, livePlayers.Count)];
+            if (selectedAction == null || selectedAction.isSummonSkill || !currentActiveUnit.IsEnemyActionReady(selectedAction))
+            {
+                EndCurrentTurn();
+                yield break;
+            }
+        }
 
 
         // Enemy dùng skill AoE -> dùng camera AoE riêng.
@@ -890,6 +909,9 @@ public class CombatManager : MonoBehaviour
     private BattleUnit animationActionOwner;
     private ActionData animationActionData;
     private bool acceptingActionAnimationEvents;
+    private bool summonSpawnVfxEventReceived;
+    private float summonSpawnVfxEventTime;
+    private readonly List<Transform> summonSpawnVfxSlots = new List<Transform>();
 
     private static void StartClawAttackTrail(BattleUnit attacker, ActionData action)
     {
@@ -912,6 +934,21 @@ public class CombatManager : MonoBehaviour
             unit == animationActionOwner && unit == currentActiveUnit && animationActionData != null;
     }
 
+    public void PlaySummonSpawnVFXFromAnimation(BattleUnit unit)
+    {
+        if (!CanAcceptActionAnimationEvent(unit) || !animationActionData.isSummonSkill || summonSpawnVfxEventReceived)
+            return;
+
+        summonSpawnVfxSlots.Clear();
+        summonSpawnVfxSlots.AddRange(GetAvailableSummonSlots(unit, animationActionData));
+        if (summonSpawnVfxSlots.Count == 0) return;
+
+        summonSpawnVfxEventReceived = true;
+        summonSpawnVfxEventTime = Time.time;
+        foreach (Transform slot in summonSpawnVfxSlots)
+            SpawnSummonVFX(animationActionData, slot);
+    }
+
     private readonly HashSet<BattleUnit> statusTargetsThisAction = new HashSet<BattleUnit>();
     private void ApplyActionStatus(BattleUnit target, ActionData action)
     {
@@ -919,10 +956,185 @@ public class CombatManager : MonoBehaviour
             target.ApplyStatusAction(action);
     }
 
+    private float GetCasterConditionalDamageMultiplier(ActionData action, BattleUnit attacker)
+    {
+        if (action == null || attacker == null || action.isFriendlyAction || action.isHeal ||
+            action.damageCondition != ActionData.DamageCondition.CasterHasBurn)
+            return 1f;
+
+        return attacker.HasDebuff(ActionData.DebuffType.Burn)
+            ? Mathf.Max(0f, action.damageMultiplierWhenCasterBurned)
+            : Mathf.Max(0f, action.damageMultiplierWhenCasterNotBurned);
+    }
+
+    private float GetTargetConditionalDamageMultiplier(ActionData action, BattleUnit target)
+    {
+        if (action == null || target == null || action.isFriendlyAction || action.isHeal ||
+            action.damageCondition != ActionData.DamageCondition.TargetHasPoison)
+            return 1f;
+
+        return target.HasDebuff(ActionData.DebuffType.Poison)
+            ? Mathf.Max(0f, action.damageMultiplierWhenTargetPoisoned)
+            : Mathf.Max(0f, action.damageMultiplierWhenTargetNotPoisoned);
+    }
+
+    private int CalculateBaseActionDamage(BattleUnit attacker, ActionData action, bool isCrit)
+    {
+        if (attacker == null || action == null) return 0;
+
+        bool burnSynergyActive = !action.isFriendlyAction && !action.isHeal &&
+                                 action.damageCondition == ActionData.DamageCondition.CasterHasBurn &&
+                                 attacker.HasDebuff(ActionData.DebuffType.Burn);
+        bool ignoreBurnReduction = burnSynergyActive && action.ignoreBurnAttackReductionWhenEmpowered;
+        int totalAttack = attacker.GetTotalAttack(ignoreBurnReduction);
+        float calculatedDamage = ((totalAttack * action.damageMultiplier) + action.power) *
+                                 GetCasterConditionalDamageMultiplier(action, attacker);
+        if (isCrit && !action.isFriendlyAction && !action.isHeal)
+            calculatedDamage *= attacker.GetCritDamageMultiplier();
+        return Mathf.RoundToInt(calculatedDamage);
+    }
+
+    private int CalculateActionDamage(BattleUnit attacker, BattleUnit target, ActionData action, bool isCrit)
+    {
+        int baseDamage = CalculateBaseActionDamage(attacker, action, isCrit);
+        if (action == null || action.isFriendlyAction || action.isHeal) return baseDamage;
+        return Mathf.RoundToInt(baseDamage * GetTargetConditionalDamageMultiplier(action, target));
+    }
+
+    private void ApplyActionLifeSteal(BattleUnit attacker, ActionData action, int actualHpDamage)
+    {
+        if (attacker == null || attacker.IsDead || action == null || !action.useLifeSteal || actualHpDamage <= 0)
+            return;
+
+        int healAmount = Mathf.RoundToInt(actualHpDamage * Mathf.Max(0f, action.lifeStealPercent) / 100f);
+        if (healAmount <= 0) return;
+
+        int hpBeforeHeal = attacker.currentHP;
+        attacker.Heal(healAmount);
+        int actualHealing = attacker.currentHP - hpBeforeHeal;
+        if (actualHealing > 0)
+            AdvancedUIManager.Instance?.ShowDamageText(attacker.transform, actualHealing, false, true);
+    }
+
+    private IEnumerator SummonUnits(BattleUnit summoner, ActionData action)
+    {
+        if (summoner == null || action == null || !action.isSummonSkill) yield break;
+        if (action.summonPrefab == null)
+        {
+            Debug.LogWarning($"[Summon] {action.actionName} has no Summon Prefab assigned.", action);
+            yield break;
+        }
+
+        List<BattleUnit> team = summoner.isPlayer ? playerParty : enemyParty;
+        int requestedCount = Mathf.Clamp(action.summonCount, 1, 2);
+        List<Transform> summonSlots = summonSpawnVfxEventReceived
+            ? new List<Transform>(summonSpawnVfxSlots)
+            : GetAvailableSummonSlots(summoner, action);
+        int spawnedCount = 0;
+
+        if (!summonSpawnVfxEventReceived)
+        {
+            // If the clip has no summon event, keep a safe fallback after its
+            // animation finishes so the skill never becomes stuck.
+            foreach (Transform slot in summonSlots)
+                SpawnSummonVFX(action, slot);
+            summonSpawnVfxEventTime = Time.time;
+            summonSpawnVfxEventReceived = true;
+        }
+
+        // The event time is the anchor, so the VFX-to-summon delay is not
+        // restarted when the animation later reaches its end event.
+        float remainingDelay = action.summonSpawnDelay - (Time.time - summonSpawnVfxEventTime);
+        if (summonSlots.Count > 0 && action.summonSpawnVfxPrefab != null && remainingDelay > 0f)
+            yield return new WaitForSeconds(remainingDelay);
+        if (summoner == null || summoner.IsDead) yield break;
+
+        foreach (Transform slot in summonSlots)
+        {
+            BattleUnit summon = Instantiate(action.summonPrefab, slot.position, slot.rotation);
+            summon.gameObject.SetActive(true);
+            summon.isPlayer = summoner.isPlayer;
+            summon.isSummonedUnit = true;
+            summon.summonOwner = summoner;
+            summon.summonDeathOwnerMaxHpCostPercent = action.summonDeathOwnerMaxHpCostPercent;
+            summon.SetPersistentHP(summon.maxHP);
+            summon.ResetEnemyActionCooldowns();
+            summon.ApplyStartingBattleEffects();
+            team.Add(summon);
+            spawnedCount++;
+        }
+
+        if (spawnedCount < requestedCount)
+            Debug.Log($"[Summon] {action.actionName} filled {spawnedCount}/{requestedCount} available battle slots.", summoner);
+
+        if (spawnedCount > 0 && AdvancedUIManager.Instance != null)
+        {
+            if (summoner.isPlayer)
+                AdvancedUIManager.Instance.RegisterPartyHP(playerParty);
+        }
+    }
+
+    private List<Transform> GetAvailableSummonSlots(BattleUnit summoner, ActionData action)
+    {
+        List<Transform> result = new List<Transform>();
+        if (summoner == null || action == null) return result;
+
+        List<BattleUnit> team = summoner.isPlayer ? playerParty : enemyParty;
+        Transform[] slots = summoner.isPlayer ? playerSlots : enemySlots;
+        int requestedCount = Mathf.Clamp(action.summonCount, 1, 2);
+        if (slots == null) return result;
+
+        for (int i = team.Count; i < slots.Length && result.Count < requestedCount; i++)
+            if (slots[i] != null) result.Add(slots[i]);
+        return result;
+    }
+
+    private void SpawnSummonVFX(ActionData action, Transform slot)
+    {
+        if (action == null || action.summonSpawnVfxPrefab == null || slot == null) return;
+
+        Vector3 position = slot.TransformPoint(action.summonSpawnVfxLocalOffset);
+        GameObject vfx = Instantiate(action.summonSpawnVfxPrefab, position, slot.rotation);
+        TrackCombatVFX(vfx);
+        Destroy(vfx, GetVfxLifeTime(vfx, action.summonSpawnVfxLifetime));
+    }
+
+    public void KillSummonsOwnedBy(BattleUnit owner)
+    {
+        if (owner == null) return;
+
+        BattleUnit[] ownedSummons = playerParty.Concat(enemyParty)
+            .Where(unit => unit != null && unit.isSummonedUnit && unit.summonOwner == owner && !unit.IsDead)
+            .Distinct()
+            .ToArray();
+
+        foreach (BattleUnit summon in ownedSummons)
+            summon.TakeDamage(Mathf.Max(1, summon.maxHP), false, false, true);
+    }
+
+    private bool CanSummonUnits(BattleUnit summoner, ActionData action)
+    {
+        if (summoner == null || action == null || !action.isSummonSkill || action.summonPrefab == null)
+            return false;
+
+        List<BattleUnit> team = summoner.isPlayer ? playerParty : enemyParty;
+        Transform[] slots = summoner.isPlayer ? playerSlots : enemySlots;
+        if (slots == null) return false;
+
+        int availableSlots = 0;
+        for (int i = team.Count; i < slots.Length && slots[i] != null; i++)
+            availableSlots++;
+
+        return availableSlots > 0;
+    }
+
     private IEnumerator ExecuteActionBody(BattleUnit attacker, BattleUnit target, ActionData action)
     {
         statusTargetsThisAction.Clear();
         state = CombatState.Executing;
+        summonSpawnVfxEventReceived = false;
+        summonSpawnVfxEventTime = 0f;
+        summonSpawnVfxSlots.Clear();
         castStarted.Clear();
         ultimateAuraStarted.Clear();
         vfxLaunched.Clear();
@@ -963,7 +1175,7 @@ public class CombatManager : MonoBehaviour
         isAttackAnimationFinished = false;
         screenSlashHitIndex = 0;
 
-        if (action != null && action.isMelee && target != null && !action.isFriendlyAction && !action.isHeal)
+        if (action != null && action.isMelee && !action.isSummonSkill && target != null && !action.isFriendlyAction && !action.isHeal)
         {
             Vector3 attackPosition = GetMeleeAttackPosition(attacker, target);
             FaceMeleeAttackTarget(attacker, target, attackPosition);
@@ -992,9 +1204,27 @@ public class CombatManager : MonoBehaviour
             string animTrigger = action != null ? action.animationTriggerName : "Attack";
             acceptingActionAnimationEvents = true;
             StartClawAttackTrail(attacker, action);
-            attacker.animator.SetTrigger(animTrigger);
+            if (action != null && action.isSummonSkill)
+                TryPlaySummonAnimation(attacker, animTrigger);
+            else if (attacker.animator != null)
+                attacker.animator.SetTrigger(animTrigger);
 
-            yield return new WaitUntil(() => isAttackAnimationFinished || attacker == null || attacker.IsDead);
+            if (action != null && action.isSummonSkill)
+            {
+                // Give Animator one frame to enter the selected attack state
+                // before measuring its actual clip duration for the fallback.
+                yield return null;
+                float fallbackDeadline = Time.unscaledTime + GetSummonAnimationFallback(attacker);
+                while (!isAttackAnimationFinished && attacker != null && !attacker.IsDead &&
+                       Time.unscaledTime < fallbackDeadline)
+                    yield return null;
+                if (!isAttackAnimationFinished && attacker != null && !attacker.IsDead)
+                    Debug.LogWarning($"[Summon] {action.actionName}: animation end event was not received; continuing to summon after the fallback wait.", action);
+            }
+            else
+            {
+                yield return new WaitUntil(() => isAttackAnimationFinished || attacker == null || attacker.IsDead);
+            }
             StopClawAttackTrail(attacker);
             acceptingActionAnimationEvents = false;
             if (attacker == null || attacker.IsDead)
@@ -1021,6 +1251,9 @@ public class CombatManager : MonoBehaviour
             ParrySystem.Instance?.ResetParryState();
         }
 
+        if (action.isSummonSkill && attacker != null && !attacker.IsDead)
+            yield return StartCoroutine(SummonUnits(attacker, action));
+
         StopBeamVFX(attacker);
         FinishCastVFX(attacker);
         attacker.transform.position = originalPosition;
@@ -1032,6 +1265,64 @@ public class CombatManager : MonoBehaviour
             attacker.ReturnToCombatIdle();
         }
 
+    }
+
+    private static float GetSummonAnimationFallback(BattleUnit attacker)
+    {
+        if (attacker == null || attacker.animator == null) return 1.5f;
+
+        float longestClip = 0f;
+        foreach (AnimatorClipInfo clipInfo in attacker.animator.GetCurrentAnimatorClipInfo(0))
+            if (clipInfo.clip != null) longestClip = Mathf.Max(longestClip, clipInfo.clip.length);
+
+        float playbackSpeed = Mathf.Max(.1f, Mathf.Abs(attacker.animator.speed));
+        return Mathf.Clamp(longestClip / playbackSpeed + .35f, 1.25f, 4f);
+    }
+
+    private static bool TryPlaySummonAnimation(BattleUnit attacker, string requestedTrigger)
+    {
+        if (attacker == null || attacker.animator == null) return false;
+
+        Animator animator = attacker.animator;
+        AnimatorControllerParameter[] parameters = animator.parameters;
+        AnimatorControllerParameter trigger = parameters.FirstOrDefault(p =>
+            p.type == AnimatorControllerParameterType.Trigger &&
+            string.Equals(p.name, requestedTrigger, System.StringComparison.OrdinalIgnoreCase));
+
+        // ActionData can use a generic name while the unit's controller exposes
+        // a specific attack trigger, such as clawsAttackLeft.
+        if (trigger == null)
+            trigger = parameters.FirstOrDefault(p => p.type == AnimatorControllerParameterType.Trigger &&
+                p.name.IndexOf("attack", System.StringComparison.OrdinalIgnoreCase) >= 0 &&
+                p.name.IndexOf("jump", System.StringComparison.OrdinalIgnoreCase) < 0);
+
+        if (trigger != null)
+        {
+            animator.ResetTrigger(trigger.nameHash);
+            animator.SetTrigger(trigger.nameHash);
+            return true;
+        }
+
+        // Some controllers expose an attack state without a matching trigger.
+        string stateName = string.IsNullOrWhiteSpace(requestedTrigger) ? "Attack" : requestedTrigger;
+        int stateHash = Animator.StringToHash(stateName);
+        for (int layer = 0; layer < animator.layerCount; layer++)
+        {
+            int fullPathHash = Animator.StringToHash(animator.GetLayerName(layer) + "." + stateName);
+            if (animator.HasState(layer, stateHash))
+            {
+                animator.CrossFade(stateHash, .08f, layer, 0f);
+                return true;
+            }
+            if (animator.HasState(layer, fullPathHash))
+            {
+                animator.CrossFade(fullPathHash, .08f, layer, 0f);
+                return true;
+            }
+        }
+
+        Debug.LogWarning($"[Summon] {attacker.unitName}: no matching attack trigger or state was found for '{requestedTrigger}'. The summon will still resolve after its fallback delay.", attacker);
+        return false;
     }
 
     public Vector3 GetMeleeAttackPosition(BattleUnit attacker, BattleUnit target)
@@ -1105,6 +1396,7 @@ public class CombatManager : MonoBehaviour
         if (!CanAcceptActionAnimationEvent(attacker)) return;
         ActionData actionToUse = animationActionData;
         if (actionToUse == null) return;
+        if (actionToUse.isSummonSkill) return;
 
         // ============================================================
         // SHOOT / BEAM:
@@ -1132,17 +1424,9 @@ public class CombatManager : MonoBehaviour
         if (!actionToUse.isFriendlyAction && !actionToUse.isHeal && currentTarget != null)
             SpawnSwordSlashVFX(attacker, currentTarget, actionToUse);
 
-        int totalAtk = attacker.GetTotalAttack();
-        float calculatedDamage = (totalAtk * actionToUse.damageMultiplier) + actionToUse.power;
-        int rawDamage = Mathf.RoundToInt(calculatedDamage);
-
         bool isCrit = !actionToUse.isFriendlyAction && !actionToUse.isHeal &&
             UnityEngine.Random.Range(0, 100) < attacker.GetCritChance();
-
-        if (isCrit && !actionToUse.isFriendlyAction)
-        {
-            rawDamage = Mathf.RoundToInt(rawDamage * attacker.GetCritDamageMultiplier());
-        }
+        int rawDamage = CalculateActionDamage(attacker, currentTarget, actionToUse, isCrit);
 
         if (actionToUse.isFriendlyAction || actionToUse.isHeal)
         {
@@ -1191,10 +1475,12 @@ public class CombatManager : MonoBehaviour
                     if (!UsesVfxImpact(actionToUse)) SpawnActionHitVFX(actionToUse, enemy);
 
                     int hpBefore = enemy.currentHP;
-                    if (!actionToUse.statusOnly) enemy.TakeDamage(rawDamage, false, isCrit);
+                    int targetRawDamage = CalculateActionDamage(attacker, enemy, actionToUse, isCrit);
+                    if (!actionToUse.statusOnly) enemy.TakeDamage(targetRawDamage, false, isCrit);
                     ApplyActionStatus(enemy, actionToUse);
                     int actualDamageTaken = hpBefore - enemy.currentHP;
                     GetComponent<BattleResultPanel>()?.RecordDamage(true, actualDamageTaken);
+                    ApplyActionLifeSteal(attacker, actionToUse, actualDamageTaken);
 
                     AdvancedUIManager.Instance.ShowDamageText(enemy.transform, actualDamageTaken, isCrit, false);
                 }
@@ -1211,10 +1497,12 @@ public class CombatManager : MonoBehaviour
             {
                 if (ally == null || ally.IsDead) continue;
                 int hpBefore = ally.currentHP;
-                if (!actionToUse.statusOnly) ally.TakeDamage(rawDamage, parried, isCrit);
+                int targetRawDamage = CalculateActionDamage(attacker, ally, actionToUse, isCrit);
+                if (!actionToUse.statusOnly) ally.TakeDamage(targetRawDamage, parried, isCrit);
                 if (!parried) ApplyActionStatus(ally, actionToUse);
                 int actualDamageTaken = hpBefore - ally.currentHP;
                 GetComponent<BattleResultPanel>()?.RecordDamage(false, actualDamageTaken);
+                if (!parried) ApplyActionLifeSteal(attacker, actionToUse, actualDamageTaken);
 
                 if (!parried)
                 {
@@ -1239,7 +1527,7 @@ public class CombatManager : MonoBehaviour
             // Player tấn công -> Enemy
             // Enemy tấn công -> Player
             // Heal/Friendly -> phe của chính người cast
-            bool targetsOwnTeam = action.isFriendlyAction || action.isHeal;
+            bool targetsOwnTeam = action.isFriendlyAction || action.isHeal || action.isSummonSkill;
 
             if (attacker.isPlayer)
             {
@@ -1582,31 +1870,15 @@ public class CombatManager : MonoBehaviour
             return;
         }
 
-        int totalAtk =
-            attacker.GetTotalAttack();
-
-        float calculatedDamage =
-            (totalAtk * action.damageMultiplier) +
-            action.power;
-
-        int rawDamage =
-            Mathf.RoundToInt(calculatedDamage);
-
         bool isCrit =
             !action.isFriendlyAction &&
             !action.isHeal &&
             UnityEngine.Random.Range(0, 100) <
             attacker.GetCritChance();
 
-        if (isCrit)
-        {
-            rawDamage = Mathf.RoundToInt(
-                rawDamage *
-                attacker.GetCritDamageMultiplier()
-            );
-        }
-
-        actionState.impactRawDamage = rawDamage;
+        // Cache attack/caster conditions and the crit once per action. Target
+        // Poison is applied separately for each impact, including AoE hits.
+        actionState.impactRawDamage = CalculateBaseActionDamage(attacker, action, isCrit);
         actionState.impactIsCrit = isCrit;
         actionState.impactDamagePrepared = true;
     }
@@ -1621,7 +1893,8 @@ public class CombatManager : MonoBehaviour
             target == null ||
             action == null ||
             actionState == null ||
-            target.IsDead)
+            target.IsDead ||
+            action.isSummonSkill)
         {
             return;
         }
@@ -1639,8 +1912,8 @@ public class CombatManager : MonoBehaviour
             actionState
         );
 
-        int rawDamage =
-            actionState.impactRawDamage;
+        int rawDamage = Mathf.RoundToInt(
+            actionState.impactRawDamage * GetTargetConditionalDamageMultiplier(action, target));
 
         bool isCrit =
             actionState.impactIsCrit;
@@ -1667,6 +1940,7 @@ public class CombatManager : MonoBehaviour
             int actualDamageTaken =
                 hpBefore -
                 target.currentHP;
+            ApplyActionLifeSteal(attacker, action, actualDamageTaken);
 
             GetComponent<BattleResultPanel>()?
                 .RecordDamage(
@@ -1715,6 +1989,7 @@ public class CombatManager : MonoBehaviour
         int playerDamageTaken =
             playerHpBefore -
             target.currentHP;
+        if (!parried) ApplyActionLifeSteal(attacker, action, playerDamageTaken);
 
         GetComponent<BattleResultPanel>()?
             .RecordDamage(

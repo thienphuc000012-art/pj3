@@ -15,13 +15,29 @@ MonoBehaviour:
   actionName: a
   description: 
   icon: {fileID: 21300000, guid: 779ff2d03c859954d928e76c8725151c, type: 3}
-  type: 0
+  type: 1
   isUltimate: 0
   ultimateEnergyGain: 10
   power: 10
   damageMultiplier: 1
+  useLifeSteal: 0
+  lifeStealPercent: 33.333
+  damageCondition: 0
+  damageMultiplierWhenCasterBurned: 2
+  damageMultiplierWhenCasterNotBurned: 0.5
+  damageMultiplierWhenTargetPoisoned: 1.5
+  damageMultiplierWhenTargetNotPoisoned: 1
+  ignoreBurnAttackReductionWhenEmpowered: 1
+  isSummonSkill: 1
+  summonPrefab: {fileID: 8798339202372134501, guid: 34c9cae981207ec4e9ee2c9c116d9442, type: 3}
+  summonCount: 2
+  summonDeathOwnerMaxHpCostPercent: 10
+  summonSpawnVfxPrefab: {fileID: 4748681987041982144, guid: 1f740c2847fa1ab42a43104c062f09bb, type: 3}
+  summonSpawnVfxLocalOffset: {x: 0, y: 0, z: 0}
+  summonSpawnVfxLifetime: 2
+  summonSpawnDelay: 2
   isHeal: 0
-  animationTriggerName: attack
+  animationTriggerName: heal
   isFriendlyAction: 0
   isAoE: 0
   isSelfOnly: 0
@@ -33,7 +49,7 @@ MonoBehaviour:
   debuffs: []
   cleanse: 0
   statusOnly: 0
-  isMelee: 1
+  isMelee: 0
   screenSlash: 0
   screenSlashColor: {r: 0.25, g: 0.8, b: 1, a: 1}
   screenSlashDuration: 0.42
@@ -85,3 +101,8 @@ MonoBehaviour:
   swordSlashVfxLifetime: 2
   swordSlashTravelsToTarget: 0
   swordSlashTravelSpeed: 24
+  useClawAttackTrailVfx: 0
+  clawAttackTrailColor: {r: 0.88, g: 0.92, b: 0.96, a: 1}
+  clawAttackTrailLifetime: 0.14
+  clawAttackTrailWidth: 1
+  clawAttackTrailHandSpread: 0.5
