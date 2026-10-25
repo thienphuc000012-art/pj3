@@ -7,6 +7,8 @@ using UnityEngine;
 public class CampaignConfig : ScriptableObject
 {
     public string mapScene = "mapgame";
+    [Tooltip("Các scene khám phá thuộc cùng campaign. mapScene vẫn là điểm bắt đầu; thêm các scene như m để giữ chung save/party/inventory.")]
+    public List<string> additionalMapScenes = new List<string>();
     public string battleScene = "combattest";
     [Header("Encounter Transition")]
     [Tooltip("VFX encounter phát phủ khung hình trước khi chuyển sang trận đấu.")]
@@ -35,6 +37,9 @@ public class CampaignConfig : ScriptableObject
     public bool defeatReturnsToCheckpoint = true;
     [Min(1)] public int equippedSkillSlots = 4;
     public List<SkillUnlockRule> skillUnlocks = new List<SkillUnlockRule>();
+    public bool IsMapScene(string sceneName) =>
+        string.Equals(sceneName, mapScene, StringComparison.Ordinal) ||
+        additionalMapScenes != null && additionalMapScenes.Exists(x => string.Equals(x, sceneName, StringComparison.Ordinal));
     public SkillUnlockRule SkillRule(ActionData skill) => skillUnlocks?.Find(x => x != null && x.skill == skill);
     public ActionData[] UnlockPrerequisites(ActionData skill) => SkillRule(skill)?.prerequisites?.Where(x => x != null).Distinct().ToArray() ?? new ActionData[0];
     public AdventureItem FindItem(string id) => items.Find(x => x.id == id);
@@ -164,7 +169,7 @@ public class PartyMemberProgress
 [Serializable]
 public class UnlockedRestPoint
 {
-    public string id, displayName;
+    public string id, displayName, sceneName;
     public Vector3 position;
     public Quaternion rotation = Quaternion.identity;
 }
@@ -173,6 +178,7 @@ public class UnlockedRestPoint
 public class CampaignSave
 {
     public int version = 2;
+    public string currentMapScene;
     public void MigrateSkillUnlocks()
     {
         if (version >= 2) return;
@@ -189,6 +195,7 @@ public class CampaignSave
     public Quaternion rotation = Quaternion.identity;
     public Vector3 checkpoint;
     public Quaternion checkpointRotation = Quaternion.identity;
+    public string checkpointMapScene;
     public bool hasPosition;
     public bool hasCheckpoint;
 

@@ -6728,7 +6728,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c0fcaf05249c36e47bee0b4d186511ef, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ParrySystem
-  parryCooldown: 1
+  parryCooldown: 0.75
+  meleeGuardDuration: 0.35
   parrySuccessVfxPrefab: {fileID: 7610566787042884159, guid: 9e4c74794b0f34e4ea245c77584489fe, type: 3}
   useGeneratedRealisticParryVfx: 1
   parrySuccessVfxLocalOffset: {x: 0, y: 1, z: 1}
@@ -10523,7 +10524,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: baseActionPattern.Array.size
-      value: 1
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: 'characterSkills.Array.data[0]'
@@ -10548,11 +10549,11 @@ PrefabInstance:
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: 'baseActionPattern.Array.data[0]'
       value: 
-      objectReference: {fileID: 11400000, guid: cb1ea973c52a8d941b9b47b973b62017, type: 2}
+      objectReference: {fileID: 11400000, guid: fcb0cc7c27be4104a89d579861c52117, type: 2}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: 'baseActionPattern.Array.data[1]'
       value: 
-      objectReference: {fileID: 11400000, guid: fcb0cc7c27be4104a89d579861c52117, type: 2}
+      objectReference: {fileID: 11400000, guid: cb1ea973c52a8d941b9b47b973b62017, type: 2}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: bossPhases.Array.data[0].phaseActionPattern.Array.size
       value: 1

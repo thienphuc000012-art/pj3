@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class ParrySystem : MonoBehaviour
 {
@@ -10,6 +11,8 @@ public class ParrySystem : MonoBehaviour
 
     [Header("Parry Anti-Spam")]
     public float parryCooldown = 0.5f; // Thời gian nghỉ giữa 2 lần bấm Parry (giây)
+    [Min(0.01f), Tooltip("Thời gian vùng đỡ của player hoạt động sau khi nhấn parry.")]
+    public float meleeGuardDuration = 0.35f;
     [Header("Successful Parry VFX")]
     [Tooltip("Prefab hiệu ứng phát khi parry đúng thời điểm. Gán prefab tại đây.")]
     public GameObject parrySuccessVfxPrefab;
@@ -40,6 +43,7 @@ public class ParrySystem : MonoBehaviour
     private float lastParryTime = -99f;
     private Coroutine parryFeedbackRoutine;
     private float timeScaleBeforeParryFeedback = 1f;
+    private readonly HashSet<BattleUnit> activeMeleeGuards = new HashSet<BattleUnit>();
 
     void Awake()
     {
@@ -68,13 +72,78 @@ public class ParrySystem : MonoBehaviour
         BattleUnit activeUnit = CombatManager.Instance.currentActiveUnit;
         if (activeUnit == null || activeUnit.IsDead || activeUnit.isPlayer) return;
         if (CombatManager.Instance.state != CombatState.Executing) return;
-
         // 2. Bắt nút Space với Cooldown chống spam
         if (Input.GetKeyDown(KeyCode.Space) && Time.time >= lastParryTime + parryCooldown)
         {
             lastParryTime = Time.time;
-            TriggerParryAction();
+            if (CombatManager.Instance.ShouldUseMeleeHitboxParry(activeUnit))
+                BeginMeleeGuard(CombatManager.Instance);
+            else
+                TriggerParryAction();
         }
+    }
+
+    private void BeginMeleeGuard(CombatManager combat)
+    {
+        if (combat == null) return;
+        parrySuccessful = false;
+
+        IEnumerable<BattleUnit> targets;
+        if (combat.IsCurrentEnemyAoEAttack())
+            targets = combat.playerParty;
+        else
+            targets = new BattleUnit[] { combat.currentTarget };
+
+        foreach (BattleUnit player in targets)
+        {
+            if (player == null || player.IsDead || !player.isPlayer) continue;
+            if (player.animator != null)
+            {
+                player.animator.ResetTrigger("Hit");
+                player.animator.SetTrigger("Parry");
+            }
+            activeMeleeGuards.Add(player);
+            StartCoroutine(ExpireMeleeGuard(player));
+        }
+    }
+
+    private IEnumerator ExpireMeleeGuard(BattleUnit player)
+    {
+        yield return new WaitForSecondsRealtime(Mathf.Max(0.01f, meleeGuardDuration));
+        activeMeleeGuards.Remove(player);
+    }
+
+    /// <summary>Called by CombatManager on each DealDamage event to test actual weapon/guard overlap.</summary>
+    public bool TryResolveMeleeHitboxParry(BattleUnit attacker, BattleUnit player, out Vector3 contactPoint)
+    {
+        contactPoint = Vector3.zero;
+        if (attacker == null || player == null || !activeMeleeGuards.Contains(player) ||
+            CombatManager.Instance == null || !CombatManager.Instance.ShouldUseMeleeHitboxParry(attacker))
+            return false;
+
+        EnemyMeleeParryHitbox[] hitboxes = attacker.GetComponentsInChildren<EnemyMeleeParryHitbox>(true);
+        PlayerMeleeParryZone[] zones = player.GetComponentsInChildren<PlayerMeleeParryZone>(true);
+        foreach (EnemyMeleeParryHitbox hitbox in hitboxes)
+        {
+            if (hitbox == null) continue;
+            foreach (PlayerMeleeParryZone zone in zones)
+            {
+                if (hitbox.TryGetContact(zone, out contactPoint))
+                {
+                    activeMeleeGuards.Remove(player);
+                    parrySuccessful = true;
+                    isParryWindowOpen = false;
+                    player.AddUltimateEnergy(player.parryUltimateGain);
+                    SpawnParrySuccessVFX(player, attacker, true, contactPoint);
+                    PlayParryImpactFeedback();
+                    CombatManager.Instance.GetComponent<BattleResultPanel>()?.RecordParry();
+                    AdvancedUIManager.Instance?.ShowParryText(player.transform);
+                    Debug.Log($"[PARRY HITBOX] {player.unitName} parried {attacker.unitName} at {contactPoint}.");
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private void TriggerParryAction()
@@ -181,7 +250,7 @@ public class ParrySystem : MonoBehaviour
         }
     }
 
-    private void SpawnParrySuccessVFX(BattleUnit player, BattleUnit attacker, bool playImpactSound = true)
+    private void SpawnParrySuccessVFX(BattleUnit player, BattleUnit attacker, bool playImpactSound = true, Vector3? contactPosition = null)
     {
         if (player == null || parrySuccessVfxPrefab == null) return;
 
@@ -193,10 +262,10 @@ public class ParrySystem : MonoBehaviour
         Vector3 normal = -towardAttacker;
         Vector3 up = Mathf.Abs(Vector3.Dot(normal, Vector3.up)) > .98f ? Vector3.forward : Vector3.up;
         Quaternion impactRotation = Quaternion.LookRotation(normal, up) * Quaternion.Euler(parrySuccessVfxLocalEuler);
-        Vector3 impactPosition = player.transform.position +
+        Vector3 impactPosition = contactPosition ?? (player.transform.position +
                                  player.transform.right * parrySuccessVfxLocalOffset.x +
                                  Vector3.up * parrySuccessVfxLocalOffset.y +
-                                 towardAttacker * parrySuccessVfxLocalOffset.z;
+                                 towardAttacker * parrySuccessVfxLocalOffset.z);
 
         // Stage inactive so playback speed is applied before any particle emits.
         GameObject staging = new GameObject("Parry Success VFX Setup");
@@ -298,5 +367,6 @@ public class ParrySystem : MonoBehaviour
     {
         isParryWindowOpen = false;
         parrySuccessful = false;
+        activeMeleeGuards.Clear();
     }
 }

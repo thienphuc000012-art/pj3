@@ -8725,6 +8725,9 @@ MonoBehaviour:
   savedWorldId: world:9273b2c032cf46cf9ef1eb624107532c
   displayName: Enemy Encounter
   kind: 4
+  targetMapScene: 
+  targetMapPosition: {x: 0, y: 0, z: 0}
+  targetMapEuler: {x: 0, y: 0, z: 0}
   range: 2.5
   experience: 100
   rewards: []
@@ -21226,6 +21229,9 @@ MonoBehaviour:
   savedWorldId: world:1be70ea988114fed8be8c6e9a6205585
   displayName: "L\u01B0u game / H\u1ED3i m\xE1u"
   kind: 3
+  targetMapScene: 
+  targetMapPosition: {x: 0, y: 0, z: 0}
+  targetMapEuler: {x: 0, y: 0, z: 0}
   range: 2.5
   experience: 0
   rewards: []
@@ -640372,6 +640378,9 @@ MonoBehaviour:
   savedWorldId: world:69cef69b177f4a529bdb3115b5496cea
   displayName: Enemy Encounter
   kind: 4
+  targetMapScene: 
+  targetMapPosition: {x: 0, y: 0, z: 0}
+  targetMapEuler: {x: 0, y: 0, z: 0}
   range: 2.5
   experience: 100
   rewards: []
@@ -649019,6 +649028,9 @@ MonoBehaviour:
   savedWorldId: world:0b492378c0fd4201a75e85efde9e91b4
   displayName: Item Pickup
   kind: 0
+  targetMapScene: 
+  targetMapPosition: {x: 0, y: 0, z: 0}
+  targetMapEuler: {x: 0, y: 0, z: 0}
   range: 2.5
   experience: 0
   rewards:
@@ -652300,6 +652312,84 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
+--- !u!1 &1707926949
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1707926951}
+  - component: {fileID: 1707926950}
+  m_Layer: 0
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1707926950
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1707926949}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 47156b6b056b106449c6a86bfa3ca5fa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WorldInteraction
+  persistentId: 4a5e7901d32e4859b889ee33437e6d37
+  savedWorldId: 
+  displayName: "T\u01B0\u01A1ng t\xE1c"
+  kind: 5
+  targetMapScene: m
+  targetMapPosition: {x: 0, y: -92.31, z: 0}
+  targetMapEuler: {x: 0, y: 0, z: 0}
+  range: 2.5
+  experience: 25
+  rewards: []
+  pickupModelPrefab: {fileID: 0}
+  pickupModelPosition: {x: 0, y: 0, z: 0}
+  pickupModelRotation: {x: 0, y: 0, z: 0}
+  pickupModelScale: {x: 1, y: 1, z: 1}
+  chestOpenAnimation: {fileID: 0}
+  chestPlayerAnimationState: Base Layer.openchest
+  chestOpenMoment: 0.5
+  chestUseAnimationEvent: 0
+  requireFrontAccess: 1
+  chestFrontAccessHalfAngle: 70
+  chestOpenDuration: 1.2
+  chestLidPath: Top_Lod
+  chestAnimateLidFallback: 1
+  chestLidOpenRotation: {x: -105, y: 0, z: 0}
+  chestOpenState: Base Layer.open
+  chestClosedState: Base Layer.closed
+  pickupAnimationState: Base Layer.pickupitem
+  pickupMoment: 0.5
+  pickupUseAnimationEvent: 0
+  pickupAnimationTimeout: 10
+  pickupModelInstance: {fileID: 0}
+  pickupModelSource: {fileID: 0}
+  enemyPrefabs: []
+  combatSetupId: default
+--- !u!4 &1707926951
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1707926949}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -16.06, y: 280.56, z: -93.14}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1719466062
 GameObject:
   m_ObjectHideFlags: 0
@@ -656094,6 +656184,9 @@ MonoBehaviour:
   savedWorldId: world:7bd11ed16c17497492b29a07a30dc3ec
   displayName: ddd
   kind: 3
+  targetMapScene: 
+  targetMapPosition: {x: 0, y: 0, z: 0}
+  targetMapEuler: {x: 0, y: 0, z: 0}
   range: 2.5
   experience: 0
   rewards: []
@@ -662889,6 +662982,9 @@ MonoBehaviour:
   savedWorldId: world:2fae7f2c06734eb59f85c4d307ae4672
   displayName: Chest
   kind: 1
+  targetMapScene: 
+  targetMapPosition: {x: 0, y: 0, z: 0}
+  targetMapEuler: {x: 0, y: 0, z: 0}
   range: 2.5
   experience: 30
   rewards:
@@ -689219,3 +689315,4 @@ SceneRoots:
   - {fileID: 905127836}
   - {fileID: 1503852099}
   - {fileID: 2059305916}
+  - {fileID: 1707926951}

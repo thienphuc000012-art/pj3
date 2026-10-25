@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: CampaignConfig
   m_EditorClassIdentifier: Assembly-CSharp::CampaignConfig
   mapScene: mapgame
+  additionalMapScenes:
+  - m
   battleScene: combattest
   encounterBlackHoleVfxPrefab: {fileID: 3165652264736840632, guid: 31e1448bbc469064e89a752925fc2ea4, type: 3}
   encounterVfxDuration: 1.5

@@ -1186,7 +1186,6 @@ public class CombatManager : MonoBehaviour
             acceptingActionAnimationEvents = true;
             StartClawAttackTrail(attacker, action);
             attacker.animator.SetTrigger(animTrigger);
-
             yield return new WaitUntil(() => isAttackAnimationFinished || attacker == null || attacker.IsDead);
             StopClawAttackTrail(attacker);
             acceptingActionAnimationEvents = false;
@@ -1397,7 +1396,6 @@ public class CombatManager : MonoBehaviour
         ActionData actionToUse = animationActionData;
         if (actionToUse == null) return;
         if (actionToUse.isSummonSkill) return;
-
         // ============================================================
         // SHOOT / BEAM:
         // Damage KHÔNG còn chạy từ Animation Event.
@@ -1489,13 +1487,16 @@ public class CombatManager : MonoBehaviour
         }
         else
         {
-            bool parried = ParrySystem.Instance != null && ParrySystem.Instance.parrySuccessful;
-            vfxActionState.parried = parried;
+            bool priorParryResult = ParrySystem.Instance != null && ParrySystem.Instance.parrySuccessful;
+            vfxActionState.parried = priorParryResult;
             List<BattleUnit> targets = actionToUse.isAoE ? playerParty.Where(u => u.currentHP > 0).ToList() : new List<BattleUnit> { currentTarget };
 
             foreach (var ally in targets)
             {
                 if (ally == null || ally.IsDead) continue;
+                bool parried = priorParryResult;
+                if (!parried && actionToUse.isMelee && actionToUse.useMeleeHitboxParry && ParrySystem.Instance != null)
+                    parried = ParrySystem.Instance.TryResolveMeleeHitboxParry(attacker, ally, out _);
                 int hpBefore = ally.currentHP;
                 int targetRawDamage = CalculateActionDamage(attacker, ally, actionToUse, isCrit);
                 if (!actionToUse.statusOnly) ally.TakeDamage(targetRawDamage, parried, isCrit);
@@ -1790,6 +1791,15 @@ public class CombatManager : MonoBehaviour
         return action != null &&
                action.useVfxParry &&
                UsesVfxImpactDamage(action);
+    }
+
+    public bool ShouldUseMeleeHitboxParry(BattleUnit unit)
+    {
+        if (unit == null || unit.isPlayer || animationActionOwner != unit) return false;
+        ActionData action = animationActionData ?? GetCurrentActionForUnit(unit);
+        return action != null && action.isMelee && action.useMeleeHitboxParry &&
+               !action.isFriendlyAction && !action.isHeal && !action.isSummonSkill &&
+               !UsesVfxImpactDamage(action);
     }
 
     // Giữ tên hàm cũ cho các đoạn code kiểm tra Hit VFX.

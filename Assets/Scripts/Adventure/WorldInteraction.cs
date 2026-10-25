@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
 
-public enum WorldInteractionKind { Pickup, Chest, Discovery, RestPoint, Encounter }
+public enum WorldInteractionKind { Pickup, Chest, Discovery, RestPoint, Encounter, MapTransition }
 
 public class WorldInteraction : MonoBehaviour
 {
@@ -12,6 +12,12 @@ public class WorldInteraction : MonoBehaviour
     [HideInInspector] public string savedWorldId;
     public string displayName = "Tương tác";
     public WorldInteractionKind kind;
+    [Header("Map Transition")]
+    [Tooltip("Tên scene đích phải có trong Campaign Config > Additional Map Scenes và Build Settings.")]
+    public string targetMapScene;
+    [Tooltip("Vị trí spawn của player trong scene đích (tọa độ world của scene đích).")]
+    public Vector3 targetMapPosition;
+    public Vector3 targetMapEuler;
     [Min(0.5f)] public float range = 2.5f;
     [Min(0)] public int experience = 25;
     public List<ItemStack> rewards = new List<ItemStack>();
@@ -227,6 +233,7 @@ public class WorldInteraction : MonoBehaviour
         if (session == null || session.Busy || IsConsumed) return;
         if (kind == WorldInteractionKind.RestPoint) { session.OpenRest(this); return; }
         if (kind == WorldInteractionKind.Encounter) { session.BeginEncounter(this); return; }
+        if (kind == WorldInteractionKind.MapTransition) { session.TravelToMap(this); return; }
         if (!session.IsNear(this)) return;
         if (kind == WorldInteractionKind.Pickup || kind == WorldInteractionKind.Chest) { session.BeginItemPickup(this); return; }
         CompleteCollection();

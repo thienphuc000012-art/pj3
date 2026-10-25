@@ -2,15 +2,7 @@ using UnityEngine;
 
 public class ControllFallingMovement : StateMachineBehaviour
 {
-    public override void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
-    {
-        animator.GetComponent<PlayerScript>().HasPlayerControl = false;
-    }
-    
-
-
-    public override void OnStateExit(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
-    {
-        animator.GetComponent<PlayerScript>().HasPlayerControl = true;
-    }
+    // Falling remains driven by PlayerScript/CharacterController. Disabling its
+    // update loop here also disables gravity and grounded detection, which can
+    // strand the Animator in a fall state after an interrupted jump.
 }

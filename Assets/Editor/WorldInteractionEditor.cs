@@ -232,6 +232,24 @@ public class WorldInteractionEditor : Editor
             (WorldInteractionKind)
             kindProperty.enumValueIndex;
 
+        if (kind == WorldInteractionKind.MapTransition)
+        {
+            EditorGUILayout.Space(6);
+            EditorGUILayout.LabelField("Chuyển sang Map", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(
+                serializedObject.FindProperty("targetMapScene"),
+                new GUIContent("Scene đích"));
+            EditorGUILayout.PropertyField(
+                serializedObject.FindProperty("targetMapPosition"),
+                new GUIContent("Target Map Position"));
+            EditorGUILayout.PropertyField(
+                serializedObject.FindProperty("targetMapEuler"),
+                new GUIContent("Góc xoay khi đến"));
+            EditorGUILayout.HelpBox(
+                "Target Map Position là tọa độ World trong scene đích. Chọn một điểm đứng an toàn trên địa hình của scene đó rồi nhập X, Y, Z tại đây.",
+                MessageType.Info);
+        }
+
 
         // ========================================================
         // EXP + REWARDS

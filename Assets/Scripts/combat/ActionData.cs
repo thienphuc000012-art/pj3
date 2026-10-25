@@ -203,6 +203,10 @@ public class ActionData : ScriptableObject
     [Min(0f)]
     public float beamParryDelay = 0.10f;
 
+    [Header("Enemy Melee Parry")]
+    [Tooltip("Allow this enemy melee action to be parried by contact between its weapon hitbox and the player's parry-zone collider.")]
+    public bool useMeleeHitboxParry = true;
+
     [Header("Beam Settings")]
     [Tooltip(
         "Playback speed của charge/particle Beam. " +

@@ -23,7 +23,10 @@ public class CampaignSession : MonoBehaviour
     public bool InEncounter => encounter != null;
     public int ResultExperience => encounter?.xp ?? 0;
     public List<ItemStack> ResultRewards => encounter?.rewards ?? new List<ItemStack>();
-    public bool OnMap => Config != null && SceneManager.GetActiveScene().name == Config.mapScene;
+    public string CurrentMapScene => Data != null && !string.IsNullOrEmpty(Data.currentMapScene)
+        ? Data.currentMapScene
+        : Config != null ? Config.mapScene : null;
+    public bool OnMap => Config != null && Config.IsMapScene(SceneManager.GetActiveScene().name);
     public bool CanStartEncounter => OnMap && !Busy && Menu == AdventureMenu.None && Time.unscaledTime >= encounterAllowedAt;
     public bool CanUpgrade => OnMap && RestPoint != null && IsNear(RestPoint) && !Busy;
     public void BeginItemPickup(WorldInteraction point)
@@ -183,7 +186,11 @@ public class CampaignSession : MonoBehaviour
 
     public static CampaignSession Ensure(CampaignConfig config, bool startNewGame = false)
     {
-        if (Instance != null) return Instance;
+        if (Instance != null)
+        {
+            if (config != null) Instance.Config = config;
+            return Instance;
+        }
         var obj = new GameObject("Campaign Session");
         var session = obj.AddComponent<CampaignSession>();
         session.Config = config;
@@ -238,12 +245,21 @@ public class CampaignSession : MonoBehaviour
     {
         MapPlayer = player;
         Busy = false;
-        if (Data.hasPosition) Teleport(Data.position, Data.rotation);
-        else CapturePosition();
+        string sceneName = SceneManager.GetActiveScene().name;
+        bool positionBelongsToThisMap = Data.hasPosition &&
+            (string.IsNullOrEmpty(Data.currentMapScene) || Data.currentMapScene == sceneName);
+        if (positionBelongsToThisMap) Teleport(Data.position, Data.rotation);
+        else
+        {
+            Data.currentMapScene = sceneName;
+            Data.hasPosition = false;
+            CapturePosition();
+        }
         if (!Data.hasCheckpoint)
         {
             Data.checkpoint = Data.position;
             Data.checkpointRotation = Data.rotation;
+            Data.checkpointMapScene = sceneName;
             Data.hasCheckpoint = true;
         }
         encounterAllowedAt = Time.unscaledTime + 2;
@@ -323,6 +339,7 @@ public class CampaignSession : MonoBehaviour
     public void CapturePosition()
     {
         if (MapPlayer == null || !OnMap) return;
+        Data.currentMapScene = SceneManager.GetActiveScene().name;
         Data.position = MapPlayer.transform.position;
         Data.rotation = MapPlayer.transform.rotation;
         Data.hasPosition = true;
@@ -382,6 +399,7 @@ public class CampaignSession : MonoBehaviour
         var unlocked = Data.unlockedRestPoints.Find(x => x.id == rest.Id);
         if (unlocked == null) { unlocked = new UnlockedRestPoint { id = rest.Id }; Data.unlockedRestPoints.Add(unlocked); }
         unlocked.displayName = rest.displayName;
+        unlocked.sceneName = SceneManager.GetActiveScene().name;
         // Record the player's reachable standing position, never the campfire's collider center.
         unlocked.position = MapPlayer.transform.position;
         unlocked.rotation = MapPlayer.transform.rotation;
@@ -395,16 +413,70 @@ public class CampaignSession : MonoBehaviour
         if (!CanUpgrade || Menu != AdventureMenu.Rest || LoadingScreen.IsLoading || RestPoint.Id == id) return false;
         var destination = Data.unlockedRestPoints.Find(x => x != null && x.id == id);
         if (destination == null) return false;
-        if (!Application.CanStreamedLevelBeLoaded(Config.mapScene) || !Application.CanStreamedLevelBeLoaded(LoadingScreen.SceneName))
+        string destinationScene = !string.IsNullOrEmpty(destination.sceneName)
+            ? destination.sceneName
+            : Config.mapScene;
+        if (!Config.IsMapScene(destinationScene)) destinationScene = Config.mapScene;
+        if (!Application.CanStreamedLevelBeLoaded(destinationScene) || !Application.CanStreamedLevelBeLoaded(LoadingScreen.SceneName))
         { Notify("Thiếu scene map hoặc Loading trong Build Settings."); return false; }
-        var oldPosition = Data.position; var oldRotation = Data.rotation; bool hadPosition = Data.hasPosition;
+        var oldPosition = Data.position; var oldRotation = Data.rotation; var oldMap = Data.currentMapScene; bool hadPosition = Data.hasPosition;
+        Data.currentMapScene = destinationScene;
         Data.position = destination.position; Data.rotation = destination.rotation; Data.hasPosition = true;
-        if (!Save(false)) { Data.position = oldPosition; Data.rotation = oldRotation; Data.hasPosition = hadPosition; return false; }
+        if (!Save(false)) { Data.currentMapScene = oldMap; Data.position = oldPosition; Data.rotation = oldRotation; Data.hasPosition = hadPosition; return false; }
         SetMenu(AdventureMenu.None);
-        if (!LoadingScreen.Load(Config.mapScene))
-        { Data.position = oldPosition; Data.rotation = oldRotation; Data.hasPosition = hadPosition; Save(false); Notify("Không thể dịch chuyển."); return false; }
+        if (!LoadingScreen.Load(destinationScene))
+        { Data.currentMapScene = oldMap; Data.position = oldPosition; Data.rotation = oldRotation; Data.hasPosition = hadPosition; Save(false); Notify("Không thể dịch chuyển."); return false; }
         Busy = true; Nearest = null;
         Notify("Đã đến " + destination.displayName);
+        return true;
+    }
+
+    public bool TravelToMap(WorldInteraction portal)
+    {
+        if (!OnMap || Busy || Menu != AdventureMenu.None || portal == null ||
+            portal.kind != WorldInteractionKind.MapTransition || !IsNear(portal) || LoadingScreen.IsLoading)
+            return false;
+
+        string targetScene = portal.targetMapScene != null ? portal.targetMapScene.Trim() : string.Empty;
+        if (string.IsNullOrEmpty(targetScene) || Config == null || !Config.IsMapScene(targetScene) ||
+            !Application.CanStreamedLevelBeLoaded(targetScene) || !Application.CanStreamedLevelBeLoaded(LoadingScreen.SceneName))
+        {
+            Notify("Scene đích phải có trong Campaign Config, Additional Map Scenes và Build Settings.");
+            return false;
+        }
+
+        CapturePosition();
+        string previousMap = Data.currentMapScene;
+        Vector3 previousPosition = Data.position;
+        Quaternion previousRotation = Data.rotation;
+        bool hadPosition = Data.hasPosition;
+        Data.currentMapScene = targetScene;
+        Data.position = portal.targetMapPosition;
+        Data.rotation = Quaternion.Euler(portal.targetMapEuler);
+        Data.hasPosition = true;
+        if (!Save(false))
+        {
+            Data.currentMapScene = previousMap;
+            Data.position = previousPosition;
+            Data.rotation = previousRotation;
+            Data.hasPosition = hadPosition;
+            return false;
+        }
+
+        Nearest = null;
+        if (!LoadingScreen.Load(targetScene))
+        {
+            Data.currentMapScene = previousMap;
+            Data.position = previousPosition;
+            Data.rotation = previousRotation;
+            Data.hasPosition = hadPosition;
+            Save(false);
+            Notify("Không thể chuyển scene.");
+            return false;
+        }
+
+        SetMenu(AdventureMenu.None);
+        Busy = true;
         return true;
     }
 
@@ -412,7 +484,8 @@ public class CampaignSession : MonoBehaviour
     {
         if (!CanUpgrade) return;
         CapturePosition();
-        Data.checkpoint = Data.position; Data.checkpointRotation = Data.rotation; Data.hasCheckpoint = true;
+        Data.checkpoint = Data.position; Data.checkpointRotation = Data.rotation;
+        Data.checkpointMapScene = Data.currentMapScene; Data.hasCheckpoint = true;
         foreach (var p in Data.party) p.hp = MaxHP(p);
         if (Save()) Notify("Đã hồi đầy máu và lưu game.");
     }
@@ -976,7 +1049,13 @@ public class CampaignSession : MonoBehaviour
         else
         {
             if (Config.defeatReturnsToCheckpoint && Data.hasCheckpoint)
-            { Data.position = Data.checkpoint; Data.rotation = Data.checkpointRotation; }
+            {
+                Data.position = Data.checkpoint;
+                Data.rotation = Data.checkpointRotation;
+                Data.currentMapScene = !string.IsNullOrEmpty(Data.checkpointMapScene)
+                    ? Data.checkpointMapScene
+                    : Config.mapScene;
+            }
             foreach (var member in Data.party) member.hp = Config.defeatReturnsToCheckpoint ? MaxHP(member) : Mathf.Max(1, Mathf.RoundToInt(MaxHP(member) * .3f));
             Notify("Thất bại • Đã trở về map. Quái vẫn còn để thử lại.");
         }
@@ -985,7 +1064,8 @@ public class CampaignSession : MonoBehaviour
     }
     public bool ContinueAfterBattle()
     {
-        if (encounter == null || !Busy || !LoadingScreen.Load(Config.mapScene)) return false;
+        string returnScene = CurrentMapScene ?? Config.mapScene;
+        if (encounter == null || !Busy || !LoadingScreen.Load(returnScene)) return false;
         encounter = null;
         return true;
     }

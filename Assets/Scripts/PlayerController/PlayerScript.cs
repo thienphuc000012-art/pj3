@@ -135,6 +135,8 @@ public class PlayerScript : MonoBehaviour
 
     private float airbornePeakY;
     private float airTime;
+    private float groundedFallRecoveryTime;
+    private float landingStateGraceTime;
     private bool trackingAirborne;
     private bool fallingAnimationActive;
 
@@ -189,6 +191,12 @@ public class PlayerScript : MonoBehaviour
         wasOnSurface = onSurface;
         SurfaceCheck();
 
+        if (onSurface)
+            groundedFallRecoveryTime += Time.deltaTime;
+        else
+            groundedFallRecoveryTime = 0f;
+        landingStateGraceTime = Mathf.Max(0f, landingStateGraceTime - Time.deltaTime);
+
         // =========================================================
         // FALL / LANDING TRACKING
         // - Khong kich hoat Falling/Land chi vi mat ground 1-2 frame.
@@ -227,7 +235,15 @@ public class PlayerScript : MonoBehaviour
 
             if (shouldPlayLanding)
             {
-                animator.SetTrigger("Land");
+                animator.ResetTrigger("Land");
+                int landStateHash = Animator.StringToHash("Base Layer.Land");
+                if (animator.HasState(0, landStateHash))
+                {
+                    animator.CrossFadeInFixedTime(landStateHash, 0.08f, 0, 0f);
+                    landingStateGraceTime = 0.35f;
+                }
+                else
+                    RecoverToLocomotion();
             }
             else
             {
@@ -253,6 +269,8 @@ public class PlayerScript : MonoBehaviour
             airTime = 0f;
             airbornePeakY = transform.position.y;
         }
+
+        RecoverStuckFallingIdle();
 
         if (onSurface && !isClimbingLadder)
         {
@@ -680,7 +698,11 @@ public class PlayerScript : MonoBehaviour
         {
             if (CC.enabled)
             {
-                CC.Move(velocity * Time.deltaTime);
+                CollisionFlags collisionFlags = CC.Move(velocity * Time.deltaTime);
+                // A ceiling hit must cancel upward velocity; otherwise the player can
+                // remain in a jump pose until gravity slowly reverses the full impulse.
+                if ((collisionFlags & CollisionFlags.Above) != 0 && fallingSpeed > 0f)
+                    fallingSpeed = 0f;
             }
 
             if (movementAmount > 0 && moveDir.magnitude > 0.2f)
@@ -700,7 +722,39 @@ public class PlayerScript : MonoBehaviour
             return;
         }
 
-        onSurface = Physics.CheckSphere(transform.TransformPoint(surfaceCheckOffset), surfaceCheckRadius, surfaceLayer);
+        bool controllerGrounded = CC != null && CC.enabled && CC.isGrounded;
+        bool nearGround = Physics.CheckSphere(
+            transform.TransformPoint(surfaceCheckOffset),
+            Mathf.Max(surfaceCheckRadius, CC != null ? CC.radius * 0.65f : surfaceCheckRadius),
+            surfaceLayer,
+            QueryTriggerInteraction.Ignore);
+        onSurface = controllerGrounded || nearGround;
+    }
+
+    private void RecoverStuckFallingIdle()
+    {
+        if (!onSurface || isClimbingLadder || playerInAction || animator == null ||
+            landingStateGraceTime > 0f || groundedFallRecoveryTime < 0.10f)
+            return;
+
+        AnimatorStateInfo state = animator.GetCurrentAnimatorStateInfo(0);
+        if (state.shortNameHash != Animator.StringToHash("fallingidle 0")) return;
+
+        animator.SetBool("IsFalling", false);
+        animator.SetBool("OnSurface", true);
+        animator.ResetTrigger("Land");
+        RecoverToLocomotion();
+        fallingAnimationActive = false;
+        trackingAirborne = false;
+        airTime = 0f;
+    }
+
+    private void RecoverToLocomotion()
+    {
+        if (animator == null || string.IsNullOrEmpty(basicMovementStateName)) return;
+        int locomotionHash = Animator.StringToHash(basicMovementStateName);
+        if (animator.HasState(0, locomotionHash))
+            animator.CrossFadeInFixedTime(locomotionHash, Mathf.Max(0.01f, smallDropRecoveryBlend), 0, 0f);
     }
 
     private void GrabLadder(Vector3 grabDirection, Vector3 hitPoint)

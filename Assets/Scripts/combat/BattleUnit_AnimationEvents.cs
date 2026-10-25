@@ -26,6 +26,9 @@ public class BattleUnit_AnimationEvents : MonoBehaviour
             return;
         }
 
+        // Melee parry is resolved by weapon/parry-zone contact at DealDamage.
+        if (CombatManager.Instance.ShouldUseMeleeHitboxParry(ownerUnit)) return;
+
         Debug.Log(
             $"[Animation Event] {ownerUnit.unitName} MỞ cửa sổ Parry!"
         );
@@ -48,6 +51,8 @@ public class BattleUnit_AnimationEvents : MonoBehaviour
         {
             return;
         }
+
+        if (CombatManager.Instance.ShouldUseMeleeHitboxParry(ownerUnit)) return;
 
         Debug.Log(
             $"[Animation Event] {ownerUnit.unitName} ĐÓNG cửa sổ Parry!"
