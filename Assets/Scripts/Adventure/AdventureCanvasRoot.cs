@@ -48,6 +48,7 @@ public class AdventureCanvasRoot : MonoBehaviour
             foreach (var text in GetComponentsInChildren<TMP_Text>(true))
                 if (text.font == defaultFont || text.font == null) text.font = runtimeFont;
         }
+        GameUITheme.Apply(gameObject);
         EnsureEventSystem();
     }
     static void ApplyBackground(Image source, Image target)
@@ -105,6 +106,7 @@ public class AdventureCanvasRoot : MonoBehaviour
             int index = list.Count;
             var row = Instantiate(template, content); row.name = "Row " + (index + 1); list.Add(row);
             onCreate?.Invoke(row, index);
+            GameUITheme.Apply(row);
         }
         for (int i = 0; i < list.Count; i++) if (list[i].activeSelf != (i < count)) list[i].SetActive(i < count);
         return list;
@@ -130,22 +132,22 @@ public class AdventureCanvasRoot : MonoBehaviour
         if (button == null) button = row.AddComponent<Button>();
         button.targetGraphic = graphic;
         button.navigation = new Navigation { mode = Navigation.Mode.None };
+        button.transition = Selectable.Transition.None;
+        var edge = graphic.GetComponent<UIHoverOutline>();
+        if (edge == null) edge = graphic.gameObject.AddComponent<UIHoverOutline>();
+        edge.Configure(new Color(.88f, .9f, .93f, .95f));
         button.onClick.AddListener(action);
     }
     public static void RowSelected(GameObject row, bool selected)
     {
-        var highlight = row.transform.Find("SelectionHighlight");
-        if (highlight == null)
-        {
-            var go = new GameObject("SelectionHighlight", typeof(RectTransform), typeof(CanvasRenderer), typeof(SelectionFadeGraphic));
-            go.transform.SetParent(row.transform, false);
-            var rect = (RectTransform)go.transform;
-            rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
-            rect.offsetMin = Vector2.zero; rect.offsetMax = Vector2.zero;
-            var fill = go.GetComponent<SelectionFadeGraphic>(); fill.color = new Color(.25f, .8f, 1f, .24f); fill.raycastTarget = false;
-            highlight = rect;
-        }
-        if (highlight.gameObject.activeSelf != selected) highlight.gameObject.SetActive(selected);
+        // Older prefab instances may still contain the former full-row fill overlay.
+        var oldFill = row.transform.Find("SelectionHighlight");
+        if (oldFill != null && oldFill.gameObject.activeSelf) oldFill.gameObject.SetActive(false);
+        var graphic = row.GetComponent<Image>();
+        if (graphic == null) return;
+        var edge = graphic.GetComponent<UIHoverOutline>();
+        if (edge == null) edge = graphic.gameObject.AddComponent<UIHoverOutline>();
+        edge.SetSelected(selected);
     }
     void OnDestroy()
     {

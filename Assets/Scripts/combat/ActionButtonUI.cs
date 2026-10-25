@@ -68,6 +68,7 @@ public class ActionButtonUI : MonoBehaviour
             button.onClick.RemoveAllListeners();
             button.onClick.AddListener(OnClick);
         }
+        GameUITheme.Apply(gameObject);
     }
 
     private void UpdateResourceText(BattleUnit unit)
@@ -81,31 +82,31 @@ public class ActionButtonUI : MonoBehaviour
                 CampaignSession.Instance.TryGetBattleItemCount(currentAction, out int ownedCount))
                 count = ownedCount;
             resourceText.text = "x" + Mathf.Max(0, count);
-            resourceText.color = Color.white;
+            resourceText.color = new Color(.82f, .84f, .87f, 1f);
             return;
         }
 
         if (currentAction.isUltimate)
         {
             resourceText.text = "Ultimate " + (unit != null ? Mathf.FloorToInt(unit.UltimateEnergy) : 0) + "/100";
-            resourceText.color = unit != null && unit.UltimateReady ? Color.yellow : Color.gray;
+            resourceText.color = unit != null && unit.UltimateReady ? new Color(.92f, .93f, .95f, 1f) : new Color(.52f, .54f, .57f, 1f);
             return;
         }
 
         if (currentAction.stainChange > 0)
         {
             resourceText.text = $"+{currentAction.stainChange} Stain";
-            resourceText.color = Color.cyan;
+            resourceText.color = new Color(.82f, .84f, .87f, 1f);
         }
         else if (currentAction.stainChange < 0)
         {
             resourceText.text = $"{currentAction.stainChange} Stain";
-            resourceText.color = new Color(1f, 0.4f, 0.4f);
+            resourceText.color = new Color(.72f, .74f, .77f, 1f);
         }
         else
         {
             resourceText.text = "0 Stain";
-            resourceText.color = Color.white;
+            resourceText.color = new Color(.82f, .84f, .87f, 1f);
         }
     }
 
@@ -121,6 +122,7 @@ public class ActionButtonUI : MonoBehaviour
             button.onClick.RemoveAllListeners();
             button.interactable = false;
         }
+        GameUITheme.Apply(gameObject);
     }
 
     public void FitFixedSlot()

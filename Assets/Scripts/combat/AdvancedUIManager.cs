@@ -359,6 +359,9 @@ public class AdvancedUIManager : MonoBehaviour
     void Awake()
     {
         Instance = this;
+        var battleCanvas = GetComponentInParent<Canvas>();
+        if (battleCanvas == null) battleCanvas = GetComponentInChildren<Canvas>(true);
+        if (battleCanvas != null) GameUITheme.Apply(battleCanvas.gameObject);
         CreateStatusTooltip();
 
         if (enemyHudPanel != null) enemyHudPanel.SetActive(false);

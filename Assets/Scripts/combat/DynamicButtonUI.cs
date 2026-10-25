@@ -30,11 +30,24 @@ public class DynamicButtonUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
     private bool isHovered = false;
     private bool hasInitialized = false;
     private bool isFullyAppeared = false;
+    private UIHoverOutline hoverOutline;
 
     void Awake()
     {
         rectTransform = GetComponent<RectTransform>();
         canvasGroup = GetComponent<CanvasGroup>();
+        var graphic = GetComponent<Graphic>();
+        if (graphic == null)
+        {
+            var button = GetComponent<Button>();
+            if (button != null) graphic = button.targetGraphic;
+        }
+        if (graphic != null)
+        {
+            hoverOutline = graphic.GetComponent<UIHoverOutline>();
+            if (hoverOutline == null) hoverOutline = graphic.gameObject.AddComponent<UIHoverOutline>();
+            hoverOutline.Configure(new Color(.88f, .9f, .93f, .95f));
+        }
     }
 
     void OnEnable()
@@ -95,17 +108,9 @@ public class DynamicButtonUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
         else
         {
             // Giai đoạn 2: Tương tác (Đã loại bỏ hoàn toàn hiệu ứng nhịp thở/pulse ở đây)
-            Vector2 finalTargetPos = originalPos;
-            Vector3 finalTargetScale = originalScale;
-
-            if (isHovered)
-            {
-                finalTargetPos = originalPos + hoverMoveOffset;
-                finalTargetScale = originalScale * hoverScale;
-            }
-
-            rectTransform.anchoredPosition = Vector2.Lerp(rectTransform.anchoredPosition, finalTargetPos, Time.deltaTime * smoothSpeed);
-            rectTransform.localScale = Vector3.Lerp(rectTransform.localScale, finalTargetScale, Time.deltaTime * smoothSpeed);
+            // Hover feedback is an edge outline only; keep the skill tile fixed in place.
+            rectTransform.anchoredPosition = Vector2.Lerp(rectTransform.anchoredPosition, originalPos, Time.deltaTime * smoothSpeed);
+            rectTransform.localScale = Vector3.Lerp(rectTransform.localScale, originalScale, Time.deltaTime * smoothSpeed);
         }
     }
 
@@ -117,8 +122,8 @@ public class DynamicButtonUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
         if (EventSystem.current.currentSelectedGameObject != this.gameObject) SetNormalState();
     }
     public void OnDeselect(BaseEventData eventData) => SetNormalState();
-    public void OnPointerDown(PointerEventData eventData) => targetScale = originalScale * 0.92f;
-    public void OnPointerUp(PointerEventData eventData) => targetScale = isHovered ? originalScale * hoverScale : originalScale;
+    public void OnPointerDown(PointerEventData eventData) { }
+    public void OnPointerUp(PointerEventData eventData) { }
 
     private void SetHoverState() => isHovered = true;
     private void SetNormalState() => isHovered = false;

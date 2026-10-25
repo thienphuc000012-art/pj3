@@ -180,7 +180,7 @@ public class AdventureUI : MonoBehaviour
     {
         var panel = new GameObject(name, typeof(RectTransform), typeof(Image));
         TravelRect(panel, parent, min, max);
-        panel.GetComponent<Image>().color = new Color(.015f, .025f, .045f, .98f);
+        panel.GetComponent<Image>().color = new Color(.012f, .014f, .017f, .96f);
         return panel;
     }
     void BuildFastTravelUI()
@@ -198,12 +198,12 @@ public class AdventureUI : MonoBehaviour
         foreach (var path in new[] { "Attributes", "Skills", "Craft" })
             view.Component<RectTransform>("Menu/Rest/" + path).anchoredPosition += step;
         travelPanel = TravelPanel("FastTravelList", view.Node("Menu"), Vector2.zero, Vector2.one);
-        travelPanel.GetComponent<Image>().color = new Color(0,0,0,.7f);
+        travelPanel.GetComponent<Image>().color = new Color(.012f, .014f, .017f, .96f);
         var listBox = TravelPanel("Box", travelPanel.transform, new Vector2(.2f,.15f), new Vector2(.8f,.85f));
         TravelText(listBox.transform, "Title", "DI CHUYỂN NHANH - Điểm nghỉ đã mở khóa", new Vector2(.05f,.86f), new Vector2(.95f,.98f));
         var scrollObj = new GameObject("List", typeof(RectTransform), typeof(ScrollRect), typeof(Image), typeof(RectMask2D));
         var viewport = TravelRect(scrollObj, listBox.transform, new Vector2(.05f,.18f), new Vector2(.95f,.84f));
-        scrollObj.GetComponent<Image>().color = new Color(0,0,0,.15f);
+        scrollObj.GetComponent<Image>().color = new Color(.08f, .085f, .09f, .55f);
         var contentObj = new GameObject("Content", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
         travelContent = TravelRect(contentObj, viewport, new Vector2(0,1), Vector2.one);
         travelContent.pivot = new Vector2(.5f,1);
@@ -212,7 +212,7 @@ public class AdventureUI : MonoBehaviour
         var scroll = scrollObj.GetComponent<ScrollRect>(); scroll.viewport = viewport; scroll.content = travelContent; scroll.horizontal = false;
         TravelButton(listBox.transform, "Back", "Trở lại", new Vector2(.6f,.03f), new Vector2(.95f,.14f), CloseTravel);
         travelDialog = TravelPanel("FastTravelConfirmation", view.Node("Menu"), Vector2.zero, Vector2.one);
-        travelDialog.GetComponent<Image>().color = new Color(0,0,0,.8f);
+        travelDialog.GetComponent<Image>().color = new Color(.012f, .014f, .017f, .96f);
         var box = TravelPanel("Box", travelDialog.transform, new Vector2(.25f,.32f), new Vector2(.75f,.68f));
         travelQuestion = TravelText(box.transform, "Question", "", new Vector2(.06f,.45f), new Vector2(.94f,.92f));
         TravelButton(box.transform, "Yes", "Có", new Vector2(.08f,.12f), new Vector2(.46f,.35f), () => { if (S.FastTravel(travelDestination)) CloseTravel(); });
