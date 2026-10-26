@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using System.Collections;
 using System.Linq;
 using UnityEngine.UI;
 using TMPro;
@@ -12,6 +13,11 @@ public class AdvancedUIManager : MonoBehaviour
 
     [Header("Action Menu (Fixed Position)")]
     public RectTransform actionMenuPanel;
+    [SerializeField] private Button runAwayButton;
+    private RectTransform combatNoticePanel;
+    private TextMeshProUGUI combatNoticeText;
+    private Coroutine combatNoticeRoutine;
+    private Canvas battleCanvas;
 
     [Header("Sub Menu (Skills/Items List)")]
     public GameObject subMenuPanel;
@@ -359,9 +365,10 @@ public class AdvancedUIManager : MonoBehaviour
     void Awake()
     {
         Instance = this;
-        var battleCanvas = GetComponentInParent<Canvas>();
+        battleCanvas = GetComponentInParent<Canvas>();
         if (battleCanvas == null) battleCanvas = GetComponentInChildren<Canvas>(true);
         if (battleCanvas != null) GameUITheme.Apply(battleCanvas.gameObject);
+        BindRunAwayButton();
         CreateStatusTooltip();
 
         if (enemyHudPanel != null) enemyHudPanel.SetActive(false);
@@ -435,6 +442,163 @@ public class AdvancedUIManager : MonoBehaviour
     }
 
     public void PositionActionMenu(Transform target) { }
+
+    private void BindRunAwayButton()
+    {
+        if (actionMenuPanel == null) return;
+        if (runAwayButton == null)
+        {
+            Button[] buttons = actionMenuPanel.GetComponentsInChildren<Button>(true);
+            runAwayButton = buttons.FirstOrDefault(IsRunAwayButton);
+            if (runAwayButton == null) runAwayButton = CreateRunAwayButton(buttons);
+        }
+
+        if (runAwayButton == null)
+        {
+            Debug.LogWarning("Action Menu không có Button Run Away và không thể tạo nút thay thế.", this);
+            return;
+        }
+
+        runAwayButton.onClick.AddListener(() =>
+        {
+            if (CombatManager.Instance != null) CombatManager.Instance.OnRunAwayClicked();
+        });
+    }
+
+    private static bool IsRunAwayButton(Button button)
+    {
+        if (button == null) return false;
+        string label = button.GetComponentInChildren<TMP_Text>(true)?.text ?? string.Empty;
+        string searchable = (button.gameObject.name + label).ToLowerInvariant();
+        string normalized = new string(searchable.Where(char.IsLetterOrDigit).ToArray());
+        return normalized.Contains("runaway") || normalized.Contains("flee") || normalized.Contains("bochay");
+    }
+
+    private Button CreateRunAwayButton(Button[] existingButtons)
+    {
+        Button template = existingButtons.FirstOrDefault(button => button != null);
+        if (template == null) return null;
+
+        RectTransform templateRect = template.transform as RectTransform;
+        RectTransform lowestRow = existingButtons
+            .Where(button => button != null && button.transform is RectTransform)
+            .Select(button => (RectTransform)button.transform)
+            .Where(rect => rect.anchorMin == new Vector2(.5f, .5f) && rect.anchorMax == new Vector2(.5f, .5f))
+            .OrderBy(rect => rect.anchoredPosition.y)
+            .FirstOrDefault();
+
+        var buttonObject = new GameObject("Run Away", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+        buttonObject.layer = actionMenuPanel.gameObject.layer;
+        buttonObject.transform.SetParent(actionMenuPanel, false);
+        var rect = buttonObject.GetComponent<RectTransform>();
+        rect.anchorMin = rect.anchorMax = new Vector2(.5f, .5f);
+        rect.pivot = new Vector2(.5f, .5f);
+        rect.sizeDelta = templateRect != null ? templateRect.sizeDelta : new Vector2(160f, 30f);
+        rect.anchoredPosition = lowestRow != null
+            ? lowestRow.anchoredPosition + Vector2.down * Mathf.Max(54f, lowestRow.rect.height + 24f)
+            : new Vector2(50f, -200f);
+
+        Image background = buttonObject.GetComponent<Image>();
+        Image templateImage = template.targetGraphic as Image;
+        if (templateImage != null)
+        {
+            background.sprite = templateImage.sprite;
+            background.type = templateImage.type;
+            background.color = templateImage.color;
+        }
+        else background.color = new Color(.035f, .038f, .042f, .94f);
+        background.raycastTarget = true;
+
+        Button button = buttonObject.GetComponent<Button>();
+        button.targetGraphic = background;
+        button.transition = Selectable.Transition.None;
+
+        var textObject = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        textObject.layer = buttonObject.layer;
+        textObject.transform.SetParent(buttonObject.transform, false);
+        var textRect = textObject.GetComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = new Vector2(8f, 2f);
+        textRect.offsetMax = new Vector2(-8f, -2f);
+        var label = textObject.GetComponent<TextMeshProUGUI>();
+        TMP_Text templateText = template.GetComponentInChildren<TMP_Text>(true);
+        if (templateText != null)
+        {
+            label.font = templateText.font;
+            label.fontSize = templateText.fontSize;
+            label.color = templateText.color;
+        }
+        else
+        {
+            label.fontSize = 24f;
+            label.color = new Color(.88f, .88f, .88f, 1f);
+        }
+        label.text = "Run Away";
+        label.alignment = TextAlignmentOptions.Center;
+        label.enableWordWrapping = false;
+        label.raycastTarget = false;
+
+        GameUITheme.Apply(buttonObject);
+        return button;
+    }
+
+    public void ShowCombatNotice(string message, float duration = 1.5f)
+    {
+        EnsureCombatNotice();
+        if (combatNoticePanel == null || combatNoticeText == null) return;
+
+        if (combatNoticeRoutine != null) StopCoroutine(combatNoticeRoutine);
+        combatNoticeText.text = message;
+        combatNoticePanel.gameObject.SetActive(true);
+        combatNoticeRoutine = StartCoroutine(HideCombatNoticeAfter(duration));
+    }
+
+    private void EnsureCombatNotice()
+    {
+        if (combatNoticePanel != null) return;
+        Canvas canvas = battleCanvas != null ? battleCanvas.rootCanvas : null;
+        if (canvas == null) canvas = GetComponentInParent<Canvas>() ?? GetComponentInChildren<Canvas>(true);
+        if (canvas == null) return;
+
+        var panelObject = new GameObject("Combat Notice Panel", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        panelObject.layer = canvas.gameObject.layer;
+        panelObject.transform.SetParent(canvas.transform, false);
+        combatNoticePanel = panelObject.GetComponent<RectTransform>();
+        combatNoticePanel.anchorMin = combatNoticePanel.anchorMax = new Vector2(.5f, .8f);
+        combatNoticePanel.pivot = new Vector2(.5f, .5f);
+        combatNoticePanel.sizeDelta = new Vector2(640f, 76f);
+        combatNoticePanel.anchoredPosition = Vector2.zero;
+        var panelImage = panelObject.GetComponent<Image>();
+        panelImage.color = new Color(.012f, .014f, .017f, .9f);
+        panelImage.raycastTarget = false;
+
+        var textObject = new GameObject("Message", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        textObject.layer = panelObject.layer;
+        textObject.transform.SetParent(panelObject.transform, false);
+        var textRect = textObject.GetComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = new Vector2(18f, 6f);
+        textRect.offsetMax = new Vector2(-18f, -6f);
+        combatNoticeText = textObject.GetComponent<TextMeshProUGUI>();
+        TMP_Text templateText = actionMenuPanel != null ? actionMenuPanel.GetComponentInChildren<TMP_Text>(true) : null;
+        if (templateText != null) combatNoticeText.font = templateText.font;
+        combatNoticeText.fontSize = 30f;
+        combatNoticeText.color = new Color(.94f, .89f, .77f, 1f);
+        combatNoticeText.alignment = TextAlignmentOptions.Center;
+        combatNoticeText.enableWordWrapping = false;
+        combatNoticeText.raycastTarget = false;
+        combatNoticePanel.gameObject.SetActive(false);
+        combatNoticePanel.SetAsLastSibling();
+    }
+
+    private IEnumerator HideCombatNoticeAfter(float duration)
+    {
+        yield return new WaitForSecondsRealtime(Mathf.Max(.1f, duration));
+        if (combatNoticePanel != null) combatNoticePanel.gameObject.SetActive(false);
+        combatNoticeRoutine = null;
+    }
 
     public void ShowActionMenu(bool isShow)
     {

@@ -2,7 +2,8 @@
 
 Mapgame keeps the player, cameras, UI, world interaction state and MapGame Systems.
 Environment roots are in 46 additive scenes under `Assets/Scenes/MapChunks`.
-The original saved map and Build Settings are backed up under `Backup-20260920-145533`.
+The original saved map and Build Settings from the latest conversion are backed up under
+`Backup-20261025-132303`.
 Do not run the one-time converter again on an already converted map.
 
 ## Runtime
@@ -49,10 +50,12 @@ do not copy savedWorldId between different interactions.
 
 ## Verification
 
-Unity scene validation: 46 unique enabled chunk scenes; 698 moved roots; no missing
-scripts or duplicated map/player systems. The default spawn requires 20 of 46 chunks.
-These are structural measurements, not measured frame-rate or memory improvements.
-Library/CombatValidation contains conversion, scene validation and Play smoke reports.
+Latest conversion: 46 chunks, 697 moved environment roots, and 1 root kept in the base
+scene because it references other scene objects. No exact-box mesh colliders were safe
+to replace; preserve the existing collision geometry. Conversion completed and saved
+the base scene plus all chunk scenes into Build Settings. This is a structural change,
+not a measured frame-rate or memory improvement.
+Library/CombatValidation/MapStreaming.result.txt records the latest conversion.
 Profile a standalone development build for startup time, main-thread spikes, physics,
 rendering and peak memory before tuning distances or reducing mesh collision detail.
 

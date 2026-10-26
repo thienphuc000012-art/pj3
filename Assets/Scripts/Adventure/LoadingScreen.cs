@@ -1,5 +1,8 @@
 using System.Collections;
+using System.IO;
+using System.Linq;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 
 public class LoadingScreen : MonoBehaviour
@@ -11,6 +14,9 @@ public class LoadingScreen : MonoBehaviour
     float progress;
     string target;
     bool failed;
+    bool loadingMapScene;
+    bool loadingChunks;
+    Scene pendingMapScene;
     AdventureCanvasRoot view;
     void Awake()
     {
@@ -38,14 +44,28 @@ public class LoadingScreen : MonoBehaviour
         target = destination;
         if (string.IsNullOrEmpty(target)) target = Resources.Load<CampaignConfig>("Adventure/CampaignConfig")?.mapScene ?? "mapgame";
         if (!Application.CanStreamedLevelBeLoaded(target) || target == SceneName)
-        { failed = true; IsLoading = false; Error = "Scene đích chưa được thêm vào Build Settings."; yield break; }
+        { Fail("Scene đích chưa được thêm vào Build Settings."); yield break; }
         IsLoading = true;
         Cursor.lockState = CursorLockMode.None; Cursor.visible = false;
         // Present at least one loading frame before beginning the expensive scene load.
         yield return null;
+        CampaignConfig config = Resources.Load<CampaignConfig>("Adventure/CampaignConfig");
+        string targetName = Path.GetFileNameWithoutExtension(target);
+        loadingMapScene = config != null && (config.IsMapScene(target) || config.IsMapScene(targetName));
+        if (loadingMapScene)
+        {
+            yield return LoadMapAndInitialChunks();
+            yield break;
+        }
+
+        yield return LoadSingleScene();
+    }
+
+    private IEnumerator LoadSingleScene()
+    {
         float began = Time.unscaledTime;
         var operation = SceneManager.LoadSceneAsync(target);
-        if (operation == null) { failed = true; IsLoading = false; Error = "Không thể tải scene."; yield break; }
+        if (operation == null) { Fail("Không thể tải scene."); yield break; }
         operation.allowSceneActivation = false;
         while (operation.progress < .9f || Time.unscaledTime - began < 1.2f)
         {
@@ -58,14 +78,145 @@ public class LoadingScreen : MonoBehaviour
         operation.allowSceneActivation = true;
         while (!operation.isDone) yield return null;
     }
+
+    private IEnumerator LoadMapAndInitialChunks()
+    {
+        string targetName = Path.GetFileNameWithoutExtension(target);
+        pendingMapScene = default;
+        SceneManager.sceneLoaded += OnDestinationSceneLoaded;
+        AsyncOperation operation = SceneManager.LoadSceneAsync(target, LoadSceneMode.Additive);
+        if (operation == null)
+        {
+            SceneManager.sceneLoaded -= OnDestinationSceneLoaded;
+            Fail("Không thể tải map đích.");
+            yield break;
+        }
+
+        operation.allowSceneActivation = false;
+        float sceneLoadStartedAt = Time.unscaledTime;
+        while (operation.progress < .9f || Time.unscaledTime - sceneLoadStartedAt < 1.2f)
+        {
+            progress = Mathf.Clamp01(operation.progress / .9f) * .72f;
+            yield return null;
+        }
+        operation.allowSceneActivation = true;
+        while (!operation.isDone) yield return null;
+        SceneManager.sceneLoaded -= OnDestinationSceneLoaded;
+
+        Scene mapScene = pendingMapScene.IsValid() && pendingMapScene.isLoaded
+            ? pendingMapScene
+            : FindLoadedScene(target, targetName);
+        if (!mapScene.IsValid() || !mapScene.isLoaded)
+        {
+            Fail("Map đích chưa được tải.");
+            yield break;
+        }
+        if (SceneManager.GetActiveScene() != mapScene)
+            SceneManager.SetActiveScene(mapScene);
+
+        float streamerWaitStartedAt = Time.unscaledTime;
+        MapChunkStreamer streamer = FindStreamer(mapScene);
+        while (streamer == null && Time.unscaledTime - streamerWaitStartedAt < 3f)
+        {
+            yield return null;
+            streamer = FindStreamer(mapScene);
+        }
+
+        // Maps without chunk streaming still use the same single loading screen.
+        if (streamer != null)
+        {
+            streamer.SuppressOverlay = true;
+            loadingChunks = true;
+            float chunkDeadline = Time.unscaledTime + 120f;
+            while (!streamer.Ready && string.IsNullOrEmpty(streamer.Error))
+            {
+                progress = .72f + .27f * Mathf.Clamp01(streamer.InitialLoadProgress);
+                if (Time.unscaledTime >= chunkDeadline)
+                {
+                    Fail("Tải chunk ban đầu quá lâu. Hãy kiểm tra scene chunk trong Build Settings.");
+                    yield break;
+                }
+                yield return null;
+            }
+
+            if (!string.IsNullOrEmpty(streamer.Error))
+            {
+                Fail(streamer.Error);
+                yield break;
+            }
+            streamer.SuppressOverlay = false;
+        }
+
+        loadingChunks = false;
+        progress = 1f;
+        yield return null;
+        destination = null;
+        Scene loadingScene = gameObject.scene;
+        PreserveMapEventSystem(mapScene, loadingScene);
+        if (loadingScene.IsValid() && loadingScene.isLoaded)
+            SceneManager.UnloadSceneAsync(loadingScene);
+    }
+
+    private void OnDestinationSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (scene.name != Path.GetFileNameWithoutExtension(target) && scene.path != target) return;
+        pendingMapScene = scene;
+        SceneManager.SetActiveScene(scene);
+
+        foreach (MapChunkStreamer streamer in FindObjectsByType<MapChunkStreamer>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            if (streamer != null && streamer.gameObject.scene == scene)
+                streamer.SuppressOverlay = true;
+    }
+
+    private static Scene FindLoadedScene(string path, string sceneName)
+    {
+        for (int i = 0; i < SceneManager.sceneCount; i++)
+        {
+            Scene scene = SceneManager.GetSceneAt(i);
+            if (scene.isLoaded && (scene.path == path || scene.name == sceneName)) return scene;
+        }
+        return default;
+    }
+
+    private static MapChunkStreamer FindStreamer(Scene scene)
+    {
+        return FindObjectsByType<MapChunkStreamer>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+            .FirstOrDefault(streamer => streamer != null && streamer.gameObject.scene == scene);
+    }
+
+    private static void PreserveMapEventSystem(Scene mapScene, Scene loadingScene)
+    {
+        EventSystem[] systems = FindObjectsByType<EventSystem>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        if (systems.Any(system => system != null && system.gameObject.scene == mapScene)) return;
+
+        EventSystem loadingSystem = systems.FirstOrDefault(system => system != null && system.gameObject.scene == loadingScene);
+        if (loadingSystem != null)
+        {
+            if (loadingSystem.transform.parent != null)
+                loadingSystem.transform.SetParent(null, true);
+            SceneManager.MoveGameObjectToScene(loadingSystem.gameObject, mapScene);
+            return;
+        }
+
+        if (!systems.Any(system => system != null))
+            AdventureCanvasRoot.EnsureEventSystem();
+    }
+
+    private void Fail(string message)
+    {
+        failed = true;
+        Error = message;
+        IsLoading = false;
+        Cursor.visible = true;
+    }
     void OnDestroy() { IsLoading = false; }
     void Update()
     {
         if (view == null) return;
         view.Component<RectTransform>("Spinner").Rotate(0, 0, -18 * Time.unscaledDeltaTime);
-        view.Text("Message", failed ? Error : target == "combattest" ? "Chuẩn bị đối mặt với thử thách." : "Mỗi bước chân mở ra một câu chuyện.");
+        view.Text("Message", failed ? Error : loadingChunks ? "Đang tải khu vực quanh điểm bắt đầu." : loadingMapScene ? "Đang chuẩn bị bản đồ khám phá." : target == "combattest" ? "Chuẩn bị đối mặt với thử thách." : "Mỗi bước chân mở ra một câu chuyện.");
         view.Fill("Progress/Fill", progress);
-        view.Text("Status", failed ? "TẢI KHÔNG THÀNH CÔNG" : progress >= 1 ? "ĐANG MỞ CẢNH • 100%" : "ĐANG TẢI • " + Mathf.FloorToInt(progress * 100) + "%");
+        view.Text("Status", failed ? "TẢI KHÔNG THÀNH CÔNG" : loadingChunks ? "ĐANG TẢI KHU VỰC • " + Mathf.FloorToInt(progress * 100) + "%" : progress >= 1 ? "ĐANG MỞ CẢNH • 100%" : "ĐANG TẢI • " + Mathf.FloorToInt(progress * 100) + "%");
         view.Active("Retry", failed);
         if (failed) Cursor.visible = true;
     }

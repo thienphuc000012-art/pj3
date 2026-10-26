@@ -58,6 +58,7 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
     public string flyMoveState = "FlyNormal";
     public string flyAttackState = "FlyStationarySpitFireBall";
     public string EncounterAttackState => airborne ? flyAttackState : attackState;
+    public int EncounterMovementLayerIndex => mapAnimator != null ? mapAnimator.GetLayerIndex(movementLayer) : -1;
     public Activity CurrentActivity { get; private set; }
     WorldInteraction point;
     NavMeshAgent agent;
@@ -130,7 +131,9 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
     public bool CanInteract(Transform player, float range)
     {
         if (player == null || CurrentActivity == Activity.TakeOff || CurrentActivity == Activity.Landing) return false;
-        float distance = airborne ? HorizontalDistance(transform.position, player.position) : Vector3.Distance(transform.position, player.position);
+        // Attack distance is measured on the ground plane; the separate height check
+        // prevents attacks across floors while avoiding false run-only behavior on slopes.
+        float distance = HorizontalDistance(transform.position, player.position);
         return distance <= range && Mathf.Abs(transform.position.y - player.position.y) <= Mathf.Max(bodyHeight, flightHeight + 2) && Visible(player);
     }
     bool Visible(Transform target)
@@ -170,6 +173,7 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
                 session.BeginEncounter(point, false);
                 if (session.Busy) return;
             }
+            else Play(idleState, flyIdleState);
             CurrentActivity = Activity.Chase;
             nextAttack = Time.time + attackCooldown;
             return;
@@ -183,6 +187,7 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
             if (CanInteract(player, Mathf.Min(attackRange, point.range)))
             {
                 StopMovement();
+                Face(player.position);
                 if (Time.time >= nextAttack && session.CanStartEncounter)
                 {
                     nextAttack = Time.time + attackCooldown;
@@ -193,6 +198,7 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
                         return;
                     }
                 }
+                else Play(idleState, flyIdleState);
                 return;
             }
             CurrentActivity = Activity.Chase;

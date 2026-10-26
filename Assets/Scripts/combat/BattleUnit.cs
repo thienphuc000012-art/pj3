@@ -270,6 +270,7 @@ public class BattleUnit : MonoBehaviour
 
     private void OnDestroy()
     {
+        RestoreDeathPresentation();
         ClearIdleVfx();
         if (phaseIdleController == null) return;
         if (animator != null && animator.runtimeAnimatorController == phaseIdleController)
@@ -290,10 +291,44 @@ public class BattleUnit : MonoBehaviour
     public string deathStateName = "death";
     [Min(1f), Tooltip("Giới hạn chờ nếu Animator thiếu state chết hoặc bị dừng.")]
     public float deathAnimationTimeout = 30f;
+    [Header("Enemy Death Dissolve")]
+    [Tooltip("SliceDissolve_URP material used only on this enemy's runtime material instances while its Die animation plays.")]
+    public Material enemyDeathDissolveMaterial;
+    [Range(0f, .95f), Tooltip("Normalized Die animation time when dissolve begins. The default starts late so the enemy stays visible through most of Die.")]
+    public float deathDissolveStartTime = .6f;
+    [Range(.8f, 1f), Tooltip("Normalized Die animation time when dissolve completes. Keep this at 1 so the enemy only disappears at the end of Die.")]
+    public float deathDissolveFinishTime = 1f;
+    [Range(.5f, .99f), Tooltip("Keep this much dissolve while the Animator blends out of Die; the final dissolve completes after the blend.")]
+    public float deathDissolveTransitionHoldAmount = .9f;
+    [Tooltip("Progress curve. Holds most of the model visible until the final part of Die, then finishes the dissolve near the last frame.")]
+    public AnimationCurve deathDissolveCurve = CreateSlowDeathDissolveCurve();
     private bool deathStateSeen;
     private bool deathAnimationFinished;
     private bool deathAnimationPending;
     private bool deathAnimationTriggered;
+    private static readonly int DeathDissolveAmountId = Shader.PropertyToID("_DissolveAmount");
+    private Renderer[] deathDissolveRenderers;
+    private Material[][] originalDeathMaterials;
+    private Material[][] runtimeDeathMaterials;
+    private MaterialPropertyBlock[][] originalDeathMaterialPropertyBlocks;
+    private MaterialPropertyBlock deathDissolvePropertyBlock;
+    private bool deathDissolveStarted;
+    private bool deathProgressInitialized;
+    private bool deathStateExitPending;
+    private float lastDeathNormalizedTime;
+    private float deathSecondsPerNormalizedTime = 1f;
+    private float deathExitElapsed;
+    private float deathExitDuration;
+
+    private static AnimationCurve CreateSlowDeathDissolveCurve()
+    {
+        return new AnimationCurve(
+            new Keyframe(0f, 0f, 0f, 0f),
+            new Keyframe(.65f, .04f, .12f, .12f),
+            new Keyframe(.9f, .28f, 1.2f, 1.2f),
+            new Keyframe(1f, 1f, 0f, 0f)
+        );
+    }
 
     private void ObserveDeathAnimation()
     {
@@ -304,9 +339,257 @@ public class BattleUnit : MonoBehaviour
         if (dying)
         {
             deathStateSeen = true;
-            if (current.normalizedTime >= 1f) deathAnimationFinished = true;
+            deathStateExitPending = false;
+            UpdateDeathAnimationTiming(current);
+            bool dissolvingEnemy = !isPlayer && enemyDeathDissolveMaterial != null;
+            float start = Mathf.Clamp01(deathDissolveStartTime);
+            float finish = dissolvingEnemy
+                ? Mathf.Clamp(deathDissolveFinishTime, Mathf.Max(.8f, start + .01f), 1f)
+                : 1f;
+            if (dissolvingEnemy)
+            {
+                if (!deathDissolveStarted) BeginEnemyDeathDissolve();
+                float progress = Mathf.InverseLerp(start, finish, current.normalizedTime);
+                float amount = deathDissolveCurve != null ? deathDissolveCurve.Evaluate(progress) : progress;
+                ApplyEnemyDeathDissolve(amount);
+            }
+            if (current.normalizedTime >= finish)
+            {
+                if (dissolvingEnemy && animator.IsInTransition(0))
+                {
+                    ApplyEnemyDeathDissolve(Mathf.Min(1f, deathDissolveTransitionHoldAmount));
+                }
+                else
+                {
+                    if (dissolvingEnemy) ApplyEnemyDeathDissolve(1f);
+                    deathAnimationFinished = true;
+                }
+            }
         }
-        else if (deathStateSeen) deathAnimationFinished = true;
+        else if (deathStateSeen)
+        {
+            if (isPlayer || !deathDissolveStarted)
+            {
+                deathAnimationFinished = true;
+                return;
+            }
+
+            // Some Animator controllers leave the death state during its final blend.
+            // Don't snap the shader to 1 here; finish over the estimated remainder of
+            // the Die clip so the dissolve cannot outrun the death animation.
+            float start = Mathf.Clamp01(deathDissolveStartTime);
+            float finish = Mathf.Clamp(deathDissolveFinishTime, Mathf.Max(.8f, start + .01f), 1f);
+            if (!deathStateExitPending)
+            {
+                deathStateExitPending = true;
+                deathExitElapsed = 0f;
+                float remainingNormalizedTime = Mathf.Max(0f, finish - lastDeathNormalizedTime);
+                deathExitDuration = Mathf.Max(.05f, remainingNormalizedTime * deathSecondsPerNormalizedTime);
+            }
+
+            deathExitElapsed += Time.deltaTime;
+            float exitProgress = Mathf.Clamp01(deathExitElapsed / deathExitDuration);
+            float estimatedNormalizedTime = lastDeathNormalizedTime + exitProgress * Mathf.Max(0f, finish - lastDeathNormalizedTime);
+            float dissolveProgress = Mathf.InverseLerp(start, finish, estimatedNormalizedTime);
+            float amount = deathDissolveCurve != null ? deathDissolveCurve.Evaluate(dissolveProgress) : dissolveProgress;
+            ApplyEnemyDeathDissolve(amount);
+            if (exitProgress >= 1f)
+            {
+                ApplyEnemyDeathDissolve(1f);
+                deathAnimationFinished = true;
+            }
+        }
+    }
+
+    private void UpdateDeathAnimationTiming(AnimatorStateInfo state)
+    {
+        float normalizedTime = Mathf.Max(0f, state.normalizedTime);
+        if (!deathProgressInitialized)
+        {
+            float playbackSpeed = Mathf.Abs(animator.speed * state.speed * state.speedMultiplier);
+            deathSecondsPerNormalizedTime = state.length / Mathf.Max(.01f, playbackSpeed);
+            deathProgressInitialized = true;
+        }
+        else
+        {
+            float normalizedDelta = normalizedTime - lastDeathNormalizedTime;
+            if (normalizedDelta > .0001f && Time.deltaTime > 0f)
+            {
+                float observedSecondsPerNormalizedTime = Time.deltaTime / normalizedDelta;
+                deathSecondsPerNormalizedTime = Mathf.Lerp(
+                    deathSecondsPerNormalizedTime,
+                    observedSecondsPerNormalizedTime,
+                    .35f
+                );
+            }
+        }
+
+        lastDeathNormalizedTime = normalizedTime;
+    }
+
+    private void BeginEnemyDeathDissolve()
+    {
+        deathDissolveStarted = true;
+        deathDissolveRenderers = GetComponentsInChildren<Renderer>(true)
+            .Where(x => x != null && !(x is ParticleSystemRenderer) && !(x is TrailRenderer) && !(x is LineRenderer))
+            .ToArray();
+        originalDeathMaterials = new Material[deathDissolveRenderers.Length][];
+        runtimeDeathMaterials = new Material[deathDissolveRenderers.Length][];
+        originalDeathMaterialPropertyBlocks = new MaterialPropertyBlock[deathDissolveRenderers.Length][];
+
+        for (int rendererIndex = 0; rendererIndex < deathDissolveRenderers.Length; rendererIndex++)
+        {
+            Renderer targetRenderer = deathDissolveRenderers[rendererIndex];
+            Material[] sourceMaterials = targetRenderer.sharedMaterials;
+            Material[] dissolveMaterials = new Material[sourceMaterials.Length];
+            MaterialPropertyBlock[] sourcePropertyBlocks = new MaterialPropertyBlock[sourceMaterials.Length];
+            originalDeathMaterials[rendererIndex] = sourceMaterials;
+            runtimeDeathMaterials[rendererIndex] = dissolveMaterials;
+            originalDeathMaterialPropertyBlocks[rendererIndex] = sourcePropertyBlocks;
+
+            for (int materialIndex = 0; materialIndex < sourceMaterials.Length; materialIndex++)
+            {
+                MaterialPropertyBlock savedBlock = new MaterialPropertyBlock();
+                targetRenderer.GetPropertyBlock(savedBlock, materialIndex);
+                sourcePropertyBlocks[materialIndex] = savedBlock;
+
+                Material dissolveMaterial = new Material(enemyDeathDissolveMaterial)
+                {
+                    name = $"{enemyDeathDissolveMaterial.name} ({targetRenderer.name})"
+                };
+                CopySurfaceProperties(sourceMaterials[materialIndex], dissolveMaterial);
+                dissolveMaterial.SetFloat(DeathDissolveAmountId, 0f);
+                dissolveMaterials[materialIndex] = dissolveMaterial;
+            }
+
+            targetRenderer.sharedMaterials = dissolveMaterials;
+        }
+
+        ApplyEnemyDeathDissolve(0f);
+    }
+
+    private static void CopySurfaceProperties(Material source, Material destination)
+    {
+        string baseMap = FindMaterialProperty(source, "_BaseMap", "_MainTex");
+        CopyTexture(source, destination, baseMap, "_BaseMap");
+        CopyColor(source, destination, FindMaterialProperty(source, "_BaseColor", "_Color"), "_BaseColor", Color.white);
+        CopyTexture(source, destination, FindMaterialProperty(source, "_BumpMap", "_NormalMap"), "_BumpMap");
+        CopyFloat(source, destination, FindMaterialProperty(source, "_BumpScale"), "_BumpScale", 1f);
+        CopyTexture(source, destination, FindMaterialProperty(source, "_MetallicGlossMap", "_MetallicSpecGlossMap"), "_MetallicGlossMap");
+        CopyFloat(source, destination, FindMaterialProperty(source, "_Metallic"), "_Metallic", 0f);
+        CopyFloat(source, destination, FindMaterialProperty(source, "_Smoothness", "_Glossiness"), "_Smoothness", .5f);
+        CopyTexture(source, destination, FindMaterialProperty(source, "_OcclusionMap"), "_OcclusionMap");
+        CopyFloat(source, destination, FindMaterialProperty(source, "_OcclusionStrength"), "_OcclusionStrength", 1f);
+        CopyTexture(source, destination, FindMaterialProperty(source, "_EmissionMap"), "_EmissionMap");
+        CopyColor(source, destination, FindMaterialProperty(source, "_EmissionColor"), "_EmissionColor", Color.black);
+        CopyFloat(source, destination, FindMaterialProperty(source, "_AlphaClip", "_AlphaClipToggle"), "_AlphaClip", 0f);
+        CopyFloat(source, destination, FindMaterialProperty(source, "_Cutoff", "_AlphaCutoff"), "_Cutoff", .5f);
+
+        if (source != null && source.IsKeywordEnabled("_EMISSION")) destination.EnableKeyword("_EMISSION");
+        else destination.DisableKeyword("_EMISSION");
+    }
+
+    private static string FindMaterialProperty(Material material, params string[] propertyNames)
+    {
+        if (material == null) return null;
+        foreach (string propertyName in propertyNames)
+            if (!string.IsNullOrEmpty(propertyName) && material.HasProperty(propertyName)) return propertyName;
+        return null;
+    }
+
+    private static void CopyTexture(Material source, Material destination, string sourceProperty, string destinationProperty)
+    {
+        if (!destination.HasProperty(destinationProperty)) return;
+        Texture texture = source != null && !string.IsNullOrEmpty(sourceProperty) ? source.GetTexture(sourceProperty) : null;
+        destination.SetTexture(destinationProperty, texture);
+        if (source != null && !string.IsNullOrEmpty(sourceProperty))
+        {
+            destination.SetTextureScale(destinationProperty, source.GetTextureScale(sourceProperty));
+            destination.SetTextureOffset(destinationProperty, source.GetTextureOffset(sourceProperty));
+        }
+        else
+        {
+            destination.SetTextureScale(destinationProperty, Vector2.one);
+            destination.SetTextureOffset(destinationProperty, Vector2.zero);
+        }
+    }
+
+    private static void CopyColor(Material source, Material destination, string sourceProperty, string destinationProperty, Color fallback)
+    {
+        if (!destination.HasProperty(destinationProperty)) return;
+        Color color = source != null && !string.IsNullOrEmpty(sourceProperty) ? source.GetColor(sourceProperty) : fallback;
+        destination.SetColor(destinationProperty, color);
+    }
+
+    private static void CopyFloat(Material source, Material destination, string sourceProperty, string destinationProperty, float fallback)
+    {
+        if (!destination.HasProperty(destinationProperty)) return;
+        float value = source != null && !string.IsNullOrEmpty(sourceProperty) ? source.GetFloat(sourceProperty) : fallback;
+        destination.SetFloat(destinationProperty, value);
+    }
+
+    private void ApplyEnemyDeathDissolve(float amount)
+    {
+        if (deathDissolveRenderers == null) return;
+        if (deathDissolvePropertyBlock == null) deathDissolvePropertyBlock = new MaterialPropertyBlock();
+        float clampedAmount = Mathf.Clamp01(amount);
+        for (int rendererIndex = 0; rendererIndex < deathDissolveRenderers.Length; rendererIndex++)
+        {
+            Renderer targetRenderer = deathDissolveRenderers[rendererIndex];
+            Material[][] runtimeMaterials = runtimeDeathMaterials;
+            if (targetRenderer == null || runtimeMaterials == null || runtimeMaterials[rendererIndex] == null) continue;
+            for (int materialIndex = 0; materialIndex < runtimeMaterials[rendererIndex].Length; materialIndex++)
+            {
+                targetRenderer.GetPropertyBlock(deathDissolvePropertyBlock, materialIndex);
+                deathDissolvePropertyBlock.SetFloat(DeathDissolveAmountId, clampedAmount);
+                targetRenderer.SetPropertyBlock(deathDissolvePropertyBlock, materialIndex);
+            }
+        }
+    }
+
+    private void RestoreDeathPresentation()
+    {
+        if (deathDissolveRenderers != null)
+        {
+            for (int rendererIndex = 0; rendererIndex < deathDissolveRenderers.Length; rendererIndex++)
+            {
+                Renderer targetRenderer = deathDissolveRenderers[rendererIndex];
+                if (targetRenderer != null)
+                {
+                    Material[][] originals = originalDeathMaterials;
+                    if (originals != null && rendererIndex < originals.Length && originals[rendererIndex] != null)
+                        targetRenderer.sharedMaterials = originals[rendererIndex];
+
+                    MaterialPropertyBlock[][] savedBlocks = originalDeathMaterialPropertyBlocks;
+                    if (savedBlocks != null && rendererIndex < savedBlocks.Length && savedBlocks[rendererIndex] != null)
+                    {
+                        for (int materialIndex = 0; materialIndex < savedBlocks[rendererIndex].Length; materialIndex++)
+                            targetRenderer.SetPropertyBlock(savedBlocks[rendererIndex][materialIndex], materialIndex);
+                    }
+                }
+
+                Material[][] created = runtimeDeathMaterials;
+                if (created == null || rendererIndex >= created.Length || created[rendererIndex] == null) continue;
+                foreach (Material material in created[rendererIndex])
+                {
+                    if (material == null) continue;
+                    if (Application.isPlaying) Destroy(material);
+                    else DestroyImmediate(material);
+                }
+            }
+        }
+
+        deathDissolveRenderers = null;
+        originalDeathMaterials = null;
+        runtimeDeathMaterials = null;
+        originalDeathMaterialPropertyBlocks = null;
+        deathDissolveStarted = false;
+        deathProgressInitialized = false;
+        deathStateExitPending = false;
+        lastDeathNormalizedTime = 0f;
+        deathSecondsPerNormalizedTime = 1f;
+        deathExitElapsed = 0f;
+        deathExitDuration = 0f;
     }
 
     public System.Collections.IEnumerator WaitForDeathAnimation()
@@ -339,6 +622,7 @@ public class BattleUnit : MonoBehaviour
     }
     public void SetPersistentHP(int hp)
     {
+        RestoreDeathPresentation();
         currentHP = Mathf.Clamp(hp, 0, maxHP);
         deathStateSeen = deathAnimationFinished = false;
         deathAnimationPending = false;
@@ -359,6 +643,7 @@ public class BattleUnit : MonoBehaviour
     private void StartDeathAnimation()
     {
         if (deathAnimationTriggered) return;
+        RestoreDeathPresentation();
         deathAnimationTriggered = true;
         deathStateSeen = false;
         deathAnimationFinished = false;

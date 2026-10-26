@@ -14,12 +14,16 @@ public class MapChunkStreamer : MonoBehaviour
     [Min(10)] public float loadDistance = 65;
     [Min(20)] public float unloadDistance = 100;
     [Min(2)] public float safetyDistance = 15;
+    [Tooltip("Show the full-screen safety overlay if the player reaches an unloaded chunk during exploration.")]
+    public bool showOverlayWhileStreaming;
     [Min(0)] public int shadowFaceBudget = 6;
     [Min(1)] public float localShadowDistance = 25;
     public static MapChunkStreamer Instance { get; private set; }
     public static bool MovementBlocked => Instance != null && Instance.Blocked;
     public bool Ready { get; private set; }
+    public float InitialLoadProgress { get; private set; }
     public bool Blocked { get; private set; } = true;
+    public bool SuppressOverlay { get; set; }
     public string Error { get; private set; }
     PlayerScript player;
     bool stopping, working;
@@ -29,6 +33,8 @@ public class MapChunkStreamer : MonoBehaviour
     readonly Dictionary<Light, LightShadows> shadowLights = new Dictionary<Light, LightShadows>();
     float nextShadowUpdate;
     int unloadedSinceCollection;
+    int initialChunkCount;
+    int initialChunksLoaded;
 
     void Awake() { Instance = this; }
     void OnDestroy() { if (Instance == this) Instance = null; }
@@ -38,10 +44,19 @@ public class MapChunkStreamer : MonoBehaviour
         RegisterLights();
         CreateOverlay();
         yield return null;
-        foreach (var chunk in chunks.OrderBy(x => Distance(x, player.transform.position)))
+        var initialChunks = chunks
+            .Where(chunk => Distance(chunk, player.transform.position) <= loadDistance)
+            .OrderBy(chunk => Distance(chunk, player.transform.position))
+            .ToList();
+        initialChunkCount = initialChunks.Count;
+        initialChunksLoaded = 0;
+        InitialLoadProgress = initialChunkCount == 0 ? 1f : 0f;
+        foreach (var chunk in initialChunks)
         {
-            if (Distance(chunk, player.transform.position) <= loadDistance) yield return Load(chunk);
+            yield return Load(chunk);
             if (Error != null) yield break;
+            initialChunksLoaded++;
+            InitialLoadProgress = (float)initialChunksLoaded / initialChunkCount;
         }
         Physics.SyncTransforms();
         Ready = true;
@@ -59,7 +74,8 @@ public class MapChunkStreamer : MonoBehaviour
     {
         if (player == null) return;
         Blocked = !Ready || Error != null || chunks.Any(x => !Loaded(x) && Distance(x, player.transform.position) <= safetyDistance);
-        if (overlay != null) overlay.SetActive(Blocked && !stopping);
+        bool showBlockingOverlay = !Ready || showOverlayWhileStreaming || Error != null;
+        if (overlay != null) overlay.SetActive(Blocked && showBlockingOverlay && !stopping && !SuppressOverlay);
         if (label != null) label.text = Error ?? "Đang tải khu vực...";
         if (Time.unscaledTime >= nextShadowUpdate)
         {
@@ -156,5 +172,6 @@ public class MapChunkStreamer : MonoBehaviour
         var text = new GameObject("Status", typeof(RectTransform), typeof(Text)); text.transform.SetParent(panel.transform, false);
         rect = text.GetComponent<RectTransform>(); rect.anchorMin = new Vector2(.1f,.3f); rect.anchorMax = new Vector2(.9f,.7f); rect.offsetMin = rect.offsetMax = Vector2.zero;
         label = text.GetComponent<Text>(); label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); label.fontSize = 24; label.alignment = TextAnchor.MiddleCenter; label.color = Color.white;
+        overlay.SetActive(false);
     }
 }

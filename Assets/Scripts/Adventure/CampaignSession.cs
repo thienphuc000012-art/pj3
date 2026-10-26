@@ -21,6 +21,7 @@ public class CampaignSession : MonoBehaviour
     public string Message { get; private set; }
     public float MessageUntil { get; private set; }
     public bool InEncounter => encounter != null;
+    public bool EncounterHasBoss => encounter != null && encounter.enemies != null && encounter.enemies.Any(enemy => enemy != null && enemy.isBoss);
     public int ResultExperience => encounter?.xp ?? 0;
     public List<ItemStack> ResultRewards => encounter?.rewards ?? new List<ItemStack>();
     public string CurrentMapScene => Data != null && !string.IsNullOrEmpty(Data.currentMapScene)
@@ -596,8 +597,9 @@ public class CampaignSession : MonoBehaviour
         Animator enemyAnimator = patrol != null ? patrol.mapAnimator : point != null ? point.GetComponentInChildren<Animator>(true) : null;
         Transform playerTransform = player != null ? player.transform : null;
         Transform enemyTransform = point != null ? point.transform : null;
-        Vector3 playerStartPosition = playerTransform != null ? playerTransform.position : Vector3.zero;
-        Vector3 enemyStartPosition = enemyTransform != null ? enemyTransform.position : Vector3.zero;
+        CharacterController playerController = player != null
+            ? player.CC != null ? player.CC : player.GetComponent<CharacterController>()
+            : null;
         Quaternion playerStartRotation = playerTransform != null ? playerTransform.rotation : Quaternion.identity;
         Quaternion enemyStartRotation = enemyTransform != null ? enemyTransform.rotation : Quaternion.identity;
         int playerStartState = playerAnimator != null && playerAnimator.layerCount > 0 ? playerAnimator.GetCurrentAnimatorStateInfo(0).fullPathHash : 0;
@@ -611,15 +613,54 @@ public class CampaignSession : MonoBehaviour
         float encounterPreviousTimeScale = Time.timeScale;
         bool loadingStarted = false;
         GameObject blackHole = null;
+        GameObject encounterContactProbe = null;
+        SphereCollider enemyAttackCollider = null;
         EncounterAnimationProgress playerAction = null;
         EncounterAnimationProgress enemyAction = null;
 
         try
         {
+            if (playerTransform != null && enemyTransform != null && playerController != null && playerController.enabled)
+            {
+                float attackRange = playerInitiated || patrol == null
+                    ? (point != null ? point.range : 2.5f)
+                    : Mathf.Min(patrol.attackRange, point.range);
+                encounterContactProbe = CreateEncounterContactProbe(enemyTransform, patrol, attackRange);
+                enemyAttackCollider = encounterContactProbe != null
+                    ? encounterContactProbe.GetComponent<SphereCollider>()
+                    : null;
+                bool contactConfirmed = false;
+                float contactDeadline = Time.unscaledTime + .25f;
+                while (Time.unscaledTime < contactDeadline && OnMap && playerTransform != null && enemyTransform != null)
+                {
+                    Physics.SyncTransforms();
+                    if (EncounterContactConfirmed(playerTransform, playerController, enemyTransform,
+                        enemyAttackCollider, patrol))
+                    {
+                        contactConfirmed = true;
+                        break;
+                    }
+                    yield return null;
+                }
+
+                Physics.SyncTransforms();
+                contactConfirmed = contactConfirmed || EncounterContactConfirmed(playerTransform, playerController,
+                    enemyTransform, enemyAttackCollider, patrol);
+                // BeginEncounter has already verified the interaction/attack range.
+                // Keep that validated range as a fallback if Unity omits a CharacterController
+                // from the physics overlap query on this frame.
+                contactConfirmed = contactConfirmed || IsNear(point);
+                if (!contactConfirmed)
+                {
+                    Notify("Không thể tiếp cận mục tiêu để bắt đầu trận.");
+                    yield break;
+                }
+            }
+
             if (playerTransform != null && enemyTransform != null)
             {
-                FaceMapActor(playerTransform, enemyStartPosition);
-                FaceMapActor(enemyTransform, playerStartPosition);
+                FaceMapActor(playerTransform, enemyTransform.position);
+                FaceMapActor(enemyTransform, playerTransform.position);
             }
             if (playerAnimator != null) playerAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
             if (enemyAnimator != null) enemyAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
@@ -634,7 +675,8 @@ public class CampaignSession : MonoBehaviour
                 playerAction = StartEncounterAnimation(playerAnimator, Config.mapPlayerHitTrigger, Config.mapPlayerHitState, .7f);
                 if (patrol != null)
                 {
-                    enemyAction = StartEncounterAnimation(patrol.mapAnimator, "", patrol.EncounterAttackState, .7f);
+                    enemyAction = StartEncounterAnimation(patrol.mapAnimator, "", patrol.EncounterAttackState,
+                        .7f, patrol.EncounterMovementLayerIndex);
                 }
                 else enemyAction = new EncounterAnimationProgress { finished = true };
             }
@@ -702,17 +744,14 @@ public class CampaignSession : MonoBehaviour
         }
         finally
         {
+            if (encounterContactProbe != null) Destroy(encounterContactProbe);
             if (!loadingStarted)
             {
                 if (blackHole != null) Destroy(blackHole);
                 if (playerTransform != null)
-                {
                     playerTransform.rotation = playerStartRotation;
-                }
                 if (enemyTransform != null)
-                {
                     enemyTransform.rotation = enemyStartRotation;
-                }
                 if (playerAnimator != null && playerStartState != 0 && playerAnimator.HasState(0, playerStartState))
                     playerAnimator.Play(playerStartState, 0, playerStartNormalizedTime);
                 if (enemyAnimator != null && enemyStartState != 0 && enemyAnimator.HasState(0, enemyStartState))
@@ -739,6 +778,54 @@ public class CampaignSession : MonoBehaviour
         if (direction.sqrMagnitude > .001f) actor.rotation = Quaternion.LookRotation(direction.normalized, Vector3.up);
     }
 
+    private static GameObject CreateEncounterContactProbe(Transform enemy, EnemyEncounterBehaviour patrol, float attackRange)
+    {
+        if (enemy == null) return null;
+        float bodyHeight = patrol != null ? Mathf.Max(.2f, patrol.bodyHeight) : 1.8f;
+        var probe = new GameObject("Encounter Attack Hitbox");
+        probe.layer = enemy.gameObject.layer;
+        probe.transform.SetParent(enemy, false);
+        probe.transform.localPosition = Vector3.up * (bodyHeight * .5f);
+        probe.transform.localRotation = Quaternion.identity;
+        var hitbox = probe.AddComponent<SphereCollider>();
+        hitbox.radius = Mathf.Max(.1f, attackRange);
+        hitbox.isTrigger = true;
+        return probe;
+    }
+
+    private static bool EncounterContactConfirmed(Transform player, CharacterController playerController,
+        Transform enemy, SphereCollider attackHitbox, EnemyEncounterBehaviour patrol)
+    {
+        if (player == null || playerController == null || !playerController.enabled || enemy == null || attackHitbox == null)
+            return false;
+
+        Physics.SyncTransforms();
+        if (patrol != null && patrol.IsAirborne)
+        {
+            // Keep aerial attacks at the player's height while retaining the configured
+            // attack-range sphere, so a flying enemy doesn't need body-to-body contact.
+            Vector3 center = attackHitbox.transform.position;
+            center.y = playerController.bounds.center.y;
+            attackHitbox.transform.position = center;
+            Physics.SyncTransforms();
+        }
+
+        Vector3 hitboxCenter = attackHitbox.transform.TransformPoint(attackHitbox.center);
+        Vector3 closestPlayerPoint = playerController.ClosestPoint(hitboxCenter);
+        float scale = Mathf.Max(Mathf.Abs(attackHitbox.transform.lossyScale.x),
+            Mathf.Abs(attackHitbox.transform.lossyScale.y), Mathf.Abs(attackHitbox.transform.lossyScale.z));
+        float radius = attackHitbox.radius * scale + .025f;
+        if ((closestPlayerPoint - hitboxCenter).sqrMagnitude <= radius * radius)
+            return true;
+
+        // Physics query fallback covers colliders attached under the player object.
+        Collider[] overlaps = Physics.OverlapSphere(hitboxCenter, radius, ~0, QueryTriggerInteraction.Ignore);
+        foreach (Collider overlap in overlaps)
+            if (overlap != null && (overlap == playerController || overlap.transform == player || overlap.transform.IsChildOf(player)))
+                return true;
+        return false;
+    }
+
     private static void PrepareEncounterVfxForUnscaledTime(GameObject effect)
     {
         if (effect == null) return;
@@ -755,7 +842,8 @@ public class CampaignSession : MonoBehaviour
             animator.updateMode = AnimatorUpdateMode.UnscaledTime;
     }
 
-    private static EncounterAnimationProgress StartEncounterAnimation(Animator animator, string triggerName, string stateName, float fallbackDuration)
+    private static EncounterAnimationProgress StartEncounterAnimation(Animator animator, string triggerName,
+        string stateName, float fallbackDuration, int preferredLayer = -1)
     {
         var progress = new EncounterAnimationProgress
         {
@@ -769,7 +857,7 @@ public class CampaignSession : MonoBehaviour
         if (progress.finished) return progress;
 
         bool hasTrigger = !string.IsNullOrWhiteSpace(triggerName) && animator.parameters.Any(x => x.name == triggerName && x.type == AnimatorControllerParameterType.Trigger);
-        if (TryFindAnimatorState(animator, progress.stateName, out _, out int reactionLayer))
+        if (TryFindAnimatorState(animator, progress.stateName, out _, out int reactionLayer, preferredLayer))
         {
             progress.stateHash = Animator.StringToHash(progress.stateName);
             progress.layer = reactionLayer;
@@ -781,7 +869,7 @@ public class CampaignSession : MonoBehaviour
             return progress;
         }
 
-        if (TryFindAnimatorState(animator, progress.stateName, out int stateHash, out int layer))
+        if (TryFindAnimatorState(animator, progress.stateName, out int stateHash, out int layer, preferredLayer))
         {
             progress.stateHash = Animator.StringToHash(progress.stateName);
             progress.layer = layer;
@@ -792,17 +880,34 @@ public class CampaignSession : MonoBehaviour
         return progress;
     }
 
-    private static bool TryFindAnimatorState(Animator animator, string shortName, out int stateHash, out int layer)
+    private static bool TryFindAnimatorState(Animator animator, string shortName, out int stateHash, out int layer,
+        int preferredLayer = -1)
     {
         stateHash = 0; layer = 0;
         if (animator == null || string.IsNullOrEmpty(shortName)) return false;
+        if (preferredLayer >= 0 && preferredLayer < animator.layerCount &&
+            TryFindAnimatorStateOnLayer(animator, shortName, preferredLayer, out stateHash))
+        {
+            layer = preferredLayer;
+            return true;
+        }
         for (int i = 0; i < animator.layerCount; i++)
         {
-            int fullHash = Animator.StringToHash(animator.GetLayerName(i) + "." + shortName);
-            int shortHash = Animator.StringToHash(shortName);
-            if (animator.HasState(i, fullHash)) { stateHash = fullHash; layer = i; return true; }
-            if (animator.HasState(i, shortHash)) { stateHash = shortHash; layer = i; return true; }
+            if (i == preferredLayer) continue;
+            if (TryFindAnimatorStateOnLayer(animator, shortName, i, out stateHash))
+            { layer = i; return true; }
         }
+        return false;
+    }
+
+    private static bool TryFindAnimatorStateOnLayer(Animator animator, string shortName, int layer, out int stateHash)
+    {
+        stateHash = 0;
+        if (animator == null || layer < 0 || layer >= animator.layerCount || string.IsNullOrEmpty(shortName)) return false;
+        int fullHash = Animator.StringToHash(animator.GetLayerName(layer) + "." + shortName);
+        int shortHash = Animator.StringToHash(shortName);
+        if (animator.HasState(layer, fullHash)) { stateHash = fullHash; return true; }
+        if (animator.HasState(layer, shortHash)) { stateHash = shortHash; return true; }
         return false;
     }
 
@@ -1062,6 +1167,76 @@ public class CampaignSession : MonoBehaviour
         Save();
         // The result panel waits for Continue before leaving combat.
     }
+
+    public bool TryEscapeBattle(CombatManager manager, out string error)
+    {
+        error = null;
+        if (encounter == null || manager == null || Data == null)
+        {
+            error = "Không thể thoát khỏi trận này.";
+            return false;
+        }
+        if (EncounterHasBoss)
+        {
+            error = "bạn không thể thoát vào lúc này";
+            return false;
+        }
+        if (Busy || LoadingScreen.IsLoading)
+        {
+            error = "Không thể thoát khỏi trận này.";
+            return false;
+        }
+
+        string returnScene = CurrentMapScene ?? Config?.mapScene;
+        if (string.IsNullOrEmpty(returnScene) || !Application.CanStreamedLevelBeLoaded(returnScene) ||
+            !Application.CanStreamedLevelBeLoaded(LoadingScreen.SceneName))
+        {
+            error = "Không tìm thấy map quay về hoặc scene Loading trong Build Settings.";
+            return false;
+        }
+
+        int[] previousPartyHp = Data.party.Select(member => member.hp).ToArray();
+        bool encounterWasConsumed = Data.collected.Contains(encounter.id);
+        for (int i = 0; i < Data.party.Count && i < manager.playerParty.Count; i++)
+            Data.party[i].hp = manager.playerParty[i] != null ? manager.playerParty[i].currentHP : Data.party[i].hp;
+        if (!encounterWasConsumed && !string.IsNullOrEmpty(encounter.id))
+            Data.collected.Add(encounter.id);
+
+        Busy = true;
+        if (!Save(capturePosition: false))
+        {
+            RestoreEscapeData(previousPartyHp, encounterWasConsumed, encounter.id);
+            Busy = false;
+            error = Message ?? "Không thể lưu trạng thái trước khi thoát.";
+            return false;
+        }
+
+        if (!LoadingScreen.Load(returnScene))
+        {
+            RestoreEscapeData(previousPartyHp, encounterWasConsumed, encounter.id);
+            Busy = false;
+            Save(capturePosition: false);
+            error = LoadingScreen.Error ?? "Không thể quay về map.";
+            return false;
+        }
+
+        // The point's id is now collected, so WorldInteraction hides the encounter
+        // when the saved map is loaded again. Keep the captured start-of-battle
+        // position; never recapture from the combat scene here.
+        encounter = null;
+        Message = null;
+        MessageUntil = 0f;
+        return true;
+    }
+
+    private void RestoreEscapeData(int[] previousPartyHp, bool encounterWasConsumed, string encounterId)
+    {
+        for (int i = 0; i < Data.party.Count && i < previousPartyHp.Length; i++)
+            Data.party[i].hp = previousPartyHp[i];
+        if (!encounterWasConsumed && !string.IsNullOrEmpty(encounterId))
+            Data.collected.Remove(encounterId);
+    }
+
     public bool ContinueAfterBattle()
     {
         string returnScene = CurrentMapScene ?? Config.mapScene;

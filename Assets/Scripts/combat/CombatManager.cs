@@ -148,6 +148,7 @@ public class CombatManager : MonoBehaviour
     [HideInInspector] public bool isSelectingSelfOnly = false;
 
     private bool isTransitioningTurn = false;
+    private bool runAwayAttemptInProgress;
     [HideInInspector] public bool isAttackAnimationFinished = false;
 
     private OpenMenuType currentOpenMenu = OpenMenuType.None;
@@ -609,6 +610,78 @@ public class CombatManager : MonoBehaviour
         {
             AdvancedUIManager.Instance.ShowActionMenu(true);
         }
+    }
+
+    public void OnRunAwayClicked()
+    {
+        if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead ||
+            isTransitioningTurn || runAwayAttemptInProgress)
+            return;
+
+        CampaignSession session = CampaignSession.Instance;
+        bool bossEncounter = enemyParty.Any(enemy => enemy != null && enemy.isBoss) ||
+                             (session != null && session.EncounterHasBoss);
+        if (bossEncounter)
+        {
+            AdvancedUIManager.Instance?.ShowCombatNotice("bạn không thể thoát vào lúc này");
+            return;
+        }
+
+        if (session == null || !session.InEncounter)
+        {
+            AdvancedUIManager.Instance?.ShowCombatNotice("Không thể thoát khỏi trận này.");
+            return;
+        }
+
+        // A failed escape uses the active character's turn, preventing the player
+        // from retrying repeatedly before the enemies can act.
+        if (UnityEngine.Random.value >= .8f)
+        {
+            runAwayAttemptInProgress = true;
+            state = CombatState.Executing;
+            selectedAction = null;
+            currentOpenMenu = OpenMenuType.None;
+            isSelectingBuffTarget = false;
+            isSelectingSelfOnly = false;
+            if (AdvancedUIManager.Instance != null)
+            {
+                AdvancedUIManager.Instance.ShowActionMenu(false);
+                AdvancedUIManager.Instance.ToggleChangeTargetHint(false);
+                AdvancedUIManager.Instance.subMenuPanel?.SetActive(false);
+                AdvancedUIManager.Instance.ShowCombatNotice("chạy trốn thất bại");
+            }
+            StartCoroutine(FinishFailedRunAwayAttempt());
+            return;
+        }
+
+        if (!session.TryEscapeBattle(this, out string error))
+        {
+            AdvancedUIManager.Instance?.ShowCombatNotice(error ?? "Không thể quay về map.");
+            return;
+        }
+
+        runAwayAttemptInProgress = true;
+        isTransitioningTurn = true;
+        state = CombatState.Executing;
+        selectedAction = null;
+        currentOpenMenu = OpenMenuType.None;
+        isSelectingBuffTarget = false;
+        isSelectingSelfOnly = false;
+        if (AdvancedUIManager.Instance != null)
+        {
+            AdvancedUIManager.Instance.ToggleAllUI(false);
+            AdvancedUIManager.Instance.subMenuPanel?.SetActive(false);
+        }
+        GetComponent<UltimateCinematic>()?.End();
+        ClearCombatVFX();
+    }
+
+    private IEnumerator FinishFailedRunAwayAttempt()
+    {
+        yield return new WaitForSecondsRealtime(1.25f);
+        runAwayAttemptInProgress = false;
+        if (this != null && !battleCompletionStarted && state == CombatState.Executing)
+            EndCurrentTurn();
     }
 
     public void OnAttackClicked()

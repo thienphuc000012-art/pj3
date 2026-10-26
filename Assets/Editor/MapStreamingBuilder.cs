@@ -126,7 +126,8 @@ public static class MapStreamingBuilder
         if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Exit Play Mode before converting.");
         var map = SceneManager.GetSceneByPath(Map);
         if (map.IsValid() && map.isDirty) throw new InvalidOperationException("Save mapgame first; conversion will not overwrite unsaved edits.");
-        if (Directory.Exists(Folder)) throw new InvalidOperationException("MapChunks already exists. Use the existing chunks; conversion is one-time only.");
+        if (Directory.Exists(Folder) && Directory.GetFiles(Folder, "*.unity", SearchOption.AllDirectories).Length > 0)
+            throw new InvalidOperationException("MapChunks already contains scene chunks. Use the existing chunks; conversion is one-time only.");
         if (!map.IsValid()) map = EditorSceneManager.OpenScene(Map, OpenSceneMode.Additive);
         var setup = map.GetRootGameObjects().SelectMany(x => x.GetComponentsInChildren<MapGameSetup>(true)).Single();
         if (setup.GetComponent<MapChunkStreamer>() != null) throw new InvalidOperationException("Map already has streaming.");
@@ -192,7 +193,6 @@ public static class MapStreamingBuilder
                     if (light.type != LightType.Directional)
                     {
                         light.shadowCustomResolution = 256;
-                        light.shadowResolution = (UnityEngine.Rendering.LightShadowResolution)256;
                         var data = light.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalLightData>();
                         if (data == null) data = light.gameObject.AddComponent<UnityEngine.Rendering.Universal.UniversalAdditionalLightData>();
                         var serialized = new SerializedObject(data);
