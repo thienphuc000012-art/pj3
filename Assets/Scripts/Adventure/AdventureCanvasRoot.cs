@@ -50,6 +50,8 @@ public class AdventureCanvasRoot : MonoBehaviour
         }
         GameUITheme.Apply(gameObject);
         EnsureEventSystem();
+        if (kind == AdventureCanvasKind.Adventure && GetComponent<AdventureCompassHUD>() == null)
+            gameObject.AddComponent<AdventureCompassHUD>();
     }
     static void ApplyBackground(Image source, Image target)
     {
