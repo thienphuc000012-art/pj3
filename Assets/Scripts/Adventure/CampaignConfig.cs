@@ -34,6 +34,9 @@ public class CampaignConfig : ScriptableObject
     public BattleUnit demoEnemy;
     public List<AdventureItem> items = new List<AdventureItem>();
     public List<CraftRecipe> recipes = new List<CraftRecipe>();
+    [Header("Quests")]
+    [Tooltip("Add every quest offered by NPC dialogue here so accepted progress remains available across maps and saved games.")]
+    public List<AdventureQuest> quests = new List<AdventureQuest>();
     public bool defeatReturnsToCheckpoint = true;
     [Min(1)] public int equippedSkillSlots = 4;
     public List<SkillUnlockRule> skillUnlocks = new List<SkillUnlockRule>();
@@ -43,6 +46,7 @@ public class CampaignConfig : ScriptableObject
     public SkillUnlockRule SkillRule(ActionData skill) => skillUnlocks?.Find(x => x != null && x.skill == skill);
     public ActionData[] UnlockPrerequisites(ActionData skill) => SkillRule(skill)?.prerequisites?.Where(x => x != null).Distinct().ToArray() ?? new ActionData[0];
     public AdventureItem FindItem(string id) => items.Find(x => x.id == id);
+    public AdventureQuest FindQuest(string id) => quests?.Find(x => x != null && string.Equals(x.Id, id, StringComparison.Ordinal));
 }
 
 [Serializable]
@@ -177,20 +181,24 @@ public class UnlockedRestPoint
 [Serializable]
 public class CampaignSave
 {
-    public int version = 2;
+    public int version = 3;
     public string currentMapScene;
     public void MigrateSkillUnlocks()
     {
-        if (version >= 2) return;
-        foreach (var member in party)
-            foreach (var entry in member.skills)
-                if (entry.rank > 1) { member.skillPoints += entry.rank - 1; entry.rank = 1; }
-        version = 2;
+        if (version < 2)
+            foreach (var member in party)
+                foreach (var entry in member.skills)
+                    if (entry.rank > 1) { member.skillPoints += entry.rank - 1; entry.rank = 1; }
+        if (quests == null) quests = new List<AdventureQuestProgress>();
+        if (string.IsNullOrEmpty(trackedQuestId)) trackedQuestId = string.Empty;
+        version = 3;
     }
     public List<PartyMemberProgress> party = new List<PartyMemberProgress>();
     public List<ItemStack> inventory = new List<ItemStack>();
     public List<string> collected = new List<string>();
     public List<UnlockedRestPoint> unlockedRestPoints = new List<UnlockedRestPoint>();
+    public List<AdventureQuestProgress> quests = new List<AdventureQuestProgress>();
+    public string trackedQuestId;
     public Vector3 position;
     public Quaternion rotation = Quaternion.identity;
     public Vector3 checkpoint;
@@ -227,4 +235,15 @@ public class CampaignSave
         AddItem(recipe.output.id, recipe.output.count);
         return true;
     }
+}
+
+[Serializable]
+public class AdventureQuestProgress
+{
+    public string questId;
+    public int objectiveCount;
+    public bool completed;
+    public string objectiveMapScene;
+    public Vector3 objectivePosition;
+    public bool hasObjectivePosition;
 }

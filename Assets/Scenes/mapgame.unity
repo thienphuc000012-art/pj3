@@ -931,8 +931,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WorldInteraction
   persistentId: 9273b2c032cf46cf9ef1eb624107532c
   savedWorldId: world:9273b2c032cf46cf9ef1eb624107532c
+  questMarkerId: 
   displayName: Enemy Encounter
   kind: 4
+  dialogue: {fileID: 0}
+  dialogueNpcModelPrefab: {fileID: 0}
+  dialogueNpcModelPosition: {x: 0, y: 0, z: 0}
+  dialogueNpcModelRotation: {x: 0, y: 0, z: 0}
+  dialogueNpcModelScale: {x: 1, y: 1, z: 1}
+  dialogueFaceHeight: 1.6
+  dialogueTalkAnimationState: Base Layer.Talking
   targetMapScene: 
   targetMapPosition: {x: 0, y: 0, z: 0}
   targetMapEuler: {x: 0, y: 0, z: 0}
@@ -961,6 +969,8 @@ MonoBehaviour:
   pickupAnimationTimeout: 10
   pickupModelInstance: {fileID: 0}
   pickupModelSource: {fileID: 0}
+  dialogueNpcModelInstance: {fileID: 0}
+  dialogueNpcModelSource: {fileID: 0}
   enemyPrefabs:
   - {fileID: 6754251023150294601, guid: 96659ae2a04725e4999e1124bc86d77c, type: 3}
   combatSetupId: dra
@@ -2559,8 +2569,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WorldInteraction
   persistentId: 1be70ea988114fed8be8c6e9a6205585
   savedWorldId: world:1be70ea988114fed8be8c6e9a6205585
+  questMarkerId: 
   displayName: "L\u01B0u game / H\u1ED3i m\xE1u"
   kind: 3
+  dialogue: {fileID: 0}
+  dialogueNpcModelPrefab: {fileID: 0}
+  dialogueNpcModelPosition: {x: 0, y: 0, z: 0}
+  dialogueNpcModelRotation: {x: 0, y: 0, z: 0}
+  dialogueNpcModelScale: {x: 1, y: 1, z: 1}
+  dialogueFaceHeight: 1.6
+  dialogueTalkAnimationState: Base Layer.Talking
   targetMapScene: 
   targetMapPosition: {x: 0, y: 0, z: 0}
   targetMapEuler: {x: 0, y: 0, z: 0}
@@ -2589,6 +2607,8 @@ MonoBehaviour:
   pickupAnimationTimeout: 10
   pickupModelInstance: {fileID: 0}
   pickupModelSource: {fileID: 0}
+  dialogueNpcModelInstance: {fileID: 0}
+  dialogueNpcModelSource: {fileID: 0}
   enemyPrefabs: []
   combatSetupId: default
 --- !u!4 &905127836
@@ -4709,6 +4729,10 @@ PrefabInstance:
     - target: {fileID: 6754251023150294601, guid: 96659ae2a04725e4999e1124bc86d77c, type: 3}
       propertyPath: m_Enabled
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6754251023150294601, guid: 96659ae2a04725e4999e1124bc86d77c, type: 3}
+      propertyPath: deathDissolveFinishTime
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6763395737984839544, guid: 96659ae2a04725e4999e1124bc86d77c, type: 3}
       propertyPath: m_LocalScale.x
@@ -34136,7 +34160,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1266846337
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -34151,8 +34175,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WorldInteraction
   persistentId: 69cef69b177f4a529bdb3115b5496cea
   savedWorldId: world:69cef69b177f4a529bdb3115b5496cea
+  questMarkerId: 
   displayName: Enemy Encounter
   kind: 4
+  dialogue: {fileID: 0}
+  dialogueNpcModelPrefab: {fileID: 0}
+  dialogueNpcModelPosition: {x: 0, y: 0, z: 0}
+  dialogueNpcModelRotation: {x: 0, y: 0, z: 0}
+  dialogueNpcModelScale: {x: 1, y: 1, z: 1}
+  dialogueFaceHeight: 1.6
+  dialogueTalkAnimationState: Base Layer.Talking
   targetMapScene: 
   targetMapPosition: {x: 0, y: 0, z: 0}
   targetMapEuler: {x: 0, y: 0, z: 0}
@@ -34181,6 +34213,8 @@ MonoBehaviour:
   pickupAnimationTimeout: 10
   pickupModelInstance: {fileID: 0}
   pickupModelSource: {fileID: 0}
+  dialogueNpcModelInstance: {fileID: 0}
+  dialogueNpcModelSource: {fileID: 0}
   enemyPrefabs:
   - {fileID: 8798339202372134501, guid: 34c9cae981207ec4e9ee2c9c116d9442, type: 3}
   combatSetupId: default
@@ -37712,8 +37746,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WorldInteraction
   persistentId: 0b492378c0fd4201a75e85efde9e91b4
   savedWorldId: world:0b492378c0fd4201a75e85efde9e91b4
+  questMarkerId: 
   displayName: Item Pickup
   kind: 0
+  dialogue: {fileID: 0}
+  dialogueNpcModelPrefab: {fileID: 0}
+  dialogueNpcModelPosition: {x: 0, y: 0, z: 0}
+  dialogueNpcModelRotation: {x: 0, y: 0, z: 0}
+  dialogueNpcModelScale: {x: 1, y: 1, z: 1}
+  dialogueFaceHeight: 1.6
+  dialogueTalkAnimationState: Base Layer.Talking
   targetMapScene: 
   targetMapPosition: {x: 0, y: 0, z: 0}
   targetMapEuler: {x: 0, y: 0, z: 0}
@@ -37744,6 +37786,8 @@ MonoBehaviour:
   pickupAnimationTimeout: 10
   pickupModelInstance: {fileID: 0}
   pickupModelSource: {fileID: 0}
+  dialogueNpcModelInstance: {fileID: 0}
+  dialogueNpcModelSource: {fileID: 0}
   enemyPrefabs: []
   combatSetupId: default
 --- !u!4 &1503852099
@@ -37797,6 +37841,10 @@ MonoBehaviour:
   vcam: {fileID: 712196188}
   playerTarget: {fileID: 1493354212}
   cameraTarget: {fileID: 1809496246}
+  dialogueCameraDistance: 2.1
+  dialogueVerticalArmLength: 0.05
+  dialogueFocusSmoothSpeed: 5
+  dialogueFieldOfView: 38
   targetHeight: 0.04
   horizontalSmoothTime: 0.025
   verticalSmoothTime: 0.12
@@ -38242,8 +38290,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WorldInteraction
   persistentId: 4a5e7901d32e4859b889ee33437e6d37
   savedWorldId: mapgame:4a5e7901d32e4859b889ee33437e6d37:GameObject#24
+  questMarkerId: 
   displayName: "T\u01B0\u01A1ng t\xE1c"
   kind: 5
+  dialogue: {fileID: 0}
+  dialogueNpcModelPrefab: {fileID: 0}
+  dialogueNpcModelPosition: {x: 0, y: 0, z: 0}
+  dialogueNpcModelRotation: {x: 0, y: 0, z: 0}
+  dialogueNpcModelScale: {x: 1, y: 1, z: 1}
+  dialogueFaceHeight: 1.6
+  dialogueTalkAnimationState: Base Layer.Talking
   targetMapScene: m
   targetMapPosition: {x: 0, y: -92.31, z: 0}
   targetMapEuler: {x: 0, y: 0, z: 0}
@@ -38272,6 +38328,8 @@ MonoBehaviour:
   pickupAnimationTimeout: 10
   pickupModelInstance: {fileID: 0}
   pickupModelSource: {fileID: 0}
+  dialogueNpcModelInstance: {fileID: 0}
+  dialogueNpcModelSource: {fileID: 0}
   enemyPrefabs: []
   combatSetupId: default
 --- !u!4 &1707926951
@@ -40511,8 +40569,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WorldInteraction
   persistentId: 7bd11ed16c17497492b29a07a30dc3ec
   savedWorldId: world:7bd11ed16c17497492b29a07a30dc3ec
+  questMarkerId: 
   displayName: ddd
   kind: 3
+  dialogue: {fileID: 0}
+  dialogueNpcModelPrefab: {fileID: 0}
+  dialogueNpcModelPosition: {x: 0, y: 0, z: 0}
+  dialogueNpcModelRotation: {x: 0, y: 0, z: 0}
+  dialogueNpcModelScale: {x: 1, y: 1, z: 1}
+  dialogueFaceHeight: 1.6
+  dialogueTalkAnimationState: Base Layer.Talking
   targetMapScene: 
   targetMapPosition: {x: 0, y: 0, z: 0}
   targetMapEuler: {x: 0, y: 0, z: 0}
@@ -40541,6 +40607,8 @@ MonoBehaviour:
   pickupAnimationTimeout: 10
   pickupModelInstance: {fileID: 0}
   pickupModelSource: {fileID: 0}
+  dialogueNpcModelInstance: {fileID: 0}
+  dialogueNpcModelSource: {fileID: 0}
   enemyPrefabs: []
   combatSetupId: default
 --- !u!4 &1842429717
@@ -40732,6 +40800,94 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
+--- !u!1 &1900531682
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1900531684}
+  - component: {fileID: 1900531683}
+  m_Layer: 0
+  m_Name: Dialogue NPC
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1900531683
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1900531682}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 47156b6b056b106449c6a86bfa3ca5fa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WorldInteraction
+  persistentId: b2064065d5564948ba61398682c2f2a6
+  savedWorldId: world:b2064065d5564948ba61398682c2f2a6
+  questMarkerId: 12
+  displayName: Dialogue NPC
+  kind: 6
+  dialogue: {fileID: 11400000, guid: 4dc58e7141992c74db511f0f65afb0b0, type: 2}
+  dialogueNpcModelPrefab: {fileID: 5526130862497330748, guid: d8c85ecb61c1c4d41acd60bc12ced154, type: 3}
+  dialogueNpcModelPosition: {x: 0, y: 0, z: 0}
+  dialogueNpcModelRotation: {x: 0, y: 0, z: 0}
+  dialogueNpcModelScale: {x: 1, y: 1, z: 1}
+  dialogueFaceHeight: 1.6
+  dialogueTalkAnimationState: Base Layer.Talking
+  targetMapScene: 
+  targetMapPosition: {x: 0, y: 0, z: 0}
+  targetMapEuler: {x: 0, y: 0, z: 0}
+  range: 2.5
+  experience: 0
+  rewards: []
+  pickupModelPrefab: {fileID: 0}
+  pickupModelPosition: {x: 0, y: 0, z: 0}
+  pickupModelRotation: {x: 0, y: 0, z: 0}
+  pickupModelScale: {x: 1, y: 1, z: 1}
+  chestOpenAnimation: {fileID: 0}
+  chestPlayerAnimationState: Base Layer.openchest
+  chestOpenMoment: 0.5
+  chestUseAnimationEvent: 0
+  requireFrontAccess: 1
+  chestFrontAccessHalfAngle: 70
+  chestOpenDuration: 1.2
+  chestLidPath: Top_Lod
+  chestAnimateLidFallback: 1
+  chestLidOpenRotation: {x: -105, y: 0, z: 0}
+  chestOpenState: Base Layer.open
+  chestClosedState: Base Layer.closed
+  pickupAnimationState: Base Layer.pickupitem
+  pickupMoment: 0.5
+  pickupUseAnimationEvent: 0
+  pickupAnimationTimeout: 10
+  pickupModelInstance: {fileID: 0}
+  pickupModelSource: {fileID: 0}
+  dialogueNpcModelInstance: {fileID: 0}
+  dialogueNpcModelSource: {fileID: 0}
+  enemyPrefabs: []
+  combatSetupId: default
+--- !u!4 &1900531684
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1900531682}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -20.875, y: 280.876, z: -90.31}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1931771126
 GameObject:
   m_ObjectHideFlags: 0
@@ -40995,8 +41151,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WorldInteraction
   persistentId: 2fae7f2c06734eb59f85c4d307ae4672
   savedWorldId: world:2fae7f2c06734eb59f85c4d307ae4672
+  questMarkerId: 
   displayName: Chest
   kind: 1
+  dialogue: {fileID: 0}
+  dialogueNpcModelPrefab: {fileID: 0}
+  dialogueNpcModelPosition: {x: 0, y: 0, z: 0}
+  dialogueNpcModelRotation: {x: 0, y: 0, z: 0}
+  dialogueNpcModelScale: {x: 1, y: 1, z: 1}
+  dialogueFaceHeight: 1.6
+  dialogueTalkAnimationState: Base Layer.Talking
   targetMapScene: 
   targetMapPosition: {x: 0, y: 0, z: 0}
   targetMapEuler: {x: 0, y: 0, z: 0}
@@ -41029,6 +41193,8 @@ MonoBehaviour:
   pickupAnimationTimeout: 10
   pickupModelInstance: {fileID: 1070058480}
   pickupModelSource: {fileID: 1534066118601383972, guid: 36f0b95c8afb6ca49b8e112cc8fba58d, type: 3}
+  dialogueNpcModelInstance: {fileID: 0}
+  dialogueNpcModelSource: {fileID: 0}
   enemyPrefabs: []
   combatSetupId: default
 --- !u!4 &2059305916
@@ -43114,3 +43280,4 @@ SceneRoots:
   - {fileID: 1503852099}
   - {fileID: 2059305916}
   - {fileID: 1707926951}
+  - {fileID: 1900531684}

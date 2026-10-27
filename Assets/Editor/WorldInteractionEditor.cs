@@ -55,6 +55,14 @@ public class WorldInteractionEditor : Editor
         );
 
 
+    [MenuItem("GameObject/Adventure/Dialogue NPC", false, 15)]
+    static void DialogueNpc()
+        => Create(
+            WorldInteractionKind.DialogueNPC,
+            "Dialogue NPC"
+        );
+
+
     // ============================================================
     // CREATE POINT
     // ============================================================
@@ -215,6 +223,11 @@ public class WorldInteractionEditor : Editor
             new GUIContent("Tên hiển thị")
         );
 
+        EditorGUILayout.PropertyField(
+            serializedObject.FindProperty("questMarkerId"),
+            new GUIContent("Quest Marker ID")
+        );
+
 
         EditorGUILayout.PropertyField(
             kindProperty,
@@ -255,7 +268,28 @@ public class WorldInteractionEditor : Editor
         // EXP + REWARDS
         // ========================================================
 
-        if (kind != WorldInteractionKind.RestPoint)
+        if (kind == WorldInteractionKind.DialogueNPC)
+        {
+            EditorGUILayout.Space(6);
+            EditorGUILayout.LabelField("Story Dialogue", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("dialogue"), new GUIContent("Dialogue Asset"));
+            EditorGUILayout.Space(4);
+            EditorGUILayout.LabelField("NPC 3D Model & Animation", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("dialogueNpcModelPrefab"), new GUIContent("NPC Model Prefab"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("dialogueNpcModelPosition"), new GUIContent("Model Local Position"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("dialogueNpcModelRotation"), new GUIContent("Model Local Rotation"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("dialogueNpcModelScale"), new GUIContent("Model Local Scale"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("dialogueFaceHeight"), new GUIContent("Fallback Face Height"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("dialogueTalkAnimationState"), new GUIContent("NPC Talk State"));
+            EditorGUILayout.HelpBox(
+                "Gán prefab model NPC; model được đặt làm con của điểm hội thoại. NPC Talk State là tên state trong Animator (ví dụ Base Layer.Talking). Nếu model có rig Humanoid, camera tự lấy bone Head; nếu không, dùng Fallback Face Height. Chọn Speaker Type = Player cho node người chơi và gán Player Talk Animation State trong Dialogue Asset. Hội thoại không dừng thời gian game.",
+                MessageType.Info);
+            EditorGUILayout.HelpBox(
+                "Tạo asset bằng Create > Adventure > Story Dialogue. Thêm các node có ID riêng; node không có Choice sẽ tiếp tục khi bấm màn hình. Text của Choice là câu người chơi nói. Mỗi lựa chọn có thể nhận nhiệm vụ. Thêm quest asset vào Campaign Config > Quests để tiến độ còn dùng được sau khi đổi map hoặc tải lại game.",
+                MessageType.Info);
+        }
+
+        if (kind != WorldInteractionKind.RestPoint && kind != WorldInteractionKind.DialogueNPC)
         {
             EditorGUILayout.PropertyField(
                 experience,
@@ -439,11 +473,13 @@ public class WorldInteractionEditor : Editor
 
 
         EditorGUILayout.HelpBox(
-            "Di chuyển điểm bằng Move Tool. " +
+            (kind == WorldInteractionKind.DialogueNPC
+                ? "Đến gần NPC rồi bấm E để nói chuyện. Dùng Dialogue Asset để viết nhánh hội thoại và gắn lựa chọn nhận nhiệm vụ."
+                : "Di chuyển điểm bằng Move Tool. " +
             "Thêm model làm object con để hiển thị trong map. " +
             "Vòng tròn Gizmos là phạm vi tương tác. " +
             "Đến gần rồi bấm E; điểm nghỉ cần chọn " +
-            "Lưu / Hồi máu để ghi checkpoint.",
+            "Lưu / Hồi máu để ghi checkpoint."),
             MessageType.Info
         );
 

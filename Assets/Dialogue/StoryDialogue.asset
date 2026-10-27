@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81d47f53f6394f7b8732d9ad44c43019, type: 3}
+  m_Name: StoryDialogue
+  m_EditorClassIdentifier: Assembly-CSharp::AdventureStoryDialogue
+  startNodeId: 12
+  playerSpeakerName: Player
+  playerTalkAnimationState: Base Layer.Talking
+  charactersPerSecond: 32
+  nodes:
+  - id: 12
+    speakerType: 0
+    speaker: okoko
+    text: "\xE2fafafa"
+    nextNodeId: 13
+    choices:
+    - text: "\xE2fafdfafafafafaa"
+      nextNodeId: 13
+      questToOffer: {fileID: 0}
+  - id: 13
+    speakerType: 0
+    speaker: okoko
+    text: "\xE0aaaaaaaaaaaaaaaaaaaaaaaaaa"
+    nextNodeId: 14
+    choices:
+    - text: ffffffffffffffffffffffffffff
+      nextNodeId: 14
+      questToOffer: {fileID: 11400000, guid: 84f0d647190015646836c1ed7fbde30a, type: 2}
+  - id: 14
+    speakerType: 0
+    speaker: okoko
+    text: bbbbbbbbbbbbbbbbbbbbbbbbbb
+    nextNodeId: 15
+    choices: []

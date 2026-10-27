@@ -21,6 +21,12 @@ public class MainCameraController : MonoBehaviour
     [SerializeField]
     private Transform cameraTarget;
 
+    [Header("Dialogue Close-up")]
+    [SerializeField, Min(0.5f)] private float dialogueCameraDistance = 2.1f;
+    [SerializeField, Min(0f)] private float dialogueVerticalArmLength = 0.05f;
+    [SerializeField, Min(0f)] private float dialogueFocusSmoothSpeed = 5f;
+    [SerializeField, Range(25f, 60f)] private float dialogueFieldOfView = 38f;
+
 
     // ============================================================
     // CAMERA TARGET POSITION
@@ -114,6 +120,15 @@ public class MainCameraController : MonoBehaviour
     private float verticalVelocity;
 
     private Quaternion targetRotation;
+    private Transform dialogueSpeakerRoot;
+    private Transform dialogueHeadTarget;
+    private float dialogueFallbackHeadHeight = 1.55f;
+    private CinemachineThirdPersonFollow dialogueFollow;
+    private Vector3 savedDialogueShoulderOffset;
+    private float savedDialogueVerticalArmLength;
+    private float savedDialogueCameraDistance;
+    private float savedDialogueFieldOfView;
+    private bool dialogueCameraSettingsApplied;
 
 
     // ============================================================
@@ -251,6 +266,12 @@ public class MainCameraController : MonoBehaviour
             return;
         }
 
+        if (dialogueSpeakerRoot != null)
+        {
+            UpdateDialogueCameraTarget();
+            return;
+        }
+
 
         // --------------------------------------------------------
         // 1. SMOOTH POSITION
@@ -264,6 +285,77 @@ public class MainCameraController : MonoBehaviour
         // --------------------------------------------------------
 
         UpdateCameraTargetRotation();
+    }
+
+    public void BeginDialogueFocus(Transform speakerRoot, Transform headTarget, float fallbackHeadHeight)
+    {
+        if (speakerRoot == null || cameraTarget == null) return;
+        dialogueSpeakerRoot = speakerRoot;
+        dialogueHeadTarget = headTarget;
+        dialogueFallbackHeadHeight = Mathf.Max(0.1f, fallbackHeadHeight);
+
+        if (dialogueCameraSettingsApplied || vcam == null) return;
+        dialogueFollow = vcam.GetComponent<CinemachineThirdPersonFollow>();
+        if (dialogueFollow != null)
+        {
+            savedDialogueShoulderOffset = dialogueFollow.ShoulderOffset;
+            savedDialogueVerticalArmLength = dialogueFollow.VerticalArmLength;
+            savedDialogueCameraDistance = dialogueFollow.CameraDistance;
+            dialogueFollow.ShoulderOffset = Vector3.zero;
+            dialogueFollow.VerticalArmLength = dialogueVerticalArmLength;
+            dialogueFollow.CameraDistance = dialogueCameraDistance;
+        }
+
+        savedDialogueFieldOfView = vcam.Lens.FieldOfView;
+        var lens = vcam.Lens;
+        lens.FieldOfView = dialogueFieldOfView;
+        vcam.Lens = lens;
+        dialogueCameraSettingsApplied = true;
+    }
+
+    public void EndDialogueFocus()
+    {
+        dialogueSpeakerRoot = null;
+        dialogueHeadTarget = null;
+        if (dialogueCameraSettingsApplied && vcam != null)
+        {
+            if (dialogueFollow != null)
+            {
+                dialogueFollow.ShoulderOffset = savedDialogueShoulderOffset;
+                dialogueFollow.VerticalArmLength = savedDialogueVerticalArmLength;
+                dialogueFollow.CameraDistance = savedDialogueCameraDistance;
+            }
+            var lens = vcam.Lens;
+            lens.FieldOfView = savedDialogueFieldOfView;
+            vcam.Lens = lens;
+        }
+        dialogueFollow = null;
+        dialogueCameraSettingsApplied = false;
+        horizontalVelocity = Vector3.zero;
+        verticalVelocity = 0f;
+        if (playerTarget != null && cameraTarget != null)
+        {
+            cameraTarget.position = playerTarget.position + Vector3.up * targetHeight;
+            cameraTarget.rotation = Quaternion.Euler(pitch, yaw, 0f);
+        }
+    }
+
+    private void UpdateDialogueCameraTarget()
+    {
+        Vector3 focusPoint = dialogueHeadTarget != null
+            ? dialogueHeadTarget.position
+            : dialogueSpeakerRoot.TransformPoint(Vector3.up * dialogueFallbackHeadHeight);
+        Vector3 forward = dialogueSpeakerRoot.forward;
+        forward.y = 0f;
+        if (forward.sqrMagnitude < 0.0001f) forward = playerTarget.forward;
+        forward.y = 0f;
+        if (forward.sqrMagnitude < 0.0001f) forward = Vector3.forward;
+
+        Quaternion desiredRotation = Quaternion.LookRotation(-forward.normalized, Vector3.up);
+        float blend = 1f - Mathf.Exp(-dialogueFocusSmoothSpeed * Time.unscaledDeltaTime);
+        cameraTarget.position = Vector3.Lerp(cameraTarget.position, focusPoint, blend);
+        cameraTarget.rotation = Quaternion.Slerp(cameraTarget.rotation, desiredRotation, blend);
+        rotationY = cameraTarget.eulerAngles.y;
     }
 
 

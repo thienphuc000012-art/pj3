@@ -4,14 +4,28 @@ using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
 
-public enum WorldInteractionKind { Pickup, Chest, Discovery, RestPoint, Encounter, MapTransition }
+public enum WorldInteractionKind { Pickup, Chest, Discovery, RestPoint, Encounter, MapTransition, DialogueNPC }
 
 public class WorldInteraction : MonoBehaviour
 {
     public string persistentId;
     [HideInInspector] public string savedWorldId;
+    [Tooltip("Optional short ID used by quest assets to point the compass at this location.")]
+    public string questMarkerId;
     public string displayName = "Tương tác";
     public WorldInteractionKind kind;
+    [Header("NPC Dialogue")]
+    public AdventureStoryDialogue dialogue;
+    [Header("NPC Presentation")]
+    [Tooltip("Optional 3D character prefab displayed at this dialogue point.")]
+    public GameObject dialogueNpcModelPrefab;
+    public Vector3 dialogueNpcModelPosition;
+    public Vector3 dialogueNpcModelRotation;
+    public Vector3 dialogueNpcModelScale = Vector3.one;
+    [Tooltip("Fallback face height above the NPC model pivot when no humanoid Head bone is available.")]
+    [Min(0.1f)] public float dialogueFaceHeight = 1.6f;
+    [Tooltip("Animator state to play while this NPC is speaking, for example Base Layer.Talking.")]
+    public string dialogueTalkAnimationState = "Base Layer.Talking";
     [Header("Map Transition")]
     [Tooltip("Tên scene đích phải có trong Campaign Config > Additional Map Scenes và Build Settings.")]
     public string targetMapScene;
@@ -57,6 +71,10 @@ public class WorldInteraction : MonoBehaviour
     [Min(0.1f)] public float pickupAnimationTimeout = 10f;
     [HideInInspector] public GameObject pickupModelInstance;
     [HideInInspector] public GameObject pickupModelSource;
+    [HideInInspector] public GameObject dialogueNpcModelInstance;
+    [HideInInspector] public GameObject dialogueNpcModelSource;
+    private Quaternion dialogueNpcOriginalWorldRotation;
+    private bool dialogueNpcOriginalRotationCaptured;
 
     private PlayableGraph chestAnimationGraph;
     private AnimationClipPlayable chestAnimationPlayable;
@@ -67,7 +85,13 @@ public class WorldInteraction : MonoBehaviour
 
     void OnEnable()
     {
-        if (!Application.isPlaying || kind != WorldInteractionKind.Pickup && kind != WorldInteractionKind.Chest) return;
+        if (!Application.isPlaying) return;
+        if (kind == WorldInteractionKind.DialogueNPC)
+        {
+            EnsureDialogueNpcModel();
+            return;
+        }
+        if (kind != WorldInteractionKind.Pickup && kind != WorldInteractionKind.Chest) return;
         if (pickupModelInstance != null && pickupModelSource != pickupModelPrefab)
         {
             StopChestAnimation();
@@ -101,6 +125,89 @@ public class WorldInteraction : MonoBehaviour
 
     void OnDisable() => StopChestAnimation();
     void OnDestroy() => StopChestAnimation();
+
+    private void EnsureDialogueNpcModel()
+    {
+        if (dialogueNpcModelInstance != null && dialogueNpcModelSource != dialogueNpcModelPrefab)
+        {
+            Destroy(dialogueNpcModelInstance);
+            dialogueNpcModelInstance = null;
+            dialogueNpcOriginalRotationCaptured = false;
+        }
+
+        if (dialogueNpcModelInstance == null && dialogueNpcModelPrefab != null &&
+            dialogueNpcModelPrefab.GetComponentInChildren<WorldInteraction>(true) == null)
+        {
+            dialogueNpcModelInstance = Instantiate(dialogueNpcModelPrefab, transform);
+            dialogueNpcModelInstance.name = "Dialogue NPC Model";
+            dialogueNpcModelSource = dialogueNpcModelPrefab;
+        }
+
+        ApplyDialogueNpcModelTransform();
+    }
+
+    public void ApplyDialogueNpcModelTransform()
+    {
+        if (dialogueNpcModelInstance == null) return;
+        dialogueNpcModelInstance.transform.localPosition = dialogueNpcModelPosition;
+        dialogueNpcModelInstance.transform.localRotation = Quaternion.Euler(dialogueNpcModelRotation);
+        dialogueNpcModelInstance.transform.localScale = dialogueNpcModelScale;
+    }
+
+    public Animator DialogueNpcAnimator
+    {
+        get
+        {
+            var root = dialogueNpcModelInstance != null ? dialogueNpcModelInstance.transform : transform;
+            return root != null ? root.GetComponentInChildren<Animator>(true) : null;
+        }
+    }
+
+    public Transform DialogueNpcRoot => dialogueNpcModelInstance != null ? dialogueNpcModelInstance.transform : transform;
+
+    public Transform DialogueNpcHead
+    {
+        get
+        {
+            var animator = DialogueNpcAnimator;
+            return animator != null && animator.isHuman ? animator.GetBoneTransform(HumanBodyBones.Head) : null;
+        }
+    }
+
+    public Vector3 DialogueNpcFacePosition
+    {
+        get
+        {
+            var head = DialogueNpcHead;
+            if (head != null) return head.position;
+            var root = DialogueNpcRoot;
+            return root != null ? root.TransformPoint(Vector3.up * dialogueFaceHeight) : transform.position + Vector3.up * dialogueFaceHeight;
+        }
+    }
+
+    public void FaceDialoguePlayer(Vector3 playerPosition)
+    {
+        var root = DialogueNpcRoot;
+        if (root == null) return;
+        if (!dialogueNpcOriginalRotationCaptured)
+        {
+            dialogueNpcOriginalWorldRotation = root.rotation;
+            dialogueNpcOriginalRotationCaptured = true;
+        }
+        Vector3 direction = playerPosition - root.position;
+        direction.y = 0f;
+        Vector3 forward = root.forward;
+        forward.y = 0f;
+        if (direction.sqrMagnitude > 0.0001f && forward.sqrMagnitude > 0.0001f)
+            root.rotation = Quaternion.FromToRotation(forward.normalized, direction.normalized) * root.rotation;
+    }
+
+    public void RestoreDialogueNpcFacing()
+    {
+        if (dialogueNpcOriginalRotationCaptured && DialogueNpcRoot != null)
+            DialogueNpcRoot.rotation = dialogueNpcOriginalWorldRotation;
+        dialogueNpcOriginalRotationCaptured = false;
+    }
 
     public float PlayChestOpen()
     {
@@ -234,6 +341,7 @@ public class WorldInteraction : MonoBehaviour
         if (kind == WorldInteractionKind.RestPoint) { session.OpenRest(this); return; }
         if (kind == WorldInteractionKind.Encounter) { session.BeginEncounter(this); return; }
         if (kind == WorldInteractionKind.MapTransition) { session.TravelToMap(this); return; }
+        if (kind == WorldInteractionKind.DialogueNPC) { if (session.IsNear(this)) session.BeginDialogue(this); return; }
         if (!session.IsNear(this)) return;
         if (kind == WorldInteractionKind.Pickup || kind == WorldInteractionKind.Chest) { session.BeginItemPickup(this); return; }
         CompleteCollection();

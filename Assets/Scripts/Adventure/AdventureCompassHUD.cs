@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 /// <summary>Creates the lightweight, camera-facing compass strip on the exploration HUD.</summary>
 [DisallowMultipleComponent]
@@ -14,6 +13,8 @@ public sealed class AdventureCompassHUD : MonoBehaviour
     readonly List<CompassMark> ticks = new List<CompassMark>(360 / TickStep);
     readonly CompassMark[] directions = new CompassMark[8];
     RectTransform strip;
+    RectTransform objectiveIcon;
+    RectTransform objectiveDistance;
     TMP_FontAsset font;
     float stripWidth;
 
@@ -39,18 +40,18 @@ public sealed class AdventureCompassHUD : MonoBehaviour
         strip.anchorMin = strip.anchorMax = new Vector2(.5f, 1f);
         strip.pivot = new Vector2(.5f, 1f);
         strip.anchoredPosition = new Vector2(0f, -14f);
-        strip.sizeDelta = new Vector2(720f, 54f);
+        strip.sizeDelta = new Vector2(720f, 80f);
 
         // A single center marker and sparse ticks keep the HUD readable without a panel,
         // border, or opaque backing image.
         CreateText("Heading Marker", "│", 19f, new Color(1f, 1f, 1f, .95f),
-            new Vector2(0f, 17f), new Vector2(20f, 24f));
+            new Vector2(0f, 30f), new Vector2(20f, 24f));
 
         for (int bearing = 0; bearing < 360; bearing += TickStep)
         {
             bool major = bearing % 15 == 0;
             var rect = CreateText("Tick " + bearing, major ? "│" : "·", major ? 15f : 12f,
-                new Color(1f, 1f, 1f, major ? .78f : .48f), new Vector2(0f, 10f),
+                new Color(1f, 1f, 1f, major ? .78f : .48f), new Vector2(0f, 18f),
                 new Vector2(16f, major ? 19f : 14f));
             ticks.Add(new CompassMark { rect = rect, bearing = bearing });
         }
@@ -58,9 +59,16 @@ public sealed class AdventureCompassHUD : MonoBehaviour
         for (int i = 0; i < directions.Length; i++)
         {
             var rect = CreateText("Direction " + DirectionNames[i], DirectionNames[i], 17f,
-                new Color(1f, 1f, 1f, .92f), new Vector2(0f, -7f), new Vector2(42f, 24f));
+                new Color(1f, 1f, 1f, .92f), Vector2.zero, new Vector2(42f, 24f));
             directions[i] = new CompassMark { rect = rect, bearing = i * 45f };
         }
+
+        objectiveIcon = CreateText("Tracked Quest Marker", "●", 16f, new Color(1f, .16f, .14f, 1f),
+            new Vector2(0f, -20f), new Vector2(22f, 20f));
+        objectiveDistance = CreateText("Tracked Quest Distance", "", 13f, new Color(1f, 1f, 1f, .95f),
+            new Vector2(0f, -34f), new Vector2(72f, 18f));
+        objectiveIcon.gameObject.SetActive(false);
+        objectiveDistance.gameObject.SetActive(false);
 
         ResizeStrip();
     }
@@ -75,8 +83,32 @@ public sealed class AdventureCompassHUD : MonoBehaviour
 
         ResizeStrip();
         float heading = ReadHeading(session.MapPlayer.transform);
-        foreach (var tick in ticks) Position(tick, heading, 10f);
-        foreach (var direction in directions) Position(direction, heading, -7f);
+        foreach (var tick in ticks) Position(tick, heading, 18f);
+        foreach (var direction in directions) Position(direction, heading, 0f);
+        UpdateTrackedObjective(session, heading);
+    }
+
+    void UpdateTrackedObjective(CampaignSession session, float heading)
+    {
+        Vector3 targetPosition = Vector3.zero;
+        bool visible = session.MapPlayer != null && session.TryGetTrackedQuestPosition(out targetPosition);
+        if (objectiveIcon.gameObject.activeSelf != visible) objectiveIcon.gameObject.SetActive(visible);
+        if (objectiveDistance.gameObject.activeSelf != visible) objectiveDistance.gameObject.SetActive(visible);
+        if (!visible) return;
+
+        Vector3 from = session.MapPlayer.transform.position;
+        Vector3 direction = Vector3.ProjectOnPlane(targetPosition - from, Vector3.up);
+        float bearing = direction.sqrMagnitude > .0001f
+            ? Mathf.Repeat(Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg, 360f)
+            : heading;
+        float relative = Mathf.Clamp(Mathf.DeltaAngle(heading, bearing), -VisibleHalfAngle, VisibleHalfAngle);
+        float markerX = relative / VisibleHalfAngle * stripWidth * .5f;
+        float edgePadding = 48f;
+        markerX = Mathf.Clamp(markerX, -stripWidth * .5f + edgePadding, stripWidth * .5f - edgePadding);
+        objectiveIcon.anchoredPosition = new Vector2(markerX, -20f);
+        objectiveDistance.anchoredPosition = new Vector2(markerX, -34f);
+        direction.y = 0f;
+        objectiveDistance.GetComponent<TMP_Text>().text = Mathf.RoundToInt(direction.magnitude) + " m";
     }
 
     float ReadHeading(Transform player)

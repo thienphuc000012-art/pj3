@@ -31,10 +31,19 @@ Gắn **WorldInteraction** vào object muốn tương tác. Chọn Kind:
 - **Discovery:** tự nhận Experience khi bước vào Range.
 - **RestPoint:** mở menu nghỉ/lưu, nâng cấp, chế tạo.
 - **Encounter:** điền các prefab có BattleUnit vào **Enemy Prefabs**; một phần tử cho mỗi quái trong nhóm. Khi thắng nhóm này mới nhận Rewards và Experience.
+- **DialogueNPC:** mở hội thoại khi player đến gần và bấm E. Gán Story Dialogue trong trường Dialogue Asset.
 
 Điền tên hiển thị, khoảng cách tương tác và ID vật phẩm đúng với CampaignConfig. Instance được nhận diện theo scene + Persistent ID + đường dẫn hierarchy để các bản sao prefab không dùng chung trạng thái. Giữ nguyên hierarchy và ID của nội dung đã phát hành nếu muốn tiếp tục đọc trạng thái thu thập trong save cũ.
 
 Sau khi tạo thêm object bằng code trong runtime, gọi `CampaignSession.Instance.RefreshWorld()` để cập nhật danh sách tương tác. Với object đặt sẵn trong scene, hệ thống tự tìm khi vào map.
+
+## Hội thoại và nhiệm vụ
+
+Tạo nội dung bằng **Create > Adventure > Story Dialogue** và **Create > Adventure > Quest**. Trên Dialogue NPC, gán asset hội thoại. Trong asset hội thoại, `Start Node ID` phải trùng ID của node mở đầu; mỗi node cần ID riêng. Nội dung hiện từng chữ; bấm giữa câu sẽ hiện hết câu. Với node không có Choice, bấm màn hình lần nữa để đi đến `Next Node ID` (không cần nút Tiếp theo). Text của mỗi Choice là câu trả lời người chơi sẽ nói; sau khi hiện hết câu và bấm màn hình, các lựa chọn mới xuất hiện. Chọn một câu thì câu đó hiện dưới `Player Speaker Name`; bấm màn hình để chuyển đến node kế tiếp. Có thể đổi `Player Speaker Name` và tốc độ chữ trong Dialogue Asset. Mỗi lựa chọn có thể chuyển sang node khác và tùy chọn nhận một Quest asset. Nội dung hội thoại và lựa chọn do bạn tự viết trong các asset này.
+
+Trong Quest asset, điền tên/mô tả, loại mục tiêu, số lượng cần hoàn thành và ID vật phẩm hoặc prefab enemy. Để la bàn tìm điểm phù hợp tự động, item cần có trong Rewards của Pickup/Chest; enemy cần có trong Encounter. Để chỉ rõ vị trí, điền `Objective World Point ID` bằng Quest Marker ID của điểm tương tác. Với điểm ở chunk chưa nạp hoặc map khác, bật `Use Fixed Objective Position`, rồi điền tên scene và tọa độ thế giới của mục tiêu. Thêm mọi Quest asset vào **Campaign Config > Quests** để có thể khôi phục định nghĩa sau khi tải save hoặc chuyển map.
+
+Mở menu P > **Nhiệm vụ** để xem các nhiệm vụ đã nhận. Chọn nhiệm vụ, bấm **Có** ở hộp “Theo dõi nhiệm vụ?” để bật chấm đỏ và khoảng cách mét trên Horizontal Compass HUD; **Không** chỉ đóng hộp. Tiến độ nhặt item được cộng khi vật phẩm vào túi đồ; tiến độ hạ enemy được cộng khi thắng Encounter tương ứng. Tiến độ và nhiệm vụ đang theo dõi nằm trong save campaign.
 
 Vật phẩm, công thức, party ban đầu và quy tắc hồi sinh được cấu hình trong `Assets/Resources/Adventure/CampaignConfig.asset`. Các prefab party/quái mẫu nằm trong `Assets/Adventure/Prefabs`, được lấy từ nhân vật đã cấu hình trong combattest; giữ các component BattleUnit, BattleUnit_AnimationEvents, Animator và các animation event để trận đấu vận hành.
 
