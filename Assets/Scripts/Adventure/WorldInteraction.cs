@@ -15,7 +15,12 @@ public class WorldInteraction : MonoBehaviour
     public string displayName = "Tương tác";
     public WorldInteractionKind kind;
     [Header("NPC Dialogue")]
+    [Tooltip("First one-time story or quest dialogue. After it is completed or its quest is accepted, the NPC uses later unlocked dialogue or Default Dialogue.")]
     public AdventureStoryDialogue dialogue;
+    [Tooltip("Additional one-time dialogues checked in order. Configure each asset's completed quest/dialogue requirements to unlock it.")]
+    public List<AdventureStoryDialogue> progressionDialogues = new List<AdventureStoryDialogue>();
+    [Tooltip("Repeatable fallback dialogue used when no one-time story dialogue is currently available.")]
+    public AdventureStoryDialogue defaultDialogue;
     [Header("NPC Presentation")]
     [Tooltip("Optional 3D character prefab displayed at this dialogue point.")]
     public GameObject dialogueNpcModelPrefab;
@@ -26,6 +31,11 @@ public class WorldInteraction : MonoBehaviour
     [Min(0.1f)] public float dialogueFaceHeight = 1.6f;
     [Tooltip("Animator state to play while this NPC is speaking, for example Base Layer.Talking.")]
     public string dialogueTalkAnimationState = "Base Layer.Talking";
+    [Header("NPC Ambient Idle")]
+    [Tooltip("Random idle states played while this NPC is not in dialogue. Use Animator state paths such as Base Layer.Idle and Base Layer.LookAround.")]
+    public List<string> dialogueNpcIdleAnimationStates = new List<string> { "Base Layer.Idle" };
+    [Min(0.1f)] public float dialogueNpcIdleMinSeconds = 5f;
+    [Min(0.1f)] public float dialogueNpcIdleMaxSeconds = 10f;
     [Header("Map Transition")]
     [Tooltip("Tên scene đích phải có trong Campaign Config > Additional Map Scenes và Build Settings.")]
     public string targetMapScene;
@@ -75,6 +85,9 @@ public class WorldInteraction : MonoBehaviour
     [HideInInspector] public GameObject dialogueNpcModelSource;
     private Quaternion dialogueNpcOriginalWorldRotation;
     private bool dialogueNpcOriginalRotationCaptured;
+    private int dialogueNpcIdleStateIndex = -1;
+    private float nextDialogueNpcIdleTime;
+    private bool dialogueNpcWasTalking;
 
     private PlayableGraph chestAnimationGraph;
     private AnimationClipPlayable chestAnimationPlayable;
@@ -125,6 +138,88 @@ public class WorldInteraction : MonoBehaviour
 
     void OnDisable() => StopChestAnimation();
     void OnDestroy() => StopChestAnimation();
+
+    void Update()
+    {
+        if (kind != WorldInteractionKind.DialogueNPC) return;
+        var animator = DialogueNpcAnimator;
+        if (animator == null || !animator.isActiveAndEnabled || animator.runtimeAnimatorController == null) return;
+
+        var session = CampaignSession.Instance;
+        bool talking = session != null && session.Menu == AdventureMenu.Dialogue && session.ActiveDialogueNpc == this;
+        if (talking)
+        {
+            dialogueNpcWasTalking = true;
+            return;
+        }
+
+        bool resumeIdle = dialogueNpcWasTalking;
+        dialogueNpcWasTalking = false;
+        if (!resumeIdle && Time.time < nextDialogueNpcIdleTime) return;
+
+        var idleStates = dialogueNpcIdleAnimationStates;
+        if (idleStates == null || idleStates.Count == 0) return;
+        var candidates = new List<int>();
+        for (int i = 0; i < idleStates.Count; i++)
+            if (TryFindDialogueNpcState(animator, idleStates[i], out _, out _)) candidates.Add(i);
+        if (candidates.Count == 0)
+        {
+            nextDialogueNpcIdleTime = Time.time + Mathf.Max(1f, dialogueNpcIdleMinSeconds);
+            return;
+        }
+
+        int nextIndex = candidates[UnityEngine.Random.Range(0, candidates.Count)];
+        if (candidates.Count > 1 && nextIndex == dialogueNpcIdleStateIndex)
+            nextIndex = candidates[(candidates.IndexOf(nextIndex) + 1 + UnityEngine.Random.Range(0, candidates.Count - 1)) % candidates.Count];
+        if (TryFindDialogueNpcState(animator, idleStates[nextIndex], out int layer, out int stateHash))
+        {
+            var current = animator.GetCurrentAnimatorStateInfo(layer);
+            bool alreadyPlaying = current.fullPathHash == stateHash || current.shortNameHash == stateHash;
+            if (!alreadyPlaying || resumeIdle) animator.CrossFadeInFixedTime(stateHash, 0.18f, layer, 0f);
+            dialogueNpcIdleStateIndex = nextIndex;
+        }
+
+        float min = Mathf.Max(0.1f, Mathf.Min(dialogueNpcIdleMinSeconds, dialogueNpcIdleMaxSeconds));
+        float max = Mathf.Max(min, Mathf.Max(dialogueNpcIdleMinSeconds, dialogueNpcIdleMaxSeconds));
+        nextDialogueNpcIdleTime = Time.time + UnityEngine.Random.Range(min, max);
+    }
+
+    private static bool TryFindDialogueNpcState(Animator animator, string configuredState, out int layer, out int stateHash)
+    {
+        layer = -1;
+        stateHash = 0;
+        if (animator == null || string.IsNullOrWhiteSpace(configuredState)) return false;
+
+        string stateName = configuredState.Trim();
+        string requestedLayer = null;
+        int separator = stateName.LastIndexOf('.');
+        if (separator >= 0 && separator + 1 < stateName.Length)
+        {
+            requestedLayer = stateName.Substring(0, separator).Trim();
+            stateName = stateName.Substring(separator + 1).Trim();
+        }
+
+        for (int i = 0; i < animator.layerCount; i++)
+        {
+            string layerName = animator.GetLayerName(i);
+            if (!string.IsNullOrEmpty(requestedLayer) && !string.Equals(layerName, requestedLayer, StringComparison.Ordinal)) continue;
+            int fullHash = Animator.StringToHash(layerName + "." + stateName);
+            if (animator.HasState(i, fullHash))
+            {
+                layer = i;
+                stateHash = fullHash;
+                return true;
+            }
+            int shortHash = Animator.StringToHash(stateName);
+            if (animator.HasState(i, shortHash))
+            {
+                layer = i;
+                stateHash = shortHash;
+                return true;
+            }
+        }
+        return false;
+    }
 
     private void EnsureDialogueNpcModel()
     {
@@ -354,7 +449,7 @@ public class WorldInteraction : MonoBehaviour
         foreach (var reward in rewards) session.AddItem(reward.id, reward.count);
         session.GainXP(experience);
         session.Data.collected.Add(Id);
-        session.Notify(displayName + " • +" + experience + " EXP");
+        session.Notify(displayName + " • +" + experience + " KN");
         session.Save();
         gameObject.SetActive(false);
     }

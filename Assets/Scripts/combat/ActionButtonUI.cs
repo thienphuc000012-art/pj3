@@ -31,7 +31,7 @@ public class ActionButtonUI : MonoBehaviour
 
         // 1. Hiển thị Tên
         if (nameText != null)
-            nameText.text = action.actionName;
+            GameLocalization.SetText(nameText, VietnameseGameUIText.ActionName(action));
 
         // 2. Hiển thị Icon
         if (iconImage != null && action.icon != null)
@@ -53,12 +53,12 @@ public class ActionButtonUI : MonoBehaviour
             if (!string.IsNullOrEmpty(action.description))
             {
                 // Nếu có ghi description trong Inspector thì hiển thị description đó
-                infoText.text = action.description;
+                GameLocalization.SetText(infoText, VietnameseGameUIText.ActionDescription(action));
             }
             else
             {
                 // Nếu quên ghi description, hiển thị tạm dòng chữ này để nhắc nhở
-                infoText.text = "<color=#AAAAAA><i>Chưa có mô tả kỹ năng.</i></color>";
+                GameLocalization.SetText(infoText, "Chưa có mô tả kỹ năng.");
             }
         }
 
@@ -88,24 +88,24 @@ public class ActionButtonUI : MonoBehaviour
 
         if (currentAction.isUltimate)
         {
-            resourceText.text = "Ultimate " + (unit != null ? Mathf.FloorToInt(unit.UltimateEnergy) : 0) + "/100";
+            GameLocalization.SetText(resourceText, "Tuyệt kỹ " + (unit != null ? Mathf.FloorToInt(unit.UltimateEnergy) : 0) + "/100");
             resourceText.color = unit != null && unit.UltimateReady ? new Color(.92f, .93f, .95f, 1f) : new Color(.52f, .54f, .57f, 1f);
             return;
         }
 
         if (currentAction.stainChange > 0)
         {
-            resourceText.text = $"+{currentAction.stainChange} Stain";
+            GameLocalization.SetText(resourceText, $"+{currentAction.stainChange} Tinh lực");
             resourceText.color = new Color(.82f, .84f, .87f, 1f);
         }
         else if (currentAction.stainChange < 0)
         {
-            resourceText.text = $"{currentAction.stainChange} Stain";
+            GameLocalization.SetText(resourceText, $"{currentAction.stainChange} Tinh lực");
             resourceText.color = new Color(.72f, .74f, .77f, 1f);
         }
         else
         {
-            resourceText.text = "0 Stain";
+            GameLocalization.SetText(resourceText, "0 Tinh lực");
             resourceText.color = new Color(.82f, .84f, .87f, 1f);
         }
     }
@@ -113,9 +113,9 @@ public class ActionButtonUI : MonoBehaviour
     public void SetupEmpty(string slotName)
     {
         currentAction = null;
-        if (nameText != null) nameText.text = slotName;
-        if (infoText != null) infoText.text = "Chưa trang bị";
-        if (resourceText != null) resourceText.text = "";
+        if (nameText != null) GameLocalization.SetText(nameText, slotName == "Ultimate" ? "Tuyệt kỹ" : slotName.StartsWith("Skill ") ? "Kỹ năng " + slotName.Substring(6) : slotName);
+        if (infoText != null) GameLocalization.SetText(infoText, "Chưa trang bị");
+        if (resourceText != null) GameLocalization.SetText(resourceText, "");
         if (iconImage != null) iconImage.gameObject.SetActive(false);
         if (button != null)
         {

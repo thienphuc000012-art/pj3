@@ -8,7 +8,7 @@ public sealed class AdventureCompassHUD : MonoBehaviour
 {
     const float VisibleHalfAngle = 70f;
     const int TickStep = 5;
-    static readonly string[] DirectionNames = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" };
+    static readonly string[] DirectionNames = { "B", "ĐB", "Đ", "ĐN", "N", "TN", "T", "TB" };
 
     readonly List<CompassMark> ticks = new List<CompassMark>(360 / TickStep);
     readonly CompassMark[] directions = new CompassMark[8];
@@ -108,7 +108,7 @@ public sealed class AdventureCompassHUD : MonoBehaviour
         objectiveIcon.anchoredPosition = new Vector2(markerX, -20f);
         objectiveDistance.anchoredPosition = new Vector2(markerX, -34f);
         direction.y = 0f;
-        objectiveDistance.GetComponent<TMP_Text>().text = Mathf.RoundToInt(direction.magnitude) + " m";
+        GameLocalization.SetText(objectiveDistance.GetComponent<TMP_Text>(), Mathf.RoundToInt(direction.magnitude) + " m");
     }
 
     float ReadHeading(Transform player)
@@ -149,7 +149,7 @@ public sealed class AdventureCompassHUD : MonoBehaviour
         rect.sizeDelta = dimensions;
 
         var text = go.GetComponent<TextMeshProUGUI>();
-        text.text = value;
+        GameLocalization.SetText(text, value);
         text.font = font;
         text.fontSize = size;
         text.fontWeight = FontWeight.Light;

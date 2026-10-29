@@ -13,13 +13,15 @@ MonoBehaviour:
   m_Name: Quest
   m_EditorClassIdentifier: Assembly-CSharp::AdventureQuest
   questId: 1
-  displayName: New Quest
+  displayName: "Nhi\u1EC7m v\u1EE5 m\u1EDBi"
   description: aaaaa
-  objectiveType: 1
+  objectiveType: 0
   requiredCount: 1
-  targetItemId: 12
+  targetItemId: herb
   targetEnemy: {fileID: 0}
   objectiveWorldPointId: 
   useFixedObjectivePosition: 1
   objectiveMapScene: mapgame
   objectivePosition: {x: 0, y: 0, z: 0}
+  experienceReward: 100
+  itemRewards: []

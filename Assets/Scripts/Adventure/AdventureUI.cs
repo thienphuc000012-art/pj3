@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
@@ -12,6 +13,7 @@ public class AdventureUI : MonoBehaviour
     bool skillContextOpen, skillDialogOpen;
     ActionData pendingSkill;
     PartyMemberProgress skillDialogMember;
+    HoldToConfirmButton attributeUpgradeHold;
     void CloseSkillChange() { skillContextOpen = false; skillDialogOpen = false; pendingSkill = null; skillDialogMember = null; }
     void OpenSkillContext(int slot) { selectedSlot = slot; CloseSkillChange(); skillContextOpen = true; skillDialogMember = S.Data.party[selectedMember]; }
 
@@ -23,8 +25,11 @@ public class AdventureUI : MonoBehaviour
     PartyMenuStage stage;
     AdventureCanvasRoot view;
     GameObject questPage, questDialog, dialoguePage;
-    RectTransform questContent, dialogueChoices;
+    Button languageToggleButton;
+    RectTransform questContent, dialoguePanel, dialogueChoices;
+    GameObject dialogueOptionsPanel;
     TMPro.TMP_Text questPrompt, dialogueSpeaker, dialogueText;
+    TMPro.TMP_Text dialogueNextLabel;
     Button dialogueScreenButton;
     AdventureQuest selectedQuest;
     string renderedDialogueNode;
@@ -45,8 +50,18 @@ public class AdventureUI : MonoBehaviour
             previousMenu = AdventureMenu.None; return;
         }
         if (view == null) { view = AdventureCanvasRoot.Acquire(AdventureCanvasKind.Adventure); Bind(); }
-        view.gameObject.SetActive(!S.Busy);
-        if (S.Busy) return;
+        bool keepHudVisibleDuringInteraction = S.Busy && S.KeepHudVisibleDuringItemInteraction;
+        view.gameObject.SetActive(!S.Busy || keepHudVisibleDuringInteraction);
+        if (S.Busy)
+        {
+            if (keepHudVisibleDuringInteraction)
+            {
+                view.Active("HUD/Interact", false);
+                view.Active("Toast", Time.unscaledTime < S.MessageUntil);
+                view.Text("Toast/Message", S.Message ?? "");
+            }
+            return;
+        }
         if (previousMenu != S.Menu)
         {
             restPage = 0; selectedSkill = 0; CloseSkillChange(); CloseTravel();
@@ -75,7 +90,7 @@ public class AdventureUI : MonoBehaviour
             {
                 var p = S.Data.party[0];
                 view.Text("HUD/Leader/Name", S.Template(p).unitName + " • Cấp " + p.level);
-                view.Text("HUD/Leader/Progress", p.xp + " / " + p.RequiredXP + " EXP");
+                view.Text("HUD/Leader/Progress", p.xp + " / " + p.RequiredXP + " KN");
                 view.Fill("HUD/Leader/XP/Fill", (float)p.xp / p.RequiredXP);
             }
             view.Active("HUD/Interact", S.Nearest != null);
@@ -116,11 +131,15 @@ public class AdventureUI : MonoBehaviour
         }
         else stage.Hide();
         string page = dialogue ? "Dialogue" : tasks ? "Tasks" : main || party ? "Party" : S.Menu == AdventureMenu.Inventory ? "Inventory" : restPage == 1 ? "Attributes" : restPage == 2 ? "Skills" : restPage == 3 ? "Craft" : "Rest";
-        if (page != "Attributes") ResetStatDraft();
+        if (page != "Attributes")
+        {
+            ResetStatDraft();
+            attributeUpgradeHold?.SetAvailable(false);
+        }
         foreach (string name in new[] { "Party", "Inventory", "Rest", "Attributes", "Skills", "Craft", "Tasks", "Dialogue" }) view.Active("Menu/" + name, name == page);
         if (!dialogue)
         {
-            view.Text("Menu/Title", main ? "MAIN MENU" : tasks ? "NHIỆM VỤ" : party ? "PARTY" : page == "Inventory" ? "RƯƠNG ĐỒ" : page == "Attributes" ? "THUỘC TÍNH" : page == "Skills" ? "KỸ NĂNG" : page == "Craft" ? "CHẾ TẠO" : "ĐIỂM NGHỈ");
+            view.Text("Menu/Title", main ? "MENU CHÍNH" : tasks ? "NHIỆM VỤ" : party ? "ĐỘI HÌNH" : page == "Inventory" ? "RƯƠNG ĐỒ" : page == "Attributes" ? "THUỘC TÍNH" : page == "Skills" ? "KỸ NĂNG" : page == "Craft" ? "CHẾ TẠO" : "ĐIỂM NGHỈ");
             view.Text("Menu/Back/Label", main ? "Đóng" : rest && restPage > 0 ? "Điểm nghỉ" : "Trở lại");
         }
         if (page == "Party") {
@@ -138,7 +157,16 @@ public class AdventureUI : MonoBehaviour
     {
         BuildFastTravelUI();
         BuildQuestUI();
+        BuildLanguageToggle();
         BuildDialogueUI();
+        var attributeConfirm = view.Component<Button>("Menu/Attributes/Confirm");
+        attributeUpgradeHold = attributeConfirm.GetComponent<HoldToConfirmButton>();
+        if (attributeUpgradeHold == null) attributeUpgradeHold = attributeConfirm.gameObject.AddComponent<HoldToConfirmButton>();
+        attributeUpgradeHold.Bind(ApplyPendingAttributeUpgrade);
+        PositionAttributeConfirmUnderStats();
+        view.Text("Menu/Attributes/Confirm/Label", "Nâng cấp thuộc tính");
+        view.Active("Menu/Attributes/Confirm", true);
+        view.Active("Menu/Attributes/Cancel", false);
         view.Active("Menu/Subtitle", false);
         view.Active("Menu/Hints", false);
         view.Active("Menu/Party/Member/Hint", false);
@@ -168,19 +196,20 @@ public class AdventureUI : MonoBehaviour
         view.Click("Menu/Rest/Attributes", () => restPage = 1);
         view.Click("Menu/Rest/Skills", () => { restPage = 2; SelectLearnable(); });
         view.Click("Menu/Rest/Craft", () => restPage = 3);
-        view.Click("Menu/Attributes/Confirm", () => { if (selectedMember < S.Data.party.Count && draftMember == S.Data.party[selectedMember] && S.ConfirmStats(selectedMember, pendingStats)) ResetStatDraft(); });
-        view.Click("Menu/Attributes/Cancel", ResetStatDraft);
         view.Click("Menu/Skills/Detail/Upgrade", () =>
         {
             var skills = CurrentSkills();
             if (selectedSkill < skills.Length) S.UnlockSkill(selectedMember, skills[selectedSkill]);
         });
+        // Runtime-created menu buttons are added after AdventureCanvasRoot.Awake themes the prefab.
+        GameUITheme.RefreshMenuButtonHover(view.gameObject);
     }
     void ClearInstructionText(string text)
     {
         foreach (var label in view.GetComponentsInChildren<TMPro.TMP_Text>(true))
-            if (label != null && string.Equals(label.text.Trim(), text, System.StringComparison.Ordinal))
-                label.text = "";
+            if (label != null && (string.Equals(label.text.Trim(), text, System.StringComparison.Ordinal) ||
+                                  string.Equals(label.text.Trim(), GameLocalization.Translate(text), System.StringComparison.Ordinal)))
+                GameLocalization.SetText(label, "");
     }
     GameObject travelPanel, travelDialog;
     RectTransform travelContent;
@@ -206,16 +235,18 @@ public class AdventureUI : MonoBehaviour
         TravelRect(button.gameObject, parent, min, max);
         button.onClick = new Button.ButtonClickedEvent(); button.onClick.AddListener(action);
         var buttonLabel = button.GetComponentInChildren<TMPro.TMP_Text>(true);
-        buttonLabel.text = label;
+        GameLocalization.SetText(buttonLabel, label);
         buttonLabel.enableWordWrapping = true;
-        button.gameObject.SetActive(true); return button;
+        button.gameObject.SetActive(true);
+        GameUITheme.Apply(button.gameObject);
+        return button;
     }
     TMPro.TMP_Text TravelText(Transform parent, string name, string text, Vector2 min, Vector2 max)
     {
         var source = travelButtonTemplate.GetComponentInChildren<TMPro.TMP_Text>(true);
         var label = Instantiate(source, parent); label.name = name;
         TravelRect(label.gameObject, parent, min, max);
-        label.text = text; label.raycastTarget = false;
+        GameLocalization.SetText(label, text); label.raycastTarget = false;
         label.alignment = TMPro.TextAlignmentOptions.MidlineLeft;
         label.enableWordWrapping = true;
         label.gameObject.SetActive(true); return label;
@@ -237,8 +268,9 @@ public class AdventureUI : MonoBehaviour
         var step = attributes.anchoredPosition - save.anchoredPosition;
         var entry = Instantiate(travelButtonTemplate, rest); entry.name = "FastTravel";
         ((RectTransform)entry.transform).anchoredPosition = attributes.anchoredPosition;
-        entry.GetComponentInChildren<TMPro.TMP_Text>(true).text = "Di chuyển nhanh";
+        GameLocalization.SetText(entry.GetComponentInChildren<TMPro.TMP_Text>(true), "Di chuyển nhanh");
         entry.onClick = new Button.ButtonClickedEvent(); entry.onClick.AddListener(OpenTravel);
+        GameUITheme.Apply(entry.gameObject);
         foreach (var path in new[] { "Attributes", "Skills", "Craft" })
             view.Component<RectTransform>("Menu/Rest/" + path).anchoredPosition += step;
         travelPanel = TravelPanel("FastTravelList", view.Node("Menu"), Vector2.zero, Vector2.one);
@@ -264,6 +296,23 @@ public class AdventureUI : MonoBehaviour
         CloseTravel();
     }
 
+    void BuildLanguageToggle()
+    {
+        var overview = view.Node("Menu/Party/Overview");
+        var template = view.Component<Button>("Menu/Party/Overview/Inventory");
+        languageToggleButton = Instantiate(template, overview);
+        languageToggleButton.name = "Language Toggle";
+        var rect = (RectTransform)languageToggleButton.transform;
+        rect.anchorMin = rect.anchorMax = new Vector2(1f, 1f);
+        rect.pivot = new Vector2(1f, 1f);
+        rect.sizeDelta = new Vector2(300f, 58f);
+        rect.anchoredPosition = new Vector2(-72f, -92f);
+        languageToggleButton.onClick = new Button.ButtonClickedEvent();
+        languageToggleButton.onClick.AddListener(GameLocalization.ToggleLanguage);
+        GameLocalization.SetText(languageToggleButton.GetComponentInChildren<TMPro.TMP_Text>(true), GameLocalization.LanguageButtonLabel);
+        GameUITheme.Apply(languageToggleButton.gameObject);
+    }
+
     void BuildQuestUI()
     {
         var overview = view.Node("Menu/Party/Overview");
@@ -273,7 +322,7 @@ public class AdventureUI : MonoBehaviour
         ((RectTransform)taskButton.transform).anchoredPosition = ((RectTransform)inventory.transform).anchoredPosition + Vector2.down * 88f;
         taskButton.onClick = new Button.ButtonClickedEvent();
         taskButton.onClick.AddListener(() => S.SetMenu(AdventureMenu.Tasks));
-        taskButton.GetComponentInChildren<TMPro.TMP_Text>(true).text = "Nhiệm vụ";
+        GameLocalization.SetText(taskButton.GetComponentInChildren<TMPro.TMP_Text>(true), "NHIỆM VỤ");
 
         questPage = new GameObject("Tasks", typeof(RectTransform), typeof(Image));
         TravelRect(questPage, view.Node("Menu"), Vector2.zero, Vector2.one);
@@ -320,21 +369,36 @@ public class AdventureUI : MonoBehaviour
         foreach (var entry in entries)
         {
             var progress = entry.progress; var quest = entry.quest;
-            string status = progress.completed ? "Hoàn thành" : progress.objectiveCount + " / " + Mathf.Max(1, quest.requiredCount);
-            if (!progress.completed && S.Data.trackedQuestId == progress.questId) status += " • Đang theo dõi";
+            string status = progress.completed
+                ? progress.rewardsClaimed ? "Hoàn thành" : "Hoàn thành • Báo cáo NPC để nhận thưởng"
+                : progress.objectiveCount + " / " + Mathf.Max(1, quest.requiredCount);
+            status = GameLocalization.Translate(status);
+            if (S.Data.trackedQuestId == progress.questId) status += GameLocalization.Translate(" • Đang theo dõi");
             var button = TravelButton(questContent, "Quest " + quest.Id, quest.displayName + "\n" + status,
                 Vector2.zero, Vector2.one, () => OpenQuestDialog(quest));
             var size = button.gameObject.AddComponent<LayoutElement>(); size.preferredHeight = 72f; size.minHeight = 60f;
-            button.interactable = !progress.completed;
+            button.interactable = !progress.completed || !progress.rewardsClaimed;
         }
     }
 
     void OpenQuestDialog(AdventureQuest quest)
     {
+        if (quest != null && S.Data.trackedQuestId == quest.Id)
+        {
+            S.TrackQuest(quest.Id);
+            RefreshQuestList();
+            return;
+        }
         selectedQuest = quest;
         var progress = quest != null ? S.QuestProgress(quest.Id) : null;
-        questPrompt.text = quest == null ? "Theo dõi nhiệm vụ?" :
-            quest.displayName + "\n\n" + quest.description + "\n\nTiến độ: " + (progress?.objectiveCount ?? 0) + " / " + Mathf.Max(1, quest.requiredCount) + "\n\nTheo dõi nhiệm vụ?";
+        string progressText = progress != null && progress.completed
+            ? progress.rewardsClaimed ? GameLocalization.Translate("Đã báo cáo và nhận thưởng.") : GameLocalization.Translate("Mục tiêu đã xong. Hãy quay lại NPC để nhận thưởng.")
+            : GameLocalization.Translate("Tiến độ: " + (progress?.objectiveCount ?? 0) + " / " + Mathf.Max(1, quest != null ? quest.requiredCount : 1));
+        string prompt = progress != null && progress.completed && !progress.rewardsClaimed
+            ? GameLocalization.Translate("Theo dõi vị trí NPC để báo cáo nhiệm vụ?")
+            : GameLocalization.Translate("Theo dõi nhiệm vụ?");
+        GameLocalization.SetText(questPrompt, quest == null ? prompt :
+            quest.displayName + "\n\n" + quest.description + "\n\n" + progressText + "\n\n" + prompt);
         questDialog.SetActive(true);
         questDialog.transform.SetAsLastSibling();
     }
@@ -364,26 +428,74 @@ public class AdventureUI : MonoBehaviour
         dialogueScreenButton.navigation = new Navigation { mode = Navigation.Mode.None };
         dialogueScreenButton.onClick.AddListener(HandleDialogueScreenClick);
 
-        var panel = TravelPanel("Dialogue Panel", dialoguePage.transform, new Vector2(.045f, .035f), new Vector2(.9f, .45f));
-        panel.GetComponent<Image>().color = new Color(.015f, .02f, .025f, .82f);
-        var speakerPanel = TravelPanel("Speaker Region", panel.transform, new Vector2(.025f, .76f), new Vector2(.975f, .96f));
-        speakerPanel.GetComponent<Image>().color = new Color(.09f, .075f, .045f, .92f);
-        dialogueSpeaker = TravelText(speakerPanel.transform, "Speaker", "", new Vector2(.035f, .08f), new Vector2(.94f, .92f));
-        dialogueSpeaker.fontSize *= 1.2f;
-        var linePanel = TravelPanel("Dialogue Text Region", panel.transform, new Vector2(.025f, .34f), new Vector2(.975f, .72f));
-        linePanel.GetComponent<Image>().color = new Color(.005f, .008f, .012f, .78f);
-        dialogueText = TravelText(linePanel.transform, "Line", "", new Vector2(.025f, .04f), new Vector2(.96f, .96f));
-        dialogueText.alignment = TMPro.TextAlignmentOptions.TopLeft;
-        dialogueText.margin = new Vector4(16f, 8f, 16f, 8f);
-        dialogueChoices = new GameObject("Choices", typeof(RectTransform), typeof(VerticalLayoutGroup)).GetComponent<RectTransform>();
-        dialogueChoices.SetParent(panel.transform, false);
-        dialogueChoices.anchorMin = new Vector2(.035f, .035f); dialogueChoices.anchorMax = new Vector2(.965f, .31f);
+        var panel = new GameObject("Dialogue Frame", typeof(RectTransform));
+        dialoguePanel = TravelRect(panel, dialoguePage.transform, new Vector2(.01f, .04f), new Vector2(.89f, .20f));
+
+        var shade = new GameObject("Dialogue Frame Shade", typeof(RectTransform), typeof(Image));
+        TravelRect(shade, panel.transform, Vector2.zero, Vector2.one);
+        var shadeImage = shade.GetComponent<Image>();
+        shadeImage.color = new Color(0f, 0f, 0f, .32f);
+        shadeImage.raycastTarget = false;
+
+        var frameObject = new GameObject("Dialogue Frame Art", typeof(RectTransform), typeof(Image));
+        TravelRect(frameObject, panel.transform, Vector2.zero, Vector2.one);
+        var frame = frameObject.GetComponent<Image>();
+        frame.sprite = GameUITheme.DialogueBackgroundSprite;
+        frame.type = Image.Type.Simple;
+        frame.preserveAspect = false;
+        frame.color = Color.white;
+        frame.raycastTarget = false;
+
+        dialogueSpeaker = TravelText(dialoguePage.transform, "Speaker", "", new Vector2(.025f, .20f), new Vector2(.78f, .248f));
+        dialogueSpeaker.fontSize *= 1.25f;
+        dialogueSpeaker.color = new Color(.95f, .94f, .91f, 1f);
+        dialogueSpeaker.alignment = TMPro.TextAlignmentOptions.MidlineLeft;
+        dialogueText = TravelText(panel.transform, "Line", "", new Vector2(.035f, .24f), new Vector2(.82f, .76f));
+        dialogueText.color = new Color(.93f, .92f, .88f, 1f);
+        dialogueText.alignment = TMPro.TextAlignmentOptions.MidlineLeft;
+        dialogueText.margin = new Vector4(12f, 0f, 8f, 0f);
+        dialogueText.fontSize *= 1.08f;
+        dialogueNextLabel = TravelText(panel.transform, "Next Label", "Tiếp", new Vector2(.835f, .30f), new Vector2(.975f, .70f));
+        dialogueNextLabel.alignment = TMPro.TextAlignmentOptions.Center;
+        dialogueNextLabel.color = new Color(.92f, .9f, .85f, 1f);
+
+        dialogueOptionsPanel = new GameObject("Dialogue Options Panel", typeof(RectTransform), typeof(Image));
+        TravelRect(dialogueOptionsPanel, dialoguePage.transform, new Vector2(.01f, .025f), new Vector2(.91f, .245f));
+        var optionsBackground = dialogueOptionsPanel.GetComponent<Image>();
+        optionsBackground.sprite = GameUITheme.DialogueBackgroundSprite;
+        optionsBackground.type = Image.Type.Simple;
+        optionsBackground.preserveAspect = false;
+        optionsBackground.color = Color.white;
+        optionsBackground.raycastTarget = false;
+
+        var choicesObject = new GameObject("Choices", typeof(RectTransform));
+        dialogueChoices = choicesObject.GetComponent<RectTransform>();
+        dialogueChoices.SetParent(dialogueOptionsPanel.transform, false);
+        dialogueChoices.anchorMin = Vector2.zero;
+        dialogueChoices.anchorMax = Vector2.one;
         dialogueChoices.offsetMin = dialogueChoices.offsetMax = Vector2.zero;
-        var choicesLayout = dialogueChoices.GetComponent<VerticalLayoutGroup>();
-        choicesLayout.spacing = 4f; choicesLayout.childControlHeight = true; choicesLayout.childControlWidth = true;
-        choicesLayout.childForceExpandHeight = false; choicesLayout.childForceExpandWidth = true;
-        dialogueChoices.gameObject.SetActive(false);
+        dialogueChoices.SetAsLastSibling();
+        SetDialogueChoiceLayout(false);
         dialoguePage.SetActive(false);
+    }
+
+    void SetDialogueChoiceLayout(bool showChoices)
+    {
+        if (dialoguePanel != null)
+        {
+            dialoguePanel.anchorMin = new Vector2(.01f, showChoices ? .255f : .04f);
+            dialoguePanel.anchorMax = new Vector2(.89f, showChoices ? .415f : .20f);
+            dialoguePanel.offsetMin = dialoguePanel.offsetMax = Vector2.zero;
+        }
+        if (dialogueSpeaker != null)
+        {
+            float frameTop = showChoices ? .415f : .20f;
+            dialogueSpeaker.rectTransform.anchorMin = new Vector2(.025f, frameTop + .001f);
+            dialogueSpeaker.rectTransform.anchorMax = new Vector2(.78f, frameTop + .048f);
+            dialogueSpeaker.rectTransform.offsetMin = dialogueSpeaker.rectTransform.offsetMax = Vector2.zero;
+        }
+        if (dialogueOptionsPanel != null) dialogueOptionsPanel.SetActive(showChoices);
+        if (dialogueChoices != null) dialogueChoices.gameObject.SetActive(showChoices);
     }
 
     void UpdateDialogue()
@@ -396,13 +508,15 @@ public class AdventureUI : MonoBehaviour
         {
             renderedDialogueNode = nodeKey;
             dialogueChoicesRevealed = false;
-            dialogueSpeaker.text = S.ShowingDialogueResponse
+        string speakerName = S.ShowingDialogueResponse
                 ? S.DialogueResponseSpeaker
                 : !string.IsNullOrWhiteSpace(node.speaker) ? node.speaker
                 : node.speakerType == AdventureDialogueSpeaker.Player
-                    ? string.IsNullOrWhiteSpace(S.ActiveDialogue.playerSpeakerName) ? "Player" : S.ActiveDialogue.playerSpeakerName
+                    ? string.IsNullOrWhiteSpace(S.ActiveDialogue.playerSpeakerName) ? "Người chơi" : S.ActiveDialogue.playerSpeakerName
                     : S.ActiveDialogueNpc?.displayName ?? "";
-            dialogueText.text = S.ShowingDialogueResponse ? S.DialogueResponseText : node.text ?? "";
+            GameLocalization.SetText(dialogueSpeaker, string.Equals(speakerName, "Player", System.StringComparison.OrdinalIgnoreCase)
+                ? "Người chơi" : speakerName);
+            GameLocalization.SetText(dialogueText, S.ShowingDialogueResponse ? S.DialogueResponseText : node.text ?? "");
             dialogueText.ForceMeshUpdate();
             dialogueCharacterCount = dialogueText.textInfo.characterCount;
             dialogueVisibleCharacters = 0;
@@ -411,7 +525,7 @@ public class AdventureUI : MonoBehaviour
             dialogueText.maxVisibleCharacters = dialogueTyping ? 0 : int.MaxValue;
             foreach (var button in dialogueChoiceButtons) if (button != null) Destroy(button.gameObject);
             dialogueChoiceButtons.Clear();
-            dialogueChoices.gameObject.SetActive(false);
+            SetDialogueChoiceLayout(false);
         }
 
         if (dialogueTyping)
@@ -440,6 +554,13 @@ public class AdventureUI : MonoBehaviour
             dialogueTyping = false;
             dialogueVisibleCharacters = dialogueCharacterCount;
             dialogueText.maxVisibleCharacters = int.MaxValue;
+            var typingNode = S.ActiveDialogueNode;
+            var typingChoices = typingNode?.choices?.Where(choice => choice != null).ToArray() ?? new AdventureDialogueChoice[0];
+            if (!S.ShowingDialogueResponse && typingChoices.Length > 0)
+            {
+                dialogueChoicesRevealed = true;
+                ShowDialogueChoices(typingChoices);
+            }
             return;
         }
 
@@ -472,15 +593,91 @@ public class AdventureUI : MonoBehaviour
         foreach (var button in dialogueChoiceButtons) if (button != null) Destroy(button.gameObject);
         dialogueChoiceButtons.Clear();
         if (choices == null || choices.Length == 0) return;
+        SetDialogueChoiceLayout(true);
+        dialogueChoices.SetAsLastSibling();
+        dialogueOptionsPanel.SetActive(true);
         dialogueChoices.gameObject.SetActive(true);
+        float gap = choices.Length > 1 ? Mathf.Min(.04f, .12f / (choices.Length - 1)) : 0f;
+        float rowHeight = Mathf.Min(.26f, (.64f - gap * (choices.Length - 1)) / choices.Length);
+        float top = .82f;
         for (int i = 0; i < choices.Length; i++)
         {
             int choiceIndex = i;
-            var button = TravelButton(dialogueChoices, "Choice " + (i + 1), choices[i].text, Vector2.zero, Vector2.one,
-                () => S.ChooseDialogue(choiceIndex));
-            var size = button.gameObject.AddComponent<LayoutElement>(); size.preferredHeight = 42f; size.minHeight = 36f;
+            float bottom = top - rowHeight;
+            var button = CreateDialogueChoiceButton(i, choices[i].text, () => S.ChooseDialogue(choiceIndex), bottom, top);
             dialogueChoiceButtons.Add(button);
+            top = bottom - gap;
         }
+        Canvas.ForceUpdateCanvases();
+        if (EventSystem.current != null && dialogueChoiceButtons.Count > 0)
+            EventSystem.current.SetSelectedGameObject(dialogueChoiceButtons[0].gameObject);
+    }
+
+    Button CreateDialogueChoiceButton(int index, string choiceText, UnityEngine.Events.UnityAction action, float bottom, float top)
+    {
+        var button = Instantiate(travelButtonTemplate, dialogueChoices);
+        button.name = "Choice " + (index + 1);
+        TravelRect(button.gameObject, dialogueChoices, new Vector2(.085f, bottom), new Vector2(.915f, top));
+        button.onClick = new Button.ButtonClickedEvent();
+        button.onClick.AddListener(action);
+        button.navigation = new Navigation { mode = Navigation.Mode.Automatic };
+        button.interactable = true;
+
+        // The source menu button has the global hover-wipe component; a choice
+        // must stay readable even before the pointer enters it.
+        var wipe = button.GetComponent<UIButtonWipeReveal>();
+        if (wipe != null) { wipe.enabled = false; Destroy(wipe); }
+        var hoverScale = button.GetComponent<SmoothButtonHoverScale>();
+        if (hoverScale != null) { hoverScale.enabled = false; Destroy(hoverScale); }
+        foreach (var child in button.GetComponentsInChildren<Transform>(true))
+            if (child != null && (child.name == "Wipe Reveal" || child.name == "Wipe Reveal Edge" || child.name == "Button Grunge Background"))
+                Destroy(child.gameObject);
+
+        var image = button.GetComponent<Image>();
+        if (image != null)
+        {
+            image.color = new Color(.018f, .025f, .04f, 0f);
+            image.raycastTarget = true;
+            image.fillAmount = 1f;
+        }
+        button.transition = Selectable.Transition.ColorTint;
+        var colors = button.colors;
+        colors.normalColor = Color.white;
+        colors.highlightedColor = new Color(1f, .89f, .67f, 1f);
+        colors.selectedColor = new Color(1f, .89f, .67f, 1f);
+        colors.pressedColor = new Color(.78f, .68f, .5f, 1f);
+        button.colors = colors;
+
+        var goldLine = button.transform.Find("GoldLine");
+        if (goldLine != null)
+        {
+            var lineImage = goldLine.GetComponent<Image>();
+            if (lineImage != null) lineImage.enabled = false;
+        }
+        var label = button.GetComponentInChildren<TMPro.TMP_Text>(true);
+        if (label != null)
+        {
+            var labelRect = label.rectTransform;
+            labelRect.anchorMin = new Vector2(.075f, 0f);
+            labelRect.anchorMax = new Vector2(.97f, 1f);
+            labelRect.offsetMin = new Vector2(10f, 2f);
+            labelRect.offsetMax = new Vector2(-8f, -2f);
+            label.enabled = true;
+            label.gameObject.SetActive(true);
+            label.color = new Color(.96f, .94f, .88f, 1f);
+            label.alignment = TMPro.TextAlignmentOptions.MidlineLeft;
+            label.margin = new Vector4(18f, 2f, 12f, 2f);
+            label.enableWordWrapping = true;
+            label.enableAutoSizing = false;
+            label.fontSize = Mathf.Max(label.fontSize, 28f);
+            label.overflowMode = TMPro.TextOverflowModes.Overflow;
+            label.raycastTarget = false;
+            GameLocalization.SetText(label, choiceText ?? "");
+            label.ForceMeshUpdate();
+        }
+        button.transform.SetAsLastSibling();
+        button.gameObject.SetActive(true);
+        return button;
     }
     void OpenTravel()
     {
@@ -490,9 +687,9 @@ public class AdventureUI : MonoBehaviour
         {
             var destination = point;
             bool current = point.id == S.RestPoint.Id;
-            var row = TravelButton(travelContent, "Destination", point.displayName + (current ? " (Hiện tại)" : ""), Vector2.zero, Vector2.one, () => {
+            var row = TravelButton(travelContent, "Destination", point.displayName + (current ? GameLocalization.Translate(" (Hiện tại)") : ""), Vector2.zero, Vector2.one, () => {
                 travelDestination = destination.id;
-                travelQuestion.text = "Bạn có chắc muốn dịch chuyển đến " + destination.displayName + "?";
+                GameLocalization.SetText(travelQuestion, GameLocalization.Translate("Bạn có chắc muốn dịch chuyển đến {0}?").Replace("{0}", destination.displayName));
                 travelDialog.SetActive(true); travelDialog.transform.SetAsLastSibling();
             });
             var size = row.gameObject.AddComponent<LayoutElement>(); size.preferredHeight = 58; size.minHeight = 48;
@@ -548,11 +745,11 @@ public class AdventureUI : MonoBehaviour
         {
             var p = S.Data.party[i];
             AdventureCanvasRoot.RowText(rows[i], "PlayerName", S.Template(p).unitName);
-            AdventureCanvasRoot.RowText(rows[i], "Details", "HP " + p.hp + "/" + S.MaxHP(p));
+            AdventureCanvasRoot.RowText(rows[i], "Details", "Máu " + p.hp + "/" + S.MaxHP(p));
             AdventureCanvasRoot.RowText(rows[i], "Level", p.level.ToString());
             AdventureCanvasRoot.RowFill(rows[i], "HP/Fill", (float)p.hp / S.MaxHP(p));
             AdventureCanvasRoot.RowFill(rows[i], "XP/Fill", (float)p.xp / p.RequiredXP);
-            AdventureCanvasRoot.RowText(rows[i], "Experience", "EXP " + p.xp + " / " + p.RequiredXP);
+            AdventureCanvasRoot.RowText(rows[i], "Experience", "KN " + p.xp + " / " + p.RequiredXP);
             var assigned = S.Config.PreviewImage(S.Template(p));
             AdventureCanvasRoot.RowPortrait(rows[i], "Portrait", assigned != null ? assigned : S.Template(p).unitPortrait);
             if (assigned != null) cardStages[i].Hide();
@@ -581,7 +778,7 @@ public class AdventureUI : MonoBehaviour
         for (int i = 0; i < S.SkillSlots; i++) {
             var skill = all.FirstOrDefault(x => x.name == p.equippedSkills[i]);
             AdventureCanvasRoot.RowSelected(slots[i], selectedSlot == i);
-            AdventureCanvasRoot.RowText(slots[i], "Select/Label", "Ô " + (i + 1) + " • " + (skill != null ? skill.actionName : "Trống"));
+            AdventureCanvasRoot.RowText(slots[i], "Select/Label", "Ô " + (i + 1) + " • " + (skill != null ? VietnameseGameUIText.ActionName(skill) : "Trống"));
         }
         view.Active(prefix + "/SkillContext", skillContextOpen);
         view.Active(prefix + "/SkillDialog", skillDialogOpen);
@@ -592,8 +789,8 @@ public class AdventureUI : MonoBehaviour
         }));
         for (int i = 0; i < learned.Length; i++) {
             AdventureCanvasRoot.RowSelected(rows[i], pendingSkill == learned[i]);
-            AdventureCanvasRoot.RowText(rows[i], "Select/Label", learned[i].actionName);
-            AdventureCanvasRoot.RowText(rows[i], "Description", learned[i].description ?? "");
+            AdventureCanvasRoot.RowText(rows[i], "Select/Label", VietnameseGameUIText.ActionName(learned[i]));
+            AdventureCanvasRoot.RowText(rows[i], "Description", VietnameseGameUIText.ActionDescription(learned[i]));
         }
         view.Text(prefix + "/SkillDialog/Title", "Đổi kỹ năng ô " + (selectedSlot + 1));
         view.Active(prefix + "/SkillDialog/Empty", learned.Length == 0);
@@ -624,12 +821,27 @@ public class AdventureUI : MonoBehaviour
         view.Text(prefix + "/Detail/Count", selectedItemId != null ? "Số lượng: " + S.Count(selectedItemId) : "");
         bool canHeal = selected != null && selected.mapHeal > 0;
         view.Active(prefix + "/Detail/Use", canHeal);
-        view.Text(prefix + "/Detail/Use/Label", canHeal && S.Data.party.Count > 0 ? "Hồi " + selected.mapHeal + " HP • " + S.Template(S.Data.party[selectedMember]).unitName : "Dùng");
+        view.Text(prefix + "/Detail/Use/Label", canHeal && S.Data.party.Count > 0 ? "Hồi " + selected.mapHeal + " máu • " + S.Template(S.Data.party[selectedMember]).unitName : "Dùng");
         view.Enabled(prefix + "/Detail/Use", canHeal && S.Data.party.Count > 0 && S.Data.party[selectedMember].hp > 0 && S.Data.party[selectedMember].hp < S.MaxHP(S.Data.party[selectedMember]));
     }
     void Picker(string prefix)
     {
-        var rows = view.Rows(prefix + "/Picker" + Content, S.Data.party.Count, (row, i) => AdventureCanvasRoot.RowClick(row, "Select", () => ChooseMember(i)));
+        bool canReorder = prefix == "Menu/Party/Member";
+        var rows = view.Rows(prefix + "/Picker" + Content, S.Data.party.Count, (row, i) =>
+        {
+            if (canReorder)
+            {
+                var portrait = row.transform.Find("Portrait")?.GetComponent<Image>();
+                var drag = row.AddComponent<PartyMemberDragReorder>();
+                drag.Configure(i, row.GetComponent<RectTransform>(), SwapPartyMembers);
+                if (portrait != null) portrait.raycastTarget = true;
+                AdventureCanvasRoot.RowClick(row, "Select", () =>
+                {
+                    if (!drag.SuppressClick()) ChooseMember(i);
+                });
+            }
+            else AdventureCanvasRoot.RowClick(row, "Select", () => ChooseMember(i));
+        });
         for (int i = 0; i < S.Data.party.Count; i++)
         {
             AdventureCanvasRoot.RowPortrait(rows[i], "Portrait", S.Template(S.Data.party[i]).unitPortrait);
@@ -637,14 +849,25 @@ public class AdventureUI : MonoBehaviour
             AdventureCanvasRoot.RowSelected(rows[i], selectedMember == i);
         }
     }
+
+    void SwapPartyMembers(int from, int to)
+    {
+        if (S == null || from == to || from < 0 || to < 0 || from >= S.Data.party.Count || to >= S.Data.party.Count)
+            return;
+        S.Swap(from, to);
+        if (selectedMember == from) selectedMember = to;
+        else if (selectedMember == to) selectedMember = from;
+    }
     void Summary(string prefix)
     {
         view.Active(prefix, S.Data.party.Count > 0); if (S.Data.party.Count == 0) return;
         var p = S.Data.party[selectedMember]; var u = S.Template(p);
+        var details = view.Node(prefix + "/Details").gameObject;
+        details.SetActive(prefix != "Menu/Attributes/Summary");
         view.Text(prefix + "/Name", u.unitName);
-        view.Text(prefix + "/Progress", "Cấp " + p.level + " • " + p.xp + " / " + p.RequiredXP + " EXP");
+        view.Text(prefix + "/Progress", "Cấp " + p.level + " • " + p.xp + " / " + p.RequiredXP + " KN");
         view.Fill(prefix + "/XP/Fill", (float)p.xp / p.RequiredXP);
-        view.Text(prefix + "/Details", "HP " + p.hp + " / " + S.MaxHP(p) + "\nATK " + (u.baseAtk + p.atkBonus) + "    DEF " + (u.baseDef + p.defBonus) + "\nCrit " + Mathf.Clamp(u.baseCrit + p.critBonus, 0, 100) + "%\nSát thương crit " + (u.baseCritDamage + p.critDamageBonus) + "%");
+        view.Text(prefix + "/Details", "Máu " + p.hp + " / " + S.MaxHP(p) + "\nCông " + (u.baseAtk + p.atkBonus) + "    Thủ " + (u.baseDef + p.defBonus) + "\nChí mạng " + Mathf.Clamp(u.baseCrit + p.critBonus, 0, 100) + "%\nSát thương chí mạng " + (u.baseCritDamage + p.critDamageBonus) + "%");
     }
     void Rest()
     {
@@ -653,12 +876,13 @@ public class AdventureUI : MonoBehaviour
         {
             var p = S.Data.party[i];
             AdventureCanvasRoot.RowPortrait(rows[i], "Portrait", S.Template(p).unitPortrait);
-            AdventureCanvasRoot.RowText(rows[i], "Name", S.Template(p).unitName + " • " + p.hp + "/" + S.MaxHP(p));
+            AdventureCanvasRoot.RowText(rows[i], "Name", S.Template(p).unitName + " • " + p.hp + "/" + S.MaxHP(p) + " máu");
             AdventureCanvasRoot.RowFill(rows[i], "HP/Fill", (float)p.hp / S.MaxHP(p));
         }
     }
     void Attributes()
     {
+        view.Active("Menu/Attributes/Confirm", true);
         Picker("Menu/Attributes"); Summary("Menu/Attributes/Summary");
         if (S.Data.party.Count == 0) return;
         var p = S.Data.party[selectedMember]; var u = S.Template(p);
@@ -668,12 +892,23 @@ public class AdventureUI : MonoBehaviour
         string[] labels = { "Sinh lực", "Sức mạnh", "Phòng thủ", "Tỉ lệ chí mạng", "Sát thương chí mạng" };
         int[] values = { S.MaxHP(p), u.baseAtk + p.atkBonus, u.baseDef + p.defBonus, Mathf.Clamp(u.baseCrit + p.critBonus, 0, 100), u.baseCritDamage + p.critDamageBonus };
         int[] deltas = { 10, 2, 1, 2, 5 };
+        UpdateAttributeSpiderChart(values, deltas);
         var rows = view.Rows("Menu/Attributes/Stats" + Content, 5, (row, i) => {
             AdventureCanvasRoot.RowClick(row, "Upgrade", () => {
                 var member = S.Data.party[selectedMember];
                 if (S.CanUpgrade && pendingStats.Sum() < member.statPoints && (i != 3 || S.Template(member).baseCrit + member.critBonus + pendingStats[3] * 2 < 100)) pendingStats[i]++;
             });
             AdventureCanvasRoot.RowClick(row, "Reduce", () => { if (pendingStats[i] > 0) pendingStats[i]--; });
+            var nameRect = row.transform.Find("Name")?.GetComponent<RectTransform>();
+            if (nameRect != null)
+            {
+                var position = nameRect.anchoredPosition;
+                position.x += 16f;
+                nameRect.anchoredPosition = position;
+                var size = nameRect.sizeDelta;
+                size.x = Mathf.Max(80f, size.x - 16f);
+                nameRect.sizeDelta = size;
+            }
         });
         for (int i = 0; i < 5; i++)
         {
@@ -684,8 +919,232 @@ public class AdventureUI : MonoBehaviour
             rows[i].transform.Find("Upgrade").GetComponent<Button>().interactable = S.CanUpgrade && spent < p.statPoints && (i != 3 || next < 100);
             rows[i].transform.Find("Reduce").GetComponent<Button>().interactable = pendingStats[i] > 0;
         }
-        view.Enabled("Menu/Attributes/Confirm", S.CanUpgrade && spent > 0 && spent <= p.statPoints);
-        view.Enabled("Menu/Attributes/Cancel", spent > 0);
+        attributeUpgradeHold.SetAvailable(S.CanUpgrade && spent > 0 && spent <= p.statPoints);
+    }
+
+    void ApplyPendingAttributeUpgrade()
+    {
+        if (S != null && S.Data != null && selectedMember < S.Data.party.Count && draftMember == S.Data.party[selectedMember] &&
+            S.ConfirmStats(selectedMember, pendingStats)) ResetStatDraft();
+    }
+
+    void PositionAttributeConfirmUnderStats()
+    {
+        if (view == null) return;
+        var stats = view.Component<RectTransform>("Menu/Attributes/Stats");
+        var confirm = view.Component<RectTransform>("Menu/Attributes/Confirm");
+        if (stats == null || confirm == null || stats.parent != confirm.parent) return;
+
+        confirm.anchorMin = confirm.anchorMax = new Vector2(0f, 1f);
+        confirm.pivot = new Vector2(.5f, 1f);
+        confirm.anchoredPosition = new Vector2(
+            stats.anchoredPosition.x + stats.rect.width * .5f,
+            stats.anchoredPosition.y - stats.rect.height - 18f);
+    }
+
+    void UpdateAttributeSpiderChart(int[] values, int[] deltas)
+    {
+        const string detailsPath = "Menu/Attributes/Summary/Details";
+        Transform details = view.Node(detailsPath);
+        Transform summary = details.parent;
+        var statsRect = view.Component<RectTransform>("Menu/Attributes/Stats");
+        EnsureAttributeSummaryLayout(summary, details, view.Component<TMPro.TMP_Text>("Menu/Attributes/Summary/Name"), statsRect.anchoredPosition.y);
+        Transform chartTransform = summary.Find("SpiderChart");
+        if (chartTransform == null)
+        {
+            var chartObject = new GameObject("SpiderChart", typeof(RectTransform), typeof(CanvasRenderer), typeof(SpiderChartGraphic));
+            chartTransform = chartObject.transform;
+            chartTransform.SetParent(summary, false);
+            var rect = (RectTransform)chartTransform;
+            rect.anchorMin = rect.anchorMax = Vector2.up;
+            rect.pivot = Vector2.up;
+            rect.anchoredPosition = new Vector2(25, -306);
+            rect.sizeDelta = new Vector2(305, 275);
+            chartTransform.SetAsLastSibling();
+            CreateSpiderChartLabels(chartTransform, view.Component<TMPro.TMP_Text>("Menu/Attributes/Summary/Name"));
+        }
+
+        chartTransform.gameObject.SetActive(true);
+        details.gameObject.SetActive(false);
+        var chart = chartTransform.GetComponent<SpiderChartGraphic>();
+        if (chart == null) chart = chartTransform.gameObject.AddComponent<SpiderChartGraphic>();
+        chart.raycastTarget = false;
+
+        // The five axes follow the five upgrade rows: HP, attack, defense,
+        // critical chance, and critical damage. Square-root compression keeps
+        // low and high values legible while preserving their order.
+        // Keep the same scale for every party member so selecting another
+        // character does not rescale the chart and hide a stat difference.
+        float[] axisRanges = { 300f, 100f, 60f, 100f, 300f };
+        var current = new float[5];
+        var preview = new float[5];
+        for (int i = 0; i < 5; i++)
+        {
+            current[i] = Mathf.Sqrt(Mathf.Clamp01(values[i] / axisRanges[i]));
+            preview[i] = Mathf.Sqrt(Mathf.Clamp01((values[i] + pendingStats[i] * deltas[i]) / axisRanges[i]));
+        }
+        chart.SetValues(current, preview);
+
+        var member = S.Data.party[selectedMember];
+        var unit = S.Template(member);
+        view.Text("Menu/Attributes/Summary/HealthLabel", "Máu " + member.hp + "/" + S.MaxHP(member));
+        view.Fill("Menu/Attributes/Summary/HealthBar/Fill", (float)member.hp / S.MaxHP(member));
+        SetCombatStat("Health", S.MaxHP(member).ToString());
+        SetCombatStat("AttackPower", (unit.baseAtk + member.atkBonus).ToString());
+        SetCombatStat("Speed", unit.speed.ToString());
+        SetCombatStat("Defense", (unit.baseDef + member.defBonus).ToString());
+        SetCombatStat("CriticalRate", Mathf.Clamp(unit.baseCrit + member.critBonus, 0, 100) + "%");
+    }
+
+    void SetCombatStat(string id, string value)
+    {
+        view.Text("Menu/Attributes/Summary/CombatStats/" + id + "/Value", value);
+    }
+
+    static void EnsureAttributeSummaryLayout(Transform summary, Transform details, TMPro.TMP_Text style, float firstRowTopY)
+    {
+        var summaryRect = (RectTransform)summary;
+        summaryRect.anchoredPosition = new Vector2(summaryRect.anchoredPosition.x, firstRowTopY);
+        summaryRect.sizeDelta = new Vector2(355, 620);
+
+        SetTopLeftRect(summary.Find("Name") as RectTransform, new Vector2(25, -18), new Vector2(305, 48));
+        SetTopLeftRect(summary.Find("Progress") as RectTransform, new Vector2(25, -70), new Vector2(305, 28));
+        SetTopLeftRect(summary.Find("XP") as RectTransform, new Vector2(25, -101), new Vector2(305, 8));
+        details.gameObject.SetActive(false);
+
+        if (summary.Find("HealthLabel") == null)
+            CreateSummaryText(summary, "HealthLabel", style, "Máu", new Vector2(25, -117), new Vector2(305, 22), 15, TextAlignmentOptions.Left, Color.white);
+
+        if (summary.Find("HealthBar") == null)
+        {
+            var background = new GameObject("HealthBar", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            background.transform.SetParent(summary, false);
+            SetTopLeftRect(background.GetComponent<RectTransform>(), new Vector2(25, -143), new Vector2(305, 8));
+            var backgroundImage = background.GetComponent<Image>();
+            backgroundImage.color = new Color(.13f, .14f, .15f, .9f);
+            backgroundImage.raycastTarget = false;
+            var fill = new GameObject("Fill", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            fill.transform.SetParent(background.transform, false);
+            var fillRect = fill.GetComponent<RectTransform>();
+            fillRect.anchorMin = Vector2.zero; fillRect.anchorMax = Vector2.one;
+            fillRect.offsetMin = fillRect.offsetMax = Vector2.zero;
+            var fillImage = fill.GetComponent<Image>();
+            fillImage.color = new Color(.72f, .16f, .13f, 1f);
+            fillImage.type = Image.Type.Filled;
+            fillImage.fillMethod = Image.FillMethod.Horizontal;
+            fillImage.fillOrigin = (int)Image.OriginHorizontal.Left;
+            fillImage.raycastTarget = false;
+        }
+
+        if (summary.Find("CombatStatsTitle") == null)
+            CreateSummaryText(summary, "CombatStatsTitle", style, "CHỈ SỐ CHIẾN ĐẤU", new Vector2(25, -164), new Vector2(305, 24), 18, TextAlignmentOptions.Left, new Color(.89f, .73f, .48f, 1f));
+
+        Transform stats = summary.Find("CombatStats");
+        if (stats == null)
+        {
+            var statsObject = new GameObject("CombatStats", typeof(RectTransform));
+            stats = statsObject.transform;
+            stats.SetParent(summary, false);
+            SetTopLeftRect((RectTransform)stats, new Vector2(25, -190), new Vector2(305, 76));
+            CreateStatCell(stats, "Health", "Máu", 0, 0, 95, 99, 42, style);
+            CreateStatCell(stats, "Speed", "Tốc độ", 159, 0, 83, 258, 47, style);
+            CreateStatCell(stats, "AttackPower", "Lực tấn công", 0, -24, 99, 99, 42, style);
+            CreateStatCell(stats, "CriticalRate", "Tỉ lệ chí mạng", 159, -24, 99, 258, 47, style);
+            CreateStatCell(stats, "Defense", "Phòng thủ", 0, -48, 95, 99, 42, style);
+        }
+
+        if (summary.Find("AttributesTitle") == null)
+            CreateSummaryText(summary, "AttributesTitle", style, "THUỘC TÍNH", new Vector2(25, -276), new Vector2(305, 24), 18, TextAlignmentOptions.Left, new Color(.89f, .73f, .48f, 1f));
+    }
+
+    static void CreateStatCell(Transform parent, string id, string label, float x, float y, float labelWidth, float valueX, float valueWidth, TMPro.TMP_Text style)
+    {
+        Transform row = parent.Find(id);
+        if (row == null)
+        {
+            var go = new GameObject(id, typeof(RectTransform));
+            row = go.transform;
+            row.SetParent(parent, false);
+        }
+        SetTopLeftRect((RectTransform)row, new Vector2(x, y), new Vector2(valueX + valueWidth - x, 23));
+        CreateSummaryText(row, "Label", style, label, Vector2.zero, new Vector2(labelWidth, 23), 13, TMPro.TextAlignmentOptions.Left, new Color(.88f, .86f, .80f, 1f));
+        CreateSummaryText(row, "Value", style, "0", new Vector2(valueX - x, 0), new Vector2(valueWidth, 23), 14, TMPro.TextAlignmentOptions.Right, Color.white);
+    }
+
+    static TMPro.TMP_Text CreateSummaryText(Transform parent, string path, TMPro.TMP_Text style, string source, Vector2 position, Vector2 size, float fontSize, TMPro.TextAlignmentOptions alignment, Color color)
+    {
+        Transform existing = parent.Find(path);
+        TMPro.TMP_Text text;
+        if (existing != null) text = existing.GetComponent<TMPro.TMP_Text>();
+        else
+        {
+            var go = new GameObject(path, typeof(RectTransform), typeof(CanvasRenderer), typeof(TMPro.TextMeshProUGUI));
+            go.transform.SetParent(parent, false);
+            text = go.GetComponent<TMPro.TextMeshProUGUI>();
+        }
+        SetTopLeftRect((RectTransform)text.transform, position, size);
+        text.font = style.font;
+        text.fontSize = fontSize;
+        text.color = color;
+        text.alignment = alignment;
+        text.enableWordWrapping = false;
+        text.raycastTarget = false;
+        GameLocalization.SetText(text, source);
+        return text;
+    }
+
+    static void SetTopLeftRect(RectTransform rect, Vector2 position, Vector2 size)
+    {
+        if (rect == null) return;
+        rect.anchorMin = rect.anchorMax = Vector2.up;
+        rect.pivot = Vector2.up;
+        rect.anchoredPosition = position;
+        rect.sizeDelta = size;
+    }
+
+    static void CreateSpiderChartLabels(Transform chart, TMPro.TMP_Text style)
+    {
+        string[] labels = { "Sinh lực", "Sức mạnh", "Phòng thủ", "Tỉ lệ chí mạng", "Sát thương chí mạng" };
+        Vector2[] positions = { new Vector2(0, 77), new Vector2(91, 31), new Vector2(86, -61), new Vector2(-86, -61), new Vector2(-80, 31) };
+        for (int i = 0; i < labels.Length; i++)
+        {
+            var labelObject = new GameObject("Axis " + labels[i], typeof(RectTransform), typeof(CanvasRenderer), typeof(TMPro.TextMeshProUGUI));
+            labelObject.transform.SetParent(chart, false);
+            var rect = (RectTransform)labelObject.transform;
+            rect.anchorMin = rect.anchorMax = new Vector2(.5f, .5f);
+            rect.pivot = new Vector2(.5f, .5f);
+            rect.anchoredPosition = positions[i];
+            rect.sizeDelta = new Vector2(i == 0 ? 105 : i == 4 ? 145 : 118, 22);
+            var text = labelObject.GetComponent<TMPro.TextMeshProUGUI>();
+            text.font = style.font;
+            text.fontSize = Mathf.Min(15, style.fontSize * .8f);
+            text.color = new Color(.88f, .86f, .80f, 1f);
+            text.alignment = TMPro.TextAlignmentOptions.Center;
+            text.enableWordWrapping = false;
+            text.raycastTarget = false;
+            GameLocalization.SetText(text, labels[i]);
+        }
+
+        CreateSpiderLegend(chart, style, "Hiện tại", new Vector2(-48, -91), new Color(.91f, .72f, .40f, 1f));
+        CreateSpiderLegend(chart, style, "Dự kiến", new Vector2(52, -91), new Color(.29f, .82f, 1f, 1f));
+    }
+
+    static void CreateSpiderLegend(Transform chart, TMPro.TMP_Text style, string label, Vector2 position, Color tint)
+    {
+        var go = new GameObject("Legend " + label, typeof(RectTransform), typeof(CanvasRenderer), typeof(TMPro.TextMeshProUGUI));
+        go.transform.SetParent(chart, false);
+        var rect = (RectTransform)go.transform;
+        rect.anchorMin = rect.anchorMax = new Vector2(.5f, .5f);
+        rect.pivot = new Vector2(.5f, .5f);
+        rect.anchoredPosition = position;
+        rect.sizeDelta = new Vector2(88, 18);
+        var text = go.GetComponent<TMPro.TextMeshProUGUI>();
+        text.font = style.font;
+        text.fontSize = Mathf.Min(12, style.fontSize * .66f);
+        text.color = tint;
+        text.alignment = TMPro.TextAlignmentOptions.Center;
+        text.raycastTarget = false;
+        GameLocalization.SetText(text, label);
     }
     ActionData[] CurrentSkills() => S.Data.party.Count == 0 ? new ActionData[0] : S.Template(S.Data.party[selectedMember]).characterSkills.Where(x => x != null).Distinct().ToArray();
     void Skills()
@@ -704,15 +1163,15 @@ public class AdventureUI : MonoBehaviour
             AdventureCanvasRoot.RowText(rows[i], "Select/Label", "");
             AdventureCanvasRoot.RowPortrait(rows[i], "Icon", skills[i].icon);
             rows[i].transform.Find("Icon").GetComponent<Image>().color = S.IsSkillUnlocked(p, skills[i]) ? Color.white : new Color(.4f, .4f, .4f, 1);
-            AdventureCanvasRoot.RowText(rows[i], "Name", skills[i].actionName);
+            AdventureCanvasRoot.RowText(rows[i], "Name", VietnameseGameUIText.ActionName(skills[i]));
             AdventureCanvasRoot.RowSelected(rows[i], selectedSkill == i);
         }
         if (skills.Length == 0) return;
         var skill = skills[selectedSkill];
-        view.Text("Menu/Skills/Detail/Name", skill.actionName);
+        view.Text("Menu/Skills/Detail/Name", VietnameseGameUIText.ActionName(skill));
         bool unlocked = S.IsSkillUnlocked(p, skill);
         var required = S.Prerequisites(p, skill).Where(x => !S.IsSkillUnlocked(p, x)).ToArray();
-        view.Text("Menu/Skills/Detail/Description", skill.description + (required.Length > 0 ? "\nCần mở: " + string.Join(", ", required.Select(x => x.actionName)) : ""));
+        view.Text("Menu/Skills/Detail/Description", VietnameseGameUIText.ActionDescription(skill) + (required.Length > 0 ? "\nCần mở: " + string.Join(", ", required.Select(VietnameseGameUIText.ActionName)) : ""));
         view.Text("Menu/Skills/Detail/Upgrade/Label", unlocked ? "Đã mở khóa" : "Mở khóa • " + S.SkillCost(skill) + " điểm");
         view.Enabled("Menu/Skills/Detail/Upgrade", S.CanUnlockSkill(p, skill));
         view.Text("Menu/Skills/Reason", S.UnlockBlockedReason(p, skill));

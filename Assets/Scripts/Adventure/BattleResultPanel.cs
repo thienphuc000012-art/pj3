@@ -47,16 +47,16 @@ public class BattleResultPanel : MonoBehaviour
     void OnDestroy() { if (visible && !leaving) Time.timeScale = oldTimeScale; }
     void Populate()
     {
-        view.Text("Title", victory ? "VICTORY" : "DEFEAT");
+        view.Text("Title", victory ? "CHIẾN THẮNG" : "THẤT BẠI");
         if (!victory) view.Component<TMP_Text>("Title").color = view.defeatAccent;
         view.Text("Subtitle", victory ? "CHIẾN THẮNG • HÀNH TRÌNH TIẾP DIỄN" : "THẤT BẠI • MỘT CƠ HỘI KHÁC");
         var session = CampaignSession.Instance;
         bool campaign = session != null && session.InEncounter;
-        view.Text("Experience", (victory && campaign ? session.ResultExperience : 0) + " EXP");
+        view.Text("Experience", "Kinh nghiệm: " + (victory && campaign ? session.ResultExperience : 0));
         view.Text("LootTitle", victory ? "Chiến lợi phẩm" : "Trở về điểm nghỉ");
         int lootCount = victory && campaign ? session.ResultRewards.Count : 0;
         view.Active("Loot", lootCount > 0); view.Active("Description", lootCount == 0);
-        view.Text("Description", victory ? campaign ? "Không có vật phẩm trong trận này." : "Đã hoàn tất trận thử nghiệm." : "Party sẽ trở về điểm lưu gần nhất và được hồi đầy máu.\n\nQuái vẫn còn trên map để bạn thử lại.");
+        view.Text("Description", victory ? campaign ? "Không có vật phẩm trong trận này." : "Đã hoàn tất trận thử nghiệm." : "Đội hình sẽ trở về điểm lưu gần nhất và được hồi đầy máu.\n\nQuái vẫn còn trên bản đồ để bạn thử lại.");
         var lootRows = view.Rows("Loot/Viewport/Content", lootCount);
         for (int i = 0; i < lootCount; i++)
         {
@@ -73,12 +73,12 @@ public class BattleResultPanel : MonoBehaviour
             if (campaign && i < session.Data.party.Count)
             {
                 var member = session.Data.party[i];
-                AdventureCanvasRoot.RowText(members[i], "Progress", "CẤP " + member.level + " • " + member.xp + " / " + member.RequiredXP + " EXP");
+                AdventureCanvasRoot.RowText(members[i], "Progress", "CẤP " + member.level + " • " + member.xp + " / " + member.RequiredXP + " KN");
                 AdventureCanvasRoot.RowFill(members[i], "XP/Fill", (float)member.xp / member.RequiredXP);
             }
             else
             {
-                AdventureCanvasRoot.RowText(members[i], "Progress", "HP " + unit.currentHP + " / " + unit.maxHP);
+                AdventureCanvasRoot.RowText(members[i], "Progress", "Máu " + unit.currentHP + " / " + unit.maxHP);
                 AdventureCanvasRoot.RowFill(members[i], "XP/Fill", (float)unit.currentHP / unit.maxHP);
             }
         }

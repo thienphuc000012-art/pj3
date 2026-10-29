@@ -11,7 +11,7 @@ public sealed class AdventureQuest : ScriptableObject
 {
     [Tooltip("Unique save key. Leave empty to use the asset name.")]
     public string questId;
-    public string displayName = "New Quest";
+    public string displayName = "Nhiệm vụ mới";
     [TextArea(2, 6)] public string description;
     public AdventureQuestObjectiveType objectiveType;
     [Min(1)] public int requiredCount = 1;
@@ -26,6 +26,10 @@ public sealed class AdventureQuest : ScriptableObject
     [Tooltip("Tên scene chứa mục tiêu. Bắt buộc khi dùng tọa độ cố định; để trống để dùng scene hiện tại.")]
     public string objectiveMapScene;
     public Vector3 objectivePosition;
+    [Header("Completion Rewards")]
+    [Min(0)] public int experienceReward;
+    [Tooltip("Item IDs must exist in Campaign Config > Items. These rewards are granted once when the objective completes.")]
+    public System.Collections.Generic.List<ItemStack> itemRewards = new System.Collections.Generic.List<ItemStack>();
 
     public string Id => string.IsNullOrWhiteSpace(questId) ? name : questId.Trim();
 }

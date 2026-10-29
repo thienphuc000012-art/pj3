@@ -47,6 +47,12 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
     [Min(.2f)] public float attackRange = 2.5f;
     [Min(.1f), Tooltip("Time to play the attack before entering combat. Range and line of sight are rechecked.")]
     public float attackWindup = .7f;
+    [Tooltip("Optional transform on the enemy's weapon/claw. Put it on the animated bone at the real contact area; an attack hitbox follows this point.")]
+    public Transform attackContactPoint;
+    [Min(.05f), Tooltip("Radius of the temporary contact collider attached to Attack Contact Point. Used only while checking an attack hit.")]
+    public float attackContactRadius = .35f;
+    [Min(.05f), Tooltip("How long after Attack Windup the weapon contact collider can trigger the encounter.")]
+    public float attackContactWindow = .3f;
     [Min(.1f)] public float attackCooldown = 2;
     [Header("Animator State Names")]
     public string movementLayer = "Move Layer";
@@ -57,6 +63,7 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
     public string flyIdleState = "FlyStationary";
     public string flyMoveState = "FlyNormal";
     public string flyAttackState = "FlyStationarySpitFireBall";
+    public bool HasValidAttackContactPoint => attackContactPoint != null && attackContactPoint != transform && attackContactPoint.IsChildOf(transform);
     public string EncounterAttackState => airborne ? flyAttackState : attackState;
     public int EncounterMovementLayerIndex => mapAnimator != null ? mapAnimator.GetLayerIndex(movementLayer) : -1;
     public Activity CurrentActivity { get; private set; }
@@ -95,6 +102,7 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
             mapAnimator.applyRootMotion = false; mapAnimator.fireEvents = false;
             int layer = mapAnimator.GetLayerIndex(movementLayer);
             if (layer >= 0) mapAnimator.SetLayerWeight(layer, 1);
+            if (!HasValidAttackContactPoint) attackContactPoint = FindAnimatedAttackContactPoint();
         }
         airborne = travelMode == TravelMode.Flying;
         agent = GetComponent<NavMeshAgent>();
@@ -118,6 +126,35 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
         initialized = true; lastPosition = transform.position;
         Idle();
         modeUntil = Time.time + (travelMode == TravelMode.GroundAndFlying && startInAir ? 0 : groundPatrolSeconds);
+    }
+
+    private Transform FindAnimatedAttackContactPoint()
+    {
+        if (mapAnimator == null) return null;
+
+        // The Vampire map model uses a generic rig with named hand bones, not a
+        // Humanoid Avatar. Follow the actual claw so the encounter hitbox moves
+        // with the attack instead of sitting at the encounter marker's origin.
+        bool preferLeft = !string.IsNullOrWhiteSpace(attackState) &&
+            attackState.IndexOf("Left", System.StringComparison.OrdinalIgnoreCase) >= 0;
+        string preferredName = preferLeft ? "VAMPIRE_ L Hand" : "VAMPIRE_ R Hand";
+        string alternateName = preferLeft ? "VAMPIRE_ R Hand" : "VAMPIRE_ L Hand";
+        Transform alternate = null;
+        foreach (Transform child in mapAnimator.GetComponentsInChildren<Transform>(true))
+        {
+            if (child == transform) continue;
+            if (child.name == preferredName) return child;
+            if (alternate == null && child.name == alternateName) alternate = child;
+        }
+        if (alternate != null) return alternate;
+
+        // Other humanoid enemies can use the same contact hitbox without an
+        // explicitly assigned point.
+        HumanBodyBones bone = preferLeft ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand;
+        Transform humanoidHand = mapAnimator.avatar != null && mapAnimator.avatar.isHuman
+            ? mapAnimator.GetBoneTransform(bone)
+            : null;
+        return humanoidHand != null && humanoidHand.IsChildOf(transform) ? humanoidHand : null;
     }
     public static void PrepareModel(GameObject model)
     {
@@ -168,14 +205,15 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
             Face(player.position);
             // Attack animation is owned by the encounter intro. Never leave the patrol AI
             // in an attack loop while the session is waiting for its transition cooldown.
-            if (session.CanStartEncounter && CanInteract(player, Mathf.Min(attackRange, point.range)))
+            if (Time.time >= nextAttack && session.CanStartEncounter &&
+                CanInteract(player, Mathf.Min(attackRange, point.range)))
             {
+                nextAttack = Time.time + attackCooldown;
                 session.BeginEncounter(point, false);
                 if (session.Busy) return;
             }
             else Play(idleState, flyIdleState);
             CurrentActivity = Activity.Chase;
-            nextAttack = Time.time + attackCooldown;
             return;
         }
         float territory = Mathf.Max(patrolRadius, leashRadius);

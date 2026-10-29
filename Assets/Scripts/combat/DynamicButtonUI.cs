@@ -36,12 +36,14 @@ public class DynamicButtonUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
     {
         rectTransform = GetComponent<RectTransform>();
         canvasGroup = GetComponent<CanvasGroup>();
+        RefreshHoverGraphic();
+    }
+
+    public void RefreshHoverGraphic()
+    {
         var graphic = GetComponent<Graphic>();
-        if (graphic == null)
-        {
-            var button = GetComponent<Button>();
-            if (button != null) graphic = button.targetGraphic;
-        }
+        var button = GetComponent<Button>();
+        if (button != null && button.targetGraphic != null) graphic = button.targetGraphic;
         if (graphic != null)
         {
             hoverOutline = graphic.GetComponent<UIHoverOutline>();

@@ -15,6 +15,7 @@ public class CampaignSession : MonoBehaviour
     public CampaignSave Data { get; private set; }
     public PlayerScript MapPlayer { get; private set; }
     public bool Busy { get; private set; }
+    public bool KeepHudVisibleDuringItemInteraction { get; private set; }
     public AdventureMenu Menu { get; private set; }
     public WorldInteraction RestPoint { get; private set; }
     public WorldInteraction Nearest { get; private set; }
@@ -47,6 +48,7 @@ public class CampaignSession : MonoBehaviour
         if (Busy || Menu != AdventureMenu.None || !OnMap || MapPlayer == null || point == null ||
             (point.kind != WorldInteractionKind.Pickup && point.kind != WorldInteractionKind.Chest) || point.IsConsumed || !IsNear(point)) return;
         Busy = true;
+        KeepHudVisibleDuringItemInteraction = true;
         Nearest = null;
         StartCoroutine(PlayItemPickup(point));
     }
@@ -165,6 +167,7 @@ public class CampaignSession : MonoBehaviour
                 if (animator.HasState(0, locomotion)) animator.CrossFadeInFixedTime(locomotion, 0.1f);
                 else if (oldState != 0 && animator.HasState(0, oldState)) animator.CrossFadeInFixedTime(oldState, 0.1f);
             }
+            KeepHudVisibleDuringItemInteraction = false;
             Busy = false;
         }
     }
@@ -179,6 +182,13 @@ public class CampaignSession : MonoBehaviour
     private int dialoguePreviousAnimatorLayer;
     private float dialoguePreviousAnimatorTime;
     private bool dialogueAnimationChanged;
+    private Animator dialoguePlayerIdleAnimator;
+    private int dialoguePlayerIdlePreviousState;
+    private float dialoguePlayerIdlePreviousTime;
+    private bool dialoguePlayerIdleAnimationChanged;
+    private bool dialoguePlayerOriginalStateCaptured;
+    private bool dialoguePlayerMovementValueCaptured;
+    private float dialoguePlayerPreviousMovementValue;
     private bool dialogueSpeakerPresentationSet;
     private bool dialoguePresentedPlayer;
     private string SavePath => Path.Combine(Application.persistentDataPath, "adventure-save-v1.json");
@@ -249,7 +259,7 @@ public class CampaignSession : MonoBehaviour
             try
             {
                 var loaded = JsonUtility.FromJson<CampaignSave>(File.ReadAllText(SavePath));
-                if (loaded != null && loaded.version >= 1 && loaded.version <= 3 && loaded.party != null && loaded.party.Count > 0 &&
+                if (loaded != null && loaded.version >= 1 && loaded.version <= 5 && loaded.party != null && loaded.party.Count > 0 &&
                     loaded.inventory != null && loaded.collected != null &&
                     loaded.party.All(p => p != null && p.prefabIndex >= 0 && p.prefabIndex < Config.startingParty.Count && Config.startingParty[p.prefabIndex] != null))
                     Data = loaded;
@@ -313,8 +323,10 @@ public class CampaignSession : MonoBehaviour
     public void BeginDialogue(WorldInteraction npc)
     {
         if (!OnMap || Busy || Menu != AdventureMenu.None || npc == null || npc.kind != WorldInteractionKind.DialogueNPC ||
-            npc.dialogue == null || !IsNear(npc)) return;
-        ActiveDialogue = npc.dialogue;
+            !IsNear(npc)) return;
+        TurnInCompletedQuests(npc);
+        ActiveDialogue = ResolveDialogueForNpc(npc);
+        if (ActiveDialogue == null) return;
         ActiveDialogueNpc = npc;
         ActiveDialogueNodeId = ActiveDialogue.startNodeId;
         ClearDialogueResponse();
@@ -355,9 +367,14 @@ public class CampaignSession : MonoBehaviour
         if (Menu != AdventureMenu.Dialogue || ShowingDialogueResponse || node?.choices == null || choiceIndex < 0 || choiceIndex >= node.choices.Count) return;
         var choice = node.choices[choiceIndex];
         if (choice == null) return;
-        if (choice.questToOffer != null) AcceptQuest(choice.questToOffer);
+        if (choice.questToOffer != null)
+        {
+            AcceptQuest(choice.questToOffer);
+            // An offer is a one-time story beat even if the player already had the quest from an older save.
+            MarkDialogueCompleted(ActiveDialogueNpc, ActiveDialogue);
+        }
         dialogueResponseNextNodeId = choice.nextNodeId;
-        DialogueResponseSpeaker = string.IsNullOrWhiteSpace(ActiveDialogue.playerSpeakerName) ? "Player" : ActiveDialogue.playerSpeakerName;
+        DialogueResponseSpeaker = string.IsNullOrWhiteSpace(ActiveDialogue.playerSpeakerName) ? "Người chơi" : ActiveDialogue.playerSpeakerName;
         DialogueResponseText = choice.text ?? "";
         ShowingDialogueResponse = true;
         RefreshDialogueSpeakerPresentation();
@@ -382,6 +399,8 @@ public class CampaignSession : MonoBehaviour
 
     public void EndDialogue()
     {
+        if (Menu == AdventureMenu.Dialogue && !ShowingDialogueResponse)
+            MarkDialogueCompleted(ActiveDialogueNpc, ActiveDialogue);
         if (Menu == AdventureMenu.Dialogue) SetMenu(AdventureMenu.None);
         else StopDialogueSpeakerPresentation();
         ClearDialogueResponse();
@@ -396,7 +415,7 @@ public class CampaignSession : MonoBehaviour
         bool playerSpeaking = DialoguePlayerIsSpeaking;
         if (dialogueSpeakerPresentationSet && dialoguePresentedPlayer == playerSpeaking) return;
 
-        StopDialogueSpeakerAnimation();
+        StopDialogueSpeakerAnimation(false);
         dialoguePresentedPlayer = playerSpeaking;
         dialogueSpeakerPresentationSet = true;
 
@@ -422,12 +441,64 @@ public class CampaignSession : MonoBehaviour
         if (dialogueCamera == null && MapPlayer != null) dialogueCamera = MapPlayer.MCC;
         if (dialogueCamera == null) dialogueCamera = FindFirstObjectByType<MainCameraController>();
         if (dialogueCamera != null) dialogueCamera.BeginDialogueFocus(cameraTargetRoot, cameraHeadTarget, cameraFallbackHeadHeight);
-        StartDialogueSpeakerAnimation(animator, animationState);
+        StartDialoguePlayerIdleAnimation();
+        bool speakerAnimationStarted = StartDialogueSpeakerAnimation(animator, animationState);
+        if (playerSpeaking && !speakerAnimationStarted) StartDialoguePlayerIdleAnimation();
     }
 
-    private void StartDialogueSpeakerAnimation(Animator animator, string stateName)
+    private void StartDialoguePlayerIdleAnimation()
     {
-        if (animator == null || !animator.isActiveAndEnabled || animator.runtimeAnimatorController == null || string.IsNullOrWhiteSpace(stateName)) return;
+        Animator animator = MapPlayer != null ? MapPlayer.animator : null;
+        if (animator == null || !animator.isActiveAndEnabled || animator.runtimeAnimatorController == null) return;
+
+        bool captureOriginalState = dialoguePlayerIdleAnimator != animator || !dialoguePlayerOriginalStateCaptured;
+        dialoguePlayerIdleAnimator = animator;
+        var movementParameter = animator.parameters.FirstOrDefault(parameter =>
+            parameter.name == "movementvalue" && parameter.type == AnimatorControllerParameterType.Float);
+        if (captureOriginalState && movementParameter != null)
+        {
+            dialoguePlayerPreviousMovementValue = animator.GetFloat(movementParameter.name);
+            dialoguePlayerMovementValueCaptured = true;
+        }
+        if (movementParameter != null) animator.SetFloat(movementParameter.name, 0f);
+
+        string stateName = string.IsNullOrWhiteSpace(ActiveDialogue.playerDialogueIdleAnimationState)
+            ? "Base Layer.Basic Movement"
+            : ActiveDialogue.playerDialogueIdleAnimationState.Trim();
+        int stateHash = Animator.StringToHash(stateName);
+        if (!animator.HasState(0, stateHash))
+        {
+            int separator = stateName.LastIndexOf('.');
+            if (separator >= 0 && separator + 1 < stateName.Length)
+                stateHash = Animator.StringToHash(stateName.Substring(separator + 1).Trim());
+        }
+        if (!animator.HasState(0, stateHash))
+        {
+            if (captureOriginalState)
+            {
+                var current = animator.GetCurrentAnimatorStateInfo(0);
+                dialoguePlayerIdlePreviousState = current.fullPathHash;
+                dialoguePlayerIdlePreviousTime = current.normalizedTime;
+                dialoguePlayerIdleAnimationChanged = false;
+                dialoguePlayerOriginalStateCaptured = true;
+            }
+            return;
+        }
+
+        var previous = animator.GetCurrentAnimatorStateInfo(0);
+        if (captureOriginalState)
+        {
+            dialoguePlayerIdlePreviousState = previous.fullPathHash;
+            dialoguePlayerIdlePreviousTime = previous.normalizedTime;
+            dialoguePlayerIdleAnimationChanged = previous.fullPathHash != stateHash;
+            dialoguePlayerOriginalStateCaptured = true;
+        }
+        if (previous.fullPathHash != stateHash) animator.CrossFadeInFixedTime(stateHash, 0.12f, 0, 0f);
+    }
+
+    private bool StartDialogueSpeakerAnimation(Animator animator, string stateName)
+    {
+        if (animator == null || !animator.isActiveAndEnabled || animator.runtimeAnimatorController == null || string.IsNullOrWhiteSpace(stateName)) return false;
         int stateHash = Animator.StringToHash(stateName.Trim());
         if (!animator.HasState(0, stateHash))
         {
@@ -435,7 +506,7 @@ public class CampaignSession : MonoBehaviour
             if (separator >= 0 && separator + 1 < stateName.Length)
                 stateHash = Animator.StringToHash(stateName.Substring(separator + 1).Trim());
         }
-        if (!animator.HasState(0, stateHash)) return;
+        if (!animator.HasState(0, stateHash)) return false;
 
         var previous = animator.GetCurrentAnimatorStateInfo(0);
         dialogueTalkingAnimator = animator;
@@ -444,15 +515,34 @@ public class CampaignSession : MonoBehaviour
         dialoguePreviousAnimatorTime = previous.normalizedTime;
         dialogueAnimationChanged = previous.fullPathHash != stateHash;
         if (dialogueAnimationChanged) animator.CrossFadeInFixedTime(stateHash, 0.12f, 0, 0f);
+        return true;
     }
 
-    private void StopDialogueSpeakerAnimation()
+    private void StopDialogueSpeakerAnimation(bool restorePlayerMovement = true)
     {
         if (dialogueTalkingAnimator != null && dialogueAnimationChanged && dialogueTalkingAnimator.isActiveAndEnabled &&
             dialogueTalkingAnimator.runtimeAnimatorController != null && dialogueTalkingAnimator.HasState(dialoguePreviousAnimatorLayer, dialoguePreviousAnimatorState))
             dialogueTalkingAnimator.CrossFade(dialoguePreviousAnimatorState, 0.12f, dialoguePreviousAnimatorLayer, Mathf.Repeat(dialoguePreviousAnimatorTime, 1f));
         dialogueTalkingAnimator = null;
         dialogueAnimationChanged = false;
+
+        if (restorePlayerMovement)
+        {
+            if (dialoguePlayerIdleAnimator != null && dialoguePlayerIdleAnimator.isActiveAndEnabled &&
+                dialoguePlayerIdleAnimator.runtimeAnimatorController != null)
+            {
+                if (dialoguePlayerIdleAnimationChanged && dialoguePlayerIdleAnimator.HasState(0, dialoguePlayerIdlePreviousState))
+                    dialoguePlayerIdleAnimator.CrossFade(dialoguePlayerIdlePreviousState, 0.12f, 0,
+                        Mathf.Repeat(dialoguePlayerIdlePreviousTime, 1f));
+                if (dialoguePlayerMovementValueCaptured && dialoguePlayerIdleAnimator.parameters.Any(parameter =>
+                        parameter.name == "movementvalue" && parameter.type == AnimatorControllerParameterType.Float))
+                    dialoguePlayerIdleAnimator.SetFloat("movementvalue", dialoguePlayerPreviousMovementValue);
+            }
+            dialoguePlayerIdleAnimator = null;
+            dialoguePlayerIdleAnimationChanged = false;
+            dialoguePlayerOriginalStateCaptured = false;
+            dialoguePlayerMovementValueCaptured = false;
+        }
     }
 
     private void StopDialogueSpeakerPresentation()
@@ -471,18 +561,76 @@ public class CampaignSession : MonoBehaviour
         if (configured != null) return configured;
         foreach (var point in worldPoints)
         {
-            var dialogue = point != null ? point.dialogue : null;
-            if (dialogue == null || dialogue.nodes == null) continue;
-            foreach (var node in dialogue.nodes)
-                foreach (var choice in node?.choices ?? new List<AdventureDialogueChoice>())
-                    if (choice?.questToOffer != null && string.Equals(choice.questToOffer.Id, id, StringComparison.Ordinal))
-                        return choice.questToOffer;
+            if (point == null) continue;
+            var dialogues = new[] { point.dialogue, point.defaultDialogue }
+                .Concat(point.progressionDialogues ?? new List<AdventureStoryDialogue>());
+            foreach (var dialogue in dialogues)
+            {
+                if (dialogue?.nodes == null) continue;
+                foreach (var node in dialogue.nodes)
+                    foreach (var choice in node?.choices ?? new List<AdventureDialogueChoice>())
+                        if (choice?.questToOffer != null && string.Equals(choice.questToOffer.Id, id, StringComparison.Ordinal))
+                            return choice.questToOffer;
+            }
         }
         return null;
     }
 
     public AdventureQuestProgress QuestProgress(string questId) =>
         Data?.quests?.Find(progress => progress != null && string.Equals(progress.questId, questId, StringComparison.Ordinal));
+
+    private AdventureStoryDialogue ResolveDialogueForNpc(WorldInteraction npc)
+    {
+        if (npc == null) return null;
+        if (IsDialogueAvailable(npc, npc.dialogue)) return npc.dialogue;
+
+        // Follow-ups must be explicitly gated by a completed quest or story dialogue.
+        foreach (var dialogue in npc.progressionDialogues ?? new List<AdventureStoryDialogue>())
+            if (HasDialogueUnlockCondition(dialogue) && IsDialogueAvailable(npc, dialogue)) return dialogue;
+        return npc.defaultDialogue;
+    }
+
+    private static bool HasDialogueUnlockCondition(AdventureStoryDialogue dialogue) => dialogue != null &&
+        (dialogue.requiredCompletedQuestIds != null && dialogue.requiredCompletedQuestIds.Any(id => !string.IsNullOrWhiteSpace(id)) ||
+         dialogue.requiredCompletedDialogueIds != null && dialogue.requiredCompletedDialogueIds.Any(id => !string.IsNullOrWhiteSpace(id)));
+
+    private bool IsDialogueAvailable(WorldInteraction npc, AdventureStoryDialogue dialogue)
+    {
+        if (dialogue == null) return false;
+        if (dialogue.playOnce && IsDialogueConsumed(npc, dialogue)) return false;
+        if (dialogue.requiredCompletedQuestIds != null)
+            foreach (var questId in dialogue.requiredCompletedQuestIds)
+                if (!string.IsNullOrWhiteSpace(questId) && QuestProgress(questId.Trim())?.completed != true) return false;
+        if (dialogue.requiredCompletedDialogueIds != null)
+            foreach (var dialogueId in dialogue.requiredCompletedDialogueIds)
+                if (!string.IsNullOrWhiteSpace(dialogueId) && Data?.completedStoryDialogueIds?.Contains(dialogueId.Trim()) != true) return false;
+
+        // Old saves may have an accepted quest but not the dialogue-consumed marker.
+        // Skip its offer conversation so the NPC cannot present the same quest again.
+        if (dialogue.nodes != null && dialogue.nodes.Any(node => node?.choices != null && node.choices.Any(choice =>
+                choice?.questToOffer != null && QuestProgress(choice.questToOffer.Id) != null))) return false;
+        return true;
+    }
+
+    private string NpcDialogueKey(WorldInteraction npc, AdventureStoryDialogue dialogue) =>
+        (npc != null ? npc.Id : "") + "::" + (dialogue != null ? dialogue.Id : "");
+
+    private bool IsDialogueConsumed(WorldInteraction npc, AdventureStoryDialogue dialogue) =>
+        Data?.consumedNpcDialogueKeys?.Contains(NpcDialogueKey(npc, dialogue)) == true;
+
+    private void MarkDialogueCompleted(WorldInteraction npc, AdventureStoryDialogue dialogue)
+    {
+        if (npc == null || dialogue == null || Data == null || dialogue == npc.defaultDialogue) return;
+        if (Data.consumedNpcDialogueKeys == null) Data.consumedNpcDialogueKeys = new List<string>();
+        if (Data.completedStoryDialogueIds == null) Data.completedStoryDialogueIds = new List<string>();
+        string npcDialogueKey = NpcDialogueKey(npc, dialogue);
+        bool changed = false;
+        if (dialogue.playOnce && !Data.consumedNpcDialogueKeys.Contains(npcDialogueKey))
+        { Data.consumedNpcDialogueKeys.Add(npcDialogueKey); changed = true; }
+        if (!Data.completedStoryDialogueIds.Contains(dialogue.Id))
+        { Data.completedStoryDialogueIds.Add(dialogue.Id); changed = true; }
+        if (changed) Save();
+    }
 
     public bool AcceptQuest(AdventureQuest quest)
     {
@@ -494,20 +642,43 @@ public class CampaignSession : MonoBehaviour
             if (Config.quests == null) Config.quests = new List<AdventureQuest>();
             if (!Config.quests.Contains(quest)) Config.quests.Add(quest);
         }
-        var progress = new AdventureQuestProgress { questId = quest.Id };
+        var questGiver = ActiveDialogueNpc != null ? ActiveDialogueNpc : worldPoints.FirstOrDefault(point =>
+            point != null && point.kind == WorldInteractionKind.DialogueNPC && NpcOffersQuest(point, quest));
+        int initialItemCount = quest.objectiveType == AdventureQuestObjectiveType.CollectItem && !string.IsNullOrWhiteSpace(quest.targetItemId)
+            ? Mathf.Max(Data.Count(quest.targetItemId), Data.CollectedItemCount(quest.targetItemId))
+            : 0;
+        var progress = new AdventureQuestProgress
+        {
+            questId = quest.Id,
+            objectiveCount = Mathf.Min(Mathf.Max(1, quest.requiredCount), initialItemCount),
+            turnInNpcId = questGiver != null ? questGiver.Id : string.Empty,
+            turnInMapScene = questGiver != null ? SceneManager.GetActiveScene().name : string.Empty,
+            turnInPosition = questGiver != null ? questGiver.transform.position : Vector3.zero
+        };
+        progress.completed = progress.objectiveCount >= Mathf.Max(1, quest.requiredCount);
         Data.quests.Add(progress);
         CacheQuestObjectivePosition(progress, quest);
         Save();
-        Notify("Đã nhận nhiệm vụ: " + quest.displayName);
+        Notify(progress.completed
+            ? "Đã nhận nhiệm vụ và đủ mục tiêu: " + quest.displayName + " • Hãy quay lại NPC để nhận thưởng."
+            : "Đã nhận nhiệm vụ: " + quest.displayName);
         return true;
     }
 
     public bool TrackQuest(string questId)
     {
         var progress = QuestProgress(questId);
-        if (progress == null || progress.completed || FindQuestDefinition(questId) == null) return false;
+        if (progress == null || progress.completed && progress.rewardsClaimed || FindQuestDefinition(questId) == null) return false;
+        if (string.Equals(Data.trackedQuestId, questId, StringComparison.Ordinal))
+        {
+            Data.trackedQuestId = string.Empty;
+            Save();
+            return true;
+        }
         Data.trackedQuestId = questId;
-        CacheQuestObjectivePosition(progress, FindQuestDefinition(questId));
+        var quest = FindQuestDefinition(questId);
+        if (progress.completed) CacheQuestTurnInPosition(progress);
+        else CacheQuestObjectivePosition(progress, quest);
         Save();
         return true;
     }
@@ -517,7 +688,26 @@ public class CampaignSession : MonoBehaviour
         position = Vector3.zero;
         var quest = TrackedQuest;
         var progress = quest != null ? QuestProgress(quest.Id) : null;
-        if (quest == null || progress == null || progress.completed) return false;
+        if (quest == null || progress == null || progress.completed && progress.rewardsClaimed) return false;
+
+        if (progress.completed)
+        {
+            var giver = FindQuestTurnInNpc(progress, quest);
+            string turnInMapScene = SceneManager.GetActiveScene().name;
+            if (giver != null)
+            {
+                position = giver.transform.position;
+                progress.turnInMapScene = turnInMapScene;
+                progress.turnInPosition = position;
+                return true;
+            }
+            if (progress.turnInMapScene == turnInMapScene)
+            {
+                position = progress.turnInPosition;
+                return true;
+            }
+            return false;
+        }
 
         var point = FindQuestObjectivePoint(quest);
         string currentMap = SceneManager.GetActiveScene().name;
@@ -563,6 +753,61 @@ public class CampaignSession : MonoBehaviour
         progress.hasObjectivePosition = true;
     }
 
+    void CacheQuestTurnInPosition(AdventureQuestProgress progress)
+    {
+        if (progress == null) return;
+        var quest = FindQuestDefinition(progress.questId);
+        var npc = FindQuestTurnInNpc(progress, quest);
+        if (npc == null) return;
+        progress.turnInMapScene = SceneManager.GetActiveScene().name;
+        progress.turnInPosition = npc.transform.position;
+    }
+
+    WorldInteraction FindQuestTurnInNpc(AdventureQuestProgress progress, AdventureQuest quest)
+    {
+        if (progress == null || worldPoints == null) return null;
+        if (!string.IsNullOrWhiteSpace(progress.turnInNpcId))
+            return worldPoints.FirstOrDefault(point => point != null && point.kind == WorldInteractionKind.DialogueNPC &&
+                string.Equals(point.Id, progress.turnInNpcId, StringComparison.Ordinal));
+        return worldPoints.FirstOrDefault(point => point != null && point.kind == WorldInteractionKind.DialogueNPC &&
+            NpcOffersQuest(point, quest));
+    }
+
+    bool IsQuestTurnInNpc(AdventureQuestProgress progress, AdventureQuest quest, WorldInteraction npc)
+    {
+        if (progress == null || quest == null || npc == null || npc.kind != WorldInteractionKind.DialogueNPC) return false;
+        if (!string.IsNullOrWhiteSpace(progress.turnInNpcId))
+            return string.Equals(npc.Id, progress.turnInNpcId, StringComparison.Ordinal);
+        return NpcOffersQuest(npc, quest);
+    }
+
+    bool NpcOffersQuest(WorldInteraction npc, AdventureQuest quest)
+    {
+        if (npc == null || quest == null) return false;
+        var dialogues = new[] { npc.dialogue, npc.defaultDialogue }
+            .Concat(npc.progressionDialogues ?? new List<AdventureStoryDialogue>());
+        return dialogues.Where(dialogue => dialogue?.nodes != null)
+            .SelectMany(dialogue => dialogue.nodes)
+            .Any(node => node?.choices != null && node.choices.Any(choice => choice?.questToOffer == quest));
+    }
+
+    void TurnInCompletedQuests(WorldInteraction npc)
+    {
+        if (Data?.quests == null || npc == null) return;
+        bool changed = false;
+        foreach (var progress in Data.quests.ToArray())
+        {
+            if (progress == null || !progress.completed || progress.rewardsClaimed) continue;
+            var quest = FindQuestDefinition(progress.questId);
+            if (quest == null || !IsQuestTurnInNpc(progress, quest, npc)) continue;
+            string rewardSummary = GrantQuestRewards(progress, quest);
+            if (Data.trackedQuestId == progress.questId) Data.trackedQuestId = string.Empty;
+            Notify("Đã báo cáo nhiệm vụ: " + quest.displayName + rewardSummary);
+            changed = true;
+        }
+        if (changed) Save();
+    }
+
     WorldInteraction FindQuestObjectivePoint(AdventureQuest quest)
     {
         if (quest == null || worldPoints == null) return null;
@@ -591,7 +836,8 @@ public class CampaignSession : MonoBehaviour
     {
         var quest = TrackedQuest;
         var progress = quest != null ? QuestProgress(quest.Id) : null;
-        return quest == null || progress == null || progress.completed ? null : FindQuestObjectivePoint(quest);
+        if (quest == null || progress == null || progress.completed && progress.rewardsClaimed) return null;
+        return progress.completed ? FindQuestTurnInNpc(progress, quest) : FindQuestObjectivePoint(quest);
     }
 
     void RecordQuestProgress(AdventureQuestObjectiveType objectiveType, string itemId, BattleUnit enemy, int amount,
@@ -620,11 +866,42 @@ public class CampaignSession : MonoBehaviour
             if (progress.objectiveCount >= Mathf.Max(1, quest.requiredCount))
             {
                 progress.completed = true;
-                if (Data.trackedQuestId == progress.questId) Data.trackedQuestId = string.Empty;
-                Notify("Hoàn thành nhiệm vụ: " + quest.displayName);
+                if (string.IsNullOrWhiteSpace(progress.turnInNpcId))
+                {
+                    var giver = worldPoints.FirstOrDefault(point => point != null && point.kind == WorldInteractionKind.DialogueNPC && NpcOffersQuest(point, quest));
+                    if (giver != null)
+                    {
+                        progress.turnInNpcId = giver.Id;
+                        progress.turnInMapScene = SceneManager.GetActiveScene().name;
+                        progress.turnInPosition = giver.transform.position;
+                    }
+                }
+                Notify("Hoàn thành mục tiêu: " + quest.displayName + " • Hãy quay lại NPC để nhận thưởng.");
+                Save();
             }
             else Notify("Tiến độ nhiệm vụ: " + quest.displayName + " • " + progress.objectiveCount + "/" + Mathf.Max(1, quest.requiredCount));
         }
+    }
+
+    private string GrantQuestRewards(AdventureQuestProgress progress, AdventureQuest quest)
+    {
+        if (progress == null || quest == null || progress.rewardsClaimed || Data == null) return string.Empty;
+        // Set the claim flag before applying rewards so a save/re-entry can never duplicate them.
+        progress.rewardsClaimed = true;
+        int xp = Mathf.Max(0, quest.experienceReward);
+        if (xp > 0) GainXP(xp);
+        var granted = new List<string>();
+        foreach (var reward in quest.itemRewards ?? new List<ItemStack>())
+        {
+            if (reward == null || string.IsNullOrWhiteSpace(reward.id) || reward.count <= 0) continue;
+            var item = Config?.items?.Find(entry => entry != null && string.Equals(entry.id, reward.id, StringComparison.Ordinal));
+            if (item == null) continue;
+            Data.AddItem(reward.id, reward.count);
+            granted.Add((item != null ? item.displayName : reward.id) + " x" + reward.count);
+        }
+        string summary = xp > 0 ? " • +" + xp + " KN" : string.Empty;
+        if (granted.Count > 0) summary += " • Thưởng: " + string.Join(", ", granted);
+        return summary;
     }
     public BattleUnit Template(PartyMemberProgress member) => Config.startingParty[member.prefabIndex];
     public int MaxHP(PartyMemberProgress member) => Template(member).maxHP + member.hpBonus;
@@ -733,6 +1010,7 @@ public class CampaignSession : MonoBehaviour
     {
         if (amount <= 0 || Config.FindItem(id) == null) return;
         Data.AddItem(id, amount);
+        Data.RecordItemAcquired(id, amount);
         RecordQuestProgress(AdventureQuestObjectiveType.CollectItem, id, null, amount);
     }
     public bool Consume(string id, int amount)
@@ -873,10 +1151,10 @@ public class CampaignSession : MonoBehaviour
     public string UnlockBlockedReason(PartyMemberProgress p, ActionData skill)
     {
         if (skill == null || !Template(p).characterSkills.Contains(skill)) return "Kỹ năng không thuộc nhân vật này.";
-        if (IsSkillUnlocked(p, skill)) return "Đã học kỹ năng này. Đổi kỹ năng mang theo trong menu Party.";
+        if (IsSkillUnlocked(p, skill)) return "Đã học kỹ năng này. Đổi kỹ năng mang theo trong Đội hình.";
         if (!CanUpgrade) return "Cần đứng tại điểm nghỉ để học kỹ năng.";
         var missing = Prerequisites(p, skill).Where(x => !IsSkillUnlocked(p, x)).ToArray();
-        if (missing.Length > 0) return "Cần học trước: " + string.Join(", ", missing.Select(x => x.actionName));
+        if (missing.Length > 0) return "Cần học trước: " + string.Join(", ", missing.Select(VietnameseGameUIText.ActionName));
         if (p.skillPoints < SkillCost(skill)) return "Cần " + SkillCost(skill) + " điểm; đang có " + p.skillPoints + ".";
         return "";
     }
@@ -888,7 +1166,7 @@ public class CampaignSession : MonoBehaviour
         var reason = UnlockBlockedReason(p, skill);
         if (!string.IsNullOrEmpty(reason)) { Notify(reason); return; }
         if (!p.TryUnlock(skill, SkillCost(skill))) return;
-        EnsureLoadout(p); Save(); Notify("Đã mở khóa " + skill.actionName);
+        EnsureLoadout(p); Save(); Notify("Đã mở khóa " + VietnameseGameUIText.ActionName(skill));
     }
     public int SkillSlots => Mathf.Max(1, Config.equippedSkillSlots);
     public ActionData[] LearnedSkills(PartyMemberProgress p) => Template(p).characterSkills.Where(x => x != null && IsSkillUnlocked(p, x)).Distinct().ToArray();
@@ -937,6 +1215,7 @@ public class CampaignSession : MonoBehaviour
         if (point.enemyPrefabs.Count == 0 || point.enemyPrefabs.Any(x => x == null) || !Data.party.Any(p => p.hp > 0))
         { Notify("Cần party còn sống và prefab quái hợp lệ."); return; }
         if (!Application.CanStreamedLevelBeLoaded(Config.battleScene)) { Notify("Chưa thêm combattest vào Build Settings."); return; }
+        if (!Application.CanStreamedLevelBeLoaded(LoadingScreen.SceneName)) { Notify("Chưa thêm scene Loading vào Build Settings."); return; }
         CapturePosition();
         encounter = new EncounterData
         {
@@ -984,43 +1263,6 @@ public class CampaignSession : MonoBehaviour
 
         try
         {
-            if (playerTransform != null && enemyTransform != null && playerController != null && playerController.enabled)
-            {
-                float attackRange = playerInitiated || patrol == null
-                    ? (point != null ? point.range : 2.5f)
-                    : Mathf.Min(patrol.attackRange, point.range);
-                encounterContactProbe = CreateEncounterContactProbe(enemyTransform, patrol, attackRange);
-                enemyAttackCollider = encounterContactProbe != null
-                    ? encounterContactProbe.GetComponent<SphereCollider>()
-                    : null;
-                bool contactConfirmed = false;
-                float contactDeadline = Time.unscaledTime + .25f;
-                while (Time.unscaledTime < contactDeadline && OnMap && playerTransform != null && enemyTransform != null)
-                {
-                    Physics.SyncTransforms();
-                    if (EncounterContactConfirmed(playerTransform, playerController, enemyTransform,
-                        enemyAttackCollider, patrol))
-                    {
-                        contactConfirmed = true;
-                        break;
-                    }
-                    yield return null;
-                }
-
-                Physics.SyncTransforms();
-                contactConfirmed = contactConfirmed || EncounterContactConfirmed(playerTransform, playerController,
-                    enemyTransform, enemyAttackCollider, patrol);
-                // BeginEncounter has already verified the interaction/attack range.
-                // Keep that validated range as a fallback if Unity omits a CharacterController
-                // from the physics overlap query on this frame.
-                contactConfirmed = contactConfirmed || IsNear(point);
-                if (!contactConfirmed)
-                {
-                    Notify("Không thể tiếp cận mục tiêu để bắt đầu trận.");
-                    yield break;
-                }
-            }
-
             if (playerTransform != null && enemyTransform != null)
             {
                 FaceMapActor(playerTransform, enemyTransform.position);
@@ -1033,27 +1275,63 @@ public class CampaignSession : MonoBehaviour
             {
                 playerAction = StartEncounterAnimation(playerAnimator, Config.mapPlayerAttackTrigger, Config.mapPlayerAttackState, .7f);
                 enemyAction = StartEncounterAnimation(enemyAnimator, Config.mapEnemyHitTrigger, Config.mapEnemyHitState, .7f);
+
+                float animationDeadline = Time.unscaledTime + 3.5f;
+                bool playerAnimationFinished = false;
+                bool enemyAnimationFinished = false;
+                while (Time.unscaledTime < animationDeadline && (!playerAnimationFinished || !enemyAnimationFinished))
+                {
+                    playerAnimationFinished = UpdateEncounterAnimation(playerAction);
+                    enemyAnimationFinished = UpdateEncounterAnimation(enemyAction);
+                    if (playerAnimationFinished && enemyAnimationFinished) break;
+                    yield return null;
+                }
             }
             else
             {
-                playerAction = StartEncounterAnimation(playerAnimator, Config.mapPlayerHitTrigger, Config.mapPlayerHitState, .7f);
-                if (patrol != null)
-                {
-                    enemyAction = StartEncounterAnimation(patrol.mapAnimator, "", patrol.EncounterAttackState,
-                        .7f, patrol.EncounterMovementLayerIndex);
-                }
-                else enemyAction = new EncounterAnimationProgress { finished = true };
-            }
+                if (playerController == null || !playerController.enabled || playerTransform == null || enemyTransform == null)
+                    yield break;
+                float attackRange = patrol != null ? Mathf.Min(patrol.attackRange, point.range) : point.range;
+                encounterContactProbe = CreateEncounterContactProbe(enemyTransform, patrol, attackRange);
+                enemyAttackCollider = encounterContactProbe != null ? encounterContactProbe.GetComponent<SphereCollider>() : null;
+                if (enemyAttackCollider == null) yield break;
 
-            float animationDeadline = Time.unscaledTime + 3.5f;
-            bool playerAnimationFinished = false;
-            bool enemyAnimationFinished = false;
-            while (Time.unscaledTime < animationDeadline && (!playerAnimationFinished || !enemyAnimationFinished))
-            {
-                playerAnimationFinished = UpdateEncounterAnimation(playerAction);
-                enemyAnimationFinished = UpdateEncounterAnimation(enemyAction);
-                if (playerAnimationFinished && enemyAnimationFinished) break;
-                yield return null;
+                enemyAction = patrol != null
+                    ? StartEncounterAnimation(patrol.mapAnimator, "", patrol.EncounterAttackState,
+                        .7f, patrol.EncounterMovementLayerIndex)
+                    : StartEncounterAnimation(enemyAnimator, Config.mapEnemyHitTrigger, Config.mapEnemyHitState, .7f);
+
+                bool contactConfirmed = false;
+                bool playerAnimationFinished = false;
+                bool enemyAnimationFinished = false;
+                float hitCheckStartsAt = Time.unscaledTime + Mathf.Max(0f, patrol != null ? patrol.attackWindup : 0f);
+                float hitCheckEndsAt = hitCheckStartsAt + Mathf.Max(.05f, patrol != null ? patrol.attackContactWindow : .3f);
+                float animationDeadline = Time.unscaledTime + Mathf.Max(3.5f,
+                    hitCheckEndsAt - Time.unscaledTime + 1f);
+                while (Time.unscaledTime < animationDeadline)
+                {
+                    enemyAnimationFinished = UpdateEncounterAnimation(enemyAction);
+                    if (!contactConfirmed && Time.unscaledTime >= hitCheckStartsAt && Time.unscaledTime <= hitCheckEndsAt)
+                    {
+                        Physics.SyncTransforms();
+                        contactConfirmed = EncounterContactConfirmed(playerTransform, playerController,
+                            enemyAttackCollider);
+                        if (contactConfirmed)
+                            playerAction = StartEncounterAnimation(playerAnimator, Config.mapPlayerHitTrigger,
+                                Config.mapPlayerHitState, .7f);
+                    }
+
+                    if (contactConfirmed) playerAnimationFinished = UpdateEncounterAnimation(playerAction);
+                    bool contactWindowClosed = Time.unscaledTime > hitCheckEndsAt;
+                    if (enemyAnimationFinished && (contactConfirmed ? playerAnimationFinished : contactWindowClosed)) break;
+                    yield return null;
+                }
+
+                if (!contactConfirmed)
+                {
+                    // Enemy attack did not overlap the player, so do not fake a Hit reaction or enter combat.
+                    yield break;
+                }
             }
 
             if (playerTransform == null || enemyTransform == null || !OnMap)
@@ -1101,7 +1379,9 @@ public class CampaignSession : MonoBehaviour
             if (!LoadingScreen.Load(Config.battleScene))
             {
                 encounter = null;
-                Notify(LoadingScreen.Error);
+                Notify(string.IsNullOrWhiteSpace(LoadingScreen.Error)
+                    ? "Không thể bắt đầu tải scene chiến đấu."
+                    : LoadingScreen.Error);
                 yield break;
             }
             loadingStarted = true;
@@ -1146,34 +1426,28 @@ public class CampaignSession : MonoBehaviour
     {
         if (enemy == null) return null;
         float bodyHeight = patrol != null ? Mathf.Max(.2f, patrol.bodyHeight) : 1.8f;
+        float radius = patrol != null ? Mathf.Max(.05f, patrol.attackContactRadius) : .35f;
+        Transform attachPoint = patrol != null && patrol.HasValidAttackContactPoint ? patrol.attackContactPoint : enemy;
         var probe = new GameObject("Encounter Attack Hitbox");
         probe.layer = enemy.gameObject.layer;
-        probe.transform.SetParent(enemy, false);
-        probe.transform.localPosition = Vector3.up * (bodyHeight * .5f);
+        probe.transform.SetParent(attachPoint, false);
+        probe.transform.localPosition = attachPoint == enemy
+            ? Vector3.up * (bodyHeight * .5f) + Vector3.forward * Mathf.Min(.65f, Mathf.Max(.05f, attackRange - radius))
+            : Vector3.zero;
         probe.transform.localRotation = Quaternion.identity;
         var hitbox = probe.AddComponent<SphereCollider>();
-        hitbox.radius = Mathf.Max(.1f, attackRange);
+        hitbox.radius = radius;
         hitbox.isTrigger = true;
         return probe;
     }
 
     private static bool EncounterContactConfirmed(Transform player, CharacterController playerController,
-        Transform enemy, SphereCollider attackHitbox, EnemyEncounterBehaviour patrol)
+        SphereCollider attackHitbox)
     {
-        if (player == null || playerController == null || !playerController.enabled || enemy == null || attackHitbox == null)
+        if (player == null || playerController == null || !playerController.enabled || attackHitbox == null)
             return false;
 
         Physics.SyncTransforms();
-        if (patrol != null && patrol.IsAirborne)
-        {
-            // Keep aerial attacks at the player's height while retaining the configured
-            // attack-range sphere, so a flying enemy doesn't need body-to-body contact.
-            Vector3 center = attackHitbox.transform.position;
-            center.y = playerController.bounds.center.y;
-            attackHitbox.transform.position = center;
-            Physics.SyncTransforms();
-        }
-
         Vector3 hitboxCenter = attackHitbox.transform.TransformPoint(attackHitbox.center);
         Vector3 closestPlayerPoint = playerController.ClosestPoint(hitboxCenter);
         float scale = Mathf.Max(Mathf.Abs(attackHitbox.transform.lossyScale.x),
@@ -1516,7 +1790,7 @@ public class CampaignSession : MonoBehaviour
                 GainXP(encounter.xp);
                 foreach (var reward in encounter.rewards) AddItem(reward.id, reward.count);
             }
-            Notify("Chiến thắng! +" + encounter.xp + " EXP • Đã nhận chiến lợi phẩm.");
+            Notify("Chiến thắng! +" + encounter.xp + " KN • Đã nhận chiến lợi phẩm.");
         }
         else
         {

@@ -271,8 +271,13 @@ public class WorldInteractionEditor : Editor
         if (kind == WorldInteractionKind.DialogueNPC)
         {
             EditorGUILayout.Space(6);
-            EditorGUILayout.LabelField("Story Dialogue", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("dialogue"), new GUIContent("Dialogue Asset"));
+            EditorGUILayout.LabelField("Story & Quest Dialogue", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("dialogue"), new GUIContent("First One-Time Dialogue"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("progressionDialogues"), new GUIContent("Locked Follow-Up Dialogues"), true);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("defaultDialogue"), new GUIContent("Repeatable Default Dialogue"));
+            EditorGUILayout.HelpBox(
+                "NPC ưu tiên Dialogue đầu tiên đủ điều kiện, sau đó kiểm tra Locked Follow-Up Dialogues theo thứ tự. Mỗi thoại one-time chỉ phát một lần; sau đó NPC quay về Default Dialogue. Follow-up chỉ mở khi đã điền Required Completed Quest IDs hoặc Required Completed Dialogue IDs trong asset Story Dialogue và điều kiện đó hoàn tất. Thêm một Story Dialogue ID vào điều kiện để mở thoại theo mốc cốt truyện.",
+                MessageType.Info);
             EditorGUILayout.Space(4);
             EditorGUILayout.LabelField("NPC 3D Model & Animation", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(serializedObject.FindProperty("dialogueNpcModelPrefab"), new GUIContent("NPC Model Prefab"));
@@ -281,11 +286,14 @@ public class WorldInteractionEditor : Editor
             EditorGUILayout.PropertyField(serializedObject.FindProperty("dialogueNpcModelScale"), new GUIContent("Model Local Scale"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("dialogueFaceHeight"), new GUIContent("Fallback Face Height"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("dialogueTalkAnimationState"), new GUIContent("NPC Talk State"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("dialogueNpcIdleAnimationStates"), new GUIContent("NPC Idle States"), true);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("dialogueNpcIdleMinSeconds"), new GUIContent("Idle Switch Min Seconds"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("dialogueNpcIdleMaxSeconds"), new GUIContent("Idle Switch Max Seconds"));
             EditorGUILayout.HelpBox(
-                "Gán prefab model NPC; model được đặt làm con của điểm hội thoại. NPC Talk State là tên state trong Animator (ví dụ Base Layer.Talking). Nếu model có rig Humanoid, camera tự lấy bone Head; nếu không, dùng Fallback Face Height. Chọn Speaker Type = Player cho node người chơi và gán Player Talk Animation State trong Dialogue Asset. Hội thoại không dừng thời gian game.",
+                "Gán prefab model NPC; model được đặt làm con của điểm hội thoại. NPC Talk State là tên state trong Animator (ví dụ Base Layer.Talking). Thêm nhiều state vào NPC Idle States (ví dụ Base Layer.Idle, Base Layer.LookAround) để NPC đổi ngẫu nhiên khi không giao tiếp. Nếu model có rig Humanoid, camera tự lấy bone Head; nếu không, dùng Fallback Face Height. Trong Dialogue Asset, Player Talk Animation State chạy khi Player nói; Player Dialogue Idle Animation State giữ Player ở idle khi NPC nói. Hội thoại không dừng thời gian game.",
                 MessageType.Info);
             EditorGUILayout.HelpBox(
-                "Tạo asset bằng Create > Adventure > Story Dialogue. Thêm các node có ID riêng; node không có Choice sẽ tiếp tục khi bấm màn hình. Text của Choice là câu người chơi nói. Mỗi lựa chọn có thể nhận nhiệm vụ. Thêm quest asset vào Campaign Config > Quests để tiến độ còn dùng được sau khi đổi map hoặc tải lại game.",
+                "Tạo asset bằng Create > Adventure > Story Dialogue. Thêm các node có ID riêng; node không có Choice sẽ tiếp tục khi bấm màn hình. Text của Choice là câu người chơi nói. Mỗi lựa chọn có thể nhận nhiệm vụ. Thêm quest asset vào Campaign Config > Quests để tiến độ còn dùng được sau khi đổi map hoặc tải lại game. Có thể đặt EXP và Item Rewards trên quest; thưởng chỉ được nhận một lần khi hoàn thành.",
                 MessageType.Info);
         }
 

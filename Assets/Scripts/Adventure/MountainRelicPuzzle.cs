@@ -37,9 +37,12 @@ public sealed class MountainRelicPuzzle : MonoBehaviour
         if (prompt != null)
         {
             prompt.transform.parent.gameObject.SetActive(nearby);
-            prompt.text = solved ? "CONG DA DA MO" : Time.time < messageUntil ? message :
-                "BIA DA: " + clue + "   |   " + progress + "/" + sequence.Length +
-                (nearest >= 0 ? "   [E] Kich hoat bia " + (nearest + 1) : "   Tim cac bia da quanh khu vuc");
+            string hint = nearest >= 0
+                ? GameLocalization.Translate("[E] Kích hoạt bia {0}").Replace("{0}", (nearest + 1).ToString())
+                : GameLocalization.Translate("Tìm các bia đá quanh khu vực");
+            prompt.text = solved ? GameLocalization.Translate("CỔNG ĐÁ ĐÃ MỞ") : Time.time < messageUntil
+                ? GameLocalization.Translate(message)
+                : GameLocalization.Translate("BIA ĐÁ:") + " " + clue + "   |   " + progress + "/" + sequence.Length + "   " + hint;
         }
         if (solved || nearest < 0 || CampaignSession.InputBlocked || !Input.GetKeyDown(KeyCode.E)) return;
         ActivateStone(nearest);
@@ -51,13 +54,13 @@ public sealed class MountainRelicPuzzle : MonoBehaviour
         {
             Tint(nearest, new Color(.2f, .85f, 1));
             progress++; solved = progress == sequence.Length;
-            message = solved ? "CONG DA DA MO" : "Da kich hoat " + progress + "/" + sequence.Length;
+            message = solved ? "CỔNG ĐÁ ĐÃ MỞ" : "Đã kích hoạt " + progress + "/" + sequence.Length;
         }
         else
         {
             progress = 0;
             for (int i = 0; i < indicators.Length; i++) Tint(i, new Color(.65f,.45f,.18f));
-            message = "Sai thu tu. Goi y: " + clue;
+            message = "Sai thứ tự. Gợi ý: " + clue;
         }
         messageUntil = Time.time + 2;
     }

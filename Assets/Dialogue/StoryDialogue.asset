@@ -12,9 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 81d47f53f6394f7b8732d9ad44c43019, type: 3}
   m_Name: StoryDialogue
   m_EditorClassIdentifier: Assembly-CSharp::AdventureStoryDialogue
+  dialogueId: 
+  playOnce: 1
+  requiredCompletedQuestIds: []
+  requiredCompletedDialogueIds: []
   startNodeId: 12
   playerSpeakerName: Player
   playerTalkAnimationState: Base Layer.Talking
+  playerDialogueIdleAnimationState: Base Layer.Basic Movement
   charactersPerSecond: 32
   nodes:
   - id: 12
@@ -23,7 +28,10 @@ MonoBehaviour:
     text: "\xE2fafafa"
     nextNodeId: 13
     choices:
-    - text: "\xE2fafdfafafafafaa"
+    - text: "c\xF3"
+      nextNodeId: 13
+      questToOffer: {fileID: 0}
+    - text: "kh\xF4ng"
       nextNodeId: 13
       questToOffer: {fileID: 0}
   - id: 13
@@ -32,7 +40,7 @@ MonoBehaviour:
     text: "\xE0aaaaaaaaaaaaaaaaaaaaaaaaaa"
     nextNodeId: 14
     choices:
-    - text: ffffffffffffffffffffffffffff
+    - text: ok
       nextNodeId: 14
       questToOffer: {fileID: 11400000, guid: 84f0d647190015646836c1ed7fbde30a, type: 2}
   - id: 14

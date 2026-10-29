@@ -935,12 +935,18 @@ MonoBehaviour:
   displayName: Enemy Encounter
   kind: 4
   dialogue: {fileID: 0}
+  progressionDialogues: []
+  defaultDialogue: {fileID: 0}
   dialogueNpcModelPrefab: {fileID: 0}
   dialogueNpcModelPosition: {x: 0, y: 0, z: 0}
   dialogueNpcModelRotation: {x: 0, y: 0, z: 0}
   dialogueNpcModelScale: {x: 1, y: 1, z: 1}
   dialogueFaceHeight: 1.6
   dialogueTalkAnimationState: Base Layer.Talking
+  dialogueNpcIdleAnimationStates:
+  - Base Layer.Idle
+  dialogueNpcIdleMinSeconds: 5
+  dialogueNpcIdleMaxSeconds: 10
   targetMapScene: 
   targetMapPosition: {x: 0, y: 0, z: 0}
   targetMapEuler: {x: 0, y: 0, z: 0}
@@ -1032,6 +1038,9 @@ MonoBehaviour:
     m_Bits: 4294967291
   attackRange: 2.5
   attackWindup: 0.7
+  attackContactPoint: {fileID: 0}
+  attackContactRadius: 0.35
+  attackContactWindow: 0.3
   attackCooldown: 2
   movementLayer: Move Layer
   idleState: IdleBreathe
@@ -2573,12 +2582,18 @@ MonoBehaviour:
   displayName: "L\u01B0u game / H\u1ED3i m\xE1u"
   kind: 3
   dialogue: {fileID: 0}
+  progressionDialogues: []
+  defaultDialogue: {fileID: 0}
   dialogueNpcModelPrefab: {fileID: 0}
   dialogueNpcModelPosition: {x: 0, y: 0, z: 0}
   dialogueNpcModelRotation: {x: 0, y: 0, z: 0}
   dialogueNpcModelScale: {x: 1, y: 1, z: 1}
   dialogueFaceHeight: 1.6
   dialogueTalkAnimationState: Base Layer.Talking
+  dialogueNpcIdleAnimationStates:
+  - Base Layer.Idle
+  dialogueNpcIdleMinSeconds: 5
+  dialogueNpcIdleMaxSeconds: 10
   targetMapScene: 
   targetMapPosition: {x: 0, y: 0, z: 0}
   targetMapEuler: {x: 0, y: 0, z: 0}
@@ -34179,17 +34194,23 @@ MonoBehaviour:
   displayName: Enemy Encounter
   kind: 4
   dialogue: {fileID: 0}
+  progressionDialogues: []
+  defaultDialogue: {fileID: 0}
   dialogueNpcModelPrefab: {fileID: 0}
   dialogueNpcModelPosition: {x: 0, y: 0, z: 0}
   dialogueNpcModelRotation: {x: 0, y: 0, z: 0}
   dialogueNpcModelScale: {x: 1, y: 1, z: 1}
   dialogueFaceHeight: 1.6
   dialogueTalkAnimationState: Base Layer.Talking
+  dialogueNpcIdleAnimationStates:
+  - Base Layer.Idle
+  dialogueNpcIdleMinSeconds: 5
+  dialogueNpcIdleMaxSeconds: 10
   targetMapScene: 
   targetMapPosition: {x: 0, y: 0, z: 0}
   targetMapEuler: {x: 0, y: 0, z: 0}
   range: 2.5
-  experience: 100
+  experience: 10000000
   rewards: []
   pickupModelPrefab: {fileID: 0}
   pickupModelPosition: {x: 0, y: 0, z: 0}
@@ -34271,7 +34292,10 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967291
   attackRange: 2.5
-  attackWindup: 0.7
+  attackWindup: 0.35
+  attackContactPoint: {fileID: 789307955}
+  attackContactRadius: 0.45
+  attackContactWindow: 0.65
   attackCooldown: 2
   movementLayer: Move Layer
   idleState: Idle
@@ -37746,23 +37770,29 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WorldInteraction
   persistentId: 0b492378c0fd4201a75e85efde9e91b4
   savedWorldId: world:0b492378c0fd4201a75e85efde9e91b4
-  questMarkerId: 
+  questMarkerId: 1
   displayName: Item Pickup
   kind: 0
   dialogue: {fileID: 0}
+  progressionDialogues: []
+  defaultDialogue: {fileID: 0}
   dialogueNpcModelPrefab: {fileID: 0}
   dialogueNpcModelPosition: {x: 0, y: 0, z: 0}
   dialogueNpcModelRotation: {x: 0, y: 0, z: 0}
   dialogueNpcModelScale: {x: 1, y: 1, z: 1}
   dialogueFaceHeight: 1.6
   dialogueTalkAnimationState: Base Layer.Talking
+  dialogueNpcIdleAnimationStates:
+  - Base Layer.Idle
+  dialogueNpcIdleMinSeconds: 5
+  dialogueNpcIdleMaxSeconds: 10
   targetMapScene: 
   targetMapPosition: {x: 0, y: 0, z: 0}
   targetMapEuler: {x: 0, y: 0, z: 0}
   range: 2.5
   experience: 0
   rewards:
-  - id: ore
+  - id: herb
     count: 1
   pickupModelPrefab: {fileID: 962555611}
   pickupModelPosition: {x: 0, y: 0, z: 0}
@@ -37843,8 +37873,9 @@ MonoBehaviour:
   cameraTarget: {fileID: 1809496246}
   dialogueCameraDistance: 2.1
   dialogueVerticalArmLength: 0.05
+  dialogueCameraSideAngle: 35
   dialogueFocusSmoothSpeed: 5
-  dialogueFieldOfView: 38
+  dialogueFieldOfView: 31.8
   targetHeight: 0.04
   horizontalSmoothTime: 0.025
   verticalSmoothTime: 0.12
@@ -38294,12 +38325,18 @@ MonoBehaviour:
   displayName: "T\u01B0\u01A1ng t\xE1c"
   kind: 5
   dialogue: {fileID: 0}
+  progressionDialogues: []
+  defaultDialogue: {fileID: 0}
   dialogueNpcModelPrefab: {fileID: 0}
   dialogueNpcModelPosition: {x: 0, y: 0, z: 0}
   dialogueNpcModelRotation: {x: 0, y: 0, z: 0}
   dialogueNpcModelScale: {x: 1, y: 1, z: 1}
   dialogueFaceHeight: 1.6
   dialogueTalkAnimationState: Base Layer.Talking
+  dialogueNpcIdleAnimationStates:
+  - Base Layer.Idle
+  dialogueNpcIdleMinSeconds: 5
+  dialogueNpcIdleMaxSeconds: 10
   targetMapScene: m
   targetMapPosition: {x: 0, y: -92.31, z: 0}
   targetMapEuler: {x: 0, y: 0, z: 0}
@@ -40573,12 +40610,18 @@ MonoBehaviour:
   displayName: ddd
   kind: 3
   dialogue: {fileID: 0}
+  progressionDialogues: []
+  defaultDialogue: {fileID: 0}
   dialogueNpcModelPrefab: {fileID: 0}
   dialogueNpcModelPosition: {x: 0, y: 0, z: 0}
   dialogueNpcModelRotation: {x: 0, y: 0, z: 0}
   dialogueNpcModelScale: {x: 1, y: 1, z: 1}
   dialogueFaceHeight: 1.6
   dialogueTalkAnimationState: Base Layer.Talking
+  dialogueNpcIdleAnimationStates:
+  - Base Layer.Idle
+  dialogueNpcIdleMinSeconds: 5
+  dialogueNpcIdleMaxSeconds: 10
   targetMapScene: 
   targetMapPosition: {x: 0, y: 0, z: 0}
   targetMapEuler: {x: 0, y: 0, z: 0}
@@ -40835,12 +40878,19 @@ MonoBehaviour:
   displayName: Dialogue NPC
   kind: 6
   dialogue: {fileID: 11400000, guid: 4dc58e7141992c74db511f0f65afb0b0, type: 2}
-  dialogueNpcModelPrefab: {fileID: 5526130862497330748, guid: d8c85ecb61c1c4d41acd60bc12ced154, type: 3}
+  progressionDialogues:
+  - {fileID: 11400000, guid: 1763a453152f2c94381b0353b6e0803d, type: 2}
+  defaultDialogue: {fileID: 11400000, guid: b337605de82d3214aaed6b64f29c1945, type: 2}
+  dialogueNpcModelPrefab: {fileID: 8631952338195859945, guid: 6420f2b6c7cb7f141a78467b70d2f49a, type: 3}
   dialogueNpcModelPosition: {x: 0, y: 0, z: 0}
   dialogueNpcModelRotation: {x: 0, y: 0, z: 0}
   dialogueNpcModelScale: {x: 1, y: 1, z: 1}
-  dialogueFaceHeight: 1.6
+  dialogueFaceHeight: 2
   dialogueTalkAnimationState: Base Layer.Talking
+  dialogueNpcIdleAnimationStates:
+  - Base Layer.Idle
+  dialogueNpcIdleMinSeconds: 5
+  dialogueNpcIdleMaxSeconds: 10
   targetMapScene: 
   targetMapPosition: {x: 0, y: 0, z: 0}
   targetMapEuler: {x: 0, y: 0, z: 0}
@@ -41155,12 +41205,18 @@ MonoBehaviour:
   displayName: Chest
   kind: 1
   dialogue: {fileID: 0}
+  progressionDialogues: []
+  defaultDialogue: {fileID: 0}
   dialogueNpcModelPrefab: {fileID: 0}
   dialogueNpcModelPosition: {x: 0, y: 0, z: 0}
   dialogueNpcModelRotation: {x: 0, y: 0, z: 0}
   dialogueNpcModelScale: {x: 1, y: 1, z: 1}
   dialogueFaceHeight: 1.6
   dialogueTalkAnimationState: Base Layer.Talking
+  dialogueNpcIdleAnimationStates:
+  - Base Layer.Idle
+  dialogueNpcIdleMinSeconds: 5
+  dialogueNpcIdleMaxSeconds: 10
   targetMapScene: 
   targetMapPosition: {x: 0, y: 0, z: 0}
   targetMapEuler: {x: 0, y: 0, z: 0}
@@ -42300,7 +42356,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 100001, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 100002, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_Pivot.x
@@ -42620,7 +42676,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 100754, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 104
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 100759, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_AnchorMax.y
@@ -42666,6 +42722,10 @@ PrefabInstance:
       propertyPath: 'm_ActiveFontFeatures.Array.data[0]'
       value: 1801810542
       objectReference: {fileID: 0}
+    - target: {fileID: 100785, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -394
+      objectReference: {fileID: 0}
     - target: {fileID: 100791, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_fontColor32.rgba
       value: 4286100177
@@ -42704,7 +42764,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 100816, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 86
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 100821, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_AnchorMax.y
@@ -42716,7 +42776,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 100821, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 815
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 100821, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_SizeDelta.y
@@ -42832,7 +42892,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 101190, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 710
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 101195, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_AnchorMax.y
@@ -42964,7 +43024,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 101346, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 74
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 101351, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_AnchorMax.y
@@ -42976,7 +43036,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 101351, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 725
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 101351, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_SizeDelta.y
@@ -43148,7 +43208,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 101493, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 74
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 101498, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_AnchorMax.y
@@ -43160,7 +43220,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 101498, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 330
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 101498, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_SizeDelta.y

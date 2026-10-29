@@ -271,7 +271,8 @@ public class AdvancedUIManager : MonoBehaviour
         string detail = stat == ActionData.BuffStat.Shield
             ? $"Hấp thụ tối đa {amount} sát thương. Còn {turns} lượt."
             : $"{name}: {value}. Còn {turns} lượt.";
-        if (stacks > 1) detail += $" ({stacks} cộng dồn)";
+        detail = GameLocalization.Translate(detail);
+        if (stacks > 1) detail += GameLocalization.Translate($" ({stacks} cộng dồn)");
         BindStatusTooltip(icon, name, detail);
     }
 
@@ -285,7 +286,7 @@ public class AdvancedUIManager : MonoBehaviour
         {
             case ActionData.DebuffType.Burn:
                 name = "Thiêu đốt";
-                detail = $"Trừ {settings.burnDamage} HP cuối lượt và giảm ATK {settings.burnAttackReductionPercent:0.#}%. Còn {activeDebuff.remainingTurns} lượt.";
+                detail = $"Trừ {settings.burnDamage} máu cuối lượt và giảm sức tấn công {settings.burnAttackReductionPercent:0.#}%. Còn {activeDebuff.remainingTurns} lượt.";
                 break;
             case ActionData.DebuffType.Paralysis:
                 name = "Tê liệt";
@@ -293,7 +294,7 @@ public class AdvancedUIManager : MonoBehaviour
                 break;
             default:
                 name = "Nhiễm độc";
-                detail = $"Mất {settings.poisonMaxHpPercent:0.#}% HP tối đa cuối lượt. Còn {activeDebuff.remainingTurns} lượt.";
+                detail = $"Mất {settings.poisonMaxHpPercent:0.#}% máu tối đa cuối lượt. Còn {activeDebuff.remainingTurns} lượt.";
                 break;
         }
         BindStatusTooltip(icon, name, detail);
@@ -303,8 +304,8 @@ public class AdvancedUIManager : MonoBehaviour
     {
         switch (stat)
         {
-            case ActionData.BuffStat.Atk: return "Tăng ATK";
-            case ActionData.BuffStat.Def: return "Tăng DEF";
+            case ActionData.BuffStat.Atk: return "Tăng sức tấn công";
+            case ActionData.BuffStat.Def: return "Tăng phòng thủ";
             case ActionData.BuffStat.Crit: return "Tăng tỷ lệ chí mạng";
             case ActionData.BuffStat.Shield: return "Lá chắn";
             case ActionData.BuffStat.CritDamage: return "Tăng sát thương chí mạng";
@@ -328,8 +329,8 @@ public class AdvancedUIManager : MonoBehaviour
     public void ShowStatusTooltip(string title, string detail, Vector2 pointerPosition)
     {
         if (statusTooltipRect == null || statusTooltipCanvas == null) return;
-        statusTooltipTitle.text = title;
-        statusTooltipBody.text = detail;
+        GameLocalization.SetText(statusTooltipTitle, title);
+        GameLocalization.SetText(statusTooltipBody, detail);
         statusTooltipRect.sizeDelta = statusTooltipSize;
         statusTooltipRect.SetAsLastSibling();
         statusTooltipRect.gameObject.SetActive(true);
@@ -367,7 +368,11 @@ public class AdvancedUIManager : MonoBehaviour
         Instance = this;
         battleCanvas = GetComponentInParent<Canvas>();
         if (battleCanvas == null) battleCanvas = GetComponentInChildren<Canvas>(true);
-        if (battleCanvas != null) GameUITheme.Apply(battleCanvas.gameObject);
+        if (battleCanvas != null)
+        {
+            GameLocalization.BindHierarchy(battleCanvas.gameObject);
+            GameUITheme.Apply(battleCanvas.gameObject);
+        }
         BindRunAwayButton();
         CreateStatusTooltip();
 
@@ -534,7 +539,7 @@ public class AdvancedUIManager : MonoBehaviour
             label.fontSize = 24f;
             label.color = new Color(.88f, .88f, .88f, 1f);
         }
-        label.text = "Run Away";
+        GameLocalization.SetText(label, "Bỏ chạy");
         label.alignment = TextAlignmentOptions.Center;
         label.enableWordWrapping = false;
         label.raycastTarget = false;
@@ -549,7 +554,7 @@ public class AdvancedUIManager : MonoBehaviour
         if (combatNoticePanel == null || combatNoticeText == null) return;
 
         if (combatNoticeRoutine != null) StopCoroutine(combatNoticeRoutine);
-        combatNoticeText.text = message;
+        GameLocalization.SetText(combatNoticeText, message);
         combatNoticePanel.gameObject.SetActive(true);
         combatNoticeRoutine = StartCoroutine(HideCombatNoticeAfter(duration));
     }
@@ -1532,7 +1537,7 @@ public sealed class DebuffIconUI
         tint = hasIcon ? Color.white : new Color(0.3f, 0.12f, 0.12f, 1f);
         image.color = tint;
         label.gameObject.SetActive(true);
-        label.text = hasIcon ? turns.ToString() : effect.settings.type + "\n" + turns;
+        GameLocalization.SetText(label, hasIcon ? turns.ToString() : VietnameseGameUIText.StatusName(effect.settings.type.ToString()) + "\n" + turns);
         label.fontSize = hasIcon ? 16 : 10;
         label.alignment = hasIcon ? TextAlignmentOptions.BottomRight : TextAlignmentOptions.Center;
         label.color = Color.white;

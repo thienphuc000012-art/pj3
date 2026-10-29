@@ -48,6 +48,7 @@ public class AdventureCanvasRoot : MonoBehaviour
             foreach (var text in GetComponentsInChildren<TMP_Text>(true))
                 if (text.font == defaultFont || text.font == null) text.font = runtimeFont;
         }
+        GameLocalization.BindHierarchy(gameObject);
         GameUITheme.Apply(gameObject);
         EnsureEventSystem();
         if (kind == AdventureCanvasKind.Adventure && GetComponent<AdventureCompassHUD>() == null)
@@ -89,7 +90,7 @@ public class AdventureCanvasRoot : MonoBehaviour
     {
         var go = Node(path).gameObject; if (go.activeSelf != active) go.SetActive(active);
     }
-    public void Text(string path, string value) { var text = Component<TMP_Text>(path); if (text.text != value) text.text = value; }
+    public void Text(string path, string value) => GameLocalization.SetText(Component<TMP_Text>(path), value);
     public void Fill(string path, float value) { Component<Image>(path).fillAmount = Mathf.Clamp01(value); }
     public void Click(string path, UnityAction action)
     {
@@ -115,7 +116,7 @@ public class AdventureCanvasRoot : MonoBehaviour
     }
     public static void RowText(GameObject row, string path, string value)
     {
-        var text = row.transform.Find(path).GetComponent<TMP_Text>(); if (text.text != value) text.text = value;
+        var text = row.transform.Find(path).GetComponent<TMP_Text>(); GameLocalization.SetText(text, value);
     }
     public static void RowFill(GameObject row, string path, float value) => row.transform.Find(path).GetComponent<Image>().fillAmount = Mathf.Clamp01(value);
     public static void RowPortrait(GameObject row, string path, Sprite sprite)
@@ -137,7 +138,7 @@ public class AdventureCanvasRoot : MonoBehaviour
         button.transition = Selectable.Transition.None;
         var edge = graphic.GetComponent<UIHoverOutline>();
         if (edge == null) edge = graphic.gameObject.AddComponent<UIHoverOutline>();
-        edge.Configure(new Color(.88f, .9f, .93f, .95f));
+        edge.Configure(new Color(1f, .82f, .48f, .98f), new Vector2(2.5f, 2.5f));
         button.onClick.AddListener(action);
     }
     public static void RowSelected(GameObject row, bool selected)

@@ -181,7 +181,7 @@ public class UnlockedRestPoint
 [Serializable]
 public class CampaignSave
 {
-    public int version = 3;
+    public int version = 5;
     public string currentMapScene;
     public void MigrateSkillUnlocks()
     {
@@ -190,14 +190,24 @@ public class CampaignSave
                 foreach (var entry in member.skills)
                     if (entry.rank > 1) { member.skillPoints += entry.rank - 1; entry.rank = 1; }
         if (quests == null) quests = new List<AdventureQuestProgress>();
+        if (completedStoryDialogueIds == null) completedStoryDialogueIds = new List<string>();
+        if (consumedNpcDialogueKeys == null) consumedNpcDialogueKeys = new List<string>();
+        if (collectedItemTotals == null) collectedItemTotals = new List<ItemStack>();
+        if (version < 4)
+            foreach (var progress in quests)
+                if (progress != null && progress.completed) progress.rewardsClaimed = true;
         if (string.IsNullOrEmpty(trackedQuestId)) trackedQuestId = string.Empty;
-        version = 3;
+        version = 5;
     }
     public List<PartyMemberProgress> party = new List<PartyMemberProgress>();
     public List<ItemStack> inventory = new List<ItemStack>();
     public List<string> collected = new List<string>();
     public List<UnlockedRestPoint> unlockedRestPoints = new List<UnlockedRestPoint>();
     public List<AdventureQuestProgress> quests = new List<AdventureQuestProgress>();
+    public List<string> completedStoryDialogueIds = new List<string>();
+    public List<string> consumedNpcDialogueKeys = new List<string>();
+    [Tooltip("Lifetime item acquisitions used when accepting collect quests after the item was already picked up.")]
+    public List<ItemStack> collectedItemTotals = new List<ItemStack>();
     public string trackedQuestId;
     public Vector3 position;
     public Quaternion rotation = Quaternion.identity;
@@ -208,6 +218,15 @@ public class CampaignSave
     public bool hasCheckpoint;
 
     public int Count(string id) => inventory.Find(x => x.id == id)?.count ?? 0;
+    public int CollectedItemCount(string id) => collectedItemTotals?.Find(x => x != null && x.id == id)?.count ?? 0;
+    public void RecordItemAcquired(string id, int amount)
+    {
+        if (string.IsNullOrEmpty(id) || amount <= 0) return;
+        if (collectedItemTotals == null) collectedItemTotals = new List<ItemStack>();
+        var total = collectedItemTotals.Find(x => x != null && x.id == id);
+        if (total == null) collectedItemTotals.Add(new ItemStack(id, amount));
+        else total.count += amount;
+    }
     public void AddItem(string id, int amount)
     {
         if (string.IsNullOrEmpty(id) || amount <= 0) return;
@@ -243,6 +262,10 @@ public class AdventureQuestProgress
     public string questId;
     public int objectiveCount;
     public bool completed;
+    public bool rewardsClaimed;
+    public string turnInNpcId;
+    public string turnInMapScene;
+    public Vector3 turnInPosition;
     public string objectiveMapScene;
     public Vector3 objectivePosition;
     public bool hasObjectivePosition;

@@ -76,7 +76,7 @@ public class MapChunkStreamer : MonoBehaviour
         Blocked = !Ready || Error != null || chunks.Any(x => !Loaded(x) && Distance(x, player.transform.position) <= safetyDistance);
         bool showBlockingOverlay = !Ready || showOverlayWhileStreaming || Error != null;
         if (overlay != null) overlay.SetActive(Blocked && showBlockingOverlay && !stopping && !SuppressOverlay);
-        if (label != null) label.text = Error ?? "Đang tải khu vực...";
+        if (label != null) label.text = GameLocalization.Translate(Error ?? "Đang tải khu vực...");
         if (Time.unscaledTime >= nextShadowUpdate)
         {
             nextShadowUpdate = Time.unscaledTime + .5f;

@@ -1,0 +1,944 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e0e4287420ba4c5b99b8ba54d5ecd900, type: 3}
+  m_Name: LocalizationTable
+  m_EditorClassIdentifier: Assembly-CSharp::GameLocalizationTable
+  defaultLanguage: 0
+  entries:
+  - key: language.toggle
+    vietnamese: "Ng\xF4n ng\u1EEF: Ti\u1EBFng Vi\u1EC7t"
+    english: 'Language: English'
+  - key: dialogue.next
+    vietnamese: "Ti\u1EBFp"
+    english: Next
+  - key: menu.main.title
+    vietnamese: "MENU CH\xCDNH"
+    english: MAIN MENU
+  - key: menu.adventure.title
+    vietnamese: "H\xC0NH TR\xCCNH"
+    english: ADVENTURE
+  - key: menu.party
+    vietnamese: "\u0110\u1ED8I H\xCCNH"
+    english: PARTY
+  - key: menu.inventory
+    vietnamese: "R\u01AF\u01A0NG \u0110\u1ED2"
+    english: INVENTORY
+  - key: menu.quests
+    vietnamese: "NHI\u1EC6M V\u1EE4"
+    english: QUESTS
+  - key: menu.rest
+    vietnamese: "\u0110I\u1EC2M NGH\u1EC8"
+    english: REST POINT
+  - key: menu.attributes
+    vietnamese: "THU\u1ED8C T\xCDNH"
+    english: ATTRIBUTES
+  - key: menu.skills
+    vietnamese: "K\u1EF8 N\u0102NG"
+    english: SKILLS
+  - key: menu.crafting
+    vietnamese: "CH\u1EBE T\u1EA0O"
+    english: CRAFTING
+  - key: menu.close
+    vietnamese: "\u0110\xF3ng"
+    english: Close
+  - key: menu.back
+    vietnamese: "Tr\u1EDF l\u1EA1i"
+    english: Back
+  - key: menu.rest.back
+    vietnamese: "\u0110i\u1EC3m ngh\u1EC9"
+    english: Rest Point
+  - key: hint.interact
+    vietnamese: "[E] T\u01B0\u01A1ng t\xE1c"
+    english: '[E] Interact'
+  - key: interaction.rest.prompt
+    vietnamese: "L\u01B0u game / H\u1ED3i m\xE1u"
+    english: Rest / Save
+  - key: menu.subtitle.story
+    vietnamese: "M\u1ED7i th\xE0nh vi\xEAn mang theo m\u1ED9t c\xE2u chuy\u1EC7n."
+    english: Every member carries a story.
+  - key: save.success
+    vietnamese: "\u0110\xE3 l\u01B0u game."
+    english: Game saved.
+  - key: rest.save
+    vietnamese: "Ngh\u1EC9 ng\u01A1i & l\u01B0u game"
+    english: Rest & Save
+  - key: rest.attributes
+    vietnamese: "N\xE2ng thu\u1ED9c t\xEDnh"
+    english: Upgrade Attributes
+  - key: rest.skills
+    vietnamese: "M\u1EDF kh\xF3a k\u1EF9 n\u0103ng"
+    english: Unlock Skills
+  - key: rest.craft
+    vietnamese: "Ch\u1EBF t\u1EA1o v\u1EADt ph\u1EA9m"
+    english: Craft Items
+  - key: rest.description
+    vietnamese: "D\u1EEBng ch\xE2n. H\u1ED3i ph\u1EE5c.\nChu\u1EA9n b\u1ECB cho ch\u1EB7ng
+      \u0111\u01B0\u1EDDng ti\u1EBFp theo."
+    english: 'Rest and recover.
+
+      Prepare for the road ahead.'
+  - key: party.member
+    vietnamese: "Th\xE0nh vi\xEAn"
+    english: Member
+  - key: item.potion.one
+    vietnamese: "Thu\u1ED1c h\u1ED3i m\xE1u \xD71"
+    english: "Healing Potion \xD71"
+  - key: item.herb
+    vietnamese: "Th\u1EA3o d\u01B0\u1EE3c"
+    english: Herb
+  - key: item.ore
+    vietnamese: "Qu\u1EB7ng tinh th\u1EC3"
+    english: Crystal Ore
+  - key: inventory.empty
+    vietnamese: "R\u01B0\u01A1ng \u0111\u1ED3 \u0111ang tr\u1ED1ng."
+    english: Your inventory is empty.
+  - key: inventory.select
+    vietnamese: "Ch\u1ECDn v\u1EADt ph\u1EA9m"
+    english: Select an item
+  - key: inventory.select.hint
+    vietnamese: "Nh\u1EA5n m\u1ED9t \xF4 \u0111\u1EC3 xem th\xF4ng tin v\u1EADt ph\u1EA9m."
+    english: Select a slot to view item details.
+  - key: inventory.use
+    vietnamese: "D\xF9ng v\u1EADt ph\u1EA9m"
+    english: Use Item
+  - key: inventory.count
+    vietnamese: "S\u1ED1 l\u01B0\u1EE3ng: {0}"
+    english: 'Quantity: {0}'
+  - key: party.loadout.title
+    vietnamese: "K\u1EF8 N\u0102NG MANG THEO"
+    english: EQUIPPED SKILLS
+  - key: party.slot.empty
+    vietnamese: "\xD4 {0} \u2022 Tr\u1ED1ng"
+    english: "Slot {0} \u2022 Empty"
+  - key: skill.name.placeholder
+    vietnamese: "T\xEAn k\u1EF9 n\u0103ng"
+    english: Skill Name
+  - key: skill.description.placeholder
+    vietnamese: "M\xF4 t\u1EA3 k\u1EF9 n\u0103ng"
+    english: Skill Description
+  - key: skill.none.learned
+    vietnamese: "Ch\u01B0a h\u1ECDc k\u1EF9 n\u0103ng n\xE0o. H\xE3y \u0111\u1EBFn
+      \u0111i\u1EC3m ngh\u1EC9 \u0111\u1EC3 h\u1ECDc."
+    english: No skills learned yet. Visit a rest point to learn skills.
+  - key: skill.none.learned.short
+    vietnamese: "Ch\u01B0a h\u1ECDc k\u1EF9 n\u0103ng n\xE0o."
+    english: No skills learned.
+  - key: party.level.xp
+    vietnamese: "C\u1EA5p {0} \u2022 {1} / {2} KN"
+    english: "Level {0} \u2022 {1} / {2} XP"
+  - key: party.level.xp.upper
+    vietnamese: "C\u1EA4P {0} \u2022 {1} / {2} KN"
+    english: "LEVEL {0} \u2022 {1} / {2} XP"
+  - key: party.hp
+    vietnamese: "M\xE1u {0} / {1}"
+    english: HP {0} / {1}
+  - key: party.hp.compact
+    vietnamese: "M\xE1u {0}/{1}"
+    english: HP {0}/{1}
+  - key: party.stats
+    vietnamese: "M\xE1u {0} / {1}\nC\xF4ng {2}    Th\u1EE7 {3}\nCh\xED m\u1EA1ng
+      {4}%\nS\xE1t th\u01B0\u01A1ng ch\xED m\u1EA1ng {5}%"
+    english: 'HP {0} / {1}
+
+      Attack {2}    Defense {3}
+
+      Critical Chance
+      {4}%
+
+      Critical Damage {5}%'
+  - key: party.change.left
+    vietnamese: "\u2190 \u0110\u1ED5i v\u1ECB tr\xED"
+    english: "\u2190 Move Slot"
+  - key: party.change.right
+    vietnamese: "\u0110\u1ED5i v\u1ECB tr\xED \u2192"
+    english: "Move Slot \u2192"
+  - key: party.skill.change
+    vietnamese: "Thay \u0111\u1ED5i k\u1EF9 n\u0103ng"
+    english: Change Skill
+  - key: common.close
+    vietnamese: "\u0110\xF3ng"
+    english: Close
+  - key: common.cancel
+    vietnamese: "H\u1EE7y"
+    english: Cancel
+  - key: common.confirm
+    vietnamese: "Ch\u1EA5p thu\u1EADn"
+    english: Confirm
+  - key: party.skill.replace
+    vietnamese: "\u0110\u1ED5i k\u1EF9 n\u0103ng"
+    english: Replace Skill
+  - key: party.overview.hint
+    vietnamese: "Ch\u1ECDn \u0110\u1ED9i h\xECnh \u0111\u1EC3 \u0111\u1ED5i k\u1EF9
+      n\u0103ng mang theo ho\u1EB7c R\u01B0\u01A1ng \u0111\u1ED3 \u0111\u1EC3 xem
+      v\u1EADt ph\u1EA9m."
+    english: Choose Party to manage skills or Inventory to view items.
+  - key: upgrade.available
+    vietnamese: "\u0110I\u1EC2M KH\u1EA2 D\u1EE4NG : {0}"
+    english: 'AVAILABLE POINTS: {0}'
+  - key: upgrade.health
+    vietnamese: "Sinh l\u1EF1c"
+    english: Vitality
+  - key: combat.stats.title
+    vietnamese: "CH\u1EC8 S\u1ED0 CHI\u1EBEN \u0110\u1EA4U"
+    english: COMBAT STATS
+  - key: combat.stat.health
+    vietnamese: "M\xE1u"
+    english: Health
+  - key: combat.stat.attack.power
+    vietnamese: "L\u1EF1c t\u1EA5n c\xF4ng"
+    english: Attack Power
+  - key: combat.stat.speed
+    vietnamese: "T\u1ED1c \u0111\u1ED9"
+    english: Speed
+  - key: upgrade.chart.current
+    vietnamese: "Hi\u1EC7n t\u1EA1i"
+    english: Current
+  - key: upgrade.chart.preview
+    vietnamese: "D\u1EF1 ki\u1EBFn"
+    english: Preview
+  - key: upgrade.value.change
+    vietnamese: "{0} \u2192 {1}"
+    english: "{0} \u2192 {1}"
+  - key: upgrade.hint
+    vietnamese: "Ch\u1ECDn + / - r\u1ED3i b\u1EA5m Ch\u1EA5p nh\u1EADn \u0111\u1EC3
+      \xE1p d\u1EE5ng."
+    english: Adjust with + / - and confirm to apply.
+  - key: skill.points
+    vietnamese: "\u0110I\u1EC2M K\u1EF8 N\u0102NG : {0}"
+    english: 'SKILL POINTS: {0}'
+  - key: skill.locked
+    vietnamese: "Ch\u01B0a m\u1EDF"
+    english: Locked
+  - key: skill.basic.description
+    vietnamese: "T\u0103ng hi\u1EC7u l\u1EF1c k\u1EF9 n\u0103ng."
+    english: Increases skill effectiveness.
+  - key: skill.unlock.cost
+    vietnamese: "M\u1EDF kh\xF3a \u2022 {0} \u0111i\u1EC3m"
+    english: "Unlock \u2022 {0} points"
+  - key: skill.member.empty
+    vietnamese: "Th\xE0nh vi\xEAn ch\u01B0a c\xF3 k\u1EF9 n\u0103ng."
+    english: This member has no skills.
+  - key: attribute.confirm
+    vietnamese: "N\xE2ng c\u1EA5p thu\u1ED9c t\xEDnh"
+    english: Upgrade Attributes
+  - key: attribute.cancel
+    vietnamese: "H\u1EE7y \u0111i\u1EC3m \u0111ang ch\u1ECDn"
+    english: Cancel Pending Points
+  - key: hud.hp
+    vietnamese: "M\xE1u {0}/{1}"
+    english: HP {0}/{1}
+  - key: hud.xp
+    vietnamese: KN {0} / {1}
+    english: XP {0} / {1}
+  - key: hud.leader.name.level
+    vietnamese: "{0} \u2022 C\u1EA5p {1}"
+    english: "{0} \u2022 Level {1}"
+  - key: hud.leader.xp
+    vietnamese: "{0} / {1} KN"
+    english: "{0} / {1} XP"
+  - key: hud.level
+    vietnamese: "C\u1EA5p"
+    english: Level
+  - key: player.default
+    vietnamese: "Ng\u01B0\u1EDDi ch\u01A1i"
+    english: Player
+  - key: battle.attack
+    vietnamese: "T\u1EA5n c\xF4ng"
+    english: Attack
+  - key: battle.skill
+    vietnamese: "K\u1EF9 n\u0103ng"
+    english: Skill
+  - key: battle.item
+    vietnamese: "V\u1EADt ph\u1EA9m"
+    english: Item
+  - key: battle.target
+    vietnamese: "\u0110\u1ED5i m\u1EE5c ti\xEAu"
+    english: Change Target
+  - key: battle.runaway
+    vietnamese: "B\u1ECF ch\u1EA1y"
+    english: Run Away
+  - key: battle.parry
+    vietnamese: "\u0110\u1EE1 \u0111\xF2n"
+    english: Parry
+  - key: battle.parry.success
+    vietnamese: "\u0110\u1EE1 \u0111\xF2n th\xE0nh c\xF4ng"
+    english: Parry Successful
+  - key: battle.hp
+    vietnamese: "M\xE1u"
+    english: HP
+  - key: battle.ultimate
+    vietnamese: "Tuy\u1EC7t k\u1EF9"
+    english: Ultimate
+  - key: battle.ultimate.energy
+    vietnamese: "Tuy\u1EC7t k\u1EF9 {0}/100"
+    english: Ultimate {0}/100
+  - key: battle.stain.positive
+    vietnamese: "+{0} Tinh l\u1EF1c"
+    english: +{0} Stain
+  - key: battle.stain.negative
+    vietnamese: "{0} Tinh l\u1EF1c"
+    english: '{0} Stain'
+  - key: battle.stain.zero
+    vietnamese: "0 Tinh l\u1EF1c"
+    english: 0 Stain
+  - key: action.attack
+    vietnamese: "T\u1EA5n c\xF4ng"
+    english: Attack
+  - key: action.skill
+    vietnamese: "K\u1EF9 n\u0103ng"
+    english: Skill
+  - key: action.item
+    vietnamese: "V\u1EADt ph\u1EA9m"
+    english: Item
+  - key: action.healing
+    vietnamese: "Thu\u1ED1c h\u1ED3i m\xE1u"
+    english: Healing Potion
+  - key: action.healing.description
+    vietnamese: "H\u1ED3i 40 m\xE1u cho m\u1ED9t \u0111\u1ED3ng minh. Ti\xEAu hao
+      1 b\xECnh thu\u1ED1c."
+    english: Restore 40 HP to one ally. Consumes one potion.
+  - key: action.slash.combo
+    vietnamese: "Li\xEAn tr\u1EA3m"
+    english: Sword Slash Combo
+  - key: action.slash.combo.description
+    vietnamese: "Combo ki\u1EBFm g\u1ED3m hai \u0111\xF2n li\xEAn ti\u1EBFp. S\u1EE9c
+      m\u1EA1nh \xE1p d\u1EE5ng cho t\u1EEBng \u0111\xF2n."
+    english: 'Two-hit sword combo: attack followed by a slash. Power applies to each
+      hit.'
+  - key: action.claws.left
+    vietnamese: "V\u1ED3 b\u1EB1ng m\xF3ng tr\xE1i"
+    english: Left Claw Swipe
+  - key: action.claws.right
+    vietnamese: "V\u1ED3 b\u1EB1ng m\xF3ng ph\u1EA3i"
+    english: Right Claw Swipe
+  - key: action.claws.combo
+    vietnamese: "Combo vu\u1ED1t hai \u0111\xF2n"
+    english: Two-Hit Claw Combo
+  - key: action.claws.grab
+    vietnamese: "Combo vu\u1ED1t, v\u1ED3 v\xE0 c\u1EAFn"
+    english: Claw, Grab and Bite Combo
+  - key: action.fireball
+    vietnamese: "Phun c\u1EA7u l\u1EEDa"
+    english: Fireball
+  - key: action.fire.spread
+    vietnamese: "Phun l\u1EEDa"
+    english: Flamethrower
+  - key: action.fire.fly
+    vietnamese: "Phun l\u1EEDa khi bay"
+    english: Aerial Flamethrower
+  - key: action.fireball.fly
+    vietnamese: "Phun c\u1EA7u l\u1EEDa khi bay"
+    english: Aerial Fireball
+  - key: action.punch
+    vietnamese: "C\xFA \u0111\u1EA5m"
+    english: Punch
+  - key: action.sword
+    vietnamese: "Ch\xE9m ki\u1EBFm"
+    english: Sword Strike
+  - key: action.generic
+    vietnamese: "K\u1EF9 n\u0103ng"
+    english: Skill
+  - key: action.generic.numbered
+    vietnamese: "K\u1EF9 n\u0103ng {0}"
+    english: Skill {0}
+  - key: action.description.empty
+    vietnamese: "Ch\u01B0a c\xF3 m\xF4 t\u1EA3 k\u1EF9 n\u0103ng."
+    english: No skill description available.
+  - key: action.slot.empty
+    vietnamese: "Ch\u01B0a trang b\u1ECB"
+    english: Not Equipped
+  - key: buff.burn
+    vietnamese: "Thi\xEAu \u0111\u1ED1t"
+    english: Burn
+  - key: buff.paralysis
+    vietnamese: "T\xEA li\u1EC7t"
+    english: Paralysis
+  - key: buff.poison
+    vietnamese: "Nhi\u1EC5m \u0111\u1ED9c"
+    english: Poison
+  - key: buff.generic
+    vietnamese: "Hi\u1EC7u \u1EE9ng b\u1EA5t l\u1EE3i"
+    english: Status Effect
+  - key: buff.attack
+    vietnamese: "T\u0103ng s\u1EE9c t\u1EA5n c\xF4ng"
+    english: Attack Up
+  - key: buff.defense
+    vietnamese: "T\u0103ng ph\xF2ng th\u1EE7"
+    english: Defense Up
+  - key: buff.critical
+    vietnamese: "T\u0103ng t\u1EF7 l\u1EC7 ch\xED m\u1EA1ng"
+    english: Critical Chance Up
+  - key: buff.shield
+    vietnamese: "L\xE1 ch\u1EAFn"
+    english: Shield
+  - key: buff.critical.damage
+    vietnamese: "T\u0103ng s\xE1t th\u01B0\u01A1ng ch\xED m\u1EA1ng"
+    english: Critical Damage Up
+  - key: buff.generic.up
+    vietnamese: "Hi\u1EC7u \u1EE9ng t\u0103ng c\u01B0\u1EDDng"
+    english: Positive Effect
+  - key: buff.shield.detail
+    vietnamese: "H\u1EA5p th\u1EE5 t\u1ED1i \u0111a {0} s\xE1t th\u01B0\u01A1ng.
+      C\xF2n {1} l\u01B0\u1EE3t."
+    english: Absorbs up to {0} damage. {1} turns remaining.
+  - key: buff.detail
+    vietnamese: "{0}: {1}. C\xF2n {2} l\u01B0\u1EE3t."
+    english: '{0}: {1}. {2} turns remaining.'
+  - key: buff.stack
+    vietnamese: " ({0} c\u1ED9ng d\u1ED3n)"
+    english: ' ({0} stacks)'
+  - key: debuff.burn.detail
+    vietnamese: "Tr\u1EEB {0} m\xE1u cu\u1ED1i l\u01B0\u1EE3t v\xE0 gi\u1EA3m s\u1EE9c
+      t\u1EA5n c\xF4ng {1}%. C\xF2n {2} l\u01B0\u1EE3t."
+    english: Deals {0} damage at turn end and lowers Attack by {1}%. {2} turns remaining.
+  - key: debuff.paralysis.detail
+    vietnamese: "C\xF3 {0}% kh\u1EA3 n\u0103ng m\u1EA5t l\u01B0\u1EE3t. C\xF2n {1}
+      l\u01B0\u1EE3t."
+    english: Has a {0}% chance to lose a turn. {1} turns remaining.
+  - key: debuff.poison.detail
+    vietnamese: "M\u1EA5t {0}% m\xE1u t\u1ED1i \u0111a cu\u1ED1i l\u01B0\u1EE3t.
+      C\xF2n {1} l\u01B0\u1EE3t."
+    english: Loses {0}% of max HP at turn end. {1} turns remaining.
+  - key: debuff.remaining
+    vietnamese: "C\xF2n {0} l\u01B0\u1EE3t."
+    english: '{0} turns remaining.'
+  - key: battle.victory
+    vietnamese: "CHI\u1EBEN TH\u1EAENG"
+    english: VICTORY
+  - key: battle.defeat
+    vietnamese: "TH\u1EA4T B\u1EA0I"
+    english: DEFEAT
+  - key: battle.victory.subtitle
+    vietnamese: "CHI\u1EBEN TH\u1EAENG \u2022 H\xC0NH TR\xCCNH TI\u1EBEP DI\u1EC4N"
+    english: "VICTORY \u2022 THE JOURNEY CONTINUES"
+  - key: battle.defeat.subtitle
+    vietnamese: "TH\u1EA4T B\u1EA0I \u2022 M\u1ED8T C\u01A0 H\u1ED8I KH\xC1C"
+    english: "DEFEAT \u2022 ANOTHER CHANCE"
+  - key: battle.experience
+    vietnamese: "Kinh nghi\u1EC7m: {0}"
+    english: 'Experience: {0}'
+  - key: battle.loot
+    vietnamese: "Chi\u1EBFn l\u1EE3i ph\u1EA9m"
+    english: Loot
+  - key: battle.return.rest
+    vietnamese: "Tr\u1EDF v\u1EC1 \u0111i\u1EC3m ngh\u1EC9"
+    english: Return to Rest Point
+  - key: battle.no.loot
+    vietnamese: "Kh\xF4ng c\xF3 v\u1EADt ph\u1EA9m trong tr\u1EADn n\xE0y."
+    english: No items were found in this battle.
+  - key: battle.test.finished
+    vietnamese: "\u0110\xE3 ho\xE0n t\u1EA5t tr\u1EADn th\u1EED nghi\u1EC7m."
+    english: Test battle complete.
+  - key: battle.defeat.description
+    vietnamese: "\u0110\u1ED9i h\xECnh s\u1EBD tr\u1EDF v\u1EC1 \u0111i\u1EC3m l\u01B0u
+      g\u1EA7n nh\u1EA5t v\xE0 \u0111\u01B0\u1EE3c h\u1ED3i \u0111\u1EA7y m\xE1u.\n\nQu\xE1i
+      v\u1EABn c\xF2n tr\xEAn b\u1EA3n \u0111\u1ED3 \u0111\u1EC3 b\u1EA1n th\u1EED
+      l\u1EA1i."
+    english: 'Your party will return to the nearest save point with full health.
+
+
+      The
+      enemies remain on the map for another attempt.'
+  - key: battle.statistics
+    vietnamese: "TH\u1ED0NG K\xCA TR\u1EACN \u0110\u1EA4U"
+    english: BATTLE STATISTICS
+  - key: battle.damage.dealt
+    vietnamese: "S\xE1t th\u01B0\u01A1ng g\xE2y ra"
+    english: Damage Dealt
+  - key: battle.strongest.hit
+    vietnamese: "\u0110\xF2n m\u1EA1nh nh\u1EA5t"
+    english: Strongest Hit
+  - key: battle.damage.received
+    vietnamese: "S\xE1t th\u01B0\u01A1ng nh\u1EADn"
+    english: Damage Received
+  - key: battle.parries
+    vietnamese: "S\u1ED1 l\u1EA7n \u0111\u1EE1 \u0111\xF2n th\xE0nh c\xF4ng"
+    english: Successful Parries
+  - key: battle.enemies.defeated
+    vietnamese: "Qu\xE1i b\u1ECB h\u1EA1"
+    english: Enemies Defeated
+  - key: battle.time
+    vietnamese: "Th\u1EDDi gian"
+    english: Time
+  - key: battle.continue
+    vietnamese: "[Enter] Ti\u1EBFp t\u1EE5c"
+    english: '[Enter] Continue'
+  - key: loading.title
+    vietnamese: "H\xC0NH TR\xCCNH"
+    english: ADVENTURE
+  - key: loading.subtitle
+    vietnamese: "B\u01AF\u1EDAC QUA M\xC0N S\u01AF\u01A0NG"
+    english: BEYOND THE MIST
+  - key: loading.quote
+    vietnamese: "M\u1ED7i b\u01B0\u1EDBc ch\xE2n m\u1EDF ra m\u1ED9t c\xE2u chuy\u1EC7n."
+    english: Every step opens a new story.
+  - key: loading.status
+    vietnamese: "\u0110ANG T\u1EA2I \u2022 {0}%"
+    english: "LOADING \u2022 {0}%"
+  - key: loading.failed
+    vietnamese: "T\u1EA2I KH\xD4NG TH\xC0NH C\xD4NG"
+    english: LOAD FAILED
+  - key: loading.try.map
+    vietnamese: "Th\u1EED quay l\u1EA1i b\u1EA3n \u0111\u1ED3"
+    english: Try returning to the map
+  - key: loading.map.area
+    vietnamese: "\u0110ang t\u1EA3i khu v\u1EF1c quanh \u0111i\u1EC3m b\u1EAFt \u0111\u1EA7u."
+    english: Loading the area around the starting point.
+  - key: loading.map.prepare
+    vietnamese: "\u0110ang chu\u1EA9n b\u1ECB b\u1EA3n \u0111\u1ED3 kh\xE1m ph\xE1."
+    english: Preparing the exploration map.
+  - key: loading.battle.prepare
+    vietnamese: "Chu\u1EA9n b\u1ECB \u0111\u1ED1i m\u1EB7t v\u1EDBi th\u1EED th\xE1ch."
+    english: Preparing for the challenge.
+  - key: quest.heading
+    vietnamese: "NHI\u1EC6M V\u1EE4 \u0110ANG C\xD3"
+    english: AVAILABLE QUESTS
+  - key: quest.none
+    vietnamese: "Ch\u01B0a c\xF3 nhi\u1EC7m v\u1EE5."
+    english: No quests yet.
+  - key: quest.completed
+    vietnamese: "Ho\xE0n th\xE0nh"
+    english: Complete
+  - key: quest.completed.report
+    vietnamese: "Ho\xE0n th\xE0nh \u2022 B\xE1o c\xE1o NPC \u0111\u1EC3 nh\u1EADn
+      th\u01B0\u1EDFng"
+    english: "Complete \u2022 Report to the NPC for your reward"
+  - key: quest.tracked
+    vietnamese: " \u2022 \u0110ang theo d\xF5i"
+    english: " \u2022 Tracked"
+  - key: quest.reported
+    vietnamese: "\u0110\xE3 b\xE1o c\xE1o v\xE0 nh\u1EADn th\u01B0\u1EDFng."
+    english: Reported and reward claimed.
+  - key: quest.return.npc
+    vietnamese: "M\u1EE5c ti\xEAu \u0111\xE3 xong. H\xE3y quay l\u1EA1i NPC \u0111\u1EC3
+      nh\u1EADn th\u01B0\u1EDFng."
+    english: Objective complete. Return to the NPC to claim your reward.
+  - key: quest.progress
+    vietnamese: "Ti\u1EBFn \u0111\u1ED9: {0} / {1}"
+    english: 'Progress: {0} / {1}'
+  - key: quest.track.npc
+    vietnamese: "Theo d\xF5i v\u1ECB tr\xED NPC \u0111\u1EC3 b\xE1o c\xE1o nhi\u1EC7m
+      v\u1EE5?"
+    english: Track the NPC to report the quest?
+  - key: quest.track.prompt
+    vietnamese: "Theo d\xF5i nhi\u1EC7m v\u1EE5?"
+    english: Track this quest?
+  - key: quest.track.confirm
+    vietnamese: "B\u1EA1n c\xF3 ch\u1EAFc mu\u1ED1n theo d\xF5i nhi\u1EC7m v\u1EE5
+      n\xE0y?"
+    english: Are you sure you want to track this quest?
+  - key: quest.track.yes
+    vietnamese: "C\xF3"
+    english: Yes
+  - key: quest.track.no
+    vietnamese: "Kh\xF4ng"
+    english: No
+  - key: fasttravel.title
+    vietnamese: "DI CHUY\u1EC2N NHANH - \u0110i\u1EC3m ngh\u1EC9 \u0111\xE3 m\u1EDF
+      kh\xF3a"
+    english: FAST TRAVEL - Unlocked Rest Points
+  - key: fasttravel.button
+    vietnamese: "Di chuy\u1EC3n nhanh"
+    english: Fast Travel
+  - key: fasttravel.back
+    vietnamese: "Tr\u1EDF l\u1EA1i"
+    english: Back
+  - key: fasttravel.current
+    vietnamese: " (Hi\u1EC7n t\u1EA1i)"
+    english: ' (Current)'
+  - key: fasttravel.confirm
+    vietnamese: "B\u1EA1n c\xF3 ch\u1EAFc mu\u1ED1n d\u1ECBch chuy\u1EC3n \u0111\u1EBFn
+      {0}?"
+    english: Are you sure you want to travel to {0}?
+  - key: interaction.save
+    vietnamese: "\u0110\xE3 l\u01B0u game."
+    english: Game saved.
+  - key: dialogue.player
+    vietnamese: "Ng\u01B0\u1EDDi ch\u01A1i"
+    english: Player
+  - key: toast.used.item
+    vietnamese: "\u0110\xE3 d\xF9ng {0}"
+    english: Used {0}
+  - key: toast.fasttravel
+    vietnamese: "\u0110\xE3 \u0111\u1EBFn {0}"
+    english: Arrived at {0}
+  - key: toast.skill.unlocked
+    vietnamese: "\u0110\xE3 m\u1EDF kh\xF3a {0}"
+    english: Unlocked {0}
+  - key: toast.crafted
+    vietnamese: "\u0110\xE3 ch\u1EBF t\u1EA1o {0}"
+    english: Crafted {0}
+  - key: toast.attribute.applied
+    vietnamese: "\u0110\xE3 \xE1p d\u1EE5ng \u0111i\u1EC3m thu\u1ED9c t\xEDnh."
+    english: Attribute points applied.
+  - key: toast.rest.saved
+    vietnamese: "\u0110\xE3 h\u1ED3i \u0111\u1EA7y m\xE1u v\xE0 l\u01B0u game."
+    english: Health restored and game saved.
+  - key: toast.runaway.blocked
+    vietnamese: "B\u1EA1n kh\xF4ng th\u1EC3 tho\xE1t v\xE0o l\xFAc n\xE0y"
+    english: You cannot escape right now.
+  - key: toast.runaway.failed
+    vietnamese: "Ch\u1EA1y tr\u1ED1n th\u1EA5t b\u1EA1i"
+    english: Escape failed.
+  - key: party.preview.title
+    vietnamese: "\u0110\u1ED9i h\xECnh \u2022 C\u1EA5p 1"
+    english: "Party \u2022 Level 1"
+  - key: hud.xp.remaining
+    vietnamese: 0 / 100 KN
+    english: 0 / 100 XP
+  - key: party.preview.xp
+    vietnamese: 0 / 100 KN
+    english: 0 / 100 XP
+  - key: party.name.stats
+    vietnamese: "Th\xE0nh vi\xEAn \u2022 100/100"
+    english: "Member \u2022 100/100"
+  - key: item.potion.count
+    vietnamese: "Thu\u1ED1c h\u1ED3i m\xE1u \xD7{0}"
+    english: "Healing Potion \xD7{0}"
+  - key: crafting.ingredients
+    vietnamese: "Th\u1EA3o d\u01B0\u1EE3c {0}/{1} + Qu\u1EB7ng {2}/{3}"
+    english: Herbs {0}/{1} + Ore {2}/{3}
+  - key: inventory.choose.slot
+    vietnamese: "Ch\u1ECDn m\u1ED9t \xF4 \u0111\u1EC3 xem th\xF4ng tin v\u1EADt ph\u1EA9m."
+    english: Choose a slot to view item details.
+  - key: party.instructions
+    vietnamese: "Ch\u1ECDn Party \u0111\u1EC3 \u0111\u1ED5i k\u1EF9 n\u0103ng mang
+      theo ho\u1EB7c Inventory \u0111\u1EC3 xem r\u01B0\u01A1ng \u0111\u1ED3."
+    english: Choose Party to manage equipped skills or Inventory to view items.
+  - key: party.preparation
+    vietnamese: "T\u1EADn d\u1EE5ng nguy\xEAn li\u1EC7u thu th\u1EADp tr\xEAn \u0111\u01B0\u1EDDng
+      \u0111\u1EC3 chu\u1EA9n b\u1ECB v\u1EADt ph\u1EA9m cho c\u1EA3 \u0111\u1ED9i
+      h\xECnh."
+    english: Use materials gathered along the way to prepare supplies for the party.
+  - key: rest.preparation
+    vietnamese: "D\u1EEBng ch\xE2n. H\u1ED3i ph\u1EE5c.\nChu\u1EA9n b\u1ECB cho ch\u1EB7ng
+      \u0111\u01B0\u1EDDng ti\u1EBFp theo."
+    english: 'Rest and recover.
+
+      Prepare for the road ahead.'
+  - key: party.select.member
+    vietnamese: "Ch\u1ECDn th\xE0nh vi\xEAn"
+    english: Select Member
+  - key: stat.points.remaining
+    vietnamese: "\u0110I\u1EC2M KH\u1EA2 D\u1EE4NG : {0}"
+    english: 'AVAILABLE POINTS: {0}'
+  - key: stat.points.member
+    vietnamese: "{0} \u2022 \u0110I\u1EC2M RI\xCANG: {1} \u2022 \u0110ANG CH\u1ECCN:
+      {2}"
+    english: "{0} \u2022 PERSONAL POINTS: {1} \u2022 ALLOCATED: {2}"
+  - key: stat.health.change
+    vietnamese: "Sinh l\u1EF1c"
+    english: Vitality
+  - key: stat.upgrade.hint
+    vietnamese: "Ch\u1ECDn + / - r\u1ED3i b\u1EA5m Ch\u1EA5p nh\u1EADn \u0111\u1EC3
+      \xE1p d\u1EE5ng."
+    english: Adjust with + / - and confirm to apply.
+  - key: skill.slot.empty
+    vietnamese: "\xD4 {0} \u2022 Tr\u1ED1ng"
+    english: "Slot {0} \u2022 Empty"
+  - key: battle.menu.empty
+    vietnamese: "Ch\u01B0a trang b\u1ECB"
+    english: Not Equipped
+  - key: battle.ultimate.charge
+    vietnamese: "Tuy\u1EC7t k\u1EF9 {0}/100"
+    english: Ultimate {0}/100
+  - key: battle.stain.amount
+    vietnamese: "{0} Tinh l\u1EF1c"
+    english: '{0} Stain'
+  - key: battle.stain.gain
+    vietnamese: "+{0} Tinh l\u1EF1c"
+    english: +{0} Stain
+  - key: action.skill.number
+    vietnamese: "K\u1EF9 n\u0103ng {0}"
+    english: Skill {0}
+  - key: action.description.placeholder
+    vietnamese: "Ch\u01B0a c\xF3 m\xF4 t\u1EA3 k\u1EF9 n\u0103ng."
+    english: No skill description available.
+  - key: buff.debuff.burn.icon
+    vietnamese: "Thi\xEAu \u0111\u1ED1t\n{0}"
+    english: 'Burn
+
+      {0}'
+  - key: buff.debuff.paralysis.icon
+    vietnamese: "T\xEA li\u1EC7t\n{0}"
+    english: 'Paralysis
+
+      {0}'
+  - key: buff.debuff.poison.icon
+    vietnamese: "Nhi\u1EC5m \u0111\u1ED9c\n{0}"
+    english: 'Poison
+
+      {0}'
+  - key: battle.result.continue.loading
+    vietnamese: "\u0110ang chuy\u1EC3n c\u1EA3nh\u2026"
+    english: "Loading next scene\u2026"
+  - key: battle.result.description.test
+    vietnamese: "\u0110\xE3 ho\xE0n t\u1EA5t tr\u1EADn th\u1EED nghi\u1EC7m."
+    english: Test battle complete.
+  - key: battle.result.loot.empty
+    vietnamese: "Kh\xF4ng c\xF3 v\u1EADt ph\u1EA9m trong tr\u1EADn n\xE0y."
+    english: No items were found in this battle.
+  - key: loading.chunk.progress
+    vietnamese: "\u0110ANG T\u1EA2I KHU V\u1EF0C \u2022 {0}%"
+    english: "LOADING AREA \u2022 {0}%"
+  - key: loading.progress
+    vietnamese: "\u0110ANG T\u1EA2I \u2022 {0}%"
+    english: "LOADING \u2022 {0}%"
+  - key: loading.open.scene
+    vietnamese: "\u0110ANG M\u1EDE C\u1EA2NH \u2022 100%"
+    english: "OPENING SCENE \u2022 100%"
+  - key: compass.north
+    vietnamese: B
+    english: N
+  - key: compass.northeast
+    vietnamese: "\u0110B"
+    english: NE
+  - key: compass.east
+    vietnamese: "\u0110"
+    english: E
+  - key: compass.southeast
+    vietnamese: "\u0110N"
+    english: SE
+  - key: compass.south
+    vietnamese: N
+    english: S
+  - key: compass.southwest
+    vietnamese: TN
+    english: SW
+  - key: compass.west
+    vietnamese: T
+    english: W
+  - key: compass.northwest
+    vietnamese: TB
+    english: NW
+  - key: quest.reported.toast
+    vietnamese: "\u0110\xE3 b\xE1o c\xE1o nhi\u1EC7m v\u1EE5: {0}{1}"
+    english: 'Quest reported: {0}{1}'
+  - key: quest.completed.toast
+    vietnamese: "Ho\xE0n th\xE0nh m\u1EE5c ti\xEAu: {0} \u2022 H\xE3y quay l\u1EA1i
+      NPC \u0111\u1EC3 nh\u1EADn th\u01B0\u1EDFng."
+    english: "Objective complete: {0} \u2022 Return to the NPC to claim your reward."
+  - key: quest.progress.toast
+    vietnamese: "Ti\u1EBFn \u0111\u1ED9 nhi\u1EC7m v\u1EE5: {0} \u2022 {1}/{2}"
+    english: "Quest progress: {0} \u2022 {1}/{2}"
+  - key: quest.reward.complete
+    vietnamese: "Chi\u1EBFn th\u1EAFng! +{0} KN \u2022 \u0110\xE3 nh\u1EADn chi\u1EBFn
+      l\u1EE3i ph\u1EA9m."
+    english: "Victory! +{0} XP \u2022 Rewards received."
+  - key: quest.return.defeat
+    vietnamese: "Th\u1EA5t b\u1EA1i \u2022 \u0110\xE3 tr\u1EDF v\u1EC1 b\u1EA3n \u0111\u1ED3.
+      Qu\xE1i v\u1EABn c\xF2n \u0111\u1EC3 th\u1EED l\u1EA1i."
+    english: "Defeat \u2022 Returned to the map. The enemies remain for another attempt."
+  - key: toast.scene.missing
+    vietnamese: "Thi\u1EBFu scene map ho\u1EB7c Loading trong Build Settings."
+    english: The map or Loading scene is missing from Build Settings.
+  - key: toast.travel.scene.missing
+    vietnamese: "Scene \u0111\xEDch ph\u1EA3i c\xF3 trong Campaign Config, Additional
+      Map Scenes v\xE0 Build Settings."
+    english: The destination scene must be listed in Campaign Config, Additional
+      Map Scenes, and Build Settings.
+  - key: toast.travel.failed
+    vietnamese: "Kh\xF4ng th\u1EC3 d\u1ECBch chuy\u1EC3n."
+    english: Fast travel failed.
+  - key: toast.combat.party.missing
+    vietnamese: "C\u1EA7n \u0111\u1ED9i h\xECnh c\xF2n s\u1ED1ng v\xE0 prefab qu\xE1i
+      h\u1EE3p l\u1EC7."
+    english: A living party and a valid enemy prefab are required.
+  - key: toast.combat.scene.missing
+    vietnamese: "Ch\u01B0a th\xEAm combattest v\xE0o Build Settings."
+    english: Add the combat scene to Build Settings.
+  - key: toast.loading.scene.missing
+    vietnamese: "Ch\u01B0a th\xEAm scene Loading v\xE0o Build Settings."
+    english: Add the Loading scene to Build Settings.
+  - key: toast.cannot.escape
+    vietnamese: "Kh\xF4ng th\u1EC3 tho\xE1t kh\u1ECFi tr\u1EADn n\xE0y."
+    english: You cannot escape from this battle.
+  - key: toast.cannot.return.map
+    vietnamese: "Kh\xF4ng th\u1EC3 quay v\u1EC1 b\u1EA3n \u0111\u1ED3."
+    english: Could not return to the map.
+  - key: toast.escape.lowercase
+    vietnamese: "ch\u1EA1y tr\u1ED1n th\u1EA5t b\u1EA1i"
+    english: Escape failed.
+  - key: toast.escape.blocked.lowercase
+    vietnamese: "b\u1EA1n kh\xF4ng th\u1EC3 tho\xE1t v\xE0o l\xFAc n\xE0y"
+    english: You cannot escape right now.
+  - key: toast.skill.points
+    vietnamese: "C\u1EA7n {0} \u0111i\u1EC3m; \u0111ang c\xF3 {1}."
+    english: Requires {0} points; you have {1}.
+  - key: toast.dialogue.invalid.start
+    vietnamese: "NPC ch\u01B0a c\xF3 node h\u1ED9i tho\u1EA1i b\u1EAFt \u0111\u1EA7u
+      h\u1EE3p l\u1EC7."
+    english: The NPC has no valid starting dialogue node.
+  - key: toast.item.used
+    vietnamese: "\u0110\xE3 d\xF9ng {0}"
+    english: Used {0}
+  - key: toast.npc.quest.return
+    vietnamese: "Ho\xE0n th\xE0nh m\u1EE5c ti\xEAu: {0} \u2022 H\xE3y quay l\u1EA1i
+      NPC \u0111\u1EC3 nh\u1EADn th\u01B0\u1EDFng."
+    english: "Objective complete: {0} \u2022 Return to the NPC to claim your reward."
+  - key: party.slot.skill
+    vietnamese: "\xD4 {0} \u2022 {1}"
+    english: "Slot {0} \u2022 {1}"
+  - key: party.skill.dialog.title
+    vietnamese: "\u0110\u1ED5i k\u1EF9 n\u0103ng \xF4 {0}"
+    english: Change Skill in Slot {0}
+  - key: party.rest.member.health
+    vietnamese: "{0} \u2022 {1}/{2} m\xE1u"
+    english: "{0} \u2022 {1}/{2} HP"
+  - key: item.use.heal
+    vietnamese: "H\u1ED3i {0} m\xE1u \u2022 {1}"
+    english: "Restore {0} HP \u2022 {1}"
+  - key: attribute.strength
+    vietnamese: "S\u1EE9c m\u1EA1nh"
+    english: Strength
+  - key: attribute.defense
+    vietnamese: "Ph\xF2ng th\u1EE7"
+    english: Defense
+  - key: attribute.critical.chance
+    vietnamese: "T\u1EC9 l\u1EC7 ch\xED m\u1EA1ng"
+    english: Critical Chance
+  - key: attribute.critical.damage
+    vietnamese: "S\xE1t th\u01B0\u01A1ng ch\xED m\u1EA1ng"
+    english: Critical Damage
+  - key: skill.unlocked
+    vietnamese: "\u0110\xE3 m\u1EDF"
+    english: Unlocked
+  - key: skill.unlocked.full
+    vietnamese: "\u0110\xE3 m\u1EDF kh\xF3a"
+    english: Unlocked
+  - key: skill.reason.not.member
+    vietnamese: "K\u1EF9 n\u0103ng kh\xF4ng thu\u1ED9c nh\xE2n v\u1EADt n\xE0y."
+    english: This skill does not belong to this character.
+  - key: skill.reason.already
+    vietnamese: "\u0110\xE3 h\u1ECDc k\u1EF9 n\u0103ng n\xE0y. \u0110\u1ED5i k\u1EF9
+      n\u0103ng mang theo trong \u0110\u1ED9i h\xECnh."
+    english: This skill is already learned. Change equipped skills in Party.
+  - key: skill.reason.rest
+    vietnamese: "C\u1EA7n \u0111\u1EE9ng t\u1EA1i \u0111i\u1EC3m ngh\u1EC9 \u0111\u1EC3
+      h\u1ECDc k\u1EF9 n\u0103ng."
+    english: You must be at a rest point to learn skills.
+  - key: skill.reason.prerequisite
+    vietnamese: "C\u1EA7n h\u1ECDc tr\u01B0\u1EDBc: {0}"
+    english: 'Learn these first: {0}'
+  - key: skill.cost
+    vietnamese: "{0} \u0111i\u1EC3m"
+    english: '{0} points'
+  - key: item.herb.progress
+    vietnamese: "Th\u1EA3o d\u01B0\u1EE3c {0}/{1} + Qu\u1EB7ng tinh th\u1EC3 {2}/{3}"
+    english: Herbs {0}/{1} + Crystal Ore {2}/{3}
+  - key: puzzle.open
+    vietnamese: "C\u1ED4NG \u0110\xC1 \u0110\xC3 M\u1EDE"
+    english: STONE GATE OPEN
+  - key: puzzle.progress
+    vietnamese: "BIA \u0110\xC1: {0}   |   {1}/{2}   {3}"
+    english: 'STONE MARKER: {0}   |   {1}/{2}   {3}'
+  - key: puzzle.label
+    vietnamese: "BIA \u0110\xC1:"
+    english: 'STONE MARKER:'
+  - key: puzzle.activate
+    vietnamese: "[E] K\xEDch ho\u1EA1t bia {0}"
+    english: '[E] Activate marker {0}'
+  - key: puzzle.find
+    vietnamese: "T\xECm c\xE1c bia \u0111\xE1 quanh khu v\u1EF1c"
+    english: Find the stone markers nearby
+  - key: puzzle.activated
+    vietnamese: "\u0110\xE3 k\xEDch ho\u1EA1t {0}/{1}"
+    english: Activated {0}/{1}
+  - key: puzzle.wrong.order
+    vietnamese: "Sai th\u1EE9 t\u1EF1. G\u1EE3i \xFD: {0}"
+    english: 'Wrong order. Clue: {0}'
+  - key: chunk.loading
+    vietnamese: "\u0110ang t\u1EA3i khu v\u1EF1c..."
+    english: Loading area...
+  - key: toast.chunk.scene.missing
+    vietnamese: "Thi\u1EBFu scene khu v\u1EF1c trong Build Settings: {0}"
+    english: 'Map area scene is missing from Build Settings: {0}'
+  - key: toast.quest.accepted
+    vietnamese: "Nhi\u1EC7m v\u1EE5 \u0111\xE3 \u0111\u01B0\u1EE3c nh\u1EADn: {0}"
+    english: 'Quest accepted: {0}'
+  - key: toast.quest.reported
+    vietnamese: "\u0110\xE3 b\xE1o c\xE1o nhi\u1EC7m v\u1EE5: {0}{1}"
+    english: 'Quest reported: {0}{1}'
+  - key: toast.quest.progress
+    vietnamese: "Ti\u1EBFn \u0111\u1ED9 nhi\u1EC7m v\u1EE5: {0} \u2022 {1}/{2}"
+    english: "Quest progress: {0} \u2022 {1}/{2}"
+  - key: toast.quest.complete
+    vietnamese: "Ho\xE0n th\xE0nh m\u1EE5c ti\xEAu: {0} \u2022 H\xE3y quay l\u1EA1i
+      NPC \u0111\u1EC3 nh\u1EADn th\u01B0\u1EDFng."
+    english: "Objective complete: {0} \u2022 Return to the NPC to claim your reward."
+  - key: toast.item.pickup
+    vietnamese: "{0} \u2022 +{1} KN"
+    english: "{0} \u2022 +{1} XP"
+  - key: toast.save.failed
+    vietnamese: "Kh\xF4ng l\u01B0u \u0111\u01B0\u1EE3c game. Ki\u1EC3m tra quy\u1EC1n
+      ghi d\u1EEF li\u1EC7u."
+    english: Could not save. Check write permissions.
+  - key: toast.scene.change.failed
+    vietnamese: "Kh\xF4ng th\u1EC3 chuy\u1EC3n c\u1EA3nh."
+    english: Could not change scene.
+  - key: toast.battle.party.invalid
+    vietnamese: "C\u1EA7n party c\xF2n s\u1ED1ng v\xE0 prefab qu\xE1i h\u1EE3p l\u1EC7."
+    english: A living party and a valid enemy prefab are required.
+  - key: toast.quest.accepted.short
+    vietnamese: "\u0110\xE3 nh\u1EADn nhi\u1EC7m v\u1EE5: {0}"
+    english: 'Quest accepted: {0}'
+  - key: toast.quest.accepted.ready
+    vietnamese: "\u0110\xE3 nh\u1EADn nhi\u1EC7m v\u1EE5 v\xE0 \u0111\u1EE7 m\u1EE5c
+      ti\xEAu: {0} \u2022 H\xE3y quay l\u1EA1i NPC \u0111\u1EC3 nh\u1EADn th\u01B0\u1EDFng."
+    english: "Quest accepted and objective complete: {0} \u2022 Return to the NPC
+      to claim your reward."
+  - key: toast.scene.combat.start.failed
+    vietnamese: "Kh\xF4ng th\u1EC3 b\u1EAFt \u0111\u1EA7u t\u1EA3i scene chi\u1EBFn
+      \u0111\u1EA5u."
+    english: Could not start loading the combat scene.
+  - key: toast.chunk.load.failed
+    vietnamese: "Kh\xF4ng t\u1EA3i \u0111\u01B0\u1EE3c khu v\u1EF1c: {0}"
+    english: 'Could not load map area: {0}'
+  - key: toast.battle.defeat.return
+    vietnamese: "Th\u1EA5t b\u1EA1i \u2022 \u0110\xE3 tr\u1EDF v\u1EC1 map. Qu\xE1i
+      v\u1EABn c\xF2n \u0111\u1EC3 th\u1EED l\u1EA1i."
+    english: "Defeat \u2022 Returned to the map. The enemies remain for another attempt."
+  - key: menu.party.title.case
+    vietnamese: "\u0110\u1ED9i h\xECnh"
+    english: Party
+  - key: menu.inventory.title.case
+    vietnamese: "R\u01B0\u01A1ng \u0111\u1ED3"
+    english: Inventory
+  - key: menu.crafting.title.case
+    vietnamese: "Ch\u1EBF t\u1EA1o"
+    english: Craft
+  - key: common.select
+    vietnamese: "Ch\u1ECDn"
+    english: Select
+  - key: common.back.esc
+    vietnamese: "[Esc] Tr\u1EDF l\u1EA1i"
+    english: '[Esc] Back'
+  - key: party.level.xp.title.case
+    vietnamese: "C\u1EA5p {0} \u2022 {1} / {2} KN"
+    english: "Level {0} \u2022 {1} / {2} XP"
+  - key: crafting.ingredients.short
+    vietnamese: "Th\u1EA3o d\u01B0\u1EE3c {0}/{1} + Qu\u1EB7ng {2}/{3}"
+    english: Herbs {0}/{1} + Ore {2}/{3}
+  - key: crafting.flavor
+    vietnamese: "T\u1EEB nh\u1EEFng g\xEC t\xECm th\u1EA5y\u2026"
+    english: "Made from what you find\u2026"
+  - key: party.skill.change.hint
+    vietnamese: "Ch\u1ECDn \xF4 r\u1ED3i nh\u1EA5n k\u1EF9 n\u0103ng \u0111\xE3 h\u1ECDc.
+      Thay \u0111\u1ED5i t\u1EF1 l\u01B0u."
+    english: Select a slot, then choose a learned skill. Changes save automatically.
+  - key: battle.name.column
+    vietnamese: "T\xEAn"
+    english: Name
+  - key: battle.defeat.return.short
+    vietnamese: "\u0110\u1ED9i h\xECnh s\u1EBD tr\u1EDF v\u1EC1 \u0111i\u1EC3m l\u01B0u
+      g\u1EA7n nh\u1EA5t v\xE0 \u0111\u01B0\u1EE3c h\u1ED3i \u0111\u1EA7y m\xE1u."
+    english: The party will return to the nearest save point and be fully healed.

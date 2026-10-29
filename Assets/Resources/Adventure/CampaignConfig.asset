@@ -16,7 +16,7 @@ MonoBehaviour:
   additionalMapScenes:
   - m
   battleScene: combattest
-  encounterBlackHoleVfxPrefab: {fileID: 3165652264736840632, guid: 31e1448bbc469064e89a752925fc2ea4, type: 3}
+  encounterBlackHoleVfxPrefab: {fileID: 8016646600747896881, guid: 156ed5bf7d1fca448b8bf68959aef780, type: 3}
   encounterVfxDuration: 1.5
   encounterVfxScale: 1.5
   initiativeSpeedBonus: 100
@@ -51,7 +51,7 @@ MonoBehaviour:
   - id: potion
     displayName: "Thu\u1ED1c h\u1ED3i m\xE1u"
     icon: {fileID: 0}
-    description: "H\u1ED3i 40 HP cho m\u1ED9t th\xE0nh vi\xEAn c\xF2n s\u1ED1ng."
+    description: "H\u1ED3i 40 m\xE1u cho m\u1ED9t th\xE0nh vi\xEAn c\xF2n s\u1ED1ng."
     mapHeal: 40
     combatAction: {fileID: 11400000, guid: 146e9672b9924e76be740e0b535dac17, type: 2}
   recipes:
@@ -64,6 +64,8 @@ MonoBehaviour:
     output:
       id: potion
       count: 1
+  quests:
+  - {fileID: 11400000, guid: 84f0d647190015646836c1ed7fbde30a, type: 2}
   defeatReturnsToCheckpoint: 1
   equippedSkillSlots: 4
   skillUnlocks:

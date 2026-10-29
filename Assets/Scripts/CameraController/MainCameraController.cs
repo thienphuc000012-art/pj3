@@ -24,6 +24,8 @@ public class MainCameraController : MonoBehaviour
     [Header("Dialogue Close-up")]
     [SerializeField, Min(0.5f)] private float dialogueCameraDistance = 2.1f;
     [SerializeField, Min(0f)] private float dialogueVerticalArmLength = 0.05f;
+    [SerializeField, Range(-60f, 60f), Tooltip("Góc lệch ngang để camera nhìn NPC từ bên cạnh, tránh Player che mặt NPC.")]
+    private float dialogueCameraSideAngle = 35f;
     [SerializeField, Min(0f)] private float dialogueFocusSmoothSpeed = 5f;
     [SerializeField, Range(25f, 60f)] private float dialogueFieldOfView = 38f;
 
@@ -351,7 +353,12 @@ public class MainCameraController : MonoBehaviour
         forward.y = 0f;
         if (forward.sqrMagnitude < 0.0001f) forward = Vector3.forward;
 
-        Quaternion desiredRotation = Quaternion.LookRotation(-forward.normalized, Vector3.up);
+        // Orbit to one side of the speaker. A straight-on camera sits directly
+        // behind the player during face-to-face dialogue, so the player blocks
+        // the NPC. Rotating the follow target also keeps the close-up aimed at
+        // the same head focus point while moving the camera off that sightline.
+        Vector3 cameraApproachDirection = Quaternion.AngleAxis(dialogueCameraSideAngle, Vector3.up) * forward.normalized;
+        Quaternion desiredRotation = Quaternion.LookRotation(-cameraApproachDirection, Vector3.up);
         float blend = 1f - Mathf.Exp(-dialogueFocusSmoothSpeed * Time.unscaledDeltaTime);
         cameraTarget.position = Vector3.Lerp(cameraTarget.position, focusPoint, blend);
         cameraTarget.rotation = Quaternion.Slerp(cameraTarget.rotation, desiredRotation, blend);
