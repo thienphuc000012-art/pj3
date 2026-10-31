@@ -6,6 +6,16 @@ using UnityEngine.Playables;
 
 public enum WorldInteractionKind { Pickup, Chest, Discovery, RestPoint, Encounter, MapTransition, DialogueNPC }
 
+[Serializable]
+public sealed class NpcQuestRepeatableDialogue
+{
+    public AdventureQuest quest;
+    [Tooltip("Thoại lặp khi đã nhận nhiệm vụ nhưng chưa hoàn thành mục tiêu.")]
+    public AdventureStoryDialogue inProgressDialogue;
+    [Tooltip("Thoại lặp khi đã hoàn thành mục tiêu, kể cả sau khi nhận thưởng.")]
+    public AdventureStoryDialogue completedDialogue;
+}
+
 public class WorldInteraction : MonoBehaviour
 {
     public string persistentId;
@@ -21,6 +31,34 @@ public class WorldInteraction : MonoBehaviour
     public List<AdventureStoryDialogue> progressionDialogues = new List<AdventureStoryDialogue>();
     [Tooltip("Repeatable fallback dialogue used when no one-time story dialogue is currently available.")]
     public AdventureStoryDialogue defaultDialogue;
+    [Tooltip("Các thoại lặp theo nhiệm vụ. Kiểm tra từ trên xuống, sau các thoại cốt truyện một lần. Chưa nhận nhiệm vụ thì dùng thoại mặc định.")]
+    public List<NpcQuestRepeatableDialogue> questRepeatableDialogues = new List<NpcQuestRepeatableDialogue>();
+
+    public IEnumerable<AdventureStoryDialogue> AllDialogueAssets()
+    {
+        yield return dialogue;
+        if (progressionDialogues != null)
+            foreach (var asset in progressionDialogues) yield return asset;
+        if (questRepeatableDialogues != null)
+            foreach (var entry in questRepeatableDialogues)
+            {
+                if (entry == null) continue;
+                yield return entry.inProgressDialogue;
+                yield return entry.completedDialogue;
+            }
+        yield return defaultDialogue;
+    }
+
+    public bool IsRepeatableDialogue(AdventureStoryDialogue asset)
+    {
+        if (asset == null) return false;
+        if (asset == defaultDialogue) return true;
+        if (questRepeatableDialogues != null)
+            foreach (var entry in questRepeatableDialogues)
+                if (entry != null && (entry.inProgressDialogue == asset || entry.completedDialogue == asset)) return true;
+        return false;
+    }
+
     [Header("NPC Presentation")]
     [Tooltip("Optional 3D character prefab displayed at this dialogue point.")]
     public GameObject dialogueNpcModelPrefab;
@@ -105,6 +143,14 @@ public class WorldInteraction : MonoBehaviour
             return;
         }
         if (kind != WorldInteractionKind.Pickup && kind != WorldInteractionKind.Chest) return;
+        // A persistent campaign already knows which items/chests were consumed
+        // when returning from combat. Avoid instantiating their model/Animator
+        // just to remove it in the final world refresh.
+        if (IsConsumed)
+        {
+            gameObject.SetActive(false);
+            return;
+        }
         if (pickupModelInstance != null && pickupModelSource != pickupModelPrefab)
         {
             StopChestAnimation();

@@ -23,8 +23,25 @@ public class AdventureCanvasRoot : MonoBehaviour
     readonly Dictionary<string, Transform> nodes = new Dictionary<string, Transform>();
     readonly Dictionary<string, List<GameObject>> rows = new Dictionary<string, List<GameObject>>();
     TMP_FontAsset runtimeFont;
+    int runtimeFontKey;
+
+    sealed class SharedLanguageFont
+    {
+        public TMP_FontAsset asset;
+        public int users;
+    }
+    static readonly Dictionary<int, SharedLanguageFont> languageFonts = new Dictionary<int, SharedLanguageFont>();
+
     void Awake()
     {
+        // Menus are not visible when a map first appears. Avoid enabling all
+        // their TMP/layout/button behaviours just to hide them in UI.Update.
+        // Find/GetComponentsInChildren(true) below still binds authored objects.
+        if (kind == AdventureCanvasKind.Adventure)
+        {
+            var menu = transform.Find("Menu");
+            if (menu != null) menu.gameObject.SetActive(false);
+        }
         // Every full-screen UI reads the same background authored in AdventureCanvas.
         var common = Resources.Load<GameObject>("Adventure/UI/AdventureCanvas");
         var source = common != null ? common.transform.Find("Menu/Background")?.GetComponent<Image>() : null;
@@ -41,18 +58,33 @@ public class AdventureCanvasRoot : MonoBehaviour
             if (preview.texture == null) preview.enabled = false;
         if (languageFont != null)
         {
-            runtimeFont = TMP_FontAsset.CreateFontAsset(languageFont);
-            runtimeFont.name = "Adventure Vietnamese UI";
-            runtimeFont.atlasPopulationMode = AtlasPopulationMode.Dynamic;
-            runtimeFont.isMultiAtlasTexturesEnabled = true;
-            foreach (var text in GetComponentsInChildren<TMP_Text>(true))
-                if (text.font == defaultFont || text.font == null) text.font = runtimeFont;
+            runtimeFont = AcquireLanguageFont(languageFont, out runtimeFontKey);
+            if (runtimeFont != null)
+                foreach (var text in GetComponentsInChildren<TMP_Text>(true))
+                    if (text.font == defaultFont || text.font == null) text.font = runtimeFont;
         }
         GameLocalization.BindHierarchy(gameObject);
         GameUITheme.Apply(gameObject);
         EnsureEventSystem();
         if (kind == AdventureCanvasKind.Adventure && GetComponent<AdventureCompassHUD>() == null)
             gameObject.AddComponent<AdventureCompassHUD>();
+    }
+
+    static TMP_FontAsset AcquireLanguageFont(Font source, out int key)
+    {
+        key = source.GetInstanceID();
+        if (languageFonts.TryGetValue(key, out var shared) && shared.asset != null)
+        {
+            shared.users++;
+            return shared.asset;
+        }
+        var asset = TMP_FontAsset.CreateFontAsset(source);
+        if (asset == null) return null;
+        asset.name = "Adventure Vietnamese UI";
+        asset.atlasPopulationMode = AtlasPopulationMode.Dynamic;
+        asset.isMultiAtlasTexturesEnabled = true;
+        languageFonts[key] = new SharedLanguageFont { asset = asset, users = 1 };
+        return asset;
     }
     static void ApplyBackground(Image source, Image target)
     {
@@ -155,6 +187,12 @@ public class AdventureCanvasRoot : MonoBehaviour
     void OnDestroy()
     {
         if (runtimeFont == null) return;
+        if (languageFonts.TryGetValue(runtimeFontKey, out var shared) && shared.asset == runtimeFont)
+        {
+            shared.users--;
+            if (shared.users > 0) { runtimeFont = null; return; }
+            languageFonts.Remove(runtimeFontKey);
+        }
         foreach (var atlas in runtimeFont.atlasTextures) if (atlas != null) Destroy(atlas);
         if (runtimeFont.material != null) Destroy(runtimeFont.material);
         Destroy(runtimeFont);

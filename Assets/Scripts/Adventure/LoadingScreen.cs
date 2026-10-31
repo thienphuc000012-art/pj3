@@ -114,13 +114,7 @@ public class LoadingScreen : MonoBehaviour
         if (SceneManager.GetActiveScene() != mapScene)
             SceneManager.SetActiveScene(mapScene);
 
-        float streamerWaitStartedAt = Time.unscaledTime;
         MapChunkStreamer streamer = FindStreamer(mapScene);
-        while (streamer == null && Time.unscaledTime - streamerWaitStartedAt < 3f)
-        {
-            yield return null;
-            streamer = FindStreamer(mapScene);
-        }
 
         // Maps without chunk streaming still use the same single loading screen.
         if (streamer != null)
@@ -148,6 +142,17 @@ public class LoadingScreen : MonoBehaviour
         }
 
         loadingChunks = false;
+        // Chunk activation alone is not the end of map initialization. Keep the
+        // loading screen over the final interaction/checkpoint setup as well.
+        MapGameSetup setup = FindMapSetup(mapScene);
+        float setupDeadline = Time.unscaledTime + 30f;
+        while (setup != null && !setup.StartupReady)
+        {
+            if (!string.IsNullOrEmpty(setup.StartupError)) { Fail(setup.StartupError); yield break; }
+            if (Time.unscaledTime >= setupDeadline) { Fail("Map chưa hoàn tất khởi tạo. Hãy kiểm tra MapGameSetup."); yield break; }
+            progress = .99f;
+            yield return null;
+        }
         progress = 1f;
         yield return null;
         destination = null;
@@ -163,9 +168,8 @@ public class LoadingScreen : MonoBehaviour
         pendingMapScene = scene;
         SceneManager.SetActiveScene(scene);
 
-        foreach (MapChunkStreamer streamer in FindObjectsByType<MapChunkStreamer>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-            if (streamer != null && streamer.gameObject.scene == scene)
-                streamer.SuppressOverlay = true;
+        var streamer = FindStreamer(scene);
+        if (streamer != null) streamer.SuppressOverlay = true;
     }
 
     private static Scene FindLoadedScene(string path, string sceneName)
@@ -180,8 +184,24 @@ public class LoadingScreen : MonoBehaviour
 
     private static MapChunkStreamer FindStreamer(Scene scene)
     {
-        return FindObjectsByType<MapChunkStreamer>(FindObjectsInactive.Include, FindObjectsSortMode.None)
-            .FirstOrDefault(streamer => streamer != null && streamer.gameObject.scene == scene);
+        var current = MapChunkStreamer.Instance;
+        if (current != null && current.gameObject.scene == scene) return current;
+        foreach (var root in scene.GetRootGameObjects())
+        {
+            var streamer = root.GetComponentInChildren<MapChunkStreamer>(true);
+            if (streamer != null) return streamer;
+        }
+        return null;
+    }
+
+    private static MapGameSetup FindMapSetup(Scene scene)
+    {
+        foreach (var root in scene.GetRootGameObjects())
+        {
+            var setup = root.GetComponentInChildren<MapGameSetup>();
+            if (setup != null) return setup;
+        }
+        return null;
     }
 
     private static void PreserveMapEventSystem(Scene mapScene, Scene loadingScene)

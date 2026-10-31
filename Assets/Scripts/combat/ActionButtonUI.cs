@@ -132,18 +132,48 @@ public class ActionButtonUI : MonoBehaviour
             rect.anchorMin = min; rect.anchorMax = max;
             rect.offsetMin = offsetMin; rect.offsetMax = offsetMax;
         }
+        // Every field lives inside the row. The resource column uses a share of
+        // the available width rather than reserving 170px on a narrow menu.
         if (iconImage != null)
-            Place(iconImage.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(8, -48), new Vector2(48, -8));
+        {
+            Place(iconImage.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(16, -56), new Vector2(56, -16));
+            iconImage.preserveAspect = true;
+            iconImage.raycastTarget = false;
+        }
         if (nameText != null)
-            Place(nameText.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(56, -46), new Vector2(-170, -6));
+        {
+            Place(nameText.rectTransform, new Vector2(0, 1), new Vector2(.67f, 1), new Vector2(70, -48), new Vector2(-10, -12));
+            nameText.alignment = TextAlignmentOptions.MidlineLeft;
+            nameText.enableAutoSizing = true;
+            nameText.fontSizeMin = 16f;
+            nameText.fontSizeMax = 24f;
+            nameText.enableWordWrapping = false;
+            nameText.overflowMode = TextOverflowModes.Ellipsis;
+            nameText.margin = Vector4.zero;
+            nameText.raycastTarget = false;
+        }
         if (resourceText != null)
-            Place(resourceText.rectTransform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-162, -46), new Vector2(-8, -6));
+        {
+            Place(resourceText.rectTransform, new Vector2(.67f, 1), Vector2.one, new Vector2(0, -48), new Vector2(-18, -12));
+            resourceText.alignment = TextAlignmentOptions.MidlineRight;
+            resourceText.enableAutoSizing = true;
+            resourceText.fontSizeMin = 12f;
+            resourceText.fontSizeMax = 21f;
+            resourceText.enableWordWrapping = false;
+            resourceText.overflowMode = TextOverflowModes.Ellipsis;
+            resourceText.margin = Vector4.zero;
+            resourceText.raycastTarget = false;
+        }
         if (infoText != null)
         {
-            Place(infoText.rectTransform, Vector2.zero, Vector2.one, new Vector2(56, 6), new Vector2(-8, -48));
+            Place(infoText.rectTransform, Vector2.zero, Vector2.one, new Vector2(70, 12), new Vector2(-18, -52));
+            infoText.alignment = TextAlignmentOptions.TopLeft;
             infoText.enableAutoSizing = true;
             infoText.fontSizeMin = 12; infoText.fontSizeMax = 20;
+            infoText.enableWordWrapping = true;
             infoText.overflowMode = TextOverflowModes.Ellipsis;
+            infoText.margin = Vector4.zero;
+            infoText.raycastTarget = false;
         }
     }
 

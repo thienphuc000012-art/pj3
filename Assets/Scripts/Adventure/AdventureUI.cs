@@ -31,6 +31,7 @@ public class AdventureUI : MonoBehaviour
     TMPro.TMP_Text questPrompt, dialogueSpeaker, dialogueText;
     TMPro.TMP_Text dialogueNextLabel;
     Button dialogueScreenButton;
+    AdventureDialogueView dialogueView;
     AdventureQuest selectedQuest;
     string renderedDialogueNode;
     int dialogueCharacterCount, dialogueVisibleCharacters;
@@ -417,91 +418,33 @@ public class AdventureUI : MonoBehaviour
 
     void BuildDialogueUI()
     {
-        dialoguePage = new GameObject("Dialogue", typeof(RectTransform), typeof(Image));
-        TravelRect(dialoguePage, view.Node("Menu"), Vector2.zero, Vector2.one);
-        var screenImage = dialoguePage.GetComponent<Image>();
-        screenImage.color = new Color(0f, 0f, 0f, 0f);
-        screenImage.raycastTarget = true;
-        dialogueScreenButton = dialoguePage.AddComponent<Button>();
-        dialogueScreenButton.targetGraphic = screenImage;
-        dialogueScreenButton.transition = Selectable.Transition.None;
-        dialogueScreenButton.navigation = new Navigation { mode = Navigation.Mode.None };
+        dialogueView = view.GetComponentInChildren<AdventureDialogueView>(true);
+        if (dialogueView == null)
+            throw new System.InvalidOperationException("AdventureCanvas thiếu Menu/Dialogue (AdventureDialogueView). Hãy cập nhật prefab AdventureCanvas.");
+        dialoguePage = dialogueView.gameObject;
+        dialoguePanel = dialogueView.dialogueFrame;
+        dialogueSpeaker = dialogueView.speaker;
+        dialogueText = dialogueView.line;
+        dialogueNextLabel = dialogueView.nextLabel;
+        dialogueOptionsPanel = dialogueView.optionsPanel;
+        dialogueChoices = dialogueView.choices;
+        dialogueScreenButton = dialogueView.screenButton;
         dialogueScreenButton.onClick.AddListener(HandleDialogueScreenClick);
-
-        var panel = new GameObject("Dialogue Frame", typeof(RectTransform));
-        dialoguePanel = TravelRect(panel, dialoguePage.transform, new Vector2(.01f, .04f), new Vector2(.89f, .20f));
-
-        var shade = new GameObject("Dialogue Frame Shade", typeof(RectTransform), typeof(Image));
-        TravelRect(shade, panel.transform, Vector2.zero, Vector2.one);
-        var shadeImage = shade.GetComponent<Image>();
-        shadeImage.color = new Color(0f, 0f, 0f, .32f);
-        shadeImage.raycastTarget = false;
-
-        var frameObject = new GameObject("Dialogue Frame Art", typeof(RectTransform), typeof(Image));
-        TravelRect(frameObject, panel.transform, Vector2.zero, Vector2.one);
-        var frame = frameObject.GetComponent<Image>();
-        frame.sprite = GameUITheme.DialogueBackgroundSprite;
-        frame.type = Image.Type.Simple;
-        frame.preserveAspect = false;
-        frame.color = Color.white;
-        frame.raycastTarget = false;
-
-        dialogueSpeaker = TravelText(dialoguePage.transform, "Speaker", "", new Vector2(.025f, .20f), new Vector2(.78f, .248f));
-        dialogueSpeaker.fontSize *= 1.25f;
-        dialogueSpeaker.color = new Color(.95f, .94f, .91f, 1f);
-        dialogueSpeaker.alignment = TMPro.TextAlignmentOptions.MidlineLeft;
-        dialogueText = TravelText(panel.transform, "Line", "", new Vector2(.035f, .24f), new Vector2(.82f, .76f));
-        dialogueText.color = new Color(.93f, .92f, .88f, 1f);
-        dialogueText.alignment = TMPro.TextAlignmentOptions.MidlineLeft;
-        dialogueText.margin = new Vector4(12f, 0f, 8f, 0f);
-        dialogueText.fontSize *= 1.08f;
-        dialogueNextLabel = TravelText(panel.transform, "Next Label", "Tiếp", new Vector2(.835f, .30f), new Vector2(.975f, .70f));
-        dialogueNextLabel.alignment = TMPro.TextAlignmentOptions.Center;
-        dialogueNextLabel.color = new Color(.92f, .9f, .85f, 1f);
-
-        dialogueOptionsPanel = new GameObject("Dialogue Options Panel", typeof(RectTransform), typeof(Image));
-        TravelRect(dialogueOptionsPanel, dialoguePage.transform, new Vector2(.01f, .025f), new Vector2(.91f, .245f));
-        var optionsBackground = dialogueOptionsPanel.GetComponent<Image>();
-        optionsBackground.sprite = GameUITheme.DialogueBackgroundSprite;
-        optionsBackground.type = Image.Type.Simple;
-        optionsBackground.preserveAspect = false;
-        optionsBackground.color = Color.white;
-        optionsBackground.raycastTarget = false;
-
-        var choicesObject = new GameObject("Choices", typeof(RectTransform));
-        dialogueChoices = choicesObject.GetComponent<RectTransform>();
-        dialogueChoices.SetParent(dialogueOptionsPanel.transform, false);
-        dialogueChoices.anchorMin = Vector2.zero;
-        dialogueChoices.anchorMax = Vector2.one;
-        dialogueChoices.offsetMin = dialogueChoices.offsetMax = Vector2.zero;
-        dialogueChoices.SetAsLastSibling();
+        dialogueView.CaptureLayout();
+        dialogueView.choiceTemplate.gameObject.SetActive(false);
         SetDialogueChoiceLayout(false);
         dialoguePage.SetActive(false);
     }
 
     void SetDialogueChoiceLayout(bool showChoices)
     {
-        if (dialoguePanel != null)
-        {
-            dialoguePanel.anchorMin = new Vector2(.01f, showChoices ? .255f : .04f);
-            dialoguePanel.anchorMax = new Vector2(.89f, showChoices ? .415f : .20f);
-            dialoguePanel.offsetMin = dialoguePanel.offsetMax = Vector2.zero;
-        }
-        if (dialogueSpeaker != null)
-        {
-            float frameTop = showChoices ? .415f : .20f;
-            dialogueSpeaker.rectTransform.anchorMin = new Vector2(.025f, frameTop + .001f);
-            dialogueSpeaker.rectTransform.anchorMax = new Vector2(.78f, frameTop + .048f);
-            dialogueSpeaker.rectTransform.offsetMin = dialogueSpeaker.rectTransform.offsetMax = Vector2.zero;
-        }
-        if (dialogueOptionsPanel != null) dialogueOptionsPanel.SetActive(showChoices);
-        if (dialogueChoices != null) dialogueChoices.gameObject.SetActive(showChoices);
+        dialogueView.SetOptionsVisible(showChoices);
     }
 
     void UpdateDialogue()
     {
         var node = S.ActiveDialogueNode;
-        if (node == null) { S.EndDialogue(); return; }
+        if (node == null) { S.EndDialogue(false); return; }
         var choices = node.choices?.Where(choice => choice != null).ToArray() ?? new AdventureDialogueChoice[0];
         string nodeKey = S.ActiveDialogue.name + ":" + node.id + (S.ShowingDialogueResponse ? ":player:" + S.DialogueResponseText : "");
         if (renderedDialogueNode != nodeKey)
@@ -597,85 +540,48 @@ public class AdventureUI : MonoBehaviour
         dialogueChoices.SetAsLastSibling();
         dialogueOptionsPanel.SetActive(true);
         dialogueChoices.gameObject.SetActive(true);
-        float gap = choices.Length > 1 ? Mathf.Min(.04f, .12f / (choices.Length - 1)) : 0f;
-        float rowHeight = Mathf.Min(.26f, (.64f - gap * (choices.Length - 1)) / choices.Length);
-        float top = .82f;
         for (int i = 0; i < choices.Length; i++)
         {
             int choiceIndex = i;
-            float bottom = top - rowHeight;
-            var button = CreateDialogueChoiceButton(i, choices[i].text, () => S.ChooseDialogue(choiceIndex), bottom, top);
+            var button = CreateDialogueChoiceButton(i, choices[i].text, () => S.ChooseDialogue(choiceIndex));
             dialogueChoiceButtons.Add(button);
-            top = bottom - gap;
         }
         Canvas.ForceUpdateCanvases();
         if (EventSystem.current != null && dialogueChoiceButtons.Count > 0)
             EventSystem.current.SetSelectedGameObject(dialogueChoiceButtons[0].gameObject);
     }
 
-    Button CreateDialogueChoiceButton(int index, string choiceText, UnityEngine.Events.UnityAction action, float bottom, float top)
+    Button CreateDialogueChoiceButton(int index, string choiceText, UnityEngine.Events.UnityAction action)
     {
-        var button = Instantiate(travelButtonTemplate, dialogueChoices);
+        var template = dialogueView.choiceTemplate;
+        // Keep the same parent coordinate space as the authored template, even
+        // when the designer puts it inside a nested layout container.
+        var templateRect = (RectTransform)template.transform;
+        templateRect.ForceUpdateRectTransforms();
+        var button = Instantiate(template, template.transform.parent, false);
         button.name = "Choice " + (index + 1);
-        TravelRect(button.gameObject, dialogueChoices, new Vector2(.085f, bottom), new Vector2(.915f, top));
+        var rect = (RectTransform)button.transform;
+        rect.anchorMin = templateRect.anchorMin;
+        rect.anchorMax = templateRect.anchorMax;
+        rect.pivot = templateRect.pivot;
+        rect.sizeDelta = templateRect.sizeDelta;
+        rect.localRotation = templateRect.localRotation;
+        rect.localScale = templateRect.localScale;
+        rect.anchoredPosition3D = templateRect.anchoredPosition3D + Vector3.down *
+            (index * (templateRect.rect.height * Mathf.Abs(templateRect.localScale.y) + dialogueView.choiceSpacing));
         button.onClick = new Button.ButtonClickedEvent();
         button.onClick.AddListener(action);
-        button.navigation = new Navigation { mode = Navigation.Mode.Automatic };
-        button.interactable = true;
-
-        // The source menu button has the global hover-wipe component; a choice
-        // must stay readable even before the pointer enters it.
-        var wipe = button.GetComponent<UIButtonWipeReveal>();
-        if (wipe != null) { wipe.enabled = false; Destroy(wipe); }
-        var hoverScale = button.GetComponent<SmoothButtonHoverScale>();
-        if (hoverScale != null) { hoverScale.enabled = false; Destroy(hoverScale); }
-        foreach (var child in button.GetComponentsInChildren<Transform>(true))
-            if (child != null && (child.name == "Wipe Reveal" || child.name == "Wipe Reveal Edge" || child.name == "Button Grunge Background"))
-                Destroy(child.gameObject);
-
-        var image = button.GetComponent<Image>();
-        if (image != null)
-        {
-            image.color = new Color(.018f, .025f, .04f, 0f);
-            image.raycastTarget = true;
-            image.fillAmount = 1f;
-        }
-        button.transition = Selectable.Transition.ColorTint;
-        var colors = button.colors;
-        colors.normalColor = Color.white;
-        colors.highlightedColor = new Color(1f, .89f, .67f, 1f);
-        colors.selectedColor = new Color(1f, .89f, .67f, 1f);
-        colors.pressedColor = new Color(.78f, .68f, .5f, 1f);
-        button.colors = colors;
-
-        var goldLine = button.transform.Find("GoldLine");
-        if (goldLine != null)
-        {
-            var lineImage = goldLine.GetComponent<Image>();
-            if (lineImage != null) lineImage.enabled = false;
-        }
         var label = button.GetComponentInChildren<TMPro.TMP_Text>(true);
-        if (label != null)
+        GameLocalization.SetText(label, choiceText ?? "");
+        foreach (var scale in button.GetComponentsInChildren<SmoothButtonHoverScale>(true))
         {
-            var labelRect = label.rectTransform;
-            labelRect.anchorMin = new Vector2(.075f, 0f);
-            labelRect.anchorMax = new Vector2(.97f, 1f);
-            labelRect.offsetMin = new Vector2(10f, 2f);
-            labelRect.offsetMax = new Vector2(-8f, -2f);
-            label.enabled = true;
-            label.gameObject.SetActive(true);
-            label.color = new Color(.96f, .94f, .88f, 1f);
-            label.alignment = TMPro.TextAlignmentOptions.MidlineLeft;
-            label.margin = new Vector4(18f, 2f, 12f, 2f);
-            label.enableWordWrapping = true;
-            label.enableAutoSizing = false;
-            label.fontSize = Mathf.Max(label.fontSize, 28f);
-            label.overflowMode = TMPro.TextOverflowModes.Overflow;
-            label.raycastTarget = false;
-            GameLocalization.SetText(label, choiceText ?? "");
-            label.ForceMeshUpdate();
+            scale.enabled = false;
+            Destroy(scale);
         }
-        button.transform.SetAsLastSibling();
+        button.transition = Selectable.Transition.None;
+        var hover = button.GetComponent<DialogueChoiceTextHover>();
+        if (hover == null) hover = button.gameObject.AddComponent<DialogueChoiceTextHover>();
+        hover.Configure(label, dialogueView.choiceNormalTextColor, dialogueView.choiceHoverTextColor);
         button.gameObject.SetActive(true);
         return button;
     }
@@ -719,7 +625,7 @@ public class AdventureUI : MonoBehaviour
     }
     public bool HandleBack()
     {
-        if (S.Menu == AdventureMenu.Dialogue) { S.EndDialogue(); renderedDialogueNode = null; return true; }
+        if (S.Menu == AdventureMenu.Dialogue) return true;
         if (questDialog != null && questDialog.activeSelf) { CloseQuestDialog(); return true; }
         if (travelDialog != null && travelDialog.activeSelf) { travelDialog.SetActive(false); return true; }
         if (travelPanel != null && travelPanel.activeSelf) { CloseTravel(); return true; }

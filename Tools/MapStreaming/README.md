@@ -1,9 +1,10 @@
 # Mapgame streaming
 
 Mapgame keeps the player, cameras, UI, world interaction state and MapGame Systems.
-Environment roots are in 46 additive scenes under `Assets/Scenes/MapChunks`.
-The original saved map and Build Settings from the latest conversion are backed up under
-`Backup-20261025-132303`.
+Environment roots now use 89 additive scenes under `Assets/Scenes/MapChunksRefined`.
+The 46 original `MapChunks` scenes remain on disk but are no longer active build entries.
+Before-refinement map, chunk scenes and Build Settings are backed up under
+`BeforeRefine-20261030-211901-497`.
 Do not run the one-time converter again on an already converted map.
 
 ## Runtime
@@ -11,12 +12,20 @@ Do not run the one-time converter again on an already converted map.
 - MapGame Systems / MapChunkStreamer: load distance 45 m, unload distance 75 m,
   safety distance 15 m. Distances are measured from the chunk's environment bounds,
   not from its center; large meshes spanning a cell boundary stay available.
-- Cell size used during conversion: 40 m. Each prefab hierarchy stays together.
+- Cell size: 40 m. Each prefab/functional hierarchy stays together. Empty grouping
+  transforms are split spatially; their local ancestor chains are copied to preserve
+  non-uniform scale/shear exactly. Scene references are kept in the same cell.
 - Initial loading waits for nearby chunks after applying the saved player position.
   A Canvas loading overlay blocks movement until colliders are ready. Nearby missing
   chunks also block movement, including after a teleport. Missing build entries show
   an error instead of releasing the player into empty space.
 - Stream one scene at a time, nearest first. Keep the base map as the active scene.
+- Exploration uses Low background loading priority. Scene activation and subsequent
+  light/interaction registration are separated by rendered frames. Initial loading
+  keeps the existing priority and waits for MapGameSetup's final world refresh.
+- Loaded-scene paths and lights are cached. Runtime loads scan only the changed scene;
+  the complete world interaction scan happens once after initial setup. Movement stays
+  blocked near a pending chunk until its postprocessing is complete, and during Loading.
 - Combat transitions wait for the pending chunk operation before replacing scenes.
 - Chunk unloading removes GameObjects and colliders. Shared mesh/texture assets can
   remain resident; unused assets are reclaimed after at least four unloads while a
@@ -50,12 +59,13 @@ do not copy savedWorldId between different interactions.
 
 ## Verification
 
-Latest conversion: 46 chunks, 697 moved environment roots, and 1 root kept in the base
-scene because it references other scene objects. No exact-box mesh colliders were safe
-to replace; preserve the existing collision geometry. Conversion completed and saved
-the base scene plus all chunk scenes into Build Settings. This is a structural change,
-not a measured frame-rate or memory improvement.
-Library/CombatValidation/MapStreaming.result.txt records the latest conversion.
+Latest refinement: 89 chunks, 7,072 intact leaf hierarchies. At the authored spawn,
+initial renderer count fell from 25,164 to 19,218 and collider count from 6,421 to 4,866
+(counts include inactive objects/LOD renderers; these are not draw-call counts).
+World matrices, effective active states, layers, mesh/material/collider/light data and
+scene references were compared before and after saving/reopening all refined scenes.
+Refinement-20261030.txt records the result. This is structural validation, not a measured
+frame-rate or memory improvement.
 Profile a standalone development build for startup time, main-thread spikes, physics,
 rendering and peak memory before tuning distances or reducing mesh collision detail.
 

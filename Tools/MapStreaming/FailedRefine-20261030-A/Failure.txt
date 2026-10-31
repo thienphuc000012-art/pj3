@@ -1,0 +1,6 @@
+FAILED; original chunk files retained.
+System.InvalidOperationException: World transform changed: CandleHolderLight (non-uniform/sheared parent transforms must stay grouped).
+  at MapChunkRefiner.Compare (MapChunkRefiner+ObjectState expected, MapChunkRefiner+ObjectState actual, System.String name) [0x00081] in D:\New folder (4)\pj3\Assets\Editor\MapChunkRefiner.cs:387 
+  at MapChunkRefiner.ValidateStates (System.Collections.Generic.IEnumerable`1[T] states) [0x00012] in D:\New folder (4)\pj3\Assets\Editor\MapChunkRefiner.cs:390 
+  at MapChunkRefiner.Refine () [0x00e62] in D:\New folder (4)\pj3\Assets\Editor\MapChunkRefiner.cs:246 
+  at MapChunkRefiner.CheckRequest () [0x00059] in D:\New folder (4)\pj3\Assets\Editor\MapChunkRefiner.cs:63 

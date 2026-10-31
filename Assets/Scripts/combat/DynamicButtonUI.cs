@@ -65,6 +65,17 @@ public class DynamicButtonUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
         ResetAppearance();
     }
 
+    public void RestoreAuthoredLayout()
+    {
+        if (hasInitialized && rectTransform != null)
+        {
+            rectTransform.anchoredPosition = originalPos;
+            rectTransform.localScale = originalScale;
+            rectTransform.localRotation = originalRotation;
+        }
+        if (canvasGroup != null) canvasGroup.alpha = 1f;
+    }
+
     private void ResetAppearance()
     {
         isHovered = false;

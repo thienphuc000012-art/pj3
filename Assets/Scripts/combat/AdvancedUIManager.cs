@@ -374,6 +374,12 @@ public class AdvancedUIManager : MonoBehaviour
             GameUITheme.Apply(battleCanvas.gameObject);
         }
         BindRunAwayButton();
+        if (actionMenuPanel != null)
+        {
+            GameUITheme.Apply(actionMenuPanel.gameObject);
+            if (actionMenuPanel.GetComponent<CombatActionMenuTransition>() == null)
+                actionMenuPanel.gameObject.AddComponent<CombatActionMenuTransition>();
+        }
         CreateStatusTooltip();
 
         if (enemyHudPanel != null) enemyHudPanel.SetActive(false);
@@ -605,11 +611,15 @@ public class AdvancedUIManager : MonoBehaviour
         combatNoticeRoutine = null;
     }
 
-    public void ShowActionMenu(bool isShow)
+    public void ShowActionMenu(bool isShow) => SetActionMenuVisible(isShow, false);
+
+    private void SetActionMenuVisible(bool isShow, bool immediate)
     {
         if (actionMenuPanel != null)
         {
-            actionMenuPanel.gameObject.SetActive(isShow);
+            var transition = actionMenuPanel.GetComponent<CombatActionMenuTransition>();
+            if (transition != null) transition.SetVisible(isShow, immediate);
+            else actionMenuPanel.gameObject.SetActive(isShow);
         }
     }
 
@@ -620,21 +630,60 @@ public class AdvancedUIManager : MonoBehaviour
 
     public void PopulateSubMenu(List<ActionData> actionList)
     {
-        if (subMenuPanel == null) return;
+        if (subMenuPanel == null || subMenuContent == null || actionButtonPrefab == null) return;
         subMenuPanel.SetActive(true);
         SetFixedSkillMode(false);
+        ConfigureItemListLayout();
 
         foreach (Transform child in subMenuContent)
         {
+            child.gameObject.SetActive(false);
             Destroy(child.gameObject);
         }
 
-        foreach (ActionData action in actionList)
+        foreach (ActionData action in actionList ?? new List<ActionData>())
         {
+            if (action == null) continue;
             GameObject newBtnObj = Instantiate(actionButtonPrefab, subMenuContent);
+            var fitter = newBtnObj.GetComponent<ContentSizeFitter>();
+            if (fitter != null) fitter.enabled = false;
+            var rowLayout = newBtnObj.GetComponent<LayoutElement>();
+            if (rowLayout == null) rowLayout = newBtnObj.AddComponent<LayoutElement>();
+            rowLayout.minHeight = rowLayout.preferredHeight = 112f;
+            rowLayout.flexibleHeight = 0f;
+            rowLayout.flexibleWidth = 1f;
+            newBtnObj.transform.localScale = Vector3.one;
             ActionButtonUI btnUI = newBtnObj.GetComponent<ActionButtonUI>();
-            if (btnUI != null) btnUI.Setup(action);
+            if (btnUI != null)
+            {
+                btnUI.Setup(action);
+                btnUI.FitFixedSlot();
+            }
         }
+    }
+
+    private void ConfigureItemListLayout()
+    {
+        var contentRect = subMenuContent as RectTransform;
+        if (contentRect == null) return;
+        contentRect.anchorMin = new Vector2(0f, 1f);
+        contentRect.anchorMax = Vector2.one;
+        contentRect.pivot = new Vector2(.5f, 1f);
+        contentRect.anchoredPosition = Vector2.zero;
+        contentRect.sizeDelta = new Vector2(0f, contentRect.sizeDelta.y);
+        var layout = subMenuContent.GetComponent<VerticalLayoutGroup>();
+        if (layout == null) layout = subMenuContent.gameObject.AddComponent<VerticalLayoutGroup>();
+        layout.padding = new RectOffset(6, 6, 6, 6);
+        layout.spacing = 8f;
+        layout.childControlWidth = layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+        layout.childScaleWidth = layout.childScaleHeight = false;
+        var fitter = subMenuContent.GetComponent<ContentSizeFitter>();
+        if (fitter == null) fitter = subMenuContent.gameObject.AddComponent<ContentSizeFitter>();
+        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        if (subMenuScroll != null) subMenuScroll.horizontal = false;
     }
 
     public void UpdateStainsUI(int currentAmount, int previewChange = 0)
@@ -1104,7 +1153,7 @@ public class AdvancedUIManager : MonoBehaviour
     {
         battleUIVisible = isShow;
         if (!isShow) HideStatusTooltip();
-        ShowActionMenu(isShow);
+        SetActionMenuVisible(isShow, !isShow);
         if (!isShow) ToggleChangeTargetHint(false);
 
         if (turnOrderContainer != null) turnOrderContainer.gameObject.SetActive(isShow);

@@ -51,6 +51,16 @@ public sealed class UIButtonWipeReveal : MonoBehaviour,
             }
         }
 
+        // Reconfiguration can move an existing wipe from a small prefab image
+        // onto the full button plate. Always match the new plate's local rect.
+        reveal.transform.SetParent(plate.transform, false);
+        var revealRect = reveal.rectTransform;
+        revealRect.anchorMin = Vector2.zero;
+        revealRect.anchorMax = Vector2.one;
+        revealRect.offsetMin = revealRect.offsetMax = Vector2.zero;
+        revealRect.localScale = Vector3.one;
+        revealRect.localRotation = Quaternion.identity;
+
         reveal.sprite = sprite;
         reveal.type = Image.Type.Filled;
         reveal.fillMethod = Image.FillMethod.Horizontal;
@@ -79,7 +89,8 @@ public sealed class UIButtonWipeReveal : MonoBehaviour,
                 revealEdge = edgeObject.GetComponent<Image>();
             }
         }
-        revealEdge.color = new Color(1f, .88f, .63f, .86f);
+        revealEdge.transform.SetParent(plate.transform, false);
+        revealEdge.color = new Color(.93f, .94f, .96f, .75f);
         revealEdge.raycastTarget = false;
         revealEdge.maskable = plate.maskable;
         revealEdge.transform.SetSiblingIndex(reveal.transform.GetSiblingIndex() + 1);
@@ -87,6 +98,11 @@ public sealed class UIButtonWipeReveal : MonoBehaviour,
     }
 
     public void SetForcedReveal(bool value) => forcedReveal = value;
+
+    public void SetBaseColor(Color color)
+    {
+        if (plate != null) plate.color = color;
+    }
 
     void Update()
     {

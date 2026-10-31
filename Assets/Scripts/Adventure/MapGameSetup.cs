@@ -9,11 +9,20 @@ public class MapGameSetup : MonoBehaviour
     [Header("Game Progress")]
     [Tooltip("Bật để chơi lại từ đầu mỗi lần bắt đầu Play từ mapgame. Bản lưu cũ được sao lưu. Không reset khi quay về map từ combat hoặc dịch chuyển nhanh. Tắt để tiếp tục bản lưu.")]
     public bool startNewGame;
+    public bool StartupReady { get; private set; }
+    public string StartupError { get; private set; }
     private System.Collections.IEnumerator Start()
     {
         if (config == null) config = Resources.Load<CampaignConfig>("Adventure/CampaignConfig");
         if (player == null) player = FindFirstObjectByType<PlayerScript>();
-        if (config == null || player == null) { Debug.LogError("MapGameSetup requires campaign config and map player."); yield break; }
+        StartupReady = false;
+        StartupError = null;
+        if (config == null || player == null)
+        {
+            StartupError = "MapGameSetup requires campaign config and map player.";
+            Debug.LogError(StartupError);
+            yield break;
+        }
         // Use the original spawn for sample placement, even after loading a save.
         Vector3 origin = player.transform.position;
         var session = CampaignSession.Ensure(config, startNewGame);
@@ -22,10 +31,11 @@ public class MapGameSetup : MonoBehaviour
         if (streaming != null)
         {
             yield return streaming.Initialize(player);
-            if (!streaming.Ready) yield break;
+            if (!streaming.Ready) { StartupError = streaming.Error ?? "Map streaming initialization failed."; yield break; }
         }
         if (createStarterInteractions) CreateStarterPoints(origin);
         session.RefreshWorld();
+        StartupReady = true;
     }
     void CreateStarterPoints(Vector3 origin)
     {

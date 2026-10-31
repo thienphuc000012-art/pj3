@@ -937,6 +937,7 @@ MonoBehaviour:
   dialogue: {fileID: 0}
   progressionDialogues: []
   defaultDialogue: {fileID: 0}
+  questRepeatableDialogues: []
   dialogueNpcModelPrefab: {fileID: 0}
   dialogueNpcModelPosition: {x: 0, y: 0, z: 0}
   dialogueNpcModelRotation: {x: 0, y: 0, z: 0}
@@ -2584,6 +2585,7 @@ MonoBehaviour:
   dialogue: {fileID: 0}
   progressionDialogues: []
   defaultDialogue: {fileID: 0}
+  questRepeatableDialogues: []
   dialogueNpcModelPrefab: {fileID: 0}
   dialogueNpcModelPosition: {x: 0, y: 0, z: 0}
   dialogueNpcModelRotation: {x: 0, y: 0, z: 0}
@@ -34196,6 +34198,7 @@ MonoBehaviour:
   dialogue: {fileID: 0}
   progressionDialogues: []
   defaultDialogue: {fileID: 0}
+  questRepeatableDialogues: []
   dialogueNpcModelPrefab: {fileID: 0}
   dialogueNpcModelPosition: {x: 0, y: 0, z: 0}
   dialogueNpcModelRotation: {x: 0, y: 0, z: 0}
@@ -37776,6 +37779,7 @@ MonoBehaviour:
   dialogue: {fileID: 0}
   progressionDialogues: []
   defaultDialogue: {fileID: 0}
+  questRepeatableDialogues: []
   dialogueNpcModelPrefab: {fileID: 0}
   dialogueNpcModelPosition: {x: 0, y: 0, z: 0}
   dialogueNpcModelRotation: {x: 0, y: 0, z: 0}
@@ -38327,6 +38331,7 @@ MonoBehaviour:
   dialogue: {fileID: 0}
   progressionDialogues: []
   defaultDialogue: {fileID: 0}
+  questRepeatableDialogues: []
   dialogueNpcModelPrefab: {fileID: 0}
   dialogueNpcModelPosition: {x: 0, y: 0, z: 0}
   dialogueNpcModelRotation: {x: 0, y: 0, z: 0}
@@ -40612,6 +40617,7 @@ MonoBehaviour:
   dialogue: {fileID: 0}
   progressionDialogues: []
   defaultDialogue: {fileID: 0}
+  questRepeatableDialogues: []
   dialogueNpcModelPrefab: {fileID: 0}
   dialogueNpcModelPosition: {x: 0, y: 0, z: 0}
   dialogueNpcModelRotation: {x: 0, y: 0, z: 0}
@@ -40880,7 +40886,11 @@ MonoBehaviour:
   dialogue: {fileID: 11400000, guid: 4dc58e7141992c74db511f0f65afb0b0, type: 2}
   progressionDialogues:
   - {fileID: 11400000, guid: 1763a453152f2c94381b0353b6e0803d, type: 2}
-  defaultDialogue: {fileID: 11400000, guid: b337605de82d3214aaed6b64f29c1945, type: 2}
+  defaultDialogue: {fileID: 0}
+  questRepeatableDialogues:
+  - quest: {fileID: 11400000, guid: 84f0d647190015646836c1ed7fbde30a, type: 2}
+    inProgressDialogue: {fileID: 11400000, guid: b337605de82d3214aaed6b64f29c1945, type: 2}
+    completedDialogue: {fileID: 11400000, guid: 4a286d0e72796524eb546e4875c2040f, type: 2}
   dialogueNpcModelPrefab: {fileID: 8631952338195859945, guid: 6420f2b6c7cb7f141a78467b70d2f49a, type: 3}
   dialogueNpcModelPosition: {x: 0, y: 0, z: 0}
   dialogueNpcModelRotation: {x: 0, y: 0, z: 0}
@@ -41207,6 +41217,7 @@ MonoBehaviour:
   dialogue: {fileID: 0}
   progressionDialogues: []
   defaultDialogue: {fileID: 0}
+  questRepeatableDialogues: []
   dialogueNpcModelPrefab: {fileID: 0}
   dialogueNpcModelPosition: {x: 0, y: 0, z: 0}
   dialogueNpcModelRotation: {x: 0, y: 0, z: 0}
@@ -42156,196 +42167,369 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MapChunkStreamer
   chunks:
-  - scenePath: Assets/Scenes/MapChunks/Map_-1_-3.unity
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-6_-3.unity
     bounds:
-      m_Center: {x: -14.900002, y: 224.85, z: -95.054535}
-      m_Extent: {x: 60, y: 224.85, z: 126.80237}
-  - scenePath: Assets/Scenes/MapChunks/Map_-1_-2.unity
+      m_Center: {x: -204.06573, y: 307.94885, z: -90.45961}
+      m_Extent: {x: 18.83313, y: 79.14459, z: 17.500168}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-6_-2.unity
     bounds:
-      m_Center: {x: -35.229996, y: 230.175, z: -57.399994}
-      m_Extent: {x: 136, y: 230.175, z: 136}
-  - scenePath: Assets/Scenes/MapChunks/Map_-1_-4.unity
+      m_Center: {x: -206.57442, y: 304.96597, z: -58.710484}
+      m_Extent: {x: 24.46611, y: 96.33017, z: 33.48672}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-6_-1.unity
     bounds:
-      m_Center: {x: -18.971432, y: 302.66852, z: -140.18127}
-      m_Extent: {x: 31.620316, y: 37.31848, z: 23.975739}
-  - scenePath: Assets/Scenes/MapChunks/Map_-2_-2.unity
+      m_Center: {x: -207.69325, y: 289.0344, z: -38.181896}
+      m_Extent: {x: 18.361465, y: 69.39755, z: 15.7735405}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-5_-4.unity
     bounds:
-      m_Center: {x: -64.573555, y: 353.0691, z: -48.06462}
-      m_Extent: {x: 127.838585, y: 81.90161, z: 128.37888}
-  - scenePath: Assets/Scenes/MapChunks/Map_-3_-2.unity
+      m_Center: {x: -170.19614, y: 302.00397, z: -134.19632}
+      m_Extent: {x: 23.865265, y: 88.16351, z: 35.573486}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-5_-3.unity
     bounds:
-      m_Center: {x: -88.49037, y: 247.05228, z: -74.94806}
-      m_Extent: {x: 127.49037, y: 182.98819, z: 132.16957}
-  - scenePath: Assets/Scenes/MapChunks/Map_-1_-5.unity
+      m_Center: {x: -182.5, y: 345.58133, z: -99.09292}
+      m_Extent: {x: 56.907745, y: 130.32376, z: 34.42312}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-5_-2.unity
     bounds:
-      m_Center: {x: -20.470001, y: 292.74, z: -185.92297}
-      m_Extent: {x: 80, y: 87.54999, z: 161.04422}
-  - scenePath: Assets/Scenes/MapChunks/Map_6_-5.unity
+      m_Center: {x: -186.07112, y: 336.1073, z: -57.015568}
+      m_Extent: {x: 30.8387, y: 108.68298, z: 37.97543}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-5_-1.unity
     bounds:
-      m_Center: {x: 240.54694, y: 392.475, z: -178.60416}
-      m_Extent: {x: 471.58746, y: 236.60263, z: 341.3754}
-  - scenePath: Assets/Scenes/MapChunks/Map_-1_1.unity
+      m_Center: {x: -180.29312, y: 296.96313, z: -32.30742}
+      m_Extent: {x: 34.30356, y: 84.82733, z: 27.24067}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-4_-4.unity
     bounds:
-      m_Center: {x: -26.930744, y: 364.6819, z: 63.88149}
-      m_Extent: {x: 49.638912, y: 66.500854, z: 24.01289}
-  - scenePath: Assets/Scenes/MapChunks/Map_-1_-1.unity
+      m_Center: {x: -143.85965, y: 307.69803, z: -140.76471}
+      m_Extent: {x: 28.850403, y: 81.46945, z: 27.740448}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-4_-3.unity
     bounds:
-      m_Center: {x: -8.6592865, y: 396.72498, z: -1.9599915}
-      m_Extent: {x: 146, y: 149.35498, z: 146}
-  - scenePath: Assets/Scenes/MapChunks/Map_-2_-4.unity
+      m_Center: {x: -158.5, y: 340.22882, z: -95.773315}
+      m_Extent: {x: 60.328857, y: 67.787766, z: 25.64177}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-4_-2.unity
     bounds:
-      m_Center: {x: -42.02054, y: 307.5404, z: -154.2785}
-      m_Extent: {x: 67.39427, y: 50.278625, z: 55.33793}
-  - scenePath: Assets/Scenes/MapChunks/Map_-2_-1.unity
+      m_Center: {x: -138.06458, y: 355.21252, z: -64.32646}
+      m_Extent: {x: 28.982819, y: 129.10205, z: 33.144104}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-4_-1.unity
     bounds:
-      m_Center: {x: -56.73204, y: 353.77667, z: -35.30298}
-      m_Extent: {x: 75.672745, y: 61.22119, z: 33.92415}
-  - scenePath: Assets/Scenes/MapChunks/Map_0_-1.unity
+      m_Center: {x: -138.03502, y: 295.2992, z: -24.994362}
+      m_Extent: {x: 31.976791, y: 99.16339, z: 40.927612}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-3_-6.unity
     bounds:
-      m_Center: {x: 4.710022, y: 361.54, z: -33.22998}
-      m_Extent: {x: 524, y: 524, z: 524}
-  - scenePath: Assets/Scenes/MapChunks/Map_0_-4.unity
+      m_Center: {x: -107.10884, y: 242.12968, z: -200.27847}
+      m_Extent: {x: 19.936481, y: 29.614761, z: 32.334404}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-3_-5.unity
     bounds:
-      m_Center: {x: 13, y: 277.61475, z: -151.90343}
-      m_Extent: {x: 25.200771, y: 20.649597, z: 8.078888}
-  - scenePath: Assets/Scenes/MapChunks/Map_-1_0.unity
+      m_Center: {x: -101.889694, y: 263.42316, z: -179.60197}
+      m_Extent: {x: 19.366745, y: 67.58264, z: 31.498215}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-3_-4.unity
     bounds:
-      m_Center: {x: -2.9000015, y: 402.58667, z: 32.9}
-      m_Extent: {x: 73, y: 98.01332, z: 73}
-  - scenePath: Assets/Scenes/MapChunks/Map_-2_0.unity
+      m_Center: {x: -81.5, y: 283.54022, z: -125.254486}
+      m_Extent: {x: 60.545105, y: 66.823975, z: 41.058563}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-3_-3.unity
     bounds:
-      m_Center: {x: -58.415863, y: 452.8686, z: 23.709936}
-      m_Extent: {x: 105.57539, y: 145.7049, z: 23.67913}
-  - scenePath: Assets/Scenes/MapChunks/Map_-4_-2.unity
+      m_Center: {x: -99.31545, y: 297.40314, z: -103.08644}
+      m_Extent: {x: 20.984581, y: 72.991394, z: 24.307953}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-3_-2.unity
     bounds:
-      m_Center: {x: -139.63617, y: 409.98346, z: -58.170506}
-      m_Extent: {x: 27.411224, y: 74.331116, z: 26.62405}
-  - scenePath: Assets/Scenes/MapChunks/Map_-3_-1.unity
+      m_Center: {x: -96.84507, y: 328.25284, z: -69.46135}
+      m_Extent: {x: 41.1522, y: 101.78763, z: 14.922913}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-3_-1.unity
     bounds:
-      m_Center: {x: -96.50093, y: 383.26404, z: -27.015345}
-      m_Extent: {x: 15.004852, y: 53.4765, z: 14.279203}
-  - scenePath: Assets/Scenes/MapChunks/Map_-2_-3.unity
+      m_Center: {x: -104.378586, y: 317.68866, z: -11.346104}
+      m_Extent: {x: 33.618683, y: 119.05182, z: 35.982346}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-3_0.unity
     bounds:
-      m_Center: {x: -56.61201, y: 343.7271, z: -94.34191}
-      m_Extent: {x: 16.287815, y: 53.063416, z: 18.127281}
-  - scenePath: Assets/Scenes/MapChunks/Map_1_0.unity
+      m_Center: {x: -92.32175, y: 432.2179, z: 8.299999}
+      m_Extent: {x: 130.9779, y: 236.08209, z: 60}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-3_1.unity
     bounds:
-      m_Center: {x: 51.986946, y: 326.01562, z: 25.363949}
-      m_Extent: {x: 5.3867874, y: 43.099487, z: 15.120022}
-  - scenePath: Assets/Scenes/MapChunks/Map_0_-2.unity
-    bounds:
-      m_Center: {x: 5.260002, y: 341.31, z: -40.28}
-      m_Extent: {x: 73, y: 73, z: 73}
-  - scenePath: Assets/Scenes/MapChunks/Map_1_-1.unity
-    bounds:
-      m_Center: {x: 46.486946, y: 318.76562, z: -29.386051}
-      m_Extent: {x: 5.3867874, y: 35.849487, z: 5.370018}
-  - scenePath: Assets/Scenes/MapChunks/Map_1_-4.unity
-    bounds:
-      m_Center: {x: 47, y: 300.19965, z: -135.72284}
-      m_Extent: {x: 36.033478, y: 41.915466, z: 12.706818}
-  - scenePath: Assets/Scenes/MapChunks/Map_0_0.unity
-    bounds:
-      m_Center: {x: 13.400002, y: 365.7, z: 31.199997}
-      m_Extent: {x: 130, y: 130, z: 130}
-  - scenePath: Assets/Scenes/MapChunks/Map_0_-3.unity
-    bounds:
-      m_Center: {x: 26.470001, y: 372.6126, z: -92.3}
-      m_Extent: {x: 62, y: 84.48743, z: 62}
-  - scenePath: Assets/Scenes/MapChunks/Map_0_1.unity
-    bounds:
-      m_Center: {x: 12.849991, y: 407.35, z: 61.25}
-      m_Extent: {x: 131.15, y: 147.94998, z: 146.55}
-  - scenePath: Assets/Scenes/MapChunks/Map_-5_-4.unity
-    bounds:
-      m_Center: {x: -169.45285, y: 351.24634, z: -146.48897}
-      m_Extent: {x: 5.165222, y: 38.921143, z: 5.2553864}
-  - scenePath: Assets/Scenes/MapChunks/Map_-3_1.unity
-    bounds:
-      m_Center: {x: -83.0544, y: 426.81305, z: 50.333256}
-      m_Extent: {x: 9.234398, y: 71.82721, z: 9.156826}
-  - scenePath: Assets/Scenes/MapChunks/Map_-2_1.unity
-    bounds:
-      m_Center: {x: -46.254395, y: 426.81305, z: 48.484737}
-      m_Extent: {x: 9.234398, y: 71.82721, z: 9.156826}
-  - scenePath: Assets/Scenes/MapChunks/Map_-3_0.unity
-    bounds:
-      m_Center: {x: -92.32175, y: 511.6429, z: 8.299999}
-      m_Extent: {x: 130.97787, y: 156.65707, z: 60}
-  - scenePath: Assets/Scenes/MapChunks/Map_-4_-4.unity
-    bounds:
-      m_Center: {x: -139.60028, y: 350.24634, z: -138.22708}
-      m_Extent: {x: 12.862675, y: 38.921143, z: 12.797699}
-  - scenePath: Assets/Scenes/MapChunks/Map_-5_-3.unity
-    bounds:
-      m_Center: {x: -182.5, y: 434.86096, z: -87.27849}
-      m_Extent: {x: 56.907738, y: 41.04413, z: 20.710175}
-  - scenePath: Assets/Scenes/MapChunks/Map_-3_-4.unity
-    bounds:
-      m_Center: {x: -81.5, y: 319.30164, z: -121.77849}
-      m_Extent: {x: 60.54509, y: 31.0625, z: 37.582565}
-  - scenePath: Assets/Scenes/MapChunks/Map_1_-3.unity
-    bounds:
-      m_Center: {x: 43.5, y: 328.6111, z: -102.21074}
-      m_Extent: {x: 34.026093, y: 43.826874, z: 17.54335}
-  - scenePath: Assets/Scenes/MapChunks/Map_-3_-3.unity
-    bounds:
-      m_Center: {x: -94.03302, y: 330.7657, z: -99.59167}
-      m_Extent: {x: 13.857574, y: 39.628845, z: 16.871727}
-  - scenePath: Assets/Scenes/MapChunks/Map_-5_-2.unity
-    bounds:
-      m_Center: {x: -160.88953, y: 405.16144, z: -79.78114}
-      m_Extent: {x: 5.6571045, y: 39.628845, z: 5.067856}
-  - scenePath: Assets/Scenes/MapChunks/Map_-1_-6.unity
-    bounds:
-      m_Center: {x: -18.8, y: 261.33002, z: -209.34766}
-      m_Extent: {x: 5, y: 3.5819092, z: 11.683289}
-  - scenePath: Assets/Scenes/MapChunks/Map_-4_-3.unity
-    bounds:
-      m_Center: {x: -158.5, y: 371.22787, z: -101.70186}
-      m_Extent: {x: 60.328857, y: 36.788666, z: 13.699085}
-  - scenePath: Assets/Scenes/MapChunks/Map_-2_-5.unity
+      m_Center: {x: -90.25349, y: 359.13803, z: 52.87701}
+      m_Extent: {x: 26.479256, y: 139.50223, z: 31.098743}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-2_-5.unity
     bounds:
       m_Center: {x: -56.5, y: 282.9727, z: -180.94739}
       m_Extent: {x: 46.724106, y: 48.717316, z: 42.36737}
-  - scenePath: Assets/Scenes/MapChunks/Map_-3_-6.unity
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-2_-4.unity
     bounds:
-      m_Center: {x: -90, y: 244.72787, z: -200.27849}
-      m_Extent: {x: 2.8276443, y: 24.688477, z: 32.334427}
-  - scenePath: Assets/Scenes/MapChunks/Map_1_-6.unity
+      m_Center: {x: -42.02054, y: 282.47345, z: -154.27847}
+      m_Extent: {x: 67.39427, y: 75.34558, z: 55.337944}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-2_-3.unity
     bounds:
-      m_Center: {x: 69.5, y: 294.72787, z: -203.77849}
-      m_Extent: {x: 4.9027405, y: 18.667084, z: 56.064957}
-  - scenePath: Assets/Scenes/MapChunks/Map_1_-7.unity
+      m_Center: {x: -54.83973, y: 309.89294, z: -102.28609}
+      m_Extent: {x: 32.957527, y: 86.89758, z: 26.071457}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-2_-2.unity
     bounds:
-      m_Center: {x: 69.5, y: 221.22787, z: -261.2785}
-      m_Extent: {x: 6.1921387, y: 32.01654, z: 70.809265}
-  - scenePath: Assets/Scenes/MapChunks/Map_2_-7.unity
+      m_Center: {x: -56, y: 314.5149, z: -55.130196}
+      m_Extent: {x: 52.785217, y: 88.04968, z: 45.61126}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-2_-1.unity
     bounds:
-      m_Center: {x: 92, y: 256.72787, z: -261.2785}
-      m_Extent: {x: 6.1921387, y: 32.01654, z: 70.809265}
-  - scenePath: Assets/Scenes/MapChunks/Map_8_-3.unity
+      m_Center: {x: -56.73204, y: 318.98154, z: -27.28299}
+      m_Extent: {x: 75.672714, y: 96.01633, z: 41.944138}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-2_0.unity
     bounds:
-      m_Center: {x: 353, y: 441.72787, z: -91.27849}
-      m_Extent: {x: 9.212402, y: 41.310883, z: 105.34746}
-  - scenePath: Assets/Scenes/MapChunks/Map_5_-3.unity
+      m_Center: {x: -58.415863, y: 437.36575, z: 17.083838}
+      m_Extent: {x: 105.57541, y: 161.20773, z: 30.30523}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-2_1.unity
     bounds:
-      m_Center: {x: 221, y: 345.22787, z: -86.27849}
-      m_Extent: {x: 86.622406, y: 33.298676, z: 60.658905}
-  - scenePath: Assets/Scenes/MapChunks/Map_3_-4.unity
+      m_Center: {x: -60.4572, y: 338.63803, z: 63.831886}
+      m_Extent: {x: 36.32602, y: 160.00223, z: 27.41578}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-2_2.unity
+    bounds:
+      m_Center: {x: -52.127327, y: 239.85704, z: 81.83189}
+      m_Extent: {x: 17.815987, y: 65.22124, z: 21.91578}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-1_-9.unity
+    bounds:
+      m_Center: {x: -15.186899, y: 237.81573, z: -346.90186}
+      m_Extent: {x: 0.062400818, y: 0.040802002, z: 0.06536865}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-1_-6.unity
+    bounds:
+      m_Center: {x: -18.48181, y: 164.488, z: -210.75461}
+      m_Extent: {x: 13.424208, y: 100.42392, z: 16.61322}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-1_-5.unity
+    bounds:
+      m_Center: {x: -20.470001, y: 292.74, z: -186.38}
+      m_Extent: {x: 80, y: 87.54999, z: 80}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-1_-4.unity
+    bounds:
+      m_Center: {x: -22.938004, y: 279.52435, z: -139.90427}
+      m_Extent: {x: 28.70253, y: 60.462646, z: 24.252716}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-1_-3.unity
+    bounds:
+      m_Center: {x: -14.900002, y: 224.85, z: -110.92845}
+      m_Extent: {x: 60, y: 224.85, z: 110.92845}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-1_-2.unity
+    bounds:
+      m_Center: {x: -35.229996, y: 230.175, z: -57.399994}
+      m_Extent: {x: 136, y: 230.175, z: 136}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-1_-1.unity
+    bounds:
+      m_Center: {x: -8.6592865, y: 273.03998, z: -1.9599915}
+      m_Extent: {x: 146, y: 273.03998, z: 146}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-1_0.unity
+    bounds:
+      m_Center: {x: -2.9000015, y: 400.01105, z: 32.9}
+      m_Extent: {x: 73, y: 100.588974, z: 73}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-1_1.unity
+    bounds:
+      m_Center: {x: -26.930748, y: 327.47617, z: 66.624596}
+      m_Extent: {x: 49.638924, y: 103.70657, z: 28.680763}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_-1_2.unity
+    bounds:
+      m_Center: {x: -20.288475, y: 251.89337, z: 84.26346}
+      m_Extent: {x: 31.351353, y: 74.75653, z: 20.145798}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_0_-6.unity
+    bounds:
+      m_Center: {x: 32.96682, y: 237.86145, z: -204.01472}
+      m_Extent: {x: 9.4557495, y: 16.700226, z: 12.578781}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_0_-4.unity
+    bounds:
+      m_Center: {x: 19.207687, y: 263.53336, z: -140.97246}
+      m_Extent: {x: 35.351913, y: 48.27243, z: 23.76207}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_0_-3.unity
+    bounds:
+      m_Center: {x: 26.470001, y: 325.40894, z: -92.3}
+      m_Extent: {x: 62, y: 131.6911, z: 62}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_0_-2.unity
+    bounds:
+      m_Center: {x: 5.260002, y: 308.0139, z: -40.28}
+      m_Extent: {x: 73, y: 106.29611, z: 73}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_0_-1.unity
+    bounds:
+      m_Center: {x: 4.710022, y: 361.54, z: -33.22998}
+      m_Extent: {x: 524, y: 524, z: 524}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_0_0.unity
+    bounds:
+      m_Center: {x: 13.400002, y: 349.33978, z: 31.199997}
+      m_Extent: {x: 130, y: 146.36023, z: 130}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_0_1.unity
+    bounds:
+      m_Center: {x: 12.849991, y: 383.63983, z: 61.25}
+      m_Extent: {x: 131.15, y: 171.66016, z: 146.55}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_0_2.unity
+    bounds:
+      m_Center: {x: 8.736487, y: 271.6584, z: 83.6475}
+      m_Extent: {x: 23.32639, y: 54.940613, z: 18.41079}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_1_-7.unity
+    bounds:
+      m_Center: {x: 76.36624, y: 232.1336, z: -261.2785}
+      m_Extent: {x: 13.05838, y: 42.92227, z: 70.809265}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_1_-6.unity
+    bounds:
+      m_Center: {x: 68.27942, y: 257.11432, z: -203.77849}
+      m_Extent: {x: 20.48854, y: 56.28064, z: 56.064957}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_1_-5.unity
+    bounds:
+      m_Center: {x: 60.1, y: 244.67282, z: -178.70796}
+      m_Extent: {x: 50.866592, y: 32.832336, z: 28.923264}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_1_-4.unity
+    bounds:
+      m_Center: {x: 47, y: 283.38943, z: -132.32}
+      m_Extent: {x: 36.033493, y: 58.725677, z: 16.10962}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_1_-3.unity
+    bounds:
+      m_Center: {x: 46.71239, y: 285.07788, z: -96.96578}
+      m_Extent: {x: 37.23849, y: 87.36011, z: 31.035667}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_1_-1.unity
+    bounds:
+      m_Center: {x: 46.486946, y: 318.76562, z: -29.386053}
+      m_Extent: {x: 5.3867874, y: 35.849487, z: 5.37002}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_1_0.unity
+    bounds:
+      m_Center: {x: 51.986946, y: 326.01562, z: 25.363949}
+      m_Extent: {x: 5.3867874, y: 43.099487, z: 15.120022}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_2_-8.unity
+    bounds:
+      m_Center: {x: 86.908905, y: 248.25192, z: -281.9879}
+      m_Extent: {x: 15.943039, y: 42.911438, z: 10.952637}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_2_-7.unity
+    bounds:
+      m_Center: {x: 85.39335, y: 253.59103, z: -261.2785}
+      m_Extent: {x: 12.79879, y: 35.15338, z: 70.809265}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_2_-6.unity
+    bounds:
+      m_Center: {x: 85.832184, y: 263.4773, z: -214.82387}
+      m_Extent: {x: 12.962158, y: 47.085938, z: 18.228745}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_2_-5.unity
+    bounds:
+      m_Center: {x: 98.02562, y: 263.06522, z: -175.95665}
+      m_Extent: {x: 16.478714, y: 46.352386, z: 24.069504}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_3_-4.unity
     bounds:
       m_Center: {x: 130, y: 276.22787, z: -140.77849}
       m_Extent: {x: 46.111633, y: 23.914948, z: 32.29048}
-  - scenePath: Assets/Scenes/MapChunks/Map_1_-5.unity
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_3_-2.unity
     bounds:
-      m_Center: {x: 60.1, y: 250.20001, z: -173.9}
-      m_Extent: {x: 50.8666, y: 22.243805, z: 24.115295}
+      m_Center: {x: 149.9419, y: 265.20984, z: -72.13092}
+      m_Extent: {x: 13.978607, y: 47.021126, z: 14.810381}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_3_-1.unity
+    bounds:
+      m_Center: {x: 158.06232, y: 228.09602, z: -28.702007}
+      m_Extent: {x: 57.661896, y: 72.22365, z: 34.395054}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_4_-6.unity
+    bounds:
+      m_Center: {x: 185.00952, y: 245.69342, z: -219.22256}
+      m_Extent: {x: 11.47113, y: 38.58658, z: 12.153717}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_4_-4.unity
+    bounds:
+      m_Center: {x: 173.5516, y: 263.06668, z: -133.98183}
+      m_Extent: {x: 17.26107, y: 38.02453, z: 20.79918}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_4_-3.unity
+    bounds:
+      m_Center: {x: 173.55159, y: 260.25726, z: -81.80817}
+      m_Extent: {x: 17.26149, y: 37.96266, z: 19.530882}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_5_-11.unity
+    bounds:
+      m_Center: {x: 229.91377, y: 226.57114, z: -422.46826}
+      m_Extent: {x: 7.248474, y: 18.468231, z: 7.7269287}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_5_-9.unity
+    bounds:
+      m_Center: {x: 211.31229, y: 259.55975, z: -338.3088}
+      m_Extent: {x: 19.250946, y: 44.699646, z: 28.222443}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_5_-8.unity
+    bounds:
+      m_Center: {x: 213.01999, y: 259.29208, z: -298.5404}
+      m_Extent: {x: 22.802307, y: 34.00403, z: 32.90869}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_5_-7.unity
+    bounds:
+      m_Center: {x: 215.0952, y: 266.97177, z: -259.4005}
+      m_Extent: {x: 24.87761, y: 53.31595, z: 35.70661}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_5_-6.unity
+    bounds:
+      m_Center: {x: 227.72028, y: 264.7171, z: -228.87689}
+      m_Extent: {x: 16.537811, y: 51.88379, z: 27.859497}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_5_-3.unity
+    bounds:
+      m_Center: {x: 221, y: 309.42947, z: -86.27849}
+      m_Extent: {x: 86.622406, y: 69.09708, z: 60.658905}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_5_-2.unity
+    bounds:
+      m_Center: {x: 221.58649, y: 270.90363, z: -72.73649}
+      m_Extent: {x: 23.92746, y: 48.211723, z: 27.51004}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_7_-4.unity
+    bounds:
+      m_Center: {x: 285.121, y: 251.3133, z: -145.11935}
+      m_Extent: {x: 15.0590515, y: 46.36548, z: 35.248535}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_7_-3.unity
+    bounds:
+      m_Center: {x: 285.121, y: 240.3133, z: -106.11933}
+      m_Extent: {x: 15.0590515, y: 46.36548, z: 35.248528}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_7_1.unity
+    bounds:
+      m_Center: {x: 318.95593, y: 289.57178, z: 54.27587}
+      m_Extent: {x: 20.034546, y: 52.47159, z: 29.60009}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_7_2.unity
+    bounds:
+      m_Center: {x: 315.9469, y: 285.45938, z: 116.26396}
+      m_Extent: {x: 31.346252, y: 99.24509, z: 28.34288}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_7_3.unity
+    bounds:
+      m_Center: {x: 319.96466, y: 313.13937, z: 142.16849}
+      m_Extent: {x: 23.700562, y: 57.9505, z: 20.035614}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_8_-3.unity
+    bounds:
+      m_Center: {x: 353, y: 441.72787, z: -91.27849}
+      m_Extent: {x: 9.212402, y: 41.310883, z: 105.34746}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_8_0.unity
+    bounds:
+      m_Center: {x: 344.05768, y: 352.8471, z: 35.64746}
+      m_Extent: {x: 28.023926, y: 84.55852, z: 33.730637}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_8_1.unity
+    bounds:
+      m_Center: {x: 334.00415, y: 298.7018, z: 57.017532}
+      m_Extent: {x: 34.61908, y: 87.48984, z: 45.413788}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_8_2.unity
+    bounds:
+      m_Center: {x: 331.46405, y: 269.99823, z: 104.34858}
+      m_Extent: {x: 30.63617, y: 73.54047, z: 37.831627}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_8_3.unity
+    bounds:
+      m_Center: {x: 334.55792, y: 320.96533, z: 130.06885}
+      m_Extent: {x: 32.67108, y: 105.54065, z: 32.702454}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_9_0.unity
+    bounds:
+      m_Center: {x: 363.79147, y: 322.8391, z: 29.5171}
+      m_Extent: {x: 25.646149, y: 90.46362, z: 24.354507}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_10_-11.unity
+    bounds:
+      m_Center: {x: 431.77264, y: 216.46437, z: -429.37268}
+      m_Extent: {x: 16.180481, y: 54.42781, z: 17.14325}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_11_-13.unity
+    bounds:
+      m_Center: {x: 458.46762, y: 245.09772, z: -497.03775}
+      m_Extent: {x: 20.611359, y: 44.014038, z: 22.941803}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_12_-12.unity
+    bounds:
+      m_Center: {x: 492.01648, y: 257.42682, z: -454.44794}
+      m_Extent: {x: 23.326172, y: 87.314514, z: 39.8266}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_12_-11.unity
+    bounds:
+      m_Center: {x: 492.5265, y: 249.45345, z: -433.64246}
+      m_Extent: {x: 15.959534, y: 45.695206, z: 29.94873}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_14_-4.unity
+    bounds:
+      m_Center: {x: 576.7583, y: 296.39026, z: -140.3338}
+      m_Extent: {x: 38.14563, y: 127.8952, z: 44.371124}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_14_-3.unity
+    bounds:
+      m_Center: {x: 573.0199, y: 277.55334, z: -118.750534}
+      m_Extent: {x: 16.83789, y: 64.25372, z: 27.736176}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_16_-1.unity
+    bounds:
+      m_Center: {x: 652.9402, y: 474.69766, z: -10.54261}
+      m_Extent: {x: 47.05139, y: 154.37997, z: 65.34941}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_16_0.unity
+    bounds:
+      m_Center: {x: 643.29114, y: 421.18198, z: 4.334873}
+      m_Extent: {x: 44.553223, y: 161.08139, z: 59.53882}
+  - scenePath: Assets/Scenes/MapChunksRefined/Cell_16_1.unity
+    bounds:
+      m_Center: {x: 649.0617, y: 344.062, z: 57.81496}
+      m_Extent: {x: 63.072693, y: 138.8092, z: 73.37851}
   loadDistance: 45
   unloadDistance: 75
   safetyDistance: 15
   showOverlayWhileStreaming: 0
   shadowFaceBudget: 6
   localShadowDistance: 25
+  explorationLoadingPriority: 0
 --- !u!1001 &896000000000000000
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -42700,7 +42884,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 100779, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_fontColor32.rgba
-      value: 4286100177
+      value: 4294967295
       objectReference: {fileID: 0}
     - target: {fileID: 100779, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -42712,7 +42896,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 100783, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_fontColor32.rgba
-      value: 4286100177
+      value: 4294967295
       objectReference: {fileID: 0}
     - target: {fileID: 100783, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -42728,7 +42912,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 100791, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_fontColor32.rgba
-      value: 4286100177
+      value: 4294967295
       objectReference: {fileID: 0}
     - target: {fileID: 100791, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -42740,7 +42924,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 100795, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_fontColor32.rgba
-      value: 4291814379
+      value: 4294967295
       objectReference: {fileID: 0}
     - target: {fileID: 100795, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -42752,7 +42936,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 100807, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_fontColor32.rgba
-      value: 4291814379
+      value: 4294967295
       objectReference: {fileID: 0}
     - target: {fileID: 100807, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -42784,7 +42968,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 100828, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_fontColor32.rgba
-      value: 4291814379
+      value: 4294967295
       objectReference: {fileID: 0}
     - target: {fileID: 100828, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -42796,7 +42980,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 100832, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_fontColor32.rgba
-      value: 4286100177
+      value: 4294967295
       objectReference: {fileID: 0}
     - target: {fileID: 100832, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -42808,7 +42992,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 100845, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_fontColor32.rgba
-      value: 4286100177
+      value: 4294967295
       objectReference: {fileID: 0}
     - target: {fileID: 100845, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -42820,7 +43004,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 100849, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_fontColor32.rgba
-      value: 4287403153
+      value: 4294967295
       objectReference: {fileID: 0}
     - target: {fileID: 100849, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -42856,7 +43040,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 101145, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_fontColor32.rgba
-      value: 4286100177
+      value: 4294967295
       objectReference: {fileID: 0}
     - target: {fileID: 101145, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -42868,7 +43052,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 101158, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_fontColor32.rgba
-      value: 4286100177
+      value: 4294967295
       objectReference: {fileID: 0}
     - target: {fileID: 101158, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -42880,7 +43064,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 101171, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_fontColor32.rgba
-      value: 4286100177
+      value: 4294967295
       objectReference: {fileID: 0}
     - target: {fileID: 101171, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -43305,6 +43489,18 @@ PrefabInstance:
     - target: {fileID: 101668, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: 'm_ActiveFontFeatures.Array.data[0]'
       value: 1801810542
+      objectReference: {fileID: 0}
+    - target: {fileID: 180029, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 40.015137
+      objectReference: {fileID: 0}
+    - target: {fileID: 180040, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -30.316284
+      objectReference: {fileID: 0}
+    - target: {fileID: 180044, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 21.034912
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

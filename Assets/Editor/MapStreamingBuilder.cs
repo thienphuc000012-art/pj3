@@ -38,7 +38,8 @@ public static class MapStreamingBuilder
     static void CloseChunks()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode) return;
-        var scenes = Enumerable.Range(0, SceneManager.sceneCount).Select(SceneManager.GetSceneAt).Where(x => x.path.StartsWith(Folder + "/")).ToArray();
+        var scenes = Enumerable.Range(0, SceneManager.sceneCount).Select(SceneManager.GetSceneAt)
+            .Where(x => x.path.StartsWith(Folder + "/") || x.path.StartsWith("Assets/Scenes/MapChunksRefined/")).ToArray();
         if (!EditorSceneManager.SaveModifiedScenesIfUserWantsTo(scenes)) return;
         foreach (var scene in scenes) EditorSceneManager.CloseScene(scene, true);
     }

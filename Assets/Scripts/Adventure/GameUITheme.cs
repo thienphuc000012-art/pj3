@@ -43,6 +43,33 @@ public static class GameUITheme
         }
     }
 
+    public static Sprite CombatActionBackgroundSprite
+    {
+        get
+        {
+            if (settings == null) settings = Resources.Load<GameUIThemeSettings>("Adventure/UI/GameUIThemeSettings");
+            return settings != null && settings.combatActionBackground != null ? settings.combatActionBackground : ButtonBackgroundSprite;
+        }
+    }
+
+    public static AudioClip CombatButtonPressSound
+    {
+        get
+        {
+            if (settings == null) settings = Resources.Load<GameUIThemeSettings>("Adventure/UI/GameUIThemeSettings");
+            return settings != null ? settings.combatButtonPressSound : null;
+        }
+    }
+
+    public static Sprite CombatSubMenuBackgroundSprite
+    {
+        get
+        {
+            if (settings == null) settings = Resources.Load<GameUIThemeSettings>("Adventure/UI/GameUIThemeSettings");
+            return settings != null && settings.combatSubMenuBackground != null ? settings.combatSubMenuBackground : CombatActionBackgroundSprite;
+        }
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void InstallSceneTheme()
     {
@@ -57,18 +84,35 @@ public static class GameUITheme
         {
             if (canvas == null || canvas.gameObject.scene != scene) continue;
             var parent = canvas.transform.parent != null ? canvas.transform.parent.GetComponentInParent<Canvas>() : null;
-            if (parent == null) Apply(canvas.gameObject);
+            // AdventureCanvasRoot already styles its complete hierarchy in
+            // Awake, including inactive menu pages. Repeating that here adds
+            // and destroys the same decoration components a second time.
+            if (parent == null && canvas.GetComponent<AdventureCanvasRoot>() == null) Apply(canvas.gameObject);
         }
     }
 
     public static void Apply(GameObject root)
     {
         if (root == null) return;
+        if (root.scene.name == "combattest")
+            foreach (var frame in root.GetComponentsInChildren<GameUIFrameGraphic>(true))
+            {
+                frame.enabled = false;
+                Object.Destroy(frame);
+            }
         foreach (var image in root.GetComponentsInChildren<Image>(true))
         {
             if (image == null) continue;
+            if (image.GetComponentInParent<AdventureDialogueView>(true) != null) continue;
             string n = image.gameObject.name.ToLowerInvariant();
             if (Contains(n, "hp", "health", "fill", "icon", "portrait", "preview", "buff", "debuff", "ultimate", "energy")) continue;
+            if (IsInsideItems(image.transform))
+            {
+                image.color = Color.clear;
+                RemoveFrame(image);
+                if (IsInventorySlot(image.transform)) EnsureInventorySlotFrame(image.transform);
+                continue;
+            }
             if (IsInsidePickerRow(image.transform))
             {
                 if (image.gameObject.name != "Portrait")
@@ -109,16 +153,36 @@ public static class GameUITheme
         foreach (var text in root.GetComponentsInChildren<TMP_Text>(true))
         {
             if (text == null) continue;
-            // Keep authored gold, cyan, red, and status colors. Warm neutral white
-            // slightly so labels fit the dark fantasy frame without flattening accents.
-            Color c = text.color;
-            if (Mathf.Abs(c.r - c.g) < 0.035f && Mathf.Abs(c.g - c.b) < 0.035f && c.r > 0.72f)
-                text.color = new Color(c.r, c.g * 0.97f, c.b * 0.87f, c.a);
+            GameUITextColor.Apply(text);
         }
 
         foreach (var button in root.GetComponentsInChildren<Button>(true))
         {
             if (button == null) continue;
+            if (IsCombatActionButton(button.transform))
+            {
+                var dynamic = button.GetComponent<DynamicButtonUI>();
+                if (dynamic != null) dynamic.RestoreAuthoredLayout();
+                RemoveButtonDecorations(button, true);
+                RemoveDynamicButtonUI(button);
+                var feedback = button.GetComponent<CombatActionButtonFeedback>();
+                if (feedback == null) feedback = button.gameObject.AddComponent<CombatActionButtonFeedback>();
+                feedback.Configure(CombatActionBackgroundSprite);
+                continue;
+            }
+            var actionRow = button.GetComponent<ActionButtonUI>();
+            if (actionRow != null)
+            {
+                PrepareCombatActionRow(button, actionRow);
+                continue;
+            }
+            if (button.GetComponentInParent<AdventureDialogueView>(true) != null) continue;
+            if (IsInsideItems(button.transform))
+            {
+                MakeButtonBackgroundTransparent(button);
+                RemoveButtonDecorations(button, true);
+                continue;
+            }
             if (IsInsidePickerRow(button.transform))
             {
                 MakeButtonBackgroundTransparent(button);
@@ -177,6 +241,100 @@ public static class GameUITheme
         }
 
         RefreshMenuButtonHover(root);
+        if (root.scene.name == "combattest")
+            foreach (var motion in root.GetComponentsInChildren<BattleMenuButtonSlide>(true))
+                for (Transform parent = motion.transform.parent; parent != null; parent = parent.parent)
+                    if (parent.name == "ActionMenu")
+                    {
+                        if (parent.GetComponent<BattleMenuStagger>() == null) parent.gameObject.AddComponent<BattleMenuStagger>();
+                        break;
+                    }
+    }
+
+    static bool IsCombatActionButton(Transform target)
+    {
+        if (target.gameObject.scene.name != "combattest") return false;
+        for (var current = target; current != null; current = current.parent)
+            if (current.name == "ActionMenu") return true;
+        return false;
+    }
+
+    static void PrepareCombatActionRow(Button button, ActionButtonUI row)
+    {
+        // Keep the icon independent from a dedicated whole-row background.
+        // A prefab's old targetGraphic may be a smaller nested image.
+        // Skill slots have already received their final anchors/offsets. The
+        // legacy entrance component cached the prefab position on Instantiate,
+        // so restoring it here would move the row out of its assigned slot.
+        RemoveDynamicButtonUI(button);
+        foreach (var outline in button.GetComponentsInChildren<UIHoverOutline>(true))
+        {
+            outline.enabled = false;
+            Object.Destroy(outline);
+        }
+        var rootImage = button.GetComponent<Image>();
+        if (rootImage == null) rootImage = button.gameObject.AddComponent<Image>();
+        if (rootImage != row.iconImage) rootImage.color = Color.clear;
+        rootImage.raycastTarget = true;
+
+        Transform existing = button.transform.Find("Combat Banner Background");
+        Image plate = existing != null ? existing.GetComponent<Image>() : null;
+        if (plate == null)
+        {
+            var go = new GameObject("Combat Banner Background", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.layer = button.gameObject.layer;
+            go.transform.SetParent(button.transform, false);
+            plate = go.GetComponent<Image>();
+        }
+        var rect = plate.rectTransform;
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = new Vector2(-6f, -4f);
+        rect.offsetMax = new Vector2(6f, 4f);
+        plate.transform.SetAsFirstSibling();
+        plate.sprite = CombatSubMenuBackgroundSprite;
+        plate.type = Image.Type.Simple;
+        plate.preserveAspect = false;
+        plate.color = Color.white;
+        plate.raycastTarget = false;
+        button.targetGraphic = rootImage;
+        button.transition = Selectable.Transition.None;
+
+        var wipe = button.GetComponent<UIButtonWipeReveal>();
+        if (wipe != null) { wipe.enabled = false; Object.Destroy(wipe); }
+        foreach (var child in button.GetComponentsInChildren<Transform>(true))
+            if (child.name == "Wipe Reveal" || child.name == "Wipe Reveal Edge")
+            {
+                child.gameObject.SetActive(false);
+                Object.Destroy(child.gameObject);
+            }
+        var feedback = button.GetComponent<CombatActionButtonFeedback>();
+        if (feedback == null) feedback = button.gameObject.AddComponent<CombatActionButtonFeedback>();
+        feedback.ConfigureRow(plate, row);
+    }
+
+    static bool IsInsideItems(Transform target)
+    {
+        for (var current = target; current != null; current = current.parent)
+            if (current.name == "Items") return true;
+        return false;
+    }
+
+    static bool IsInventorySlot(Transform target) => target.parent != null &&
+        target.parent.name == "Content" && IsInsideItems(target);
+
+    static void EnsureInventorySlotFrame(Transform slot)
+    {
+        if (slot.GetComponentInChildren<InventorySlotFrame>(true) != null) return;
+        var go = new GameObject("Inventory Slot Frame", typeof(RectTransform), typeof(CanvasRenderer), typeof(InventorySlotFrame));
+        go.layer = slot.gameObject.layer;
+        go.transform.SetParent(slot, false);
+        go.transform.SetAsFirstSibling();
+        var rect = (RectTransform)go.transform;
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = rect.offsetMax = Vector2.zero;
+        go.GetComponent<InventorySlotFrame>().raycastTarget = false;
     }
 
     static bool IsAttributeStatRow(Image image)
@@ -440,6 +598,7 @@ public static class GameUITheme
 
     static void AddFrame(Image image, bool ornate)
     {
+        if (image != null && image.gameObject.scene.name == "combattest") return;
         if (image == null || image.name.ToLowerInvariant().Contains("background")) return;
         var frame = image.GetComponentInChildren<GameUIFrameGraphic>(true);
         if (frame == null)

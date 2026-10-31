@@ -44,6 +44,7 @@ public static class GameLocalization
     public static void SetText(TMP_Text target, string source)
     {
         if (target == null) return;
+        GameUITextColor.Apply(target);
         var binding = target.GetComponent<LocalizedGameText>();
         if (binding == null) binding = target.gameObject.AddComponent<LocalizedGameText>();
         binding.SetSource(source);

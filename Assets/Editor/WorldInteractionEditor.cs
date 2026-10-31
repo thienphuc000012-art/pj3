@@ -275,8 +275,9 @@ public class WorldInteractionEditor : Editor
             EditorGUILayout.PropertyField(serializedObject.FindProperty("dialogue"), new GUIContent("First One-Time Dialogue"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("progressionDialogues"), new GUIContent("Locked Follow-Up Dialogues"), true);
             EditorGUILayout.PropertyField(serializedObject.FindProperty("defaultDialogue"), new GUIContent("Repeatable Default Dialogue"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("questRepeatableDialogues"), new GUIContent("Thoại lặp theo nhiệm vụ"), true);
             EditorGUILayout.HelpBox(
-                "NPC ưu tiên Dialogue đầu tiên đủ điều kiện, sau đó kiểm tra Locked Follow-Up Dialogues theo thứ tự. Mỗi thoại one-time chỉ phát một lần; sau đó NPC quay về Default Dialogue. Follow-up chỉ mở khi đã điền Required Completed Quest IDs hoặc Required Completed Dialogue IDs trong asset Story Dialogue và điều kiện đó hoàn tất. Thêm một Story Dialogue ID vào điều kiện để mở thoại theo mốc cốt truyện.",
+                "Ưu tiên thoại đầu tiên → Locked Follow-Up Dialogues đủ điều kiện → Thoại lặp theo nhiệm vụ → Default Dialogue. Trong Thoại lặp theo nhiệm vụ, gán Quest, In Progress Dialogue (đã nhận nhưng chưa xong) và Completed Dialogue (đã xong, kể cả đã nhận thưởng). Các mục này luôn được lặp, không bị Play Once trong asset chặn. Nếu có nhiều nhiệm vụ thì kiểm tra từ trên xuống. Chưa nhận Quest hoặc bỏ trống thoại của trạng thái hiện tại thì dùng mục tiếp theo hoặc Default Dialogue. Follow-up chỉ mở khi điều kiện Required Completed Quest IDs hoặc Required Completed Dialogue IDs đã hoàn tất.",
                 MessageType.Info);
             EditorGUILayout.Space(4);
             EditorGUILayout.LabelField("NPC 3D Model & Animation", EditorStyles.boldLabel);

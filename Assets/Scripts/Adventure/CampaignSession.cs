@@ -6,11 +6,12 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Unity.Cinemachine;
+using Unity.Profiling;
 
 public class CampaignSession : MonoBehaviour
 {
     public static CampaignSession Instance { get; private set; }
-    public static bool InputBlocked => MapChunkStreamer.MovementBlocked || (Instance != null && (Instance.Busy || Instance.Menu != AdventureMenu.None));
+    public static bool InputBlocked => LoadingScreen.IsLoading || MapChunkStreamer.MovementBlocked || (Instance != null && (Instance.Busy || Instance.Menu != AdventureMenu.None));
     public CampaignConfig Config { get; private set; }
     public CampaignSave Data { get; private set; }
     public PlayerScript MapPlayer { get; private set; }
@@ -41,7 +42,7 @@ public class CampaignSession : MonoBehaviour
         ? Data.currentMapScene
         : Config != null ? Config.mapScene : null;
     public bool OnMap => Config != null && Config.IsMapScene(SceneManager.GetActiveScene().name);
-    public bool CanStartEncounter => OnMap && !Busy && Menu == AdventureMenu.None && Time.unscaledTime >= encounterAllowedAt;
+    public bool CanStartEncounter => OnMap && !Busy && !LoadingScreen.IsLoading && !MapChunkStreamer.MovementBlocked && Menu == AdventureMenu.None && Time.unscaledTime >= encounterAllowedAt;
     public bool CanUpgrade => OnMap && RestPoint != null && IsNear(RestPoint) && !Busy;
     public void BeginItemPickup(WorldInteraction point)
     {
@@ -172,6 +173,11 @@ public class CampaignSession : MonoBehaviour
         }
     }
     private WorldInteraction[] worldPoints = new WorldInteraction[0];
+    readonly Dictionary<int, WorldInteraction[]> worldPointsByScene = new Dictionary<int, WorldInteraction[]>();
+    readonly List<GameObject> worldSceneRoots = new List<GameObject>();
+    readonly List<WorldInteraction> worldScanBuffer = new List<WorldInteraction>();
+    readonly List<WorldInteraction> worldPointBuffer = new List<WorldInteraction>();
+    static readonly ProfilerMarker WorldRefreshMarker = new ProfilerMarker("Adventure.RefreshWorld");
     private EncounterData encounter;
     private float previousTimeScale = 1;
     private CursorLockMode previousCursor;
@@ -302,16 +308,73 @@ public class CampaignSession : MonoBehaviour
     }
     public void RefreshWorld()
     {
-        worldPoints = FindObjectsByType<WorldInteraction>(FindObjectsSortMode.None);
-        foreach (var point in worldPoints)
+        using (WorldRefreshMarker.Auto())
         {
-            if (point.IsConsumed) point.gameObject.SetActive(false);
-            if (point.kind == WorldInteractionKind.RestPoint)
+            worldPointsByScene.Clear();
+            var found = FindObjectsByType<WorldInteraction>(FindObjectsSortMode.None);
+            var grouped = new Dictionary<int, List<WorldInteraction>>();
+            foreach (var point in found)
             {
-                var known = Data.unlockedRestPoints.Find(x => x != null && x.id == point.Id);
-                if (known != null) known.displayName = point.displayName;
+                if (!PrepareWorldPoint(point)) continue;
+                int handle = point.gameObject.scene.handle;
+                if (!grouped.TryGetValue(handle, out var list)) grouped.Add(handle, list = new List<WorldInteraction>());
+                list.Add(point);
             }
+            foreach (var pair in grouped) worldPointsByScene.Add(pair.Key, pair.Value.ToArray());
+            RebuildWorldPoints();
         }
+    }
+
+    // Streamed environment chunks usually contain no interactions. Scan only
+    // the changed scene instead of searching every loaded chunk after each load.
+    public void RefreshWorld(Scene changedScene)
+    {
+        if (!changedScene.IsValid() || !changedScene.isLoaded) return;
+        using (WorldRefreshMarker.Auto())
+        {
+            worldPointBuffer.Clear();
+            worldSceneRoots.Clear();
+            changedScene.GetRootGameObjects(worldSceneRoots);
+            foreach (var root in worldSceneRoots)
+            {
+                worldScanBuffer.Clear();
+                root.GetComponentsInChildren<WorldInteraction>(false, worldScanBuffer);
+                foreach (var point in worldScanBuffer)
+                    if (PrepareWorldPoint(point)) worldPointBuffer.Add(point);
+            }
+            bool previouslyHadPoints = worldPointsByScene.Remove(changedScene.handle);
+            if (worldPointBuffer.Count == 0 && !previouslyHadPoints) return;
+            if (worldPointBuffer.Count > 0) worldPointsByScene.Add(changedScene.handle, worldPointBuffer.ToArray());
+            RebuildWorldPoints();
+        }
+    }
+
+    public void ForgetWorldScene(Scene scene)
+    {
+        if (!worldPointsByScene.Remove(scene.handle)) return;
+        if (Nearest != null && Nearest.gameObject.scene.handle == scene.handle) Nearest = null;
+        RebuildWorldPoints();
+    }
+
+    bool PrepareWorldPoint(WorldInteraction point)
+    {
+        if (point == null || !point.isActiveAndEnabled) return false;
+        if (point.IsConsumed) { point.gameObject.SetActive(false); return false; }
+        if (point.kind == WorldInteractionKind.RestPoint && Data?.unlockedRestPoints != null)
+        {
+            var known = Data.unlockedRestPoints.Find(x => x != null && x.id == point.Id);
+            if (known != null) known.displayName = point.displayName;
+        }
+        return true;
+    }
+
+    void RebuildWorldPoints()
+    {
+        var merged = new List<WorldInteraction>();
+        foreach (var points in worldPointsByScene.Values)
+            foreach (var point in points)
+                if (point != null && point.isActiveAndEnabled) merged.Add(point);
+        worldPoints = merged.ToArray();
         if (Data?.quests != null)
             foreach (var progress in Data.quests)
             {
@@ -392,14 +455,14 @@ public class CampaignSession : MonoBehaviour
 
     void SetDialogueNode(string nodeId)
     {
-        if (ActiveDialogue == null || ActiveDialogue.FindNode(nodeId) == null) { EndDialogue(); return; }
+        if (ActiveDialogue == null || ActiveDialogue.FindNode(nodeId) == null) { EndDialogue(false); return; }
         ActiveDialogueNodeId = nodeId;
         RefreshDialogueSpeakerPresentation();
     }
 
-    public void EndDialogue()
+    public void EndDialogue(bool completed = true)
     {
-        if (Menu == AdventureMenu.Dialogue && !ShowingDialogueResponse)
+        if (completed && Menu == AdventureMenu.Dialogue && !ShowingDialogueResponse)
             MarkDialogueCompleted(ActiveDialogueNpc, ActiveDialogue);
         if (Menu == AdventureMenu.Dialogue) SetMenu(AdventureMenu.None);
         else StopDialogueSpeakerPresentation();
@@ -562,9 +625,10 @@ public class CampaignSession : MonoBehaviour
         foreach (var point in worldPoints)
         {
             if (point == null) continue;
-            var dialogues = new[] { point.dialogue, point.defaultDialogue }
-                .Concat(point.progressionDialogues ?? new List<AdventureStoryDialogue>());
-            foreach (var dialogue in dialogues)
+            if (point.questRepeatableDialogues != null)
+                foreach (var entry in point.questRepeatableDialogues)
+                    if (entry?.quest != null && string.Equals(entry.quest.Id, id, StringComparison.Ordinal)) return entry.quest;
+            foreach (var dialogue in point.AllDialogueAssets())
             {
                 if (dialogue?.nodes == null) continue;
                 foreach (var node in dialogue.nodes)
@@ -587,6 +651,16 @@ public class CampaignSession : MonoBehaviour
         // Follow-ups must be explicitly gated by a completed quest or story dialogue.
         foreach (var dialogue in npc.progressionDialogues ?? new List<AdventureStoryDialogue>())
             if (HasDialogueUnlockCondition(dialogue) && IsDialogueAvailable(npc, dialogue)) return dialogue;
+        foreach (var entry in npc.questRepeatableDialogues ?? new List<NpcQuestRepeatableDialogue>())
+        {
+            if (entry?.quest == null) continue;
+            var progress = QuestProgress(entry.quest.Id);
+            if (progress == null) continue;
+            var repeatable = progress.completed ? entry.completedDialogue : entry.inProgressDialogue;
+            // State-specific conversations repeat even if Play Once was left on
+            // in the asset. They do not consume a story progression marker.
+            if (repeatable != null && repeatable.FindNode(repeatable.startNodeId) != null) return repeatable;
+        }
         return npc.defaultDialogue;
     }
 
@@ -620,7 +694,7 @@ public class CampaignSession : MonoBehaviour
 
     private void MarkDialogueCompleted(WorldInteraction npc, AdventureStoryDialogue dialogue)
     {
-        if (npc == null || dialogue == null || Data == null || dialogue == npc.defaultDialogue) return;
+        if (npc == null || dialogue == null || Data == null || npc.IsRepeatableDialogue(dialogue)) return;
         if (Data.consumedNpcDialogueKeys == null) Data.consumedNpcDialogueKeys = new List<string>();
         if (Data.completedStoryDialogueIds == null) Data.completedStoryDialogueIds = new List<string>();
         string npcDialogueKey = NpcDialogueKey(npc, dialogue);
@@ -784,8 +858,7 @@ public class CampaignSession : MonoBehaviour
     bool NpcOffersQuest(WorldInteraction npc, AdventureQuest quest)
     {
         if (npc == null || quest == null) return false;
-        var dialogues = new[] { npc.dialogue, npc.defaultDialogue }
-            .Concat(npc.progressionDialogues ?? new List<AdventureStoryDialogue>());
+        var dialogues = npc.AllDialogueAssets();
         return dialogues.Where(dialogue => dialogue?.nodes != null)
             .SelectMany(dialogue => dialogue.nodes)
             .Any(node => node?.choices != null && node.choices.Any(choice => choice?.questToOffer == quest));
@@ -916,7 +989,10 @@ public class CampaignSession : MonoBehaviour
     }
     void Update()
     {
-        if (!OnMap || MapPlayer == null || Busy || MapChunkStreamer.MovementBlocked) return;
+        if (!OnMap || MapPlayer == null || Busy || LoadingScreen.IsLoading || MapChunkStreamer.MovementBlocked) return;
+        // Dialogue owns input until its final node. Esc/P must not consume a
+        // one-time conversation or release its camera/player controls early.
+        if (Menu == AdventureMenu.Dialogue) return;
         if (Input.GetKeyDown(KeyCode.Escape)) { if (!GetComponent<AdventureUI>().HandleBack()) SetMenu(AdventureMenu.None); return; }
         if (Input.GetKeyDown(KeyCode.P)) SetMenu(Menu == AdventureMenu.None ? AdventureMenu.Main : AdventureMenu.None);
         if (Menu != AdventureMenu.None) return;

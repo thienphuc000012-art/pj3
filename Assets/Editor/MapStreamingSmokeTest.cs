@@ -37,13 +37,31 @@ public static class MapStreamingSmokeTest
         if (streamer == null) return;
         if (streamer.Error != null) { Finish("FAIL: " + streamer.Error); return; }
         if (!streamer.Ready || streamer.Blocked || session == null || session.MapPlayer == null) return;
+        var setup = streamer.GetComponent<MapGameSetup>();
+        if (setup != null && !setup.StartupReady)
+        {
+            if (!string.IsNullOrEmpty(setup.StartupError)) Finish("FAIL: " + setup.StartupError);
+            return;
+        }
         var player = session.MapPlayer;
         int expected = streamer.chunks.Count(x => MapChunkStreamer.Distance(x, player.transform.position) <= streamer.loadDistance);
         int loaded = streamer.chunks.Count(x => SceneManager.GetSceneByPath(x.scenePath).isLoaded);
         int mask = player.surfaceLayer.value != 0 ? player.surfaceLayer.value : Physics.DefaultRaycastLayers;
         bool ground = Physics.Raycast(player.transform.position + Vector3.up * 2, Vector3.down, out var hit, 15, mask, QueryTriggerInteraction.Ignore);
+        int renderers = 0, colliders = 0;
+        foreach (var chunk in streamer.chunks)
+        {
+            var scene = SceneManager.GetSceneByPath(chunk.scenePath);
+            if (!scene.isLoaded) continue;
+            foreach (var root in scene.GetRootGameObjects())
+            {
+                renderers += root.GetComponentsInChildren<Renderer>(true).Length;
+                colliders += root.GetComponentsInChildren<Collider>(true).Length;
+            }
+        }
         Finish((loaded >= expected && ground ? "PASS" : "FAIL") + ": async startup completed; loaded " + loaded + "/" + streamer.chunks.Count +
-            "; expected " + expected + "; movement gate released; ground collider " + (ground ? hit.collider.name : "NOT FOUND") + "; player " + player.transform.position);
+            "; expected " + expected + "; movement gate released; ground collider " + (ground ? hit.collider.name : "NOT FOUND") + "; player " + player.transform.position +
+            "; loaded renderers " + renderers + "; loaded colliders " + colliders + "; runtime startup " + Time.realtimeSinceStartup.ToString("F2") + "s (Editor, not a build benchmark)");
     }
     static void Finish(string message)
     {

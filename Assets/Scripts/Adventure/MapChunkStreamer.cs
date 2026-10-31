@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -18,6 +17,8 @@ public class MapChunkStreamer : MonoBehaviour
     public bool showOverlayWhileStreaming;
     [Min(0)] public int shadowFaceBudget = 6;
     [Min(1)] public float localShadowDistance = 25;
+    [Tooltip("Main-thread integration budget while exploring. Initial loading keeps the current priority so the loading screen can finish promptly.")]
+    public UnityEngine.ThreadPriority explorationLoadingPriority = UnityEngine.ThreadPriority.Low;
     public static MapChunkStreamer Instance { get; private set; }
     public static bool MovementBlocked => Instance != null && Instance.Blocked;
     public bool Ready { get; private set; }
@@ -31,23 +32,60 @@ public class MapChunkStreamer : MonoBehaviour
     Text label;
     readonly HashSet<string> failed = new HashSet<string>();
     readonly Dictionary<Light, LightShadows> shadowLights = new Dictionary<Light, LightShadows>();
+    readonly HashSet<string> loadedScenePaths = new HashSet<string>();
+    readonly List<Chunk> initialChunks = new List<Chunk>();
+    readonly List<GameObject> sceneRoots = new List<GameObject>();
+    readonly List<Light> sceneLights = new List<Light>();
+    readonly List<Light> deadLights = new List<Light>();
+    struct ShadowCandidate { public Light light; public LightShadows shadows; public float distanceSquared; }
+    readonly List<ShadowCandidate> shadowCandidates = new List<ShadowCandidate>();
+    static readonly Comparison<ShadowCandidate> NearestShadowFirst = (a, b) => a.distanceSquared.CompareTo(b.distanceSquared);
+    Vector3 initialPosition;
+    string overlayMessage;
+    bool ownsLoadingPriority;
+    UnityEngine.ThreadPriority savedLoadingPriority;
     float nextShadowUpdate;
     int unloadedSinceCollection;
     int initialChunkCount;
     int initialChunksLoaded;
+    Chunk pendingChunk;
 
-    void Awake() { Instance = this; }
-    void OnDestroy() { if (Instance == this) Instance = null; }
+    void Awake()
+    {
+        Instance = this;
+        for (int i = 0; i < SceneManager.sceneCount; i++)
+        {
+            var scene = SceneManager.GetSceneAt(i);
+            if (scene.isLoaded) loadedScenePaths.Add(scene.path);
+        }
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        SceneManager.sceneUnloaded += OnSceneUnloaded;
+    }
+    void OnSceneLoaded(Scene scene, LoadSceneMode mode) => loadedScenePaths.Add(scene.path);
+    void OnSceneUnloaded(Scene scene) => loadedScenePaths.Remove(scene.path);
+    void OnDestroy()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        SceneManager.sceneUnloaded -= OnSceneUnloaded;
+        RestoreLoadingPriority();
+        if (Instance == this) Instance = null;
+    }
     public IEnumerator Initialize(PlayerScript target)
     {
         player = target;
-        RegisterLights();
+        RegisterSceneLights(gameObject.scene);
+        // Chunks opened additively in the Editor may already be resident.
+        for (int i = 0; i < chunks.Count; i++)
+            if (Loaded(chunks[i])) RegisterSceneLights(SceneManager.GetSceneByPath(chunks[i].scenePath));
         CreateOverlay();
         yield return null;
-        var initialChunks = chunks
-            .Where(chunk => Distance(chunk, player.transform.position) <= loadDistance)
-            .OrderBy(chunk => Distance(chunk, player.transform.position))
-            .ToList();
+        initialPosition = player.transform.position;
+        initialChunks.Clear();
+        float loadDistanceSquared = loadDistance * loadDistance;
+        for (int i = 0; i < chunks.Count; i++)
+            if (chunks[i] != null && DistanceSquared(chunks[i], initialPosition) <= loadDistanceSquared)
+                initialChunks.Add(chunks[i]);
+        initialChunks.Sort((a, b) => DistanceSquared(a, initialPosition).CompareTo(DistanceSquared(b, initialPosition)));
         initialChunkCount = initialChunks.Count;
         initialChunksLoaded = 0;
         InitialLoadProgress = initialChunkCount == 0 ? 1f : 0f;
@@ -60,23 +98,39 @@ public class MapChunkStreamer : MonoBehaviour
         }
         Physics.SyncTransforms();
         Ready = true;
+        UpdateShadows();
         Update();
         StartCoroutine(Stream());
     }
     public static float Distance(Chunk chunk, Vector3 position)
+        => Mathf.Sqrt(DistanceSquared(chunk, position));
+    static float DistanceSquared(Chunk chunk, Vector3 position)
     {
         // Vertical map layers belong to the same streaming column.
         position.y = chunk.bounds.center.y;
-        return Mathf.Sqrt(chunk.bounds.SqrDistance(position));
+        return chunk.bounds.SqrDistance(position);
     }
-    bool Loaded(Chunk chunk) => SceneManager.GetSceneByPath(chunk.scenePath).isLoaded;
+    bool Loaded(Chunk chunk) => chunk != null && loadedScenePaths.Contains(chunk.scenePath);
     void Update()
     {
         if (player == null) return;
-        Blocked = !Ready || Error != null || chunks.Any(x => !Loaded(x) && Distance(x, player.transform.position) <= safetyDistance);
+        Blocked = !Ready || Error != null;
+        if (!Blocked)
+        {
+            Vector3 position = player.transform.position;
+            float safetyDistanceSquared = safetyDistance * safetyDistance;
+            for (int i = 0; i < chunks.Count; i++)
+                if (chunks[i] != null && (!Loaded(chunks[i]) || chunks[i] == pendingChunk) && DistanceSquared(chunks[i], position) <= safetyDistanceSquared)
+                { Blocked = true; break; }
+        }
         bool showBlockingOverlay = !Ready || showOverlayWhileStreaming || Error != null;
-        if (overlay != null) overlay.SetActive(Blocked && showBlockingOverlay && !stopping && !SuppressOverlay);
-        if (label != null) label.text = GameLocalization.Translate(Error ?? "Đang tải khu vực...");
+        bool showOverlay = Blocked && showBlockingOverlay && !stopping && !SuppressOverlay;
+        if (overlay != null && overlay.activeSelf != showOverlay) overlay.SetActive(showOverlay);
+        if (label != null && showOverlay)
+        {
+            string message = GameLocalization.Translate(Error ?? "Đang tải khu vực...");
+            if (overlayMessage != message) { overlayMessage = message; label.text = message; }
+        }
         if (Time.unscaledTime >= nextShadowUpdate)
         {
             nextShadowUpdate = Time.unscaledTime + .5f;
@@ -92,62 +146,143 @@ public class MapChunkStreamer : MonoBehaviour
             failed.Add(chunk.scenePath); Debug.LogError(Error, this); yield break;
         }
         working = true;
-        var operation = SceneManager.LoadSceneAsync(chunk.scenePath, LoadSceneMode.Additive);
-        if (operation != null) yield return operation;
-        working = false;
-        if (!Loaded(chunk)) { Error = "Không tải được khu vực: " + chunk.scenePath; failed.Add(chunk.scenePath); yield break; }
-        Physics.SyncTransforms();
-        RegisterLights();
-        CampaignSession.Instance?.RefreshWorld();
-        yield return null;
+        pendingChunk = chunk;
+        try
+        {
+            if (Ready)
+            {
+                savedLoadingPriority = Application.backgroundLoadingPriority;
+                ownsLoadingPriority = true;
+                Application.backgroundLoadingPriority = explorationLoadingPriority;
+            }
+            // Give the loading UI a render opportunity before scene integration.
+            yield return null;
+            var operation = SceneManager.LoadSceneAsync(chunk.scenePath, LoadSceneMode.Additive);
+            if (operation != null) yield return operation;
+            var loadedScene = SceneManager.GetSceneByPath(chunk.scenePath);
+            if (!loadedScene.isLoaded)
+            { Error = "Không tải được khu vực: " + chunk.scenePath; failed.Add(chunk.scenePath); yield break; }
+            loadedScenePaths.Add(chunk.scenePath);
+            // Do not pile scene activation, light discovery and world scans into
+            // the same frame. Initial collider transforms are synced once below.
+            yield return null;
+            if (Ready) Physics.SyncTransforms();
+            RegisterSceneLights(loadedScene);
+            if (Ready)
+            {
+                UpdateShadows();
+                yield return null;
+                CampaignSession.Instance?.RefreshWorld(loadedScene);
+            }
+            yield return null;
+        }
+        finally
+        {
+            RestoreLoadingPriority();
+            pendingChunk = null;
+            working = false;
+        }
+    }
+
+    void RestoreLoadingPriority()
+    {
+        if (!ownsLoadingPriority) return;
+        Application.backgroundLoadingPriority = savedLoadingPriority;
+        ownsLoadingPriority = false;
     }
     IEnumerator Stream()
     {
+        var wait = new WaitForSecondsRealtime(.2f);
         while (!stopping && player != null)
         {
-            var next = chunks.Where(x => !Loaded(x) && !failed.Contains(x.scenePath) && Distance(x, player.transform.position) <= loadDistance)
-                .OrderBy(x => Distance(x, player.transform.position)).FirstOrDefault();
+            Vector3 position = player.transform.position;
+            float closestDistanceSquared = loadDistance * loadDistance;
+            Chunk next = null;
+            for (int i = 0; i < chunks.Count; i++)
+            {
+                var chunk = chunks[i];
+                if (chunk == null || Loaded(chunk) || failed.Contains(chunk.scenePath)) continue;
+                float distanceSquared = DistanceSquared(chunk, position);
+                if (distanceSquared <= closestDistanceSquared)
+                { next = chunk; closestDistanceSquared = distanceSquared; }
+            }
             if (next != null) { yield return Load(next); continue; }
-            var far = chunks.FirstOrDefault(x => Loaded(x) && Distance(x, player.transform.position) > Mathf.Max(loadDistance + 20, unloadDistance));
+            float farDistance = Mathf.Max(loadDistance + 20, unloadDistance);
+            Chunk far = null;
+            for (int i = 0; i < chunks.Count; i++)
+                if (Loaded(chunks[i]) && DistanceSquared(chunks[i], position) > farDistance * farDistance)
+                { far = chunks[i]; break; }
             if (far != null)
             {
                 working = true;
-                var operation = SceneManager.UnloadSceneAsync(far.scenePath);
-                if (operation != null) yield return operation;
-                working = false;
-                unloadedSinceCollection++;
-                CampaignSession.Instance?.RefreshWorld();
+                try
+                {
+                    var unloadingScene = SceneManager.GetSceneByPath(far.scenePath);
+                    CampaignSession.Instance?.ForgetWorldScene(unloadingScene);
+                    var operation = SceneManager.UnloadSceneAsync(far.scenePath);
+                    if (operation != null) yield return operation;
+                    unloadedSinceCollection++;
+                }
+                finally { working = false; }
             }
             // Unloading scenes removes objects/colliders, not necessarily their shared assets.
             // Reclaim unreferenced meshes/textures while the map is paused in a menu.
             if (!stopping && unloadedSinceCollection >= 4 && CampaignSession.Instance != null && CampaignSession.Instance.Menu != AdventureMenu.None)
             {
                 working = true;
-                yield return Resources.UnloadUnusedAssets();
-                working = false;
-                unloadedSinceCollection = 0;
+                try
+                {
+                    yield return Resources.UnloadUnusedAssets();
+                    unloadedSinceCollection = 0;
+                }
+                finally { working = false; }
             }
-            yield return new WaitForSecondsRealtime(.2f);
+            yield return wait;
         }
     }
-    void RegisterLights()
+    void RegisterSceneLights(Scene scene)
     {
-        foreach (var light in FindObjectsByType<Light>(FindObjectsSortMode.None))
-            if ((light.type == LightType.Point || light.type == LightType.Spot) && light.shadows != LightShadows.None && !shadowLights.ContainsKey(light))
-                shadowLights.Add(light, light.shadows);
-        UpdateShadows();
+        if (!scene.IsValid() || !scene.isLoaded) return;
+        sceneRoots.Clear();
+        scene.GetRootGameObjects(sceneRoots);
+        foreach (var root in sceneRoots)
+        {
+            sceneLights.Clear();
+            root.GetComponentsInChildren(true, sceneLights);
+            foreach (var light in sceneLights)
+                if ((light.type == LightType.Point || light.type == LightType.Spot) && light.shadows != LightShadows.None && !shadowLights.ContainsKey(light))
+                    shadowLights.Add(light, light.shadows);
+        }
     }
     void UpdateShadows()
     {
-        foreach (var dead in shadowLights.Keys.Where(x => x == null).ToArray()) shadowLights.Remove(dead);
         if (player == null) return;
-        int remaining = shadowFaceBudget;
-        foreach (var pair in shadowLights.OrderBy(x => (x.Key.transform.position - player.transform.position).sqrMagnitude))
+        deadLights.Clear();
+        shadowCandidates.Clear();
+        Vector3 position = player.transform.position;
+        float shadowDistanceSquared = localShadowDistance * localShadowDistance;
+        foreach (var pair in shadowLights)
         {
             var light = pair.Key;
+            if (light == null) { deadLights.Add(light); continue; }
+            float distanceSquared = (light.transform.position - position).sqrMagnitude;
+            if (!light.isActiveAndEnabled || distanceSquared > shadowDistanceSquared)
+            {
+                if (light.shadows != LightShadows.None) light.shadows = LightShadows.None;
+                continue;
+            }
+            shadowCandidates.Add(new ShadowCandidate { light = light, shadows = pair.Value, distanceSquared = distanceSquared });
+        }
+        foreach (var light in deadLights) shadowLights.Remove(light);
+        shadowCandidates.Sort(NearestShadowFirst);
+        int remaining = shadowFaceBudget;
+        foreach (var candidate in shadowCandidates)
+        {
+            var light = candidate.light;
             int cost = light.type == LightType.Point ? 6 : 1;
-            bool use = light.isActiveAndEnabled && remaining >= cost && Vector3.Distance(light.transform.position, player.transform.position) <= localShadowDistance;
-            light.shadows = use ? pair.Value : LightShadows.None;
+            bool use = remaining >= cost;
+            var desired = use ? candidate.shadows : LightShadows.None;
+            if (light.shadows != desired) light.shadows = desired;
             if (use) remaining -= cost;
         }
     }
