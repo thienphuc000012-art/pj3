@@ -1,6 +1,13 @@
 # Save and load slots
 
-- Rest point → Rest / Save → choose a slot → Yes writes a snapshot and restores party HP.
+- Entering a rest point's interaction range automatically restores the party's HP,
+  without opening the menu or showing a healing toast. Recovered HP updates the
+  autosave only when HP actually changes; manual slots and checkpoints are unchanged.
+- Rest point → Rest / Save → choose a slot → Yes writes a snapshot and checkpoint.
+- Left click an empty slot shows “Lưu game”; an occupied slot shows “Xác nhận ghi đè”.
+- In the save list, right click an occupied slot → confirm deletion with Yes.
+  No keeps it intact. Deletion leaves the list open and clears only that manual slot
+  and its overwrite backup; the current campaign, autosave and other slots remain intact.
 - Main menu (P) → Load Game → choose an occupied slot → Yes reloads its map and campaign state.
 - No returns to the slot list. Escape/P closes confirmation first, then the list.
 - Every occupied slot shows its saved date/time in the machine's local time zone,

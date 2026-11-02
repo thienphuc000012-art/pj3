@@ -46,7 +46,7 @@ public sealed class AdventureSaveSlotsView : MonoBehaviour
     AdventureMenu openingMenu;
     CampaignSaveSlotInfo selectedInfo;
     GameObject lastFocused;
-    bool saving, committing;
+    bool saving, deleting, committing;
     int selectedSlot;
     bool IsEnglish => GameLocalization.IsEnglish;
     public bool IsOpen => slotsPanel != null && slotsPanel.activeSelf;
@@ -176,7 +176,7 @@ public sealed class AdventureSaveSlotsView : MonoBehaviour
     {
         if (session == null || canvasRoot == null || !session.OnMap || session.Busy || slotsPanel == null) return;
         if (forSaving && (session.Menu != AdventureMenu.Rest || !session.CanUpgrade)) return;
-        saving = forSaving; openingMenu = session.Menu; committing = false; selectedInfo = null; lastFocused = null;
+        saving = forSaving; deleting = false; openingMenu = session.Menu; committing = false; selectedInfo = null; lastFocused = null;
         confirmationPanel.SetActive(false);
         listGroup.interactable = listGroup.blocksRaycasts = true;
         slotsPanel.SetActive(true); slotsPanel.transform.SetAsLastSibling();
@@ -195,7 +195,7 @@ public sealed class AdventureSaveSlotsView : MonoBehaviour
         if (slotsPanel != null) slotsPanel.SetActive(false);
         if (confirmationPanel != null) confirmationPanel.SetActive(false);
         if (listGroup != null) listGroup.interactable = listGroup.blocksRaycasts = true;
-        selectedInfo = null; selectedSlot = 0; committing = false; lastFocused = null;
+        selectedInfo = null; selectedSlot = 0; deleting = false; committing = false; lastFocused = null;
     }
 
     public bool HandleBack()
@@ -237,6 +237,9 @@ public sealed class AdventureSaveSlotsView : MonoBehaviour
             var row = EnsureRow(button);
             button.onClick = new Button.ButtonClickedEvent();
             button.onClick.AddListener(() => SelectSlot(slot));
+            var contextClick = button.GetComponent<SaveSlotContextClick>();
+            if (contextClick == null) contextClick = button.gameObject.AddComponent<SaveSlotContextClick>();
+            contextClick.Configure(() => SelectSlot(slot, true));
             rows.Add(row);
         }
         bool anyLoadable = false;
@@ -268,13 +271,15 @@ public sealed class AdventureSaveSlotsView : MonoBehaviour
         }
     }
 
-    void SelectSlot(int slot)
+    void SelectSlot(int slot, bool forDeletion = false)
     {
-        if (!IsOpen || committing) return;
+        if (!IsOpen || committing || confirmationPanel.activeSelf || session == null || (forDeletion && !saving)) return;
         selectedInfo = null;
         foreach (var entry in session.GetSaveSlots()) if (entry != null && entry.slot == slot) { selectedInfo = entry; break; }
         selectedInfo = selectedInfo ?? new CampaignSaveSlotInfo { slot = slot, isEmpty = true };
+        if (forDeletion && selectedInfo.isEmpty) return;
         if (!saving && (selectedInfo.isEmpty || selectedInfo.isCorrupt)) return;
+        deleting = forDeletion;
         selectedSlot = slot;
         listGroup.interactable = listGroup.blocksRaycasts = false;
         ShowConfirmationText();
@@ -285,9 +290,12 @@ public sealed class AdventureSaveSlotsView : MonoBehaviour
     void ShowConfirmationText()
     {
         if (selectedInfo == null) return;
-        Set(confirmationQuestion, saving ? Pick("Lưu game", "Save Game") : Pick("Tải game", "Load Game"));
+        Set(confirmationQuestion, deleting ? Pick("Xóa bản lưu?", "Delete Save?")
+            : !saving ? Pick("Tải game", "Load Game")
+            : selectedInfo.isEmpty ? Pick("Lưu game", "Save Game") : Pick("Xác nhận ghi đè", "Confirm Overwrite"));
         Set(confirmationDetails, selectedInfo.isEmpty ? "" : selectedInfo.isCorrupt
-            ? Pick("Bản lưu hiện tại không đọc được. Dữ liệu sẽ được thay thế.", "This save is unreadable. Its data will be replaced.")
+            ? deleting ? Pick("Bản lưu hiện tại không đọc được. Xóa bản lưu này?", "This save is unreadable. Delete it?")
+                : Pick("Bản lưu hiện tại không đọc được. Dữ liệu sẽ được thay thế.", "This save is unreadable. Its data will be replaced.")
             : FormatDate(selectedInfo) + "\n" + Pick("Thời gian chơi: ", "Play Time: ") + FormatPlayTime(selectedInfo.playTimeSeconds));
         Set(yesButton.GetComponentInChildren<TMP_Text>(true), Pick("Có", "Yes"));
         Set(noButton.GetComponentInChildren<TMP_Text>(true), Pick("Không", "No"));
@@ -299,15 +307,26 @@ public sealed class AdventureSaveSlotsView : MonoBehaviour
         listGroup.interactable = listGroup.blocksRaycasts = true;
         if (selectedSlot > 0 && selectedSlot <= rows.Count && EventSystem.current != null)
             EventSystem.current.SetSelectedGameObject(rows[selectedSlot - 1].button.gameObject);
+        deleting = false;
     }
     void Confirm()
     {
-        if (!IsOpen || committing || selectedSlot < 1 || selectedInfo == null || session == null) return;
+        if (!IsOpen || confirmationPanel == null || !confirmationPanel.activeSelf || committing || selectedSlot < 1 || selectedInfo == null || session == null) return;
         committing = true;
         yesButton.interactable = noButton.interactable = false;
         string error;
-        bool success = saving ? session.TrySaveToSlot(selectedSlot, out error) : session.TryLoadFromSlot(selectedSlot, out error);
+        bool wasDeleting = deleting;
+        bool success = deleting ? session.TryDeleteSaveSlot(selectedSlot, out error)
+            : saving ? session.TrySaveToSlot(selectedSlot, out error) : session.TryLoadFromSlot(selectedSlot, out error);
         committing = false;
+        if (success && wasDeleting)
+        {
+            CancelConfirmation();
+            RefreshRows();
+            selectedInfo = null;
+            Set(statusText, Pick("Đã xóa bản lưu.", "Save deleted."));
+            return;
+        }
         if (success) { Close(); return; }
         yesButton.interactable = noButton.interactable = true;
         CancelConfirmation();

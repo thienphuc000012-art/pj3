@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
+using UnityEngine.UI;
 
 public enum WorldInteractionKind { Pickup, Chest, Discovery, RestPoint, Encounter, MapTransition, DialogueNPC }
 
@@ -67,6 +68,14 @@ public class WorldInteraction : MonoBehaviour
     public Vector3 dialogueNpcModelScale = Vector3.one;
     [Tooltip("Fallback face height above the NPC model pivot when no humanoid Head bone is available.")]
     [Min(0.1f)] public float dialogueFaceHeight = 1.6f;
+    [Header("NPC Chat Icon")]
+    public bool showDialogueChatIcon = true;
+    [Tooltip("Để trống để dùng icon Chat chung trong Game UI Theme Settings.")]
+    public Sprite dialogueChatIcon;
+    [Tooltip("Độ lệch theo world từ bone Head, hoặc vị trí Fallback Face Height.")]
+    public Vector3 dialogueChatIconOffset = new Vector3(0f, 0.4f, 0f);
+    [Min(0.05f), Tooltip("Kích thước icon theo mét. Ảnh luôn giữ đúng tỉ lệ.")]
+    public float dialogueChatIconSize = 0.4f;
     [Tooltip("Animator state to play while this NPC is speaking, for example Base Layer.Talking.")]
     public string dialogueTalkAnimationState = "Base Layer.Talking";
     [Header("NPC Ambient Idle")]
@@ -126,6 +135,13 @@ public class WorldInteraction : MonoBehaviour
     private int dialogueNpcIdleStateIndex = -1;
     private float nextDialogueNpcIdleTime;
     private bool dialogueNpcWasTalking;
+    private RectTransform dialogueChatMarker;
+    private Image dialogueChatImage;
+    private Canvas dialogueChatCanvas;
+    private Transform dialogueChatRoot, dialogueChatHead;
+    private Camera dialogueChatCamera;
+    private float nextDialogueChatCameraSearch;
+    private static GameUIThemeSettings dialogueChatSettings;
 
     private PlayableGraph chestAnimationGraph;
     private AnimationClipPlayable chestAnimationPlayable;
@@ -182,8 +198,71 @@ public class WorldInteraction : MonoBehaviour
         }
     }
 
-    void OnDisable() => StopChestAnimation();
+    void OnDisable()
+    {
+        StopChestAnimation();
+        if (dialogueChatMarker != null) dialogueChatMarker.gameObject.SetActive(false);
+    }
     void OnDestroy() => StopChestAnimation();
+
+    void LateUpdate()
+    {
+        var session = CampaignSession.Instance;
+        bool visible = kind == WorldInteractionKind.DialogueNPC && showDialogueChatIcon && session != null &&
+            session.OnMap && !session.Busy && !LoadingScreen.IsLoading && !MapChunkStreamer.MovementBlocked &&
+            session.Menu == AdventureMenu.None && session.MapPlayer != null &&
+            (session.MapPlayer.transform.position - transform.position).sqrMagnitude <= range * range;
+        if (!visible)
+        {
+            if (dialogueChatMarker != null && dialogueChatMarker.gameObject.activeSelf) dialogueChatMarker.gameObject.SetActive(false);
+            return;
+        }
+
+        if ((dialogueChatCamera == null || !dialogueChatCamera.isActiveAndEnabled) && Time.unscaledTime >= nextDialogueChatCameraSearch)
+        {
+            dialogueChatCamera = Camera.main;
+            nextDialogueChatCameraSearch = Time.unscaledTime + 0.5f;
+        }
+        if (dialogueChatSettings == null) dialogueChatSettings = Resources.Load<GameUIThemeSettings>("Adventure/UI/GameUIThemeSettings");
+        var sprite = dialogueChatIcon != null ? dialogueChatIcon : dialogueChatSettings != null ? dialogueChatSettings.npcChatIcon : null;
+        if (dialogueChatCamera == null || sprite == null)
+        {
+            if (dialogueChatMarker != null) dialogueChatMarker.gameObject.SetActive(false);
+            return;
+        }
+        if (dialogueChatMarker == null)
+        {
+            // No collider or GraphicRaycaster: this is a visual marker, not an interaction target.
+            var marker = new GameObject("NPC Chat Icon", typeof(RectTransform), typeof(Canvas), typeof(Image));
+            marker.layer = LayerMask.NameToLayer("UI");
+            dialogueChatMarker = (RectTransform)marker.transform;
+            dialogueChatMarker.SetParent(transform, false);
+            dialogueChatMarker.sizeDelta = Vector2.one * 100f;
+            dialogueChatCanvas = marker.GetComponent<Canvas>();
+            dialogueChatCanvas.renderMode = RenderMode.WorldSpace;
+            dialogueChatImage = marker.GetComponent<Image>();
+            dialogueChatImage.raycastTarget = false;
+            dialogueChatImage.preserveAspect = true;
+        }
+        var root = DialogueNpcRoot;
+        if (dialogueChatRoot != root)
+        {
+            dialogueChatRoot = root;
+            dialogueChatHead = DialogueNpcHead;
+        }
+        Vector3 anchor = dialogueChatHead != null ? dialogueChatHead.position : root.TransformPoint(Vector3.up * dialogueFaceHeight);
+        dialogueChatMarker.position = anchor + dialogueChatIconOffset;
+        dialogueChatMarker.rotation = dialogueChatCamera.transform.rotation;
+        // Keep a world-sized icon even when the NPC model/point has a non-unit scale.
+        Vector3 parentScale = transform.lossyScale;
+        float size = Mathf.Max(0.05f, dialogueChatIconSize) / 100f;
+        dialogueChatMarker.localScale = new Vector3(SafeIconScale(parentScale.x, size), SafeIconScale(parentScale.y, size), SafeIconScale(parentScale.z, size));
+        dialogueChatCanvas.worldCamera = dialogueChatCamera;
+        if (dialogueChatImage.sprite != sprite) dialogueChatImage.sprite = sprite;
+        if (!dialogueChatMarker.gameObject.activeSelf) dialogueChatMarker.gameObject.SetActive(true);
+    }
+
+    static float SafeIconScale(float parentScale, float size) => Mathf.Abs(parentScale) > 0.0001f ? size / parentScale : size;
 
     void Update()
     {

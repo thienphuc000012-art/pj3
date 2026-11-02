@@ -1018,6 +1018,20 @@ public class CampaignSession : MonoBehaviour
     }
     public BattleUnit Template(PartyMemberProgress member) => Config.startingParty[member.prefabIndex];
     public int MaxHP(PartyMemberProgress member) => Template(member).maxHP + member.hpBonus;
+    bool RestorePartyHealth()
+    {
+        if (Data?.party == null) return false;
+        bool restored = false;
+        foreach (var member in Data.party)
+        {
+            if (member == null) continue;
+            int maximum = MaxHP(member);
+            if (member.hp >= maximum) continue;
+            member.hp = maximum;
+            restored = true;
+        }
+        return restored;
+    }
     public bool IsNear(WorldInteraction point)
     {
         if (MapPlayer == null || point == null || !point.gameObject.activeInHierarchy) return false;
@@ -1044,13 +1058,19 @@ public class CampaignSession : MonoBehaviour
         if (Menu != AdventureMenu.None) return;
         Nearest = null;
         float best = float.MaxValue;
+        bool restoredHealth = false;
         foreach (var point in worldPoints)
         {
             if (point == null || point.IsConsumed || !IsNear(point)) continue;
+            if (!restoredHealth && point.kind == WorldInteractionKind.RestPoint)
+                restoredHealth = RestorePartyHealth();
             if (point.kind == WorldInteractionKind.Discovery) { point.Interact(); continue; }
             float distance = (point.transform.position - MapPlayer.transform.position).sqrMagnitude;
             if (distance < best) { Nearest = point; best = distance; }
         }
+        // Persist recovered HP only when it changes. Merely standing near a
+        // rest point must not write a save every frame or show a healing toast.
+        if (restoredHealth) Save();
         if (Nearest != null && (Input.GetKeyDown(KeyCode.E) || (Nearest.kind == WorldInteractionKind.Encounter && Input.GetMouseButtonDown(0))))
             Nearest.Interact();
     }
@@ -1255,6 +1275,14 @@ public class CampaignSession : MonoBehaviour
     public IReadOnlyList<CampaignSaveSlotInfo> GetSaveSlots() =>
         CampaignSaveSlots.ListSlots(Application.persistentDataPath, SaveSlotCount);
 
+    public bool TryDeleteSaveSlot(int slot, out string error)
+    {
+        error = null;
+        if (!OnMap || Busy || LoadingScreen.IsLoading || Menu != AdventureMenu.Rest || !CanUpgrade)
+        { error = "Không thể xóa bản lưu lúc này."; return false; }
+        return CampaignSaveSlots.TryDelete(Application.persistentDataPath, slot, SaveSlotCount, out error);
+    }
+
     public bool TrySaveToSlot(int slot, out string error)
     {
         error = null;
@@ -1267,17 +1295,16 @@ public class CampaignSession : MonoBehaviour
         snapshot.checkpointRotation = snapshot.rotation;
         snapshot.checkpointMapScene = snapshot.currentMapScene;
         snapshot.hasCheckpoint = true;
-        for (int i = 0; i < snapshot.party.Count; i++) snapshot.party[i].hp = MaxHP(Data.party[i]);
         string location = RestPoint != null ? RestPoint.displayName : snapshot.currentMapScene;
         if (!CampaignSaveSlots.TrySave(Application.persistentDataPath, slot, SaveSlotCount, snapshot, snapshot.playTimeSeconds, location, out error)) return false;
-        // Apply the rest only after the chosen manual slot was written successfully.
+        // Checkpoints still require a successful manual save; HP recovery is
+        // handled automatically when approaching a rest point.
         Data.checkpoint = snapshot.checkpoint;
         Data.checkpointRotation = snapshot.checkpointRotation;
         Data.checkpointMapScene = snapshot.checkpointMapScene;
         Data.hasCheckpoint = true;
-        for (int i = 0; i < Data.party.Count; i++) Data.party[i].hp = snapshot.party[i].hp;
         bool autoSaved = Save(false);
-        Notify(autoSaved ? "Đã hồi đầy máu và lưu vào ô " + slot + "." : "Đã lưu vào ô " + slot + ", nhưng chưa cập nhật được bản tự lưu.");
+        Notify(autoSaved ? "Đã lưu vào ô " + slot + "." : "Đã lưu vào ô " + slot + ", nhưng chưa cập nhật được bản tự lưu.");
         return true;
     }
 

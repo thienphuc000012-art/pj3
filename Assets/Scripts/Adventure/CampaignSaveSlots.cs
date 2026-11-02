@@ -150,6 +150,32 @@ public static class CampaignSaveSlots
         return loaded;
     }
 
+    /// <summary>Deletes one confirmed manual slot, including its overwrite backup.</summary>
+    public static bool TryDelete(string directory, int slot, int slotCount, out string error)
+    {
+        error = null;
+        try
+        {
+            string path = SlotPath(directory, slot, slotCount);
+            // Remove the backup first: if that fails, leave the visible primary
+            // save intact. Never enumerate the directory or touch the autosave.
+            DeleteSlotFile(path + ".bak");
+            DeleteSlotFile(path);
+            return true;
+        }
+        catch (Exception exception)
+        {
+            error = "Không thể xóa ô lưu này: " + exception.Message;
+            return false;
+        }
+    }
+
+    static void DeleteSlotFile(string path)
+    {
+        try { File.Delete(path); }
+        catch (DirectoryNotFoundException) { } // An already empty slot is a no-op.
+    }
+
     static bool ReadSlot(string directory, int slot, int slotCount, out SlotFile file,
         out CampaignSaveSlotInfo info, out string error)
     {

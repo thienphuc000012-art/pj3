@@ -286,6 +286,12 @@ public class WorldInteractionEditor : Editor
             EditorGUILayout.PropertyField(serializedObject.FindProperty("dialogueNpcModelRotation"), new GUIContent("Model Local Rotation"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("dialogueNpcModelScale"), new GUIContent("Model Local Scale"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("dialogueFaceHeight"), new GUIContent("Fallback Face Height"));
+            EditorGUILayout.Space(4);
+            EditorGUILayout.LabelField("Icon hội thoại", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("showDialogueChatIcon"), new GUIContent("Hiện icon khi ở gần"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("dialogueChatIcon"), new GUIContent("Chat Icon (để trống dùng icon chung)"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("dialogueChatIconOffset"), new GUIContent("Vị trí icon so với đầu"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("dialogueChatIconSize"), new GUIContent("Kích thước icon"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("dialogueTalkAnimationState"), new GUIContent("NPC Talk State"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("dialogueNpcIdleAnimationStates"), new GUIContent("NPC Idle States"), true);
             EditorGUILayout.PropertyField(serializedObject.FindProperty("dialogueNpcIdleMinSeconds"), new GUIContent("Idle Switch Min Seconds"));
