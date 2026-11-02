@@ -942,3 +942,18 @@ MonoBehaviour:
     vietnamese: "\u0110\u1ED9i h\xECnh s\u1EBD tr\u1EDF v\u1EC1 \u0111i\u1EC3m l\u01B0u
       g\u1EA7n nh\u1EA5t v\xE0 \u0111\u01B0\u1EE3c h\u1ED3i \u0111\u1EA7y m\xE1u."
     english: The party will return to the nearest save point and be fully healed.
+  - key: menu.load.game
+    vietnamese: Tải game
+    english: Load Game
+  - key: save.slot.success
+    vietnamese: "Đã hồi đầy máu và lưu vào ô {0}."
+    english: "Health restored. Game saved to slot {0}."
+  - key: save.slot.autosave.failure
+    vietnamese: "Đã lưu vào ô {0}, nhưng chưa cập nhật được bản tự lưu."
+    english: "Saved to slot {0}, but the autosave could not be updated."
+  - key: save.slot.rest.only
+    vietnamese: Chỉ có thể lưu tại điểm nghỉ.
+    english: You can only save at a rest point.
+  - key: save.slot.load.busy
+    vietnamese: Không thể tải game lúc này.
+    english: You cannot load a game right now.

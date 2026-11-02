@@ -10,6 +10,9 @@ public class CampaignConfig : ScriptableObject
     [Tooltip("Các scene khám phá thuộc cùng campaign. mapScene vẫn là điểm bắt đầu; thêm các scene như m để giữ chung save/party/inventory.")]
     public List<string> additionalMapScenes = new List<string>();
     public string battleScene = "combattest";
+    [Header("Save Slots")]
+    [Range(1, 99), Tooltip("Số ô lưu thủ công trong menu Lưu/Tải game. Tự lưu vẫn dùng file riêng.")]
+    public int saveSlotCount = 10;
     [Header("Encounter Transition")]
     [Tooltip("VFX encounter phát phủ khung hình trước khi chuyển sang trận đấu.")]
     public GameObject encounterBlackHoleVfxPrefab;
@@ -182,6 +185,9 @@ public class UnlockedRestPoint
 public class CampaignSave
 {
     public int version = 5;
+    public double playTimeSeconds;
+    public string savedAtUtc;
+    public string saveLocationName;
     public string currentMapScene;
     public void MigrateSkillUnlocks()
     {

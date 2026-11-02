@@ -1,12 +1,13 @@
 using TMPro;
 using UnityEngine;
 
-/// <summary>Keeps UI text white when other presenters update their contents.</summary>
+/// <summary>Keeps shared UI text colors consistent with explicit selection styles.</summary>
 [DisallowMultipleComponent, DefaultExecutionOrder(10000)]
 public sealed class GameUITextColor : MonoBehaviour
 {
     TMP_Text label;
     DialogueChoiceTextHover choiceHover;
+    Color? colorOverride;
 
     public static GameUITextColor Apply(TMP_Text text)
     {
@@ -24,13 +25,19 @@ public sealed class GameUITextColor : MonoBehaviour
         Refresh();
     }
 
+    public void SetColorOverride(Color? value)
+    {
+        colorOverride = value;
+        Refresh();
+    }
+
     void LateUpdate() => Refresh();
 
     void Refresh()
     {
         if (label == null) label = GetComponent<TMP_Text>();
         if (label == null) return;
-        Color color = choiceHover != null ? choiceHover.TextColor : Color.white;
+        Color color = colorOverride ?? (choiceHover != null ? choiceHover.TextColor : Color.white);
         color.a = label.color.a;
         if (label.color != color) label.color = color;
         if (label.enableVertexGradient) label.enableVertexGradient = false;

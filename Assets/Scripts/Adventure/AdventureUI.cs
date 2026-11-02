@@ -24,6 +24,7 @@ public class AdventureUI : MonoBehaviour
     AdventureMenu previousMenu;
     PartyMenuStage stage;
     AdventureCanvasRoot view;
+    AdventureSaveSlotsView saveSlotsView;
     GameObject questPage, questDialog, dialoguePage;
     Button languageToggleButton;
     RectTransform questContent, dialoguePanel, dialogueChoices;
@@ -65,10 +66,14 @@ public class AdventureUI : MonoBehaviour
         }
         if (previousMenu != S.Menu)
         {
+            saveSlotsView?.Close();
             restPage = 0; selectedSkill = 0; CloseSkillChange(); CloseTravel();
             if (S.Menu != AdventureMenu.Tasks) CloseQuestDialog();
             previousMenu = S.Menu;
-            if (S.Menu == AdventureMenu.Tasks) RefreshQuestList();
+            if (S.Menu == AdventureMenu.Tasks)
+            {
+                RefreshQuestList();
+            }
             if (S.Menu == AdventureMenu.Dialogue)
             {
                 renderedDialogueNode = null;
@@ -160,6 +165,7 @@ public class AdventureUI : MonoBehaviour
         BuildQuestUI();
         BuildLanguageToggle();
         BuildDialogueUI();
+        BuildSaveLoadUI();
         var attributeConfirm = view.Component<Button>("Menu/Attributes/Confirm");
         attributeUpgradeHold = attributeConfirm.GetComponent<HoldToConfirmButton>();
         if (attributeUpgradeHold == null) attributeUpgradeHold = attributeConfirm.gameObject.AddComponent<HoldToConfirmButton>();
@@ -193,7 +199,7 @@ public class AdventureUI : MonoBehaviour
             if (pendingSkill != null && skillDialogMember == S.Data.party[selectedMember]) S.EquipSkill(selectedMember, selectedSlot, pendingSkill);
             CloseSkillChange();
         });
-        view.Click("Menu/Rest/Save", () => S.RestAndSave());
+        view.Click("Menu/Rest/Save", () => OpenSaveSlots(true));
         view.Click("Menu/Rest/Attributes", () => restPage = 1);
         view.Click("Menu/Rest/Skills", () => { restPage = 2; SelectLearnable(); });
         view.Click("Menu/Rest/Craft", () => restPage = 3);
@@ -205,6 +211,36 @@ public class AdventureUI : MonoBehaviour
         // Runtime-created menu buttons are added after AdventureCanvasRoot.Awake themes the prefab.
         GameUITheme.RefreshMenuButtonHover(view.gameObject);
     }
+
+    void BuildSaveLoadUI()
+    {
+        saveSlotsView = view.GetComponent<AdventureSaveSlotsView>();
+        if (saveSlotsView == null) saveSlotsView = view.gameObject.AddComponent<AdventureSaveSlotsView>();
+        saveSlotsView.Bind(view, S, view.Component<Button>("Menu/Rest/Save"));
+        var overview = view.Node("Menu/Party/Overview");
+        var inventory = view.Component<Button>("Menu/Party/Overview/Inventory");
+        var existing = overview.Find("LoadGame");
+        var button = existing != null ? existing.GetComponent<Button>() : null;
+        if (button == null)
+        {
+            button = Instantiate(inventory, overview);
+            button.name = "LoadGame";
+            ((RectTransform)button.transform).anchoredPosition = ((RectTransform)inventory.transform).anchoredPosition + Vector2.down * 176f;
+        }
+        button.onClick = new Button.ButtonClickedEvent();
+        button.onClick.AddListener(() => OpenSaveSlots(false));
+        GameLocalization.SetText(button.GetComponentInChildren<TMP_Text>(true), "Tải game");
+        button.gameObject.SetActive(true);
+    }
+
+    public void OpenSaveSlots(bool forSaving)
+    {
+        if (S == null || S.Data == null || !S.OnMap) return;
+        if (view == null) { view = AdventureCanvasRoot.Acquire(AdventureCanvasKind.Adventure); Bind(); }
+        saveSlotsView?.Open(forSaving);
+    }
+
+    public bool SaveSlotsOpen => saveSlotsView != null && saveSlotsView.IsOpen;
     void ClearInstructionText(string text)
     {
         foreach (var label in view.GetComponentsInChildren<TMPro.TMP_Text>(true))
@@ -330,16 +366,16 @@ public class AdventureUI : MonoBehaviour
         questPage.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f);
         questPage.GetComponent<Image>().raycastTarget = false;
         var listPanel = TravelPanel("Quest List", questPage.transform, new Vector2(.09f, .16f), new Vector2(.91f, .84f));
-        listPanel.GetComponent<Image>().color = new Color(.012f, .014f, .017f, .78f);
+        listPanel.GetComponent<Image>().color = new Color(.025f, .028f, .034f, 1f);
         TravelText(listPanel.transform, "Heading", "NHIỆM VỤ ĐANG CÓ", new Vector2(.04f, .87f), new Vector2(.96f, .98f));
         var scrollObject = new GameObject("Quest Scroll", typeof(RectTransform), typeof(ScrollRect), typeof(Image), typeof(RectMask2D));
         var viewport = TravelRect(scrollObject, listPanel.transform, new Vector2(.04f, .1f), new Vector2(.96f, .84f));
-        scrollObject.GetComponent<Image>().color = new Color(.05f, .06f, .07f, .45f);
+        scrollObject.GetComponent<Image>().color = new Color(.14f, .15f, .17f, 1f);
         var contentObject = new GameObject("Content", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
         questContent = TravelRect(contentObject, viewport, new Vector2(0f, 1f), Vector2.one);
         questContent.pivot = new Vector2(.5f, 1f);
         var listLayout = contentObject.GetComponent<VerticalLayoutGroup>();
-        listLayout.spacing = 8f; listLayout.padding = new RectOffset(6, 6, 6, 6);
+        listLayout.spacing = 12f; listLayout.padding = new RectOffset(12, 12, 12, 12);
         listLayout.childControlHeight = true; listLayout.childForceExpandHeight = false;
         contentObject.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         var scroll = scrollObject.GetComponent<ScrollRect>(); scroll.viewport = viewport; scroll.content = questContent; scroll.horizontal = false;
@@ -347,15 +383,34 @@ public class AdventureUI : MonoBehaviour
         questDialog.GetComponent<Image>().color = new Color(0f, 0f, 0f, .62f);
         var box = TravelPanel("Panel", questDialog.transform, new Vector2(.27f, .3f), new Vector2(.73f, .7f));
         questPrompt = TravelText(box.transform, "Prompt", "", new Vector2(.07f, .38f), new Vector2(.93f, .91f));
-        TravelButton(box.transform, "Yes", "Có", new Vector2(.08f, .1f), new Vector2(.46f, .3f), ConfirmTrackQuest);
-        TravelButton(box.transform, "No", "Không", new Vector2(.54f, .1f), new Vector2(.92f, .3f), CloseQuestDialog);
+        QuestConfirmationButton(box.transform, "Yes", "Có", new Vector2(.08f, .1f), new Vector2(.46f, .3f), ConfirmTrackQuest);
+        QuestConfirmationButton(box.transform, "No", "Không", new Vector2(.54f, .1f), new Vector2(.92f, .3f), CloseQuestDialog);
         questDialog.SetActive(false);
+    }
+
+    Button QuestConfirmationButton(Transform parent, string name, string text, Vector2 min, Vector2 max, UnityEngine.Events.UnityAction action)
+    {
+        var obj = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+        obj.layer = view.gameObject.layer;
+        TravelRect(obj, parent, min, max);
+        var background = obj.GetComponent<Image>();
+        var settings = Resources.Load<GameUIThemeSettings>("Adventure/UI/GameUIThemeSettings");
+        background.sprite = settings != null ? settings.skillBackground : null;
+        background.color = background.sprite != null ? Color.white : Color.black;
+        var button = obj.GetComponent<Button>();
+        button.targetGraphic = background;
+        button.transition = Selectable.Transition.None;
+        button.onClick.AddListener(action);
+        var label = TravelText(obj.transform, "Label", text, new Vector2(.08f, .08f), new Vector2(.92f, .92f));
+        label.alignment = TextAlignmentOptions.Center;
+        obj.AddComponent<QuestButtonHighlight>().Configure(false, true);
+        return button;
     }
 
     void RefreshQuestList()
     {
         if (questContent == null) return;
-        foreach (Transform child in questContent) Destroy(child.gameObject);
+        foreach (Transform child in questContent) { child.gameObject.SetActive(false); Destroy(child.gameObject); }
         var progressList = S.QuestProgresses;
         var entries = progressList == null ? null : progressList.Where(progress => progress != null)
             .Select(progress => new { progress, quest = S.FindQuestDefinition(progress.questId) })
@@ -375,10 +430,23 @@ public class AdventureUI : MonoBehaviour
                 : progress.objectiveCount + " / " + Mathf.Max(1, quest.requiredCount);
             status = GameLocalization.Translate(status);
             if (S.Data.trackedQuestId == progress.questId) status += GameLocalization.Translate(" • Đang theo dõi");
-            var button = TravelButton(questContent, "Quest " + quest.Id, quest.displayName + "\n" + status,
-                Vector2.zero, Vector2.one, () => OpenQuestDialog(quest));
-            var size = button.gameObject.AddComponent<LayoutElement>(); size.preferredHeight = 72f; size.minHeight = 60f;
+            // Quest entries own their appearance rather than inheriting the rest
+            // button's grunge plate, wipe, outline glow and hover scale.
+            var row = new GameObject("Quest " + quest.Id, typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
+            row.layer = view.gameObject.layer;
+            TravelRect(row, questContent, Vector2.zero, Vector2.one);
+            var button = row.GetComponent<Button>();
+            button.targetGraphic = row.GetComponent<Image>();
+            button.transition = Selectable.Transition.None;
+            button.onClick.AddListener(() => OpenQuestDialog(quest));
+            var border = row.AddComponent<Outline>();
+            border.effectColor = new Color(.65f, .67f, .7f, .6f);
+            border.effectDistance = new Vector2(1f, -1f);
+            TravelText(row.transform, "Label", quest.displayName + "\n" + status,
+                new Vector2(.025f, .1f), new Vector2(.975f, .9f));
+            var size = row.GetComponent<LayoutElement>(); size.preferredHeight = 88f; size.minHeight = 88f;
             button.interactable = !progress.completed || !progress.rewardsClaimed;
+            row.AddComponent<QuestButtonHighlight>().Configure(true, false);
         }
     }
 
@@ -625,6 +693,7 @@ public class AdventureUI : MonoBehaviour
     }
     public bool HandleBack()
     {
+        if (saveSlotsView != null && saveSlotsView.HandleBack()) return true;
         if (S.Menu == AdventureMenu.Dialogue) return true;
         if (questDialog != null && questDialog.activeSelf) { CloseQuestDialog(); return true; }
         if (travelDialog != null && travelDialog.activeSelf) { travelDialog.SetActive(false); return true; }

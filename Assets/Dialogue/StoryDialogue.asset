@@ -32,7 +32,7 @@ MonoBehaviour:
       nextNodeId: 13
       questToOffer: {fileID: 0}
     - text: "kh\xF4ng"
-      nextNodeId: 13
+      nextNodeId: khong
       questToOffer: {fileID: 0}
   - id: 13
     speakerType: 0
@@ -47,5 +47,11 @@ MonoBehaviour:
     speakerType: 0
     speaker: okoko
     text: bbbbbbbbbbbbbbbbbbbbbbbbbb
+    nextNodeId: 15
+    choices: []
+  - id: khong
+    speakerType: 0
+    speaker: okoko
+    text: vay thoi
     nextNodeId: 15
     choices: []

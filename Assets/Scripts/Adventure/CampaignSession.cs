@@ -198,6 +198,9 @@ public class CampaignSession : MonoBehaviour
     private bool dialogueSpeakerPresentationSet;
     private bool dialoguePresentedPlayer;
     private string SavePath => Path.Combine(Application.persistentDataPath, "adventure-save-v1.json");
+    private double playTimeSample = -1;
+    private bool playTimePaused;
+    public int SaveSlotCount => Mathf.Clamp(Config != null ? Config.saveSlotCount : 10, 1, 99);
     private float encounterAllowedAt;
     private class EncounterData
     {
@@ -244,8 +247,25 @@ public class CampaignSession : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
     void OnDestroy() { if (Instance == this) { StopDialogueSpeakerPresentation(); Instance = null; Time.timeScale = previousTimeScale; } }
+    void OnApplicationFocus(bool focused) { playTimeSample = Time.realtimeSinceStartupAsDouble; }
+    void OnApplicationPause(bool paused) { playTimePaused = paused; playTimeSample = Time.realtimeSinceStartupAsDouble; }
+    void UpdatePlayTime()
+    {
+        double now = Time.realtimeSinceStartupAsDouble;
+        double elapsed = playTimeSample < 0 ? 0 : Math.Max(0, now - playTimeSample);
+        playTimeSample = now;
+        if (Data == null || playTimePaused || !Application.isFocused || LoadingScreen.IsLoading) return;
+        if (double.IsNaN(Data.playTimeSeconds) || double.IsInfinity(Data.playTimeSeconds) || Data.playTimeSeconds < 0) Data.playTimeSeconds = 0;
+        Data.playTimeSeconds += elapsed;
+    }
+
+    bool IsCompatibleSave(CampaignSave save) => save != null && save.version >= 1 && save.version <= 5 &&
+        save.party != null && save.party.Count > 0 && save.inventory != null && save.collected != null &&
+        Config?.startingParty != null && save.party.All(member => member != null && member.prefabIndex >= 0 &&
+            member.prefabIndex < Config.startingParty.Count && Config.startingParty[member.prefabIndex] != null);
     void LoadOrCreate(bool startNewGame = false)
     {
+        playTimeSample = Time.realtimeSinceStartupAsDouble;
         if (startNewGame && File.Exists(SavePath))
         {
             try
@@ -265,9 +285,7 @@ public class CampaignSession : MonoBehaviour
             try
             {
                 var loaded = JsonUtility.FromJson<CampaignSave>(File.ReadAllText(SavePath));
-                if (loaded != null && loaded.version >= 1 && loaded.version <= 5 && loaded.party != null && loaded.party.Count > 0 &&
-                    loaded.inventory != null && loaded.collected != null &&
-                    loaded.party.All(p => p != null && p.prefabIndex >= 0 && p.prefabIndex < Config.startingParty.Count && Config.startingParty[p.prefabIndex] != null))
+                if (IsCompatibleSave(loaded))
                     Data = loaded;
             }
             catch (Exception e) { Debug.LogWarning("Could not read adventure save: " + e.Message); }
@@ -433,7 +451,8 @@ public class CampaignSession : MonoBehaviour
         if (choice.questToOffer != null)
         {
             AcceptQuest(choice.questToOffer);
-            // An offer is a one-time story beat even if the player already had the quest from an older save.
+            // Completion is recorded only if the quest was actually accepted.
+            // A declined/failed offer must remain available next time.
             MarkDialogueCompleted(ActiveDialogueNpc, ActiveDialogue);
         }
         dialogueResponseNextNodeId = choice.nextNodeId;
@@ -659,9 +678,10 @@ public class CampaignSession : MonoBehaviour
             var repeatable = progress.completed ? entry.completedDialogue : entry.inProgressDialogue;
             // State-specific conversations repeat even if Play Once was left on
             // in the asset. They do not consume a story progression marker.
-            if (repeatable != null && repeatable.FindNode(repeatable.startNodeId) != null) return repeatable;
+            if (repeatable != null && repeatable.FindNode(repeatable.startNodeId) != null &&
+                GetDialogueQuestOfferState(repeatable) != DialogueQuestOfferState.Accepted) return repeatable;
         }
-        return npc.defaultDialogue;
+        return GetDialogueQuestOfferState(npc.defaultDialogue) == DialogueQuestOfferState.Accepted ? null : npc.defaultDialogue;
     }
 
     private static bool HasDialogueUnlockCondition(AdventureStoryDialogue dialogue) => dialogue != null &&
@@ -671,7 +691,11 @@ public class CampaignSession : MonoBehaviour
     private bool IsDialogueAvailable(WorldInteraction npc, AdventureStoryDialogue dialogue)
     {
         if (dialogue == null) return false;
-        if (dialogue.playOnce && IsDialogueConsumed(npc, dialogue)) return false;
+        var questOfferState = GetDialogueQuestOfferState(dialogue);
+        // Quest progress is authoritative, including older saves. Earlier builds
+        // could consume the conversation after choosing No; let that offer reopen.
+        if (questOfferState == DialogueQuestOfferState.Accepted) return false;
+        if (questOfferState == DialogueQuestOfferState.None && dialogue.playOnce && IsDialogueConsumed(npc, dialogue)) return false;
         if (dialogue.requiredCompletedQuestIds != null)
             foreach (var questId in dialogue.requiredCompletedQuestIds)
                 if (!string.IsNullOrWhiteSpace(questId) && QuestProgress(questId.Trim())?.completed != true) return false;
@@ -679,11 +703,26 @@ public class CampaignSession : MonoBehaviour
             foreach (var dialogueId in dialogue.requiredCompletedDialogueIds)
                 if (!string.IsNullOrWhiteSpace(dialogueId) && Data?.completedStoryDialogueIds?.Contains(dialogueId.Trim()) != true) return false;
 
-        // Old saves may have an accepted quest but not the dialogue-consumed marker.
-        // Skip its offer conversation so the NPC cannot present the same quest again.
-        if (dialogue.nodes != null && dialogue.nodes.Any(node => node?.choices != null && node.choices.Any(choice =>
-                choice?.questToOffer != null && QuestProgress(choice.questToOffer.Id) != null))) return false;
         return true;
+    }
+
+    private enum DialogueQuestOfferState { None, Unaccepted, Accepted }
+
+    private DialogueQuestOfferState GetDialogueQuestOfferState(AdventureStoryDialogue dialogue)
+    {
+        bool offersQuest = false;
+        if (dialogue?.nodes != null)
+            foreach (var node in dialogue.nodes)
+            {
+                if (node?.choices == null) continue;
+                foreach (var choice in node.choices)
+                {
+                    if (choice?.questToOffer == null) continue;
+                    offersQuest = true;
+                    if (QuestProgress(choice.questToOffer.Id) != null) return DialogueQuestOfferState.Accepted;
+                }
+            }
+        return offersQuest ? DialogueQuestOfferState.Unaccepted : DialogueQuestOfferState.None;
     }
 
     private string NpcDialogueKey(WorldInteraction npc, AdventureStoryDialogue dialogue) =>
@@ -695,6 +734,7 @@ public class CampaignSession : MonoBehaviour
     private void MarkDialogueCompleted(WorldInteraction npc, AdventureStoryDialogue dialogue)
     {
         if (npc == null || dialogue == null || Data == null || npc.IsRepeatableDialogue(dialogue)) return;
+        if (GetDialogueQuestOfferState(dialogue) == DialogueQuestOfferState.Unaccepted) return;
         if (Data.consumedNpcDialogueKeys == null) Data.consumedNpcDialogueKeys = new List<string>();
         if (Data.completedStoryDialogueIds == null) Data.completedStoryDialogueIds = new List<string>();
         string npcDialogueKey = NpcDialogueKey(npc, dialogue);
@@ -989,12 +1029,18 @@ public class CampaignSession : MonoBehaviour
     }
     void Update()
     {
+        UpdatePlayTime();
         if (!OnMap || MapPlayer == null || Busy || LoadingScreen.IsLoading || MapChunkStreamer.MovementBlocked) return;
         // Dialogue owns input until its final node. Esc/P must not consume a
         // one-time conversation or release its camera/player controls early.
         if (Menu == AdventureMenu.Dialogue) return;
         if (Input.GetKeyDown(KeyCode.Escape)) { if (!GetComponent<AdventureUI>().HandleBack()) SetMenu(AdventureMenu.None); return; }
-        if (Input.GetKeyDown(KeyCode.P)) SetMenu(Menu == AdventureMenu.None ? AdventureMenu.Main : AdventureMenu.None);
+        if (Input.GetKeyDown(KeyCode.P))
+        {
+            var ui = GetComponent<AdventureUI>();
+            if (ui != null && ui.SaveSlotsOpen) { ui.HandleBack(); return; }
+            SetMenu(Menu == AdventureMenu.None ? AdventureMenu.Main : AdventureMenu.None);
+        }
         if (Menu != AdventureMenu.None) return;
         Nearest = null;
         float best = float.MaxValue;
@@ -1070,9 +1116,12 @@ public class CampaignSession : MonoBehaviour
     }
     public bool Save(bool capturePosition = true)
     {
+        UpdatePlayTime();
         if (capturePosition) CapturePosition();
         try
         {
+            Data.savedAtUtc = DateTime.UtcNow.ToString("O");
+            Data.saveLocationName = RestPoint != null ? RestPoint.displayName : Data.currentMapScene;
             string temp = SavePath + ".tmp";
             File.WriteAllText(temp, JsonUtility.ToJson(Data, true));
             if (File.Exists(SavePath)) File.Replace(temp, SavePath, SavePath + ".bak");
@@ -1199,13 +1248,92 @@ public class CampaignSession : MonoBehaviour
 
     public void RestAndSave()
     {
-        if (!CanUpgrade) return;
-        CapturePosition();
-        Data.checkpoint = Data.position; Data.checkpointRotation = Data.rotation;
-        Data.checkpointMapScene = Data.currentMapScene; Data.hasCheckpoint = true;
-        foreach (var p in Data.party) p.hp = MaxHP(p);
-        if (Save()) Notify("Đã hồi đầy máu và lưu game.");
+        if (!CanUpgrade || Menu != AdventureMenu.Rest) return;
+        GetComponent<AdventureUI>()?.OpenSaveSlots(true);
     }
+
+    public IReadOnlyList<CampaignSaveSlotInfo> GetSaveSlots() =>
+        CampaignSaveSlots.ListSlots(Application.persistentDataPath, SaveSlotCount);
+
+    public bool TrySaveToSlot(int slot, out string error)
+    {
+        error = null;
+        if (!CanUpgrade || Menu != AdventureMenu.Rest || LoadingScreen.IsLoading || Data == null)
+        { error = "Chỉ có thể lưu tại điểm nghỉ."; return false; }
+        UpdatePlayTime();
+        CapturePosition();
+        var snapshot = JsonUtility.FromJson<CampaignSave>(JsonUtility.ToJson(Data));
+        snapshot.checkpoint = snapshot.position;
+        snapshot.checkpointRotation = snapshot.rotation;
+        snapshot.checkpointMapScene = snapshot.currentMapScene;
+        snapshot.hasCheckpoint = true;
+        for (int i = 0; i < snapshot.party.Count; i++) snapshot.party[i].hp = MaxHP(Data.party[i]);
+        string location = RestPoint != null ? RestPoint.displayName : snapshot.currentMapScene;
+        if (!CampaignSaveSlots.TrySave(Application.persistentDataPath, slot, SaveSlotCount, snapshot, snapshot.playTimeSeconds, location, out error)) return false;
+        // Apply the rest only after the chosen manual slot was written successfully.
+        Data.checkpoint = snapshot.checkpoint;
+        Data.checkpointRotation = snapshot.checkpointRotation;
+        Data.checkpointMapScene = snapshot.checkpointMapScene;
+        Data.hasCheckpoint = true;
+        for (int i = 0; i < Data.party.Count; i++) Data.party[i].hp = snapshot.party[i].hp;
+        bool autoSaved = Save(false);
+        Notify(autoSaved ? "Đã hồi đầy máu và lưu vào ô " + slot + "." : "Đã lưu vào ô " + slot + ", nhưng chưa cập nhật được bản tự lưu.");
+        return true;
+    }
+
+    public bool TryLoadFromSlot(int slot, out string error)
+    {
+        error = null;
+        if (!OnMap || Busy || LoadingScreen.IsLoading || (Menu != AdventureMenu.Main && Menu != AdventureMenu.Rest))
+        { error = "Không thể tải game lúc này."; return false; }
+        if (!CampaignSaveSlots.TryLoad(Application.persistentDataPath, slot, SaveSlotCount, out var loaded, out var info, out error)) return false;
+        if (!IsCompatibleSave(loaded)) { error = "Bản lưu không tương thích với đội hình hiện tại."; return false; }
+        string target = string.IsNullOrWhiteSpace(loaded.currentMapScene) ? Config.mapScene : loaded.currentMapScene;
+        if (!Config.IsMapScene(target) || !Application.CanStreamedLevelBeLoaded(target) || !Application.CanStreamedLevelBeLoaded(LoadingScreen.SceneName))
+        { error = "Map trong bản lưu hoặc scene Loading chưa có trong Build Settings."; return false; }
+        if (loaded.hasPosition && (!Finite(loaded.position.x) || !Finite(loaded.position.y) || !Finite(loaded.position.z)))
+        { error = "Vị trí trong bản lưu không hợp lệ."; return false; }
+        try { loaded.MigrateSkillUnlocks(); }
+        catch (Exception) { error = "Dữ liệu bản lưu không hợp lệ."; return false; }
+        loaded.currentMapScene = target;
+        if (loaded.unlockedRestPoints == null) loaded.unlockedRestPoints = new List<UnlockedRestPoint>();
+        var oldMenu = Menu;
+        var oldRest = RestPoint;
+        SetMenu(AdventureMenu.None);
+        if (!LoadingScreen.Load(target))
+        {
+            RestPoint = oldRest;
+            SetMenu(oldMenu);
+            if (oldMenu == AdventureMenu.Rest) oldRest?.GetComponent<RestPointPresentation>()?.Begin(MapPlayer);
+            error = LoadingScreen.Error ?? "Không thể tải map.";
+            return false;
+        }
+        // The scene operation is asynchronous. Replace campaign data before the
+        // destination MapGameSetup binds its player and chooses initial chunks.
+        Data = loaded;
+        playTimeSample = Time.realtimeSinceStartupAsDouble;
+        previousTimeScale = 1;
+        Busy = true;
+        KeepHudVisibleDuringItemInteraction = false;
+        encounter = null;
+        RestPoint = null;
+        Nearest = null;
+        ActiveDialogue = null;
+        ActiveDialogueNpc = null;
+        ActiveDialogueNodeId = null;
+        ClearDialogueResponse();
+        worldPoints = new WorldInteraction[0];
+        worldPointsByScene.Clear();
+        worldSceneRoots.Clear();
+        worldScanBuffer.Clear();
+        worldPointBuffer.Clear();
+        Message = null;
+        MessageUntil = 0;
+        Save(false);
+        return true;
+    }
+
+    static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
     public bool ConfirmStats(int memberIndex, int[] points)
     {
         if (!CanUpgrade || memberIndex < 0 || memberIndex >= Data.party.Count) return false;

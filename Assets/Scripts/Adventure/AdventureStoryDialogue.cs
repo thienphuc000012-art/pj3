@@ -8,7 +8,7 @@ public sealed class AdventureStoryDialogue : ScriptableObject
 {
     [Tooltip("Stable ID used for story progression checks. Leave empty to use the asset name.")]
     public string dialogueId;
-    [Tooltip("When enabled, this dialogue is available only once per NPC. Default NPC dialogue is repeatable.")]
+    [Tooltip("Thoại cốt truyện chỉ chạy một lần mỗi NPC khi bật. Thoại có lựa chọn nhận quest vẫn lặp nếu chưa nhận; nhận quest rồi thì ngừng lặp. Thoại mặc định không có quest luôn được lặp.")]
     public bool playOnce = true;
     [Tooltip("Optional quest IDs that must be completed before this dialogue unlocks.")]
     public List<string> requiredCompletedQuestIds = new List<string>();

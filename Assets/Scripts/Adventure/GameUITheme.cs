@@ -103,6 +103,7 @@ public static class GameUITheme
         foreach (var image in root.GetComponentsInChildren<Image>(true))
         {
             if (image == null) continue;
+            if (IsSaveSlotsElement(image.transform) || IsQuestElement(image.transform)) continue;
             if (image.GetComponentInParent<AdventureDialogueView>(true) != null) continue;
             string n = image.gameObject.name.ToLowerInvariant();
             if (Contains(n, "hp", "health", "fill", "icon", "portrait", "preview", "buff", "debuff", "ultimate", "energy")) continue;
@@ -159,6 +160,7 @@ public static class GameUITheme
         foreach (var button in root.GetComponentsInChildren<Button>(true))
         {
             if (button == null) continue;
+            if (IsSaveSlotsElement(button.transform) || IsQuestElement(button.transform)) continue;
             if (IsCombatActionButton(button.transform))
             {
                 var dynamic = button.GetComponent<DynamicButtonUI>();
@@ -249,6 +251,20 @@ public static class GameUITheme
                         if (parent.GetComponent<BattleMenuStagger>() == null) parent.gameObject.AddComponent<BattleMenuStagger>();
                         break;
                     }
+    }
+
+    static bool IsQuestElement(Transform target)
+    {
+        for (var parent = target; parent != null; parent = parent.parent)
+            if (parent.name == "Quest Scroll" || parent.name == "Quest Track Confirmation") return true;
+        return false;
+    }
+
+    static bool IsSaveSlotsElement(Transform target)
+    {
+        for (var parent = target; parent != null; parent = parent.parent)
+            if (parent.name == "Save Slots" || parent.name == "Save Slot Confirmation") return true;
+        return false;
     }
 
     static bool IsCombatActionButton(Transform target)
