@@ -153,6 +153,7 @@ public class WorldInteraction : MonoBehaviour
     void OnEnable()
     {
         if (!Application.isPlaying) return;
+        AdventureScanTarget.EnsureForInteraction(this);
         if (kind == WorldInteractionKind.DialogueNPC)
         {
             EnsureDialogueNpcModel();

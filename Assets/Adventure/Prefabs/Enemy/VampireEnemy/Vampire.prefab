@@ -858,8 +858,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 99de3be6ba1a61f459516fd503e34872, type: 2}
   startingBattleEffects: []
   bossPhases:
-  - hpPercentThreshold: 0.5
-    actionsPerTurn: 2
+  - actionsPerTurn: 2
     phaseActionPattern:
     - {fileID: 11400000, guid: 99de3be6ba1a61f459516fd503e34872, type: 2}
     - {fileID: 11400000, guid: 60996dce4e5bb1749a52c607abe63b1f, type: 2}

@@ -301,6 +301,7 @@ public class CampaignSession : MonoBehaviour
     public void BindMap(PlayerScript player)
     {
         MapPlayer = player;
+        AdventureScanner.EnsureForMap(player);
         Busy = false;
         string sceneName = SceneManager.GetActiveScene().name;
         bool positionBelongsToThisMap = Data.hasPosition &&

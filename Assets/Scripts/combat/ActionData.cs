@@ -13,6 +13,11 @@ public class ActionData : ScriptableObject
     public enum ActionType { Attack, Skill, Item }
     public ActionType type;
 
+    public enum ElementType { None, Fire, Water, Nature }
+    [Header("Elemental Type")]
+    [Tooltip("Hệ riêng của kỹ năng. None là kỹ năng trung tính, không nhận hệ số cùng/khắc hệ.")]
+    public ElementType element = ElementType.None;
+
     [Header("Ultimate Energy")]
     [Tooltip("Requires a full personal Ultimate gauge and consumes it on use.")]
     public bool isUltimate;

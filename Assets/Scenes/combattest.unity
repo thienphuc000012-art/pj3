@@ -713,6 +713,10 @@ MonoBehaviour:
   portraitPrefab: {fileID: 792294675605953329, guid: 0b09863592c7b544b8abb0f99efc28ec, type: 3}
   enemyHudPanel: {fileID: 1019893777}
   enemyHpFill: {fileID: 1563397434}
+  enemyElementIcon: {fileID: 0}
+  enemyElementLabel: {fileID: 0}
+  enemyElementIconSize: {x: 26, y: 26}
+  enemyElementIconOffset: {x: -5, y: 0}
   enemyHpBorder: {fileID: 0}
   enemyBuffContainer: {fileID: 643845430}
   enemyBuffContainerParent: {fileID: 643845430}
@@ -726,6 +730,24 @@ MonoBehaviour:
   enemyHpBorderOffsetMax: {x: 0.000041008, y: 44.18607}
   enemyNameText: {fileID: 881428119}
   enemyHpText: {fileID: 1371621001}
+  enemyBossPhaseIcon: {fileID: 0}
+  enemyBossPhaseLabel: {fileID: 0}
+  enemyBossPhaseIconSize: {x: 42, y: 34}
+  enemyBossPhaseIconOffset: {x: 0, y: 0}
+  enemyBossPhaseBadgeColor: {r: 0.055, g: 0.045, b: 0.035, a: 0.94}
+  elementSprites:
+  - element: 1
+    sprite: {fileID: 0}
+    fallbackColor: {r: 0.78, g: 0.19, b: 0.12, a: 1}
+    fallbackLabel: F
+  - element: 2
+    sprite: {fileID: 0}
+    fallbackColor: {r: 0.14, g: 0.48, b: 0.82, a: 1}
+    fallbackLabel: W
+  - element: 3
+    sprite: {fileID: 0}
+    fallbackColor: {r: 0.22, g: 0.62, b: 0.32, a: 1}
+    fallbackLabel: N
   partyHUDList:
   - gameObject: {fileID: 1666445954}
     hpFill: {fileID: 1952813307}
@@ -733,6 +755,10 @@ MonoBehaviour:
     hpText: {fileID: 1771239686}
     nameText: {fileID: 1588585347}
     ultimateFill: {fileID: 0}
+    elementIcon: {fileID: 0}
+    elementLabel: {fileID: 0}
+    elementIconSize: {x: 24, y: 24}
+    elementIconOffset: {x: 0, y: 0}
     ultimateFillDuration: 1
     buffContainer: {fileID: 1196199401}
   - gameObject: {fileID: 356043649}
@@ -741,6 +767,10 @@ MonoBehaviour:
     hpText: {fileID: 2012900699}
     nameText: {fileID: 44903031}
     ultimateFill: {fileID: 0}
+    elementIcon: {fileID: 0}
+    elementLabel: {fileID: 0}
+    elementIconSize: {x: 24, y: 24}
+    elementIconOffset: {x: 0, y: 0}
     ultimateFillDuration: 1
     buffContainer: {fileID: 371314642}
   targetNameText: {fileID: 0}
@@ -1689,8 +1719,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 203175422}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.021174362, y: 0.3696603, z: -0.010416302, w: -0.9288673}
-  m_LocalPosition: {x: -2.369995, y: 4.0700073, z: -1.663}
+  m_LocalRotation: {x: 0.014203008, y: 0.08886555, z: 0.018844398, w: 0.99576414}
+  m_LocalPosition: {x: -7.166992, y: 4.8499756, z: -5.89}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3417,6 +3447,17 @@ MonoBehaviour:
   - {fileID: 11400000, guid: ff83eafb89cc4d0489f523f4f3805d89, type: 2}
   currentStains: 0
   maxStains: 4
+  useElementalDamage: 1
+  elementalAdvantageMultiplier: 2
+  elementalSameTypeMultiplier: 1.5
+  elementalDisadvantageMultiplier: 0.5
+  elementalCounterRules:
+  - strongerElement: 1
+    weakerElement: 3
+  - strongerElement: 3
+    weakerElement: 2
+  - strongerElement: 2
+    weakerElement: 1
   currentActiveUnit: {fileID: 0}
   currentTarget: {fileID: 0}
   meleeApproachDistance: 1.6
@@ -3862,6 +3903,10 @@ PrefabInstance:
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: baseAtk
       value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
+      propertyPath: element
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: unitName
@@ -5075,6 +5120,8 @@ MonoBehaviour:
   infoText: {fileID: 348332472}
   resourceText: {fileID: 430380721}
   iconImage: {fileID: 252714975}
+  elementIconImage: {fileID: 0}
+  elementIconLabel: {fileID: 0}
   button: {fileID: 842231499}
 --- !u!114 &842231499
 MonoBehaviour:
@@ -13049,6 +13096,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 3750319964840296008, guid: 6420f2b6c7cb7f141a78467b70d2f49a, type: 3}
+      propertyPath: element
+      value: 2
+      objectReference: {fileID: 0}
     - target: {fileID: 8631952338195859945, guid: 6420f2b6c7cb7f141a78467b70d2f49a, type: 3}
       propertyPath: m_Name
       value: SK_Lauren Red
@@ -14035,6 +14086,10 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6754251023150294601, guid: 96659ae2a04725e4999e1124bc86d77c, type: 3}
+      propertyPath: element
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6754251023150294601, guid: 96659ae2a04725e4999e1124bc86d77c, type: 3}
       propertyPath: idleVfx.Array.size
       value: 1
       objectReference: {fileID: 0}
@@ -14105,10 +14160,6 @@ PrefabInstance:
     - target: {fileID: 6754251023150294601, guid: 96659ae2a04725e4999e1124bc86d77c, type: 3}
       propertyPath: bossPhases.Array.data[1].actionsPerTurn
       value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 6754251023150294601, guid: 96659ae2a04725e4999e1124bc86d77c, type: 3}
-      propertyPath: bossPhases.Array.data[1].hpPercentThreshold
-      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 6754251023150294601, guid: 96659ae2a04725e4999e1124bc86d77c, type: 3}
       propertyPath: bossPhases.Array.data[0].phaseActionPattern.Array.size

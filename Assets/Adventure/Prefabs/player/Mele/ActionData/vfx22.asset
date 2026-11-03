@@ -16,21 +16,40 @@ MonoBehaviour:
   description: anbfaklfbafbna
   icon: {fileID: 21300000, guid: 742198cc0ec8f0143b32a726fe61f028, type: 3}
   type: 1
+  element: 1
   isUltimate: 0
   ultimateEnergyGain: 10
   power: 5
   damageMultiplier: 10
+  useLifeSteal: 0
+  lifeStealPercent: 33.333
+  damageCondition: 0
+  damageMultiplierWhenCasterBurned: 2
+  damageMultiplierWhenCasterNotBurned: 0.5
+  damageMultiplierWhenTargetPoisoned: 1.5
+  damageMultiplierWhenTargetNotPoisoned: 1
+  ignoreBurnAttackReductionWhenEmpowered: 1
+  isSummonSkill: 0
+  summonPrefab: {fileID: 0}
+  summonCount: 2
+  summonDeathOwnerMaxHpCostPercent: 10
+  summonSpawnVfxPrefab: {fileID: 0}
+  summonSpawnVfxLocalOffset: {x: 0, y: 0, z: 0}
+  summonSpawnVfxLifetime: 2
+  summonSpawnDelay: 0.65
   isHeal: 0
   animationTriggerName: Anim22
   isFriendlyAction: 1
   isAoE: 0
   isSelfOnly: 1
   stainChange: 0
+  enemyCooldownTurns: 0
   buffStat: 1
   buffAmount: 100
   buffDuration: 2
   debuffs:
   - type: 0
+    icon: {fileID: 0}
     applyChance: 0
     turns: 0
     burnDamage: 0
@@ -59,6 +78,10 @@ MonoBehaviour:
   screenSlashTimeScale: 1
   vfxType: 2
   vfxPrefab: {fileID: 121928, guid: 313e5c5f850e5be429d4a6787a725f73, type: 3}
+  vfxPlaybackSpeed: 1
+  ultimateAuraVfxPrefab: {fileID: 0}
+  ultimateAuraVfxLocalOffset: {x: 0, y: 1, z: 0}
+  ultimateAuraVfxPlaybackSpeed: 1
   castVfxPrefab: {fileID: 0}
   hitVfxPrefab: {fileID: 0}
   useCustomHitVfxOffset: 0
@@ -70,6 +93,7 @@ MonoBehaviour:
   parryOpenBeforeImpact: 0.25
   parryWindowDuration: 0.3
   beamParryDelay: 0.1
+  useMeleeHitboxParry: 1
   beamPlaybackSpeed: 1
   beamParticleNames: []
   beamParticleStream: 0
@@ -83,3 +107,15 @@ MonoBehaviour:
   curveHeight: 2
   curveSideOffset: 0
   rfxUseGravity: 0
+  swordSlashVfxPrefab: {fileID: 0}
+  swordSlashVfxLocalOffset: {x: 0, y: 0, z: 0}
+  swordSlashVfxLocalEuler: {x: 0, y: 0, z: 0}
+  swordSlashVfxScale: {x: 1, y: 1, z: 1}
+  swordSlashVfxLifetime: 2
+  swordSlashTravelsToTarget: 1
+  swordSlashTravelSpeed: 24
+  useClawAttackTrailVfx: 0
+  clawAttackTrailColor: {r: 0.88, g: 0.92, b: 0.96, a: 1}
+  clawAttackTrailLifetime: 0.14
+  clawAttackTrailWidth: 1
+  clawAttackTrailHandSpread: 0.5

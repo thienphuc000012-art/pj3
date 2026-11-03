@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4501985cff294a67871c90972b091374, type: 3}
+  m_Name: AdventureScanSettings
+  m_EditorClassIdentifier: Assembly-CSharp::AdventureScanSettings
+  scanEnabled: 1
+  scanKey: 118
+  radius: 45
+  waveSpeed: 22
+  cooldown: 8
+  revealDuration: 6
+  fadeDuration: 0.6
+  maxDetectedTargets: 48
+  detectionLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  requireLineOfSight: 0
+  obstructionLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  scanColor: {r: 0.05, g: 0.8, b: 1.4, a: 1}
+  waveWidth: 1.6
+  waveIntensity: 1.2
+  revealTrailWidth: 12
+  gridScale: 1.5
+  gridIntensity: 0.18
+  edgeIntensity: 0.4
+  environmentTint: 0.05
+  hologramScanlineDensity: 18
+  hologramScanlineStrength: 0.06
+  outlineFeatures:
+  - {fileID: 6184892026712934701, guid: f288ae1f4751b564a96ac7587541f7a2, type: 2}
+  - {fileID: 6184892026712934701, guid: 65bc7dbf4170f435aa868c779acfb082, type: 2}
+  showOutline: 1
+  outlineColor: {r: 0.08, g: 1.2, b: 1.8, a: 1}
+  outlineWidth: 3.5
+  outlinePulseAmount: 0.15
+  outlinePulseSpeed: 1.4
+  outlineRenderingLayer: 29
+  showHud: 1
+  showMarkers: 1
+  showTargetNames: 1
+  showDistances: 1
+  markerSprite: {fileID: 0}
+  markerColor: {r: 0.45, g: 0.92, b: 1, a: 1}
+  markerSize: 24
+  cooldownPosition: {x: -32, y: 112}
+  cooldownSize: {x: 180, y: 38}
+  scanSound: {fileID: 0}
+  volume: 0.6

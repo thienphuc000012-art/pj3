@@ -11,6 +11,9 @@ public class ActionButtonUI : MonoBehaviour
     [FormerlySerializedAs("stainText"), Tooltip("Shows item quantity for items, or Stain/Ultimate resource for actions.")]
     public TextMeshProUGUI resourceText;
     public Image iconImage;                // Icon kỹ năng
+    [Tooltip("Icon hệ của kỹ năng, tự tạo cạnh icon kỹ năng nếu để trống.")]
+    public Image elementIconImage;
+    public TextMeshProUGUI elementIconLabel;
     public Button button;
 
     private ActionData currentAction;
@@ -29,6 +32,8 @@ public class ActionButtonUI : MonoBehaviour
     public void Setup(ActionData action)
     {
         currentAction = action;
+
+        UpdateElementIcon();
 
         // 1. Hiển thị Tên
         if (nameText != null)
@@ -70,6 +75,73 @@ public class ActionButtonUI : MonoBehaviour
             button.onClick.AddListener(OnClick);
         }
         GameUITheme.Apply(gameObject);
+    }
+
+    private void UpdateElementIcon()
+    {
+        if (iconImage == null) return;
+        if (elementIconImage == null)
+        {
+            Transform existing = transform.Find("Element Type Icon");
+            if (existing != null) elementIconImage = existing.GetComponent<Image>();
+            if (elementIconImage == null)
+            {
+                var badge = new GameObject("Element Type Icon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                badge.layer = iconImage.gameObject.layer;
+                var rect = badge.GetComponent<RectTransform>();
+                rect.SetParent(transform, false);
+                RectTransform sourceRect = iconImage.rectTransform;
+                rect.anchorMin = rect.anchorMax = sourceRect.anchorMin;
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.sizeDelta = new Vector2(20f, 20f);
+                rect.anchoredPosition = sourceRect.anchoredPosition + new Vector2(sourceRect.rect.width - 10f, -10f);
+                rect.SetAsLastSibling();
+                elementIconImage = badge.GetComponent<Image>();
+            }
+        }
+        if (elementIconImage == null) return;
+        elementIconImage.raycastTarget = false;
+        RectTransform badgeRect = elementIconImage.rectTransform;
+        RectTransform sourceIconRect = iconImage.rectTransform;
+        badgeRect.anchorMin = badgeRect.anchorMax = sourceIconRect.anchorMin;
+        badgeRect.anchoredPosition = sourceIconRect.anchoredPosition +
+            new Vector2(sourceIconRect.rect.width - 10f, -10f);
+        ActionData.ElementType element = currentAction != null ? currentAction.element : ActionData.ElementType.None;
+        bool show = element != ActionData.ElementType.None;
+        elementIconImage.gameObject.SetActive(show);
+        if (!show) return;
+
+        AdvancedUIManager manager = AdvancedUIManager.Instance;
+        Sprite sprite = manager != null ? manager.GetElementSprite(element) : null;
+        elementIconImage.sprite = sprite;
+        elementIconImage.color = sprite != null || manager == null ? Color.white : manager.GetElementFallbackColor(element);
+
+        if (elementIconLabel == null)
+        {
+            Transform existing = elementIconImage.transform.Find("Element Label");
+            if (existing != null) elementIconLabel = existing.GetComponent<TextMeshProUGUI>();
+            if (elementIconLabel == null)
+            {
+                var labelObject = new GameObject("Element Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+                labelObject.layer = elementIconImage.gameObject.layer;
+                var rect = labelObject.GetComponent<RectTransform>();
+                rect.SetParent(elementIconImage.transform, false);
+                rect.anchorMin = Vector2.zero;
+                rect.anchorMax = Vector2.one;
+                rect.offsetMin = rect.offsetMax = Vector2.zero;
+                elementIconLabel = labelObject.GetComponent<TextMeshProUGUI>();
+                elementIconLabel.font = nameText != null ? nameText.font : TMP_Settings.defaultFontAsset;
+                elementIconLabel.fontSize = 12f;
+                elementIconLabel.alignment = TextAlignmentOptions.Center;
+                elementIconLabel.color = Color.white;
+                elementIconLabel.raycastTarget = false;
+            }
+        }
+        if (elementIconLabel != null)
+        {
+            elementIconLabel.gameObject.SetActive(sprite == null);
+            elementIconLabel.text = manager != null ? manager.GetElementFallbackLabel(element) : element.ToString().Substring(0, 1);
+        }
     }
 
     private void UpdateResourceText(BattleUnit unit)
@@ -124,6 +196,7 @@ public class ActionButtonUI : MonoBehaviour
     public void SetupEmpty(string slotName)
     {
         currentAction = null;
+        if (elementIconImage != null) elementIconImage.gameObject.SetActive(false);
         if (nameText != null) GameLocalization.SetText(nameText, slotName == "Ultimate" ? "Tuyệt kỹ" : slotName.StartsWith("Skill ") ? "Kỹ năng " + slotName.Substring(6) : slotName);
         if (infoText != null) GameLocalization.SetText(infoText, "Chưa trang bị");
         if (resourceText != null) GameLocalization.SetText(resourceText, "");
@@ -158,7 +231,7 @@ public class ActionButtonUI : MonoBehaviour
             nameText.enableAutoSizing = true;
             nameText.fontSizeMin = 16f;
             nameText.fontSizeMax = 24f;
-            nameText.enableWordWrapping = false;
+            nameText.textWrappingMode = TextWrappingModes.NoWrap;
             nameText.overflowMode = TextOverflowModes.Ellipsis;
             nameText.margin = Vector4.zero;
             nameText.raycastTarget = false;
@@ -170,7 +243,7 @@ public class ActionButtonUI : MonoBehaviour
             resourceText.enableAutoSizing = true;
             resourceText.fontSizeMin = 12f;
             resourceText.fontSizeMax = 21f;
-            resourceText.enableWordWrapping = false;
+            resourceText.textWrappingMode = TextWrappingModes.NoWrap;
             resourceText.overflowMode = TextOverflowModes.Ellipsis;
             resourceText.margin = Vector4.zero;
             resourceText.raycastTarget = false;
@@ -181,11 +254,12 @@ public class ActionButtonUI : MonoBehaviour
             infoText.alignment = TextAlignmentOptions.TopLeft;
             infoText.enableAutoSizing = true;
             infoText.fontSizeMin = 12; infoText.fontSizeMax = 20;
-            infoText.enableWordWrapping = true;
+            infoText.textWrappingMode = TextWrappingModes.Normal;
             infoText.overflowMode = TextOverflowModes.Ellipsis;
             infoText.margin = Vector4.zero;
             infoText.raycastTarget = false;
         }
+        UpdateElementIcon();
     }
 
     private void OnClick()

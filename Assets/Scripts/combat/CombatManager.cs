@@ -6,6 +6,15 @@ using UnityEngine;
 public enum CombatState { Start, PlayerTurn, EnemyTurn, Executing, Won, Lost, BattleStartAnim }
 public enum OpenMenuType { None, Skills, Items }
 
+[System.Serializable]
+public class ElementCounterRule
+{
+    [Tooltip("Hệ gây sát thương mạnh hơn.")]
+    public ActionData.ElementType strongerElement = ActionData.ElementType.Fire;
+    [Tooltip("Hệ bị khắc chế.")]
+    public ActionData.ElementType weakerElement = ActionData.ElementType.Nature;
+}
+
 public class CombatManager : MonoBehaviour
 {
     public static CombatManager Instance;
@@ -129,6 +138,23 @@ public class CombatManager : MonoBehaviour
     public List<ActionData> inventoryItems = new List<ActionData>();
     public int currentStains = 0;
     public int maxStains = 4;
+
+    [Header("Elemental Damage / Tương khắc nguyên tố")]
+    [Tooltip("Bật/tắt nhân sát thương theo hệ của đòn đánh và mục tiêu.")]
+    public bool useElementalDamage = true;
+    [Min(0f), Tooltip("Damage multiplier khi hệ của đòn đánh khắc hệ mục tiêu.")]
+    public float elementalAdvantageMultiplier = 2f;
+    [Min(0f), Tooltip("Damage multiplier khi đòn đánh và mục tiêu cùng hệ (không áp dụng cho Neutral/None).")]
+    public float elementalSameTypeMultiplier = 1.5f;
+    [Min(0f), Tooltip("Damage multiplier khi hệ mục tiêu khắc hệ của đòn đánh.")]
+    public float elementalDisadvantageMultiplier = 0.5f;
+    [Tooltip("Quy tắc khắc hệ. Mặc định: Lửa > Tự nhiên > Nước > Lửa. Thêm các cặp khác tại đây.")]
+    public List<ElementCounterRule> elementalCounterRules = new List<ElementCounterRule>
+    {
+        new ElementCounterRule { strongerElement = ActionData.ElementType.Fire, weakerElement = ActionData.ElementType.Nature },
+        new ElementCounterRule { strongerElement = ActionData.ElementType.Nature, weakerElement = ActionData.ElementType.Water },
+        new ElementCounterRule { strongerElement = ActionData.ElementType.Water, weakerElement = ActionData.ElementType.Fire }
+    };
 
     [Header("Current Turn Info")]
     public BattleUnit currentActiveUnit;
@@ -256,8 +282,8 @@ public class CombatManager : MonoBehaviour
     private void CycleTarget(int direction)
     {
         List<BattleUnit> validTargets = isSelectingBuffTarget ?
-            playerParty.Where(u => u.currentHP > 0).ToList() :
-            enemyParty.Where(u => u.currentHP > 0).ToList();
+            playerParty.Where(u => u != null && !u.IsDead).ToList() :
+            enemyParty.Where(u => u != null && !u.IsDead).ToList();
 
         if (validTargets.Count == 0) return;
 
@@ -299,7 +325,7 @@ public class CombatManager : MonoBehaviour
 
             AdvancedUIManager.Instance.UpdateStainsUI(currentStains, 0);
 
-            currentTarget = enemyParty.FirstOrDefault(e => e.currentHP > 0);
+            currentTarget = enemyParty.FirstOrDefault(e => e != null && !e.IsDead);
             if (currentTarget != null)
             {
                 AdvancedUIManager.Instance.UpdateTargetUI(currentTarget.unitName);
@@ -372,7 +398,7 @@ public class CombatManager : MonoBehaviour
     {
         if (state != CombatState.Start && state != CombatState.BattleStartAnim)
         {
-            foreach (var unit in playerParty.Concat(enemyParty).Where(u => u != null && u.currentHP > 0))
+            foreach (var unit in playerParty.Concat(enemyParty).Where(u => u != null && !u.IsDead))
             {
                 unit.TickBuffs();
             }
@@ -381,14 +407,14 @@ public class CombatManager : MonoBehaviour
         allUnitsTimeline.Clear();
 
         // Gom tất cả unit còn sống
-        var aliveUnits = playerParty.Where(u => u.currentHP > 0)
-            .Concat(enemyParty.Where(u => u.currentHP > 0))
+        var aliveUnits = playerParty.Where(u => u != null && !u.IsDead)
+            .Concat(enemyParty.Where(u => u != null && !u.IsDead))
             .ToList();
 
         BattleUnit phase2IntroBoss = null;
 
-        // Phase chỉ được check ở đầu Wave mới.
-        // Nếu Boss vừa bước vào Phase 2 thì ghi lại để chạy cinematic đúng 1 lần.
+        // Safety check for any phase transition queued by external damage.
+        // Normal lethal-hit transitions are applied after the turn's HP trail drains.
         foreach (var unit in aliveUnits)
         {
             if (unit.isPlayer) continue;
@@ -429,11 +455,11 @@ public class CombatManager : MonoBehaviour
         }
     }
 
-    private IEnumerator BossPhase2IntroRoutine(BattleUnit boss)
+    private IEnumerator BossPhase2IntroRoutine(BattleUnit boss, bool continueTurn = true)
     {
         if (boss == null)
         {
-            StartNextUnitTurn();
+            if (continueTurn) StartNextUnitTurn();
             yield break;
         }
 
@@ -470,7 +496,7 @@ public class CombatManager : MonoBehaviour
         }
 
         isTransitioningTurn = false;
-        StartNextUnitTurn();
+        if (continueTurn) StartNextUnitTurn();
     }
     private void ResetMenuAnimations()
     {
@@ -533,12 +559,12 @@ public class CombatManager : MonoBehaviour
 
         AdvancedUIManager.Instance.UpdateStainsUI(currentStains, 0);
 
-        if (enemyParty.All(e => e.currentHP <= 0)) { CompleteBattle(true); return; }
-        if (playerParty.All(p => p.currentHP <= 0)) { CompleteBattle(false); return; }
+        if (enemyParty.All(e => e == null || e.IsDead)) { CompleteBattle(true); return; }
+        if (playerParty.All(p => p == null || p.IsDead)) { CompleteBattle(false); return; }
 
         currentActiveUnit = allUnitsTimeline[currentTimelineIndex];
 
-        if (currentActiveUnit == null || currentActiveUnit.currentHP <= 0)
+        if (currentActiveUnit == null || currentActiveUnit.IsDead)
         {
             EndCurrentTurn();
             return;
@@ -575,7 +601,7 @@ public class CombatManager : MonoBehaviour
             // 3. Gọi Coroutine chờ Camera lia xong rồi mới bật UI lên
             StartCoroutine(ShowActionMenuAfterCamera(CameraManager.Instance.transitionSpeed));
 
-            currentTarget = enemyParty.FirstOrDefault(e => e.currentHP > 0);
+            currentTarget = enemyParty.FirstOrDefault(e => e != null && !e.IsDead);
         }
         else
         {
@@ -707,9 +733,9 @@ public class CombatManager : MonoBehaviour
         selectedAction = attackAction;
         targetSelectionConfirmed = false;
 
-        if (currentTarget == null || currentTarget.currentHP <= 0 || currentTarget.isPlayer)
+        if (currentTarget == null || currentTarget.IsDead || currentTarget.isPlayer)
         {
-            currentTarget = enemyParty.FirstOrDefault(e => e.currentHP > 0);
+            currentTarget = enemyParty.FirstOrDefault(e => e != null && !e.IsDead);
         }
 
         if (currentTarget != null)
@@ -845,7 +871,7 @@ public class CombatManager : MonoBehaviour
         }
         else
         {
-            currentTarget = enemyParty.FirstOrDefault(e => e.currentHP > 0);
+            currentTarget = enemyParty.FirstOrDefault(e => e != null && !e.IsDead);
         }
 
         if (currentTarget != null)
@@ -891,7 +917,7 @@ public class CombatManager : MonoBehaviour
         // -> Boss sẽ không đổi phase ngay giữa Turn Order nữa, 
         // mà sẽ đợi hàm DetermineTurnOrder() chạy ở đầu Wave tiếp theo.
 
-        List<BattleUnit> livePlayers = playerParty.Where(p => p.currentHP > 0).ToList();
+        List<BattleUnit> livePlayers = playerParty.Where(p => p != null && !p.IsDead).ToList();
         if (livePlayers.Count == 0) yield break;
 
         // KHÔNG ĐÁNH 1 NGƯỜI 2 LẦN LIÊN TỤC (Chỉ áp dụng nếu party còn >1 người sống)
@@ -1033,7 +1059,7 @@ public class CombatManager : MonoBehaviour
     private readonly HashSet<BattleUnit> statusTargetsThisAction = new HashSet<BattleUnit>();
     private void ApplyActionStatus(BattleUnit target, ActionData action)
     {
-        if (target != null && !target.IsDead && statusTargetsThisAction.Add(target))
+        if (target != null && !target.IsDead && !target.HasPendingBossPhaseTransition && statusTargetsThisAction.Add(target))
             target.ApplyStatusAction(action);
     }
 
@@ -1059,6 +1085,45 @@ public class CombatManager : MonoBehaviour
             : Mathf.Max(0f, action.damageMultiplierWhenTargetNotPoisoned);
     }
 
+    private float GetElementalDamageMultiplier(BattleUnit attacker, BattleUnit target, ActionData action)
+    {
+        if (!useElementalDamage || attacker == null || target == null || action == null ||
+            action.isFriendlyAction || action.isHeal)
+            return 1f;
+
+        // Skill element is independent from the caster's element. The unit's
+        // element is only read as the defending target's affinity.
+        ActionData.ElementType attackElement = action.element;
+        ActionData.ElementType targetElement = target.element;
+        if (attackElement == ActionData.ElementType.None || targetElement == ActionData.ElementType.None)
+            return 1f;
+
+        if (attackElement == targetElement)
+            return Mathf.Max(0f, elementalSameTypeMultiplier);
+
+        if (elementalCounterRules == null) return 1f;
+        foreach (ElementCounterRule rule in elementalCounterRules)
+        {
+            if (rule == null || rule.strongerElement == ActionData.ElementType.None ||
+                rule.weakerElement == ActionData.ElementType.None || rule.strongerElement == rule.weakerElement)
+                continue;
+
+            if (rule.strongerElement == attackElement && rule.weakerElement == targetElement)
+                return Mathf.Max(0f, elementalAdvantageMultiplier);
+
+            if (rule.strongerElement == targetElement && rule.weakerElement == attackElement)
+                return Mathf.Max(0f, elementalDisadvantageMultiplier);
+        }
+
+        return 1f;
+    }
+
+    private float GetTargetDamageMultiplier(BattleUnit attacker, BattleUnit target, ActionData action)
+    {
+        return GetTargetConditionalDamageMultiplier(action, target) *
+               GetElementalDamageMultiplier(attacker, target, action);
+    }
+
     private int CalculateBaseActionDamage(BattleUnit attacker, ActionData action, bool isCrit)
     {
         if (attacker == null || action == null) return 0;
@@ -1079,7 +1144,7 @@ public class CombatManager : MonoBehaviour
     {
         int baseDamage = CalculateBaseActionDamage(attacker, action, isCrit);
         if (action == null || action.isFriendlyAction || action.isHeal) return baseDamage;
-        return Mathf.RoundToInt(baseDamage * GetTargetConditionalDamageMultiplier(action, target));
+        return Mathf.RoundToInt(baseDamage * GetTargetDamageMultiplier(attacker, target, action));
     }
 
     private void ApplyActionLifeSteal(BattleUnit attacker, ActionData action, int actualHpDamage)
@@ -1498,9 +1563,13 @@ public class CombatManager : MonoBehaviour
             return;
         }
 
+        if (!actionToUse.isAoE && currentTarget != null && currentTarget.HasPendingBossPhaseTransition)
+            return;
+
         // Sword slash VFX is synchronized to the same animation event that
         // resolves a melee hit. Each event in a multi-hit combo gets one slash.
-        if (!actionToUse.isFriendlyAction && !actionToUse.isHeal && currentTarget != null)
+        if (!actionToUse.isFriendlyAction && !actionToUse.isHeal && currentTarget != null &&
+            !currentTarget.HasPendingBossPhaseTransition)
             SpawnSwordSlashVFX(attacker, currentTarget, actionToUse);
 
         bool isCrit = !actionToUse.isFriendlyAction && !actionToUse.isHeal &&
@@ -1515,7 +1584,7 @@ public class CombatManager : MonoBehaviour
             bool resolved = false;
             foreach (var ally in targets)
             {
-                if (ally == null || ally.IsDead) continue;
+                if (ally == null || ally.IsDead || ally.HasPendingBossPhaseTransition) continue;
                 ApplyActionStatus(ally, actionToUse);
                 if (actionToUse.isHeal)
                 {
@@ -1543,11 +1612,11 @@ public class CombatManager : MonoBehaviour
             }
 
             {
-                List<BattleUnit> targets = actionToUse.isAoE ? enemyParty.Where(u => u.currentHP > 0).ToList() : new List<BattleUnit> { currentTarget };
+                List<BattleUnit> targets = actionToUse.isAoE ? enemyParty.Where(u => u != null && !u.IsDead).ToList() : new List<BattleUnit> { currentTarget };
 
                 foreach (var enemy in targets)
                 {
-                    if (enemy == null || enemy.IsDead) continue;
+                    if (enemy == null || enemy.IsDead || enemy.HasPendingBossPhaseTransition) continue;
                     resolvedHit = true;
                     // Melee/explicit animation timing uses this event. Ranged
                     // impact-timed VFX is emitted by the visual arrival callback.
@@ -1561,7 +1630,8 @@ public class CombatManager : MonoBehaviour
                     GetComponent<BattleResultPanel>()?.RecordDamage(true, actualDamageTaken);
                     ApplyActionLifeSteal(attacker, actionToUse, actualDamageTaken);
 
-                    AdvancedUIManager.Instance.ShowDamageText(enemy.transform, actualDamageTaken, isCrit, false);
+                    AdvancedUIManager.Instance.ShowDamageText(enemy.transform, actualDamageTaken, isCrit, false,
+                        GetElementalDamageMultiplier(attacker, enemy, actionToUse));
                 }
             }
             if (resolvedHit) attacker.GainUltimateFromHit(actionToUse);
@@ -1570,11 +1640,11 @@ public class CombatManager : MonoBehaviour
         {
             bool priorParryResult = ParrySystem.Instance != null && ParrySystem.Instance.parrySuccessful;
             vfxActionState.parried = priorParryResult;
-            List<BattleUnit> targets = actionToUse.isAoE ? playerParty.Where(u => u.currentHP > 0).ToList() : new List<BattleUnit> { currentTarget };
+            List<BattleUnit> targets = actionToUse.isAoE ? playerParty.Where(u => u != null && !u.IsDead).ToList() : new List<BattleUnit> { currentTarget };
 
             foreach (var ally in targets)
             {
-                if (ally == null || ally.IsDead) continue;
+                if (ally == null || ally.IsDead || ally.HasPendingBossPhaseTransition) continue;
                 bool parried = priorParryResult;
                 if (!parried && actionToUse.isMelee && actionToUse.useMeleeHitboxParry && ParrySystem.Instance != null)
                     parried = ParrySystem.Instance.TryResolveMeleeHitboxParry(attacker, ally, out _);
@@ -1590,7 +1660,8 @@ public class CombatManager : MonoBehaviour
                 {
                     // Parry thành công thì không hiện hiệu ứng trúng đòn.
                     if (!UsesVfxImpact(actionToUse)) SpawnActionHitVFX(actionToUse, ally);
-                    AdvancedUIManager.Instance.ShowDamageText(ally.transform, actualDamageTaken, isCrit, false);
+                    AdvancedUIManager.Instance.ShowDamageText(ally.transform, actualDamageTaken, isCrit, false,
+                        GetElementalDamageMultiplier(attacker, ally, actionToUse));
                 }
             }
             ParrySystem.Instance?.ResetParryState();
@@ -1614,14 +1685,14 @@ public class CombatManager : MonoBehaviour
             if (attacker.isPlayer)
             {
                 targetList = targetsOwnTeam
-                    ? playerParty.Where(u => u != null && u.currentHP > 0).ToList()
-                    : enemyParty.Where(u => u != null && u.currentHP > 0).ToList();
+                    ? playerParty.Where(u => u != null && !u.IsDead).ToList()
+                    : enemyParty.Where(u => u != null && !u.IsDead).ToList();
             }
             else
             {
                 targetList = targetsOwnTeam
-                    ? enemyParty.Where(u => u != null && u.currentHP > 0).ToList()
-                    : playerParty.Where(u => u != null && u.currentHP > 0).ToList();
+                    ? enemyParty.Where(u => u != null && !u.IsDead).ToList()
+                    : playerParty.Where(u => u != null && !u.IsDead).ToList();
             }
         }
         else
@@ -1637,7 +1708,7 @@ public class CombatManager : MonoBehaviour
             action.swordSlashVfxPrefab != null &&
             !action.isFriendlyAction && !action.isHeal)
         {
-            foreach (BattleUnit u in targetList.Where(u => u != null && u.currentHP > 0))
+            foreach (BattleUnit u in targetList.Where(u => u != null && !u.IsDead))
                 SpawnSwordSlashVFX(attacker, u, action);
         }
 
@@ -1648,7 +1719,7 @@ public class CombatManager : MonoBehaviour
         // =========================================================
         if (action.vfxType == ActionData.VfxType.SpawnAtTarget)
         {
-            foreach (BattleUnit u in targetList.Where(u => u != null && u.currentHP > 0))
+            foreach (BattleUnit u in targetList.Where(u => u != null && !u.IsDead))
             {
                 // Configure while inactive so Play On Awake particles start at
                 // the ActionData runtime speed on their first frame.
@@ -1681,7 +1752,7 @@ public class CombatManager : MonoBehaviour
 
         Vector3 startPos = spawnTransform.TransformPoint(action.projectileStartOffset);
 
-        foreach (BattleUnit u in targetList.Where(u => u != null && u.currentHP > 0))
+        foreach (BattleUnit u in targetList.Where(u => u != null && !u.IsDead))
         {
             Vector3 targetPos = u.GetVfxTargetPosition(action.projectileTargetOffset);
             Vector3 directionToTarget = targetPos - startPos;
@@ -1985,6 +2056,7 @@ public class CombatManager : MonoBehaviour
             action == null ||
             actionState == null ||
             target.IsDead ||
+            target.HasPendingBossPhaseTransition ||
             action.isSummonSkill)
         {
             return;
@@ -2004,7 +2076,7 @@ public class CombatManager : MonoBehaviour
         );
 
         int rawDamage = Mathf.RoundToInt(
-            actionState.impactRawDamage * GetTargetConditionalDamageMultiplier(action, target));
+            actionState.impactRawDamage * GetTargetDamageMultiplier(attacker, target, action));
 
         bool isCrit =
             actionState.impactIsCrit;
@@ -2045,7 +2117,8 @@ public class CombatManager : MonoBehaviour
                     target.transform,
                     actualDamageTaken,
                     isCrit,
-                    false
+                    false,
+                    GetElementalDamageMultiplier(attacker, target, action)
                 );
             }
 
@@ -2096,7 +2169,8 @@ public class CombatManager : MonoBehaviour
                     target.transform,
                     playerDamageTaken,
                     isCrit,
-                    false
+                    false,
+                    GetElementalDamageMultiplier(attacker, target, action)
                 );
             }
 
@@ -3003,8 +3077,28 @@ public class CombatManager : MonoBehaviour
             AdvancedUIManager.Instance.DrainDamageAtTurnEnd();
         }
 
-        // A lethal unit only enters its Die state after its own HP trail reaches
-        // the real HP value. Other units' nonlethal trails may continue as usual.
+        // Keep a boss alive through the lethal HP drain, then refill its HP
+        // for the next phase before continuing the current turn timeline.
+        BattleUnit[] phaseTransitions = enemyParty
+            .Where(unit => unit != null && unit.HasPendingBossPhaseTransition)
+            .ToArray();
+        bool bossPhaseChanged = false;
+        foreach (BattleUnit boss in phaseTransitions)
+        {
+            if (AdvancedUIManager.Instance != null)
+                yield return AdvancedUIManager.Instance.WaitForDamageDrain(boss);
+
+            int enteredPhase = boss.CheckPhase();
+            bossPhaseChanged |= enteredPhase > 0;
+            if (enteredPhase == 2 && !boss.phase2IntroPlayed)
+            {
+                boss.phase2IntroPlayed = true;
+                yield return BossPhase2IntroRoutine(boss, false);
+            }
+        }
+
+        // A truly defeated unit only enters Die after its own HP trail reaches
+        // zero. Bosses with another phase were already refilled above.
         var deadUnits = playerParty.Concat(enemyParty)
             .Where(unit => unit != null && unit.IsDead)
             .Distinct()
@@ -3020,8 +3114,25 @@ public class CombatManager : MonoBehaviour
         if (enemyParty.All(e => e == null || e.IsDead)) { CompleteBattle(true); yield break; }
         if (playerParty.All(p => p == null || p.IsDead)) { CompleteBattle(false); yield break; }
         SetupPositions();
-        AdvancedUIManager.Instance.RemoveFirstPortrait();
-        currentTimelineIndex++;
+
+        if (bossPhaseChanged)
+        {
+            // The wave was built using the old phase's actionsPerTurn. Rebuild
+            // only its future portion so the new phase uses its own action count.
+            RebuildRemainingTimelineAfterPhaseChange(currentTimelineIndex + 1);
+            currentTimelineIndex++;
+            if (AdvancedUIManager.Instance != null)
+            {
+                var remainingTimeline = allUnitsTimeline.Skip(currentTimelineIndex).ToList();
+                AdvancedUIManager.Instance.UpdateTurnOrderUI(remainingTimeline);
+            }
+        }
+        else
+        {
+            if (AdvancedUIManager.Instance != null)
+                AdvancedUIManager.Instance.RemoveFirstPortrait();
+            currentTimelineIndex++;
+        }
 
         if (currentTimelineIndex >= allUnitsTimeline.Count)
         {
@@ -3033,11 +3144,41 @@ public class CombatManager : MonoBehaviour
         }
     }
 
+    private void RebuildRemainingTimelineAfterPhaseChange(int completedTimelineCount)
+    {
+        int completedCount = Mathf.Clamp(completedTimelineCount, 0, allUnitsTimeline.Count);
+        var rebuiltTimeline = allUnitsTimeline.Take(completedCount).ToList();
+        var completedActions = new Dictionary<BattleUnit, int>();
+        foreach (BattleUnit unit in rebuiltTimeline)
+        {
+            if (unit == null) continue;
+            completedActions.TryGetValue(unit, out int count);
+            completedActions[unit] = count + 1;
+        }
+
+        var liveUnits = playerParty.Concat(enemyParty)
+            .Where(unit => unit != null && !unit.IsDead)
+            .Distinct()
+            .OrderByDescending(unit => unit.speed);
+
+        foreach (BattleUnit unit in liveUnits)
+        {
+            completedActions.TryGetValue(unit, out int alreadyActed);
+            int configuredActions = unit.isPlayer ? 1 : Mathf.Max(1, unit.actionsPerTurn);
+            int remainingActions = Mathf.Max(0, configuredActions - alreadyActed);
+            for (int i = 0; i < remainingActions; i++)
+                rebuiltTimeline.Add(unit);
+        }
+
+        allUnitsTimeline.Clear();
+        allUnitsTimeline.AddRange(rebuiltTimeline);
+    }
+
     public void SetTargetUnit(BattleUnit newTarget)
     {
         if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
 
-        if (newTarget != null && newTarget.currentHP > 0)
+        if (newTarget != null && !newTarget.IsDead)
         {
             if (isSelectingSelfOnly && newTarget != currentActiveUnit)
             {

@@ -23,7 +23,8 @@ namespace TobyFredson
 		protected void Awake()
 		{
 			// Ensure only one controller exists
-			TobyGlobalShadersController[] controllers = FindObjectsOfType<TobyGlobalShadersController>(true);
+			TobyGlobalShadersController[] controllers = FindObjectsByType<TobyGlobalShadersController>(
+				FindObjectsInactive.Include, FindObjectsSortMode.None);
 			if (controllers.Length > 1)
 			{
 				Debug.LogWarning($"Multiple controllers found in scene {SceneManager.GetActiveScene().name}. Destroying duplicates.");

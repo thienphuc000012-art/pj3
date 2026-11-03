@@ -1522,8 +1522,7 @@ MonoBehaviour:
   actionsPerTurn: 1
   baseActionPattern: []
   bossPhases:
-  - hpPercentThreshold: 0.5
-    actionsPerTurn: 2
+  - actionsPerTurn: 2
     phaseActionPattern:
     - {fileID: 11400000, guid: 147ca3bf8513ee74ea9627cf932fe845, type: 2}
     - {fileID: 11400000, guid: f4fd381b02d00ab45a17df37683eadaa, type: 2}

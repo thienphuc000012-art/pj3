@@ -27,7 +27,6 @@ public class DynamicButtonUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
     private Vector3 targetScale;
     private Quaternion targetRotation;
 
-    private bool isHovered = false;
     private bool hasInitialized = false;
     private bool isFullyAppeared = false;
     private UIHoverOutline hoverOutline;
@@ -78,7 +77,6 @@ public class DynamicButtonUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
 
     private void ResetAppearance()
     {
-        isHovered = false;
         isFullyAppeared = false;
 
         targetScale = originalScale;
@@ -127,17 +125,11 @@ public class DynamicButtonUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
         }
     }
 
-    // --- Các hàm sự kiện tương tác ---
-    public void OnPointerEnter(PointerEventData eventData) => SetHoverState();
-    public void OnSelect(BaseEventData eventData) => SetHoverState();
-    public void OnPointerExit(PointerEventData eventData)
-    {
-        if (EventSystem.current.currentSelectedGameObject != this.gameObject) SetNormalState();
-    }
-    public void OnDeselect(BaseEventData eventData) => SetNormalState();
+    // Hover visuals are provided by UIHoverOutline; this component only animates entrance/layout.
+    public void OnPointerEnter(PointerEventData eventData) { }
+    public void OnSelect(BaseEventData eventData) { }
+    public void OnPointerExit(PointerEventData eventData) { }
+    public void OnDeselect(BaseEventData eventData) { }
     public void OnPointerDown(PointerEventData eventData) { }
     public void OnPointerUp(PointerEventData eventData) { }
-
-    private void SetHoverState() => isHovered = true;
-    private void SetNormalState() => isHovered = false;
 }

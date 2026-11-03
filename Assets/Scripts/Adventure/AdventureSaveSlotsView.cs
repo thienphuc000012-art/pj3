@@ -449,7 +449,7 @@ public sealed class AdventureSaveSlotsView : MonoBehaviour
         var text = obj.GetComponent<TMP_Text>();
         if (fontSource != null) text.font = fontSource.font;
         text.fontSize = size; text.color = Color.white; text.alignment = alignment;
-        text.enableWordWrapping = false; text.overflowMode = TextOverflowModes.Ellipsis;
+        text.textWrappingMode = TextWrappingModes.NoWrap; text.overflowMode = TextOverflowModes.Ellipsis;
         text.raycastTarget = false; text.text = value;
         return text;
     }

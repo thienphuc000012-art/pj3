@@ -25,8 +25,8 @@ public class BattleStartEffect
 [System.Serializable]
 public class BossPhase
 {
-    [Tooltip("Phần trăm máu để kích hoạt (Ví dụ: 0.5 = 50% máu)")]
-    [Range(0f, 1f)] public float hpPercentThreshold = 0.5f;
+    [Tooltip("Icon tùy chọn cho phase này. Để trống sẽ hiện số phase trên HUD.")]
+    public Sprite phaseIcon;
 
     [Tooltip("Số lượt đánh trong 1 turn khi ở phase này")]
     public int actionsPerTurn = 2;
@@ -96,6 +96,10 @@ public class BattleUnit : MonoBehaviour
     [Tooltip("Total damage percentage on a critical hit: 150 means x1.5 damage before defense.")]
     [Min(100)] public int baseCritDamage = 150;
 
+    [Header("Elemental Type")]
+    [Tooltip("Hệ riêng của nhân vật, dùng khi nhân vật là mục tiêu để tính cùng/khắc hệ với kỹ năng tấn công.")]
+    public ActionData.ElementType element = ActionData.ElementType.None;
+
     [Header("Player Skills")]
     public ActionData defaultAttack;
     public List<ActionData> characterSkills; // Danh sách skill hiển thị ở Menu cho Player
@@ -113,10 +117,14 @@ public class BattleUnit : MonoBehaviour
     public List<BattleStartEffect> startingBattleEffects = new List<BattleStartEffect>();
     private bool startingBattleEffectsApplied;
 
-    [Tooltip("Danh sách các Phase của Boss (Nhập theo thứ tự giảm dần: 0.7 -> 0.5 -> 0.2)")]
+    [Tooltip("Mỗi phần tử tạo thêm một thanh HP đầy cho một phase tiếp theo. Boss chỉ chuyển phase khi thanh HP hiện tại cạn hết.")]
     public List<BossPhase> bossPhases;
 
+    [Tooltip("Icon tùy chọn cho Phase 1. Để trống sẽ hiện số phase trên HUD.")]
+    public Sprite phase1Icon;
+
     private int currentPhaseIndex = -1; // -1 = Phase 1/base, bossPhases[0] = Phase 2
+    private bool bossPhaseTransitionPending;
     private int currentPatternIndex = 0; // Đếm số thứ tự chiêu thức trong chuỗi
     private int enemyTurnNumber;
     private readonly Dictionary<ActionData, int> enemyActionReadyTurns = new Dictionary<ActionData, int>();
@@ -285,7 +293,12 @@ public class BattleUnit : MonoBehaviour
     public int speed;
     public Sprite unitPortrait;
     public int currentHP { get; private set; }
-    public bool IsDead => currentHP <= 0;
+    public bool IsDead => currentHP <= 0 && !bossPhaseTransitionPending;
+    public bool HasPendingBossPhaseTransition => bossPhaseTransitionPending;
+    public int CurrentBossPhaseNumber => !isBoss ? 0 : currentPhaseIndex + 2;
+    public Sprite CurrentBossPhaseIcon => !isBoss ? null : currentPhaseIndex < 0
+        ? phase1Icon
+        : bossPhases != null && currentPhaseIndex < bossPhases.Count ? bossPhases[currentPhaseIndex]?.phaseIcon : null;
     [Header("Death Presentation")]
     [Tooltip("Tên state chết trong Animator. Controller hiện tại dùng death.")]
     public string deathStateName = "death";
@@ -624,6 +637,7 @@ public class BattleUnit : MonoBehaviour
     {
         RestoreDeathPresentation();
         currentHP = Mathf.Clamp(hp, 0, maxHP);
+        bossPhaseTransitionPending = false;
         deathStateSeen = deathAnimationFinished = false;
         deathAnimationPending = false;
         deathAnimationTriggered = false;
@@ -692,29 +706,26 @@ public class BattleUnit : MonoBehaviour
         UpdateUI();
     }
 
-    // Trả về số Phase vừa chuyển tới.
+    // Gọi sau khi thanh HP và damage trail của lượt đã chạm 0.
     // 0 = không đổi phase, 2 = bossPhases[0], 3 = bossPhases[1], ...
     public int CheckPhase()
     {
-        if (!isBoss || bossPhases == null || bossPhases.Count == 0) return 0;
+        if (!HasPendingBossPhaseTransition || bossPhases == null ||
+            currentPhaseIndex + 1 >= bossPhases.Count)
+            return 0;
 
-        float currentHpPercent = (float)currentHP / maxHP;
+        currentPhaseIndex++;
+        bossPhaseTransitionPending = false;
+        currentHP = Mathf.Max(1, maxHP);
+        actionsPerTurn = Mathf.Max(1, bossPhases[currentPhaseIndex] != null
+            ? bossPhases[currentPhaseIndex].actionsPerTurn
+            : 1);
+        currentPatternIndex = 0;
 
-        for (int i = bossPhases.Count - 1; i >= 0; i--)
-        {
-            if (currentHpPercent <= bossPhases[i].hpPercentThreshold && currentPhaseIndex < i)
-            {
-                currentPhaseIndex = i;
-                actionsPerTurn = bossPhases[i].actionsPerTurn;
-                currentPatternIndex = 0;
-
-                int phaseNumber = i + 2; // Base = Phase 1, bossPhases[0] = Phase 2
-                Debug.Log($"[BOSS HỆ THỐNG] {unitName} chuyển sang Phase {phaseNumber}!");
-                return phaseNumber;
-            }
-        }
-
-        return 0;
+        int phaseNumber = currentPhaseIndex + 2; // Base = Phase 1, bossPhases[0] = Phase 2
+        Debug.Log($"[BOSS HỆ THỐNG] {unitName} chuyển sang Phase {phaseNumber}!");
+        UpdateUI();
+        return phaseNumber;
     }
 
     // --- CẬP NHẬT: Lấy kỹ năng tiếp theo trong chuỗi thay vì Random ---
@@ -928,7 +939,7 @@ public class BattleUnit : MonoBehaviour
 
     public void TakeDamage(int rawDamage, bool isParried, bool isCritical = false, bool isDamageOverTime = false)
     {
-        if (IsDead) return;
+        if (IsDead || bossPhaseTransitionPending) return;
         // --- CẬP NHẬT: Nếu Parry thành công, chặn Damage và KHÔNG gọi lại SetTrigger("Parry") ---
         if (isParried)
         {
@@ -959,6 +970,9 @@ public class BattleUnit : MonoBehaviour
         int hpLost = Mathf.Min(currentHP, finalDamage);
         currentHP = Mathf.Max(0, currentHP - finalDamage);
         if (hpLost > 0) AddUltimateEnergy(damageUltimateGain * hpLost / Mathf.Max(1f, maxHP));
+
+        if (currentHP <= 0 && isBoss && bossPhases != null && currentPhaseIndex + 1 < bossPhases.Count)
+            bossPhaseTransitionPending = true;
 
         UpdateUI();
         if (IsDead)
@@ -995,7 +1009,7 @@ public class BattleUnit : MonoBehaviour
     }
     public void Heal(int amount)
     {
-        if (IsDead) return; // Healing is not a revive action.
+        if (IsDead || bossPhaseTransitionPending) return; // Healing is not a revive or a way to interrupt a phase break.
         if (amount > 0)
         {
             currentHP = Mathf.Min(maxHP, currentHP + amount);

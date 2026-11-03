@@ -155,7 +155,7 @@ public sealed class AdventureCompassHUD : MonoBehaviour
         text.fontWeight = FontWeight.Light;
         text.color = color;
         text.alignment = TextAlignmentOptions.Center;
-        text.enableWordWrapping = false;
+        text.textWrappingMode = TextWrappingModes.NoWrap;
         text.raycastTarget = false;
         return rect;
     }

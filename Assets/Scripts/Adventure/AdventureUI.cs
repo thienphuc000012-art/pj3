@@ -273,7 +273,7 @@ public class AdventureUI : MonoBehaviour
         button.onClick = new Button.ButtonClickedEvent(); button.onClick.AddListener(action);
         var buttonLabel = button.GetComponentInChildren<TMPro.TMP_Text>(true);
         GameLocalization.SetText(buttonLabel, label);
-        buttonLabel.enableWordWrapping = true;
+        buttonLabel.textWrappingMode = TMPro.TextWrappingModes.Normal;
         button.gameObject.SetActive(true);
         GameUITheme.Apply(button.gameObject);
         return button;
@@ -285,7 +285,7 @@ public class AdventureUI : MonoBehaviour
         TravelRect(label.gameObject, parent, min, max);
         GameLocalization.SetText(label, text); label.raycastTarget = false;
         label.alignment = TMPro.TextAlignmentOptions.MidlineLeft;
-        label.enableWordWrapping = true;
+        label.textWrappingMode = TMPro.TextWrappingModes.Normal;
         label.gameObject.SetActive(true); return label;
     }
     GameObject TravelPanel(string name, Transform parent, Vector2 min, Vector2 max)
@@ -1062,7 +1062,7 @@ public class AdventureUI : MonoBehaviour
         text.fontSize = fontSize;
         text.color = color;
         text.alignment = alignment;
-        text.enableWordWrapping = false;
+        text.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
         text.raycastTarget = false;
         GameLocalization.SetText(text, source);
         return text;
@@ -1095,7 +1095,7 @@ public class AdventureUI : MonoBehaviour
             text.fontSize = Mathf.Min(15, style.fontSize * .8f);
             text.color = new Color(.88f, .86f, .80f, 1f);
             text.alignment = TMPro.TextAlignmentOptions.Center;
-            text.enableWordWrapping = false;
+            text.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
             text.raycastTarget = false;
             GameLocalization.SetText(text, labels[i]);
         }

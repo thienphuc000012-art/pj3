@@ -81,7 +81,7 @@ public sealed class CombatBeamVfx : MonoBehaviour
     private void LateUpdate()
     {
         if (caster == null || target == null || !caster.isActiveAndEnabled ||
-            !target.isActiveAndEnabled || caster.currentHP <= 0)
+            !target.isActiveAndEnabled || caster.IsDead)
         {
             Destroy(gameObject);
             return;

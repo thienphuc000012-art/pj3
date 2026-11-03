@@ -117,6 +117,11 @@ public class AdvancedUIManager : MonoBehaviour
     [Header("Boss / Enemy HP Bar (Top Screen)")]
     public GameObject enemyHudPanel;
     public Image enemyHpFill;
+    [Tooltip("Icon hệ của enemy cạnh thanh HP. Để trống sẽ tự tạo.")]
+    public Image enemyElementIcon;
+    public TextMeshProUGUI enemyElementLabel;
+    public Vector2 enemyElementIconSize = new Vector2(26f, 26f);
+    public Vector2 enemyElementIconOffset = new Vector2(-5f, 0f);
     [Tooltip("Image viền nằm trên HP Fill. Để trống sẽ tự tạo khi chạy.")]
     public Image enemyHpBorder;
     [Tooltip("BuffContainer Enemy độc lập với phần name. Để trống sẽ tự tạo làm object cùng cấp với name.")]
@@ -165,6 +170,34 @@ public class AdvancedUIManager : MonoBehaviour
     private bool enemyBorderInitialized;
     public TextMeshProUGUI enemyNameText;
     public TextMeshProUGUI enemyHpText;
+    [Header("Boss Phase Indicator")]
+    [Tooltip("Icon/badge hiển thị dưới góc trái thanh HP Boss. Để trống sẽ tự tạo.")]
+    public Image enemyBossPhaseIcon;
+    [Tooltip("Nhãn số phase nằm trong badge. Để trống sẽ tự tạo; icon phase riêng được gán thì nhãn ẩn.")]
+    public TextMeshProUGUI enemyBossPhaseLabel;
+    [Tooltip("Kích thước badge phase tự tạo.")]
+    public Vector2 enemyBossPhaseIconSize = new Vector2(42f, 34f);
+    [Tooltip("Dịch thêm badge so với vị trí tự tính ở góc dưới trái thanh HP.")]
+    public Vector2 enemyBossPhaseIconOffset;
+    public Color enemyBossPhaseBadgeColor = new Color(0.055f, 0.045f, 0.035f, 0.94f);
+
+    [System.Serializable]
+    public struct ElementSpriteMapping
+    {
+        public ActionData.ElementType element;
+        public Sprite sprite;
+        public Color fallbackColor;
+        public string fallbackLabel;
+    }
+
+    [Header("Element Icons")]
+    [Tooltip("Gán sprite Fire, Water và Nature. Nếu sprite để trống, HUD sẽ dùng huy hiệu màu kèm chữ.")]
+    public ElementSpriteMapping[] elementSprites =
+    {
+        new ElementSpriteMapping { element = ActionData.ElementType.Fire, fallbackColor = new Color(0.78f, 0.19f, 0.12f), fallbackLabel = "F" },
+        new ElementSpriteMapping { element = ActionData.ElementType.Water, fallbackColor = new Color(0.14f, 0.48f, 0.82f), fallbackLabel = "W" },
+        new ElementSpriteMapping { element = ActionData.ElementType.Nature, fallbackColor = new Color(0.22f, 0.62f, 0.32f), fallbackLabel = "N" }
+    };
 
     [Header("Party Members HP HUD (Bottom Right)")]
     public List<PartyHUDUnit> partyHUDList;
@@ -386,6 +419,10 @@ public class AdvancedUIManager : MonoBehaviour
         CreateStatusTooltip();
 
         if (enemyHudPanel != null) enemyHudPanel.SetActive(false);
+        EnsureBossPhaseIndicator();
+        if (enemyBossPhaseIcon != null) enemyBossPhaseIcon.gameObject.SetActive(false);
+        EnsureEnemyElementIcon();
+        if (enemyElementIcon != null) enemyElementIcon.gameObject.SetActive(false);
         if (enemyBuffContainer != null) enemyBuffContainer.gameObject.SetActive(false);
         if (turnOrderContainer != null) turnOrderContainer.gameObject.SetActive(false);
         if (changeTargetHintText != null) changeTargetHintText.SetActive(false);
@@ -550,7 +587,7 @@ public class AdvancedUIManager : MonoBehaviour
         }
         GameLocalization.SetText(label, "Bỏ chạy");
         label.alignment = TextAlignmentOptions.Center;
-        label.enableWordWrapping = false;
+        label.textWrappingMode = TextWrappingModes.NoWrap;
         label.raycastTarget = false;
 
         GameUITheme.Apply(buttonObject);
@@ -601,7 +638,7 @@ public class AdvancedUIManager : MonoBehaviour
         combatNoticeText.fontSize = 30f;
         combatNoticeText.color = new Color(.94f, .89f, .77f, 1f);
         combatNoticeText.alignment = TextAlignmentOptions.Center;
-        combatNoticeText.enableWordWrapping = false;
+        combatNoticeText.textWrappingMode = TextWrappingModes.NoWrap;
         combatNoticeText.raycastTarget = false;
         combatNoticePanel.gameObject.SetActive(false);
         combatNoticePanel.SetAsLastSibling();
@@ -943,9 +980,177 @@ public class AdvancedUIManager : MonoBehaviour
         EnsureEnemyBuffContainer();
         enemyDebuffIcon.Refresh(boundEnemy, enemyBuffContainer);
         RefreshEnemyBuffIcons();
-        if (enemyHpFill != null) enemyHpFill.fillAmount = (float)current / max;
+        if (enemyHpFill != null) enemyHpFill.fillAmount = max > 0 ? (float)current / max : 0f;
         if (enemyHpText != null)
             enemyHpText.text = shield > 0 ? $"{current}/{max} <color=yellow>[+{shield}]</color>" : $"{current} / {max}";
+        UpdateBossPhaseIndicator();
+        UpdateEnemyElementIcon();
+    }
+
+    public Sprite GetElementSprite(ActionData.ElementType element)
+    {
+        if (elementSprites == null) return null;
+        foreach (ElementSpriteMapping mapping in elementSprites)
+            if (mapping.element == element) return mapping.sprite;
+        return null;
+    }
+
+    public Color GetElementFallbackColor(ActionData.ElementType element)
+    {
+        if (elementSprites != null)
+            foreach (ElementSpriteMapping mapping in elementSprites)
+                if (mapping.element == element) return mapping.fallbackColor;
+        return Color.white;
+    }
+
+    public string GetElementFallbackLabel(ActionData.ElementType element)
+    {
+        if (elementSprites != null)
+            foreach (ElementSpriteMapping mapping in elementSprites)
+                if (mapping.element == element && !string.IsNullOrEmpty(mapping.fallbackLabel))
+                    return mapping.fallbackLabel;
+        return element.ToString().Substring(0, 1);
+    }
+
+    private void EnsureEnemyElementIcon()
+    {
+        if (enemyHpFill == null) return;
+        if (enemyElementIcon == null)
+        {
+            var go = new GameObject("Enemy Element Icon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.layer = enemyHpFill.gameObject.layer;
+            var rect = go.GetComponent<RectTransform>();
+            rect.SetParent(enemyHpFill.transform.parent, false);
+            enemyElementIcon = go.GetComponent<Image>();
+        }
+        if (enemyElementIcon == null) return;
+        enemyElementIcon.raycastTarget = false;
+
+        if (enemyElementLabel == null)
+        {
+            var go = new GameObject("Element Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+            go.layer = enemyElementIcon.gameObject.layer;
+            var rect = go.GetComponent<RectTransform>();
+            rect.SetParent(enemyElementIcon.transform, false);
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = rect.offsetMax = Vector2.zero;
+            enemyElementLabel = go.GetComponent<TextMeshProUGUI>();
+            enemyElementLabel.font = enemyHpText != null ? enemyHpText.font : TMP_Settings.defaultFontAsset;
+            enemyElementLabel.fontSize = 15f;
+            enemyElementLabel.alignment = TextAlignmentOptions.Center;
+            enemyElementLabel.color = Color.white;
+            enemyElementLabel.raycastTarget = false;
+        }
+
+        RectTransform iconRect = enemyElementIcon.rectTransform;
+        RectTransform fillRect = enemyHpFill.rectTransform;
+        if (iconRect.parent != fillRect.parent) iconRect.SetParent(fillRect.parent, false);
+        iconRect.anchorMin = iconRect.anchorMax = fillRect.anchorMin;
+        iconRect.pivot = new Vector2(0.5f, 0.5f);
+        iconRect.sizeDelta = enemyElementIconSize;
+        iconRect.anchoredPosition = fillRect.anchoredPosition + new Vector2(
+            -fillRect.rect.width * 0.5f - enemyElementIconSize.x * 0.5f,
+            0f) + enemyElementIconOffset;
+        iconRect.SetAsLastSibling();
+    }
+
+    private void UpdateEnemyElementIcon()
+    {
+        EnsureEnemyElementIcon();
+        if (enemyElementIcon == null) return;
+        bool show = boundEnemy != null && !boundEnemy.IsDead && boundEnemy.element != ActionData.ElementType.None;
+        enemyElementIcon.gameObject.SetActive(show);
+        if (!show) return;
+
+        Sprite sprite = GetElementSprite(boundEnemy.element);
+        enemyElementIcon.sprite = sprite;
+        enemyElementIcon.color = sprite != null ? Color.white : GetElementFallbackColor(boundEnemy.element);
+        if (enemyElementLabel != null)
+        {
+            enemyElementLabel.gameObject.SetActive(sprite == null);
+            enemyElementLabel.text = GetElementFallbackLabel(boundEnemy.element);
+        }
+    }
+
+    private void EnsureBossPhaseIndicator()
+    {
+        if (enemyHpFill == null) return;
+
+        if (enemyBossPhaseIcon == null)
+        {
+            var go = new GameObject("Boss Phase Icon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.layer = enemyHpFill.gameObject.layer;
+            var rect = go.GetComponent<RectTransform>();
+            rect.SetParent(enemyHpFill.transform.parent, false);
+            enemyBossPhaseIcon = go.GetComponent<Image>();
+        }
+
+        if (enemyBossPhaseIcon == null) return;
+        enemyBossPhaseIcon.raycastTarget = false;
+
+        if (enemyBossPhaseLabel == null)
+        {
+            var go = new GameObject("Phase Number", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+            go.layer = enemyBossPhaseIcon.gameObject.layer;
+            var rect = go.GetComponent<RectTransform>();
+            rect.SetParent(enemyBossPhaseIcon.transform, false);
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            enemyBossPhaseLabel = go.GetComponent<TextMeshProUGUI>();
+            enemyBossPhaseLabel.font = enemyHpText != null ? enemyHpText.font : TMP_Settings.defaultFontAsset;
+            enemyBossPhaseLabel.fontSize = 17f;
+            enemyBossPhaseLabel.alignment = TextAlignmentOptions.Center;
+            enemyBossPhaseLabel.color = new Color(1f, 0.88f, 0.63f, 1f);
+            enemyBossPhaseLabel.raycastTarget = false;
+        }
+
+        RectTransform iconRect = enemyBossPhaseIcon.rectTransform;
+        RectTransform fillRect = enemyHpFill.rectTransform;
+        if (iconRect.parent != fillRect.parent)
+            iconRect.SetParent(fillRect.parent, false);
+        iconRect.anchorMin = iconRect.anchorMax = fillRect.anchorMin;
+        iconRect.pivot = new Vector2(0.5f, 0.5f);
+        iconRect.sizeDelta = enemyBossPhaseIconSize;
+        iconRect.anchoredPosition = fillRect.anchoredPosition + new Vector2(
+            -fillRect.rect.width * 0.5f - enemyBossPhaseIconSize.x * 0.5f - 8f,
+            -fillRect.rect.height * 0.5f - enemyBossPhaseIconSize.y * 0.5f - 6f) + enemyBossPhaseIconOffset;
+        iconRect.SetAsLastSibling();
+    }
+
+    private void UpdateBossPhaseIndicator()
+    {
+        if (enemyHpFill == null) return;
+        EnsureBossPhaseIndicator();
+        if (enemyBossPhaseIcon == null) return;
+
+        bool show = boundEnemy != null && !boundEnemy.IsDead && boundEnemy.isBoss;
+        enemyBossPhaseIcon.gameObject.SetActive(show);
+        if (!show) return;
+
+        Sprite phaseIcon = boundEnemy.CurrentBossPhaseIcon;
+        enemyBossPhaseIcon.sprite = phaseIcon;
+        enemyBossPhaseIcon.color = phaseIcon != null ? Color.white : enemyBossPhaseBadgeColor;
+        if (enemyBossPhaseLabel != null)
+        {
+            enemyBossPhaseLabel.gameObject.SetActive(phaseIcon == null);
+            enemyBossPhaseLabel.text = ToRomanPhase(boundEnemy.CurrentBossPhaseNumber);
+        }
+    }
+
+    private static string ToRomanPhase(int phase)
+    {
+        switch (phase)
+        {
+            case 1: return "I";
+            case 2: return "II";
+            case 3: return "III";
+            case 4: return "IV";
+            case 5: return "V";
+            default: return phase.ToString();
+        }
     }
 
     private void EnsureEnemyBuffContainer()
@@ -1127,6 +1332,11 @@ public class AdvancedUIManager : MonoBehaviour
 
     public void ShowDamageText(Transform targetTransform, int amount, bool isCrit, bool isHeal = false)
     {
+        ShowDamageText(targetTransform, amount, isCrit, isHeal, 1f);
+    }
+
+    public void ShowDamageText(Transform targetTransform, int amount, bool isCrit, bool isHeal, float elementalMultiplier)
+    {
         if (damageTextPrefab == null || targetTransform == null) return;
 
         float randomX = Random.Range(-0.4f, 0.4f);
@@ -1151,7 +1361,10 @@ public class AdvancedUIManager : MonoBehaviour
                 else
                 {
                     txt.text = amount.ToString();
-                    txt.color = isCrit ? new Color(1f, 0.5f, 0f) : Color.white;
+                    if (isCrit) txt.color = new Color(1f, 0.5f, 0f);
+                    else if (elementalMultiplier >= 1.99f) txt.color = new Color(1f, 0.24f, 0.2f);
+                    else if (elementalMultiplier <= 0.51f) txt.color = new Color(0.28f, 0.62f, 1f);
+                    else txt.color = Color.white;
                     if (isCrit) txt.fontSize *= 1.3f;
                 }
             }
@@ -1270,6 +1483,13 @@ public class PartyHUDUnit
     public TextMeshProUGUI hpText;
     public TextMeshProUGUI nameText;
     public Image ultimateFill;
+    [Tooltip("Icon hệ của thành viên; để trống sẽ tự tạo cạnh thanh HP.")]
+    public Image elementIcon;
+    public TextMeshProUGUI elementLabel;
+    [Tooltip("Kích thước icon hệ trên thẻ thành viên.")]
+    public Vector2 elementIconSize = new Vector2(24f, 24f);
+    [Tooltip("Dịch icon hệ so với vị trí tự tính cạnh thanh HP.")]
+    public Vector2 elementIconOffset;
 
     public void EnsureUltimateBar()
     {
@@ -1355,6 +1575,8 @@ public class PartyHUDUnit
         }
         boundUnit = unit;
         EnsureUltimateBar();
+        EnsureElementIcon();
+        UpdateElementIcon();
         boundUnit.OnUltimateEnergyChanged += OnUltimateChanged;
         OnUltimateChanged(boundUnit.UltimateEnergy);
         AnimateUltimate(ultimateFillDuration);
@@ -1369,7 +1591,8 @@ public class PartyHUDUnit
     void OnStatsChangedHandler(int current, int max, int shield)
     {
         debuffIcon.Refresh(boundUnit, buffContainer);
-        if (hpFill != null) hpFill.fillAmount = (float)current / max;
+        if (hpFill != null) hpFill.fillAmount = max > 0 ? (float)current / max : 0f;
+        UpdateElementIcon();
 
         if (shieldFill != null)
         {
@@ -1510,6 +1733,69 @@ public class PartyHUDUnit
 
                 spawnedBuffIcons.Add(img);
             }
+        }
+    }
+
+    private void EnsureElementIcon()
+    {
+        if (gameObject == null || hpFill == null) return;
+        RectTransform root = gameObject.GetComponent<RectTransform>();
+        if (root == null) return;
+        if (elementIcon == null)
+        {
+            Transform existing = root.Find("Element Icon");
+            if (existing != null) elementIcon = existing.GetComponent<Image>();
+            if (elementIcon == null)
+            {
+                var go = new GameObject("Element Icon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                go.layer = gameObject.layer;
+                go.transform.SetParent(root, false);
+                elementIcon = go.GetComponent<Image>();
+            }
+        }
+        if (elementIcon == null) return;
+        elementIcon.raycastTarget = false;
+        if (elementLabel == null)
+        {
+            var go = new GameObject("Element Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+            go.layer = elementIcon.gameObject.layer;
+            var rect = go.GetComponent<RectTransform>();
+            rect.SetParent(elementIcon.transform, false);
+            rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
+            rect.offsetMin = rect.offsetMax = Vector2.zero;
+            elementLabel = go.GetComponent<TextMeshProUGUI>();
+            elementLabel.font = hpText != null ? hpText.font : TMP_Settings.defaultFontAsset;
+            elementLabel.fontSize = 14f;
+            elementLabel.alignment = TextAlignmentOptions.Center;
+            elementLabel.color = Color.white;
+            elementLabel.raycastTarget = false;
+        }
+        RectTransform iconRect = elementIcon.rectTransform;
+        Canvas.ForceUpdateCanvases();
+        Bounds bounds = RectTransformUtility.CalculateRelativeRectTransformBounds(root, hpFill.rectTransform);
+        iconRect.SetParent(root, false);
+        iconRect.anchorMin = iconRect.anchorMax = new Vector2(.5f, .5f);
+        iconRect.pivot = new Vector2(.5f, .5f);
+        iconRect.sizeDelta = elementIconSize;
+        iconRect.anchoredPosition = new Vector2(bounds.min.x - elementIconSize.x * .5f - 5f, bounds.center.y) + elementIconOffset;
+        iconRect.SetAsLastSibling();
+    }
+
+    private void UpdateElementIcon()
+    {
+        EnsureElementIcon();
+        if (elementIcon == null) return;
+        bool show = boundUnit != null && boundUnit.element != ActionData.ElementType.None;
+        elementIcon.gameObject.SetActive(show);
+        if (!show) return;
+        AdvancedUIManager manager = AdvancedUIManager.Instance;
+        Sprite sprite = manager != null ? manager.GetElementSprite(boundUnit.element) : null;
+        elementIcon.sprite = sprite;
+        elementIcon.color = sprite != null || manager == null ? Color.white : manager.GetElementFallbackColor(boundUnit.element);
+        if (elementLabel != null)
+        {
+            elementLabel.gameObject.SetActive(sprite == null);
+            elementLabel.text = manager != null ? manager.GetElementFallbackLabel(boundUnit.element) : boundUnit.element.ToString().Substring(0, 1);
         }
     }
 

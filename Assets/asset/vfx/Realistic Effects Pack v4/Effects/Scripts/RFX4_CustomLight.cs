@@ -16,7 +16,7 @@ public class RFX4_CustomLight : MonoBehaviour
 
     private void Awake()
     {
-        sceneLights = GameObject.FindObjectsOfType<Light>().ToList();
+        sceneLights = FindObjectsByType<Light>(FindObjectsSortMode.None).ToList();
     }
 
     void Update()
