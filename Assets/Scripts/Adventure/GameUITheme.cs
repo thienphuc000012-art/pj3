@@ -103,6 +103,7 @@ public static class GameUITheme
         foreach (var image in root.GetComponentsInChildren<Image>(true))
         {
             if (image == null) continue;
+            if (IsSkillPresentationElement(image.transform)) continue;
             if (IsSaveSlotsElement(image.transform) || IsQuestElement(image.transform)) continue;
             if (image.GetComponentInParent<AdventureDialogueView>(true) != null) continue;
             string n = image.gameObject.name.ToLowerInvariant();
@@ -160,6 +161,7 @@ public static class GameUITheme
         foreach (var button in root.GetComponentsInChildren<Button>(true))
         {
             if (button == null) continue;
+            if (button.GetComponent<CombatSkillRowUI>() != null) continue;
             if (IsSaveSlotsElement(button.transform) || IsQuestElement(button.transform)) continue;
             if (IsCombatActionButton(button.transform))
             {
@@ -257,6 +259,14 @@ public static class GameUITheme
     {
         for (var parent = target; parent != null; parent = parent.parent)
             if (parent.name == "Quest Scroll" || parent.name == "Quest Track Confirmation") return true;
+        return false;
+    }
+
+    static bool IsSkillPresentationElement(Transform target)
+    {
+        if (target.GetComponentInParent<CombatSkillRowUI>(true) != null) return true;
+        for (var parent = target; parent != null; parent = parent.parent)
+            if (parent.name == "Skill Presentation" && parent.parent != null && parent.parent.GetComponent<CombatSkillListUI>() != null) return true;
         return false;
     }
 

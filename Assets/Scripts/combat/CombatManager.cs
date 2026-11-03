@@ -135,6 +135,10 @@ public class CombatManager : MonoBehaviour
     public BattleUnit currentTarget;
     private int currentTimelineIndex = 0;
     private ActionData selectedAction;
+    private bool targetSelectionConfirmed;
+    public bool IsChoosingTarget => isActiveAndEnabled && state == CombatState.PlayerTurn &&
+        !targetSelectionConfirmed && selectedAction != null && currentActiveUnit != null &&
+        !currentActiveUnit.IsDead && currentTarget != null && !currentTarget.IsDead;
 
     [Header("Melee Approach Position")]
     [Min(0f), Tooltip("Khoảng cách dùng chung để Player dừng trước Enemy khi áp sát đánh.")]
@@ -701,6 +705,7 @@ public class CombatManager : MonoBehaviour
         isSelectingBuffTarget = false;
         isSelectingSelfOnly = false;
         selectedAction = attackAction;
+        targetSelectionConfirmed = false;
 
         if (currentTarget == null || currentTarget.currentHP <= 0 || currentTarget.isPlayer)
         {
@@ -820,6 +825,7 @@ public class CombatManager : MonoBehaviour
         }
 
         selectedAction = skillAction;
+        targetSelectionConfirmed = false;
         isSelectingSelfOnly = skillAction.isSelfOnly || skillAction.isSummonSkill;
         isSelectingBuffTarget = skillAction.isFriendlyAction || isSelectingSelfOnly;
         currentOpenMenu = OpenMenuType.None;
@@ -865,6 +871,8 @@ public class CombatManager : MonoBehaviour
             CampaignSession.Instance.RefreshBattleItems(this);
         }
         selectedAction = action;
+        targetSelectionConfirmed = true;
+        GetComponent<CombatTargetSelection>()?.ClearSelection(true);
         currentOpenMenu = OpenMenuType.None;
 
         ResetMenuAnimations();

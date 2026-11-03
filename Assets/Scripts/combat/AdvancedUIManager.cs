@@ -23,7 +23,8 @@ public class AdvancedUIManager : MonoBehaviour
     public GameObject subMenuPanel;
     public Transform subMenuContent;
     public GameObject actionButtonPrefab;
-    private RectTransform fixedSkillContent;
+    [Tooltip("Editable skill rows and shared description panel on the Canvas.")]
+    public CombatSkillListUI skillListUI;
     private ScrollRect subMenuScroll;
     private bool subMenuScrollInitiallyEnabled;
     private bool subMenuScrollCaptured;
@@ -42,17 +43,13 @@ public class AdvancedUIManager : MonoBehaviour
             subMenuScroll.enabled = skills ? false : subMenuScrollInitiallyEnabled;
         }
         subMenuContent.gameObject.SetActive(!skills);
-        if (skills && fixedSkillContent == null)
+        if (skillListUI == null) skillListUI = subMenuPanel.GetComponent<CombatSkillListUI>();
+        if (skills)
         {
-            var go = new GameObject("Fixed Skill Slots", typeof(RectTransform));
-            go.layer = subMenuContent.gameObject.layer;
-            fixedSkillContent = go.GetComponent<RectTransform>();
-            fixedSkillContent.SetParent(subMenuContent.parent, false);
-            fixedSkillContent.anchorMin = Vector2.zero;
-            fixedSkillContent.anchorMax = Vector2.one;
-            fixedSkillContent.offsetMin = fixedSkillContent.offsetMax = Vector2.zero;
+            if (skillListUI == null) skillListUI = subMenuPanel.AddComponent<CombatSkillListUI>();
+            skillListUI.EnsureHierarchy(this);
         }
-        if (fixedSkillContent != null) fixedSkillContent.gameObject.SetActive(skills);
+        if (skillListUI != null) skillListUI.SetVisible(skills);
     }
 
     public void PopulateSkillSubMenu(List<ActionData> actions)
@@ -60,10 +57,13 @@ public class AdvancedUIManager : MonoBehaviour
         if (subMenuPanel == null || subMenuContent == null || actionButtonPrefab == null) return;
         subMenuPanel.SetActive(true);
         SetFixedSkillMode(true);
-        foreach (Transform child in fixedSkillContent)
+        for (int childIndex = skillListUI.rowsRoot.childCount - 1; childIndex >= 0; childIndex--)
         {
+            var child = skillListUI.rowsRoot.GetChild(childIndex);
+            if (skillListUI.rowTemplate != null && child == skillListUI.rowTemplate.transform) continue;
             child.gameObject.SetActive(false);
-            Destroy(child.gameObject);
+            if (Application.isPlaying) Destroy(child.gameObject);
+            else DestroyImmediate(child.gameObject);
         }
         var slots = new ActionData[5];
         int normalIndex = 0;
@@ -79,7 +79,8 @@ public class AdvancedUIManager : MonoBehaviour
             }
         for (int i = 0; i < slots.Length; i++)
         {
-            var go = Instantiate(actionButtonPrefab, fixedSkillContent);
+            var button = Instantiate(skillListUI.rowTemplate, skillListUI.rowsRoot);
+            var go = button.gameObject;
             go.name = i == 4 ? "Ultimate Slot" : "Skill Slot " + (i + 1);
             var rect = go.GetComponent<RectTransform>();
             var fitter = go.GetComponent<ContentSizeFitter>();
@@ -90,12 +91,13 @@ public class AdvancedUIManager : MonoBehaviour
             rect.offsetMin = new Vector2(6f, 4f);
             rect.offsetMax = new Vector2(-6f, -4f);
             rect.localScale = Vector3.one;
-            var button = go.GetComponent<ActionButtonUI>();
             if (button == null) continue;
             if (slots[i] != null) button.Setup(slots[i]);
             else button.SetupEmpty(i == 4 ? "Ultimate" : "Skill " + (i + 1));
-            button.FitFixedSlot();
+            button.GetComponent<CombatSkillRowUI>().Bind(skillListUI, button);
+            go.SetActive(true);
         }
+        skillListUI.FocusFirstRow();
     }
 
     [Header("Hints")]
@@ -366,6 +368,7 @@ public class AdvancedUIManager : MonoBehaviour
     void Awake()
     {
         Instance = this;
+        HideSubMenu();
         battleCanvas = GetComponentInParent<Canvas>();
         if (battleCanvas == null) battleCanvas = GetComponentInChildren<Canvas>(true);
         if (battleCanvas != null)
@@ -613,8 +616,16 @@ public class AdvancedUIManager : MonoBehaviour
 
     public void ShowActionMenu(bool isShow) => SetActionMenuVisible(isShow, false);
 
+    public void HideSubMenu()
+    {
+        if (skillListUI == null && subMenuPanel != null) skillListUI = subMenuPanel.GetComponent<CombatSkillListUI>();
+        if (skillListUI != null) skillListUI.SetVisible(false);
+        if (subMenuPanel != null) subMenuPanel.SetActive(false);
+    }
+
     private void SetActionMenuVisible(bool isShow, bool immediate)
     {
+        if (isShow) HideSubMenu();
         if (actionMenuPanel != null)
         {
             var transition = actionMenuPanel.GetComponent<CombatActionMenuTransition>();
@@ -1152,6 +1163,7 @@ public class AdvancedUIManager : MonoBehaviour
     public void ToggleAllUI(bool isShow)
     {
         battleUIVisible = isShow;
+        if (!isShow) HideSubMenu();
         if (!isShow) HideStatusTooltip();
         SetActionMenuVisible(isShow, !isShow);
         if (!isShow) ToggleChangeTargetHint(false);

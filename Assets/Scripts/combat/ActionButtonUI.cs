@@ -14,6 +14,7 @@ public class ActionButtonUI : MonoBehaviour
     public Button button;
 
     private ActionData currentAction;
+    public ActionData CurrentAction => currentAction;
 
     void Update()
     {
@@ -74,6 +75,16 @@ public class ActionButtonUI : MonoBehaviour
     private void UpdateResourceText(BattleUnit unit)
     {
         if (resourceText == null || currentAction == null) return;
+
+        var skillRow = GetComponent<CombatSkillRowUI>();
+        if (skillRow != null && currentAction.type != ActionData.ActionType.Item)
+        {
+            string amount = currentAction.isUltimate
+                ? (unit != null ? Mathf.FloorToInt(unit.UltimateEnergy) : 0) + "/100"
+                : currentAction.stainChange > 0 ? "+" + currentAction.stainChange : Mathf.Abs(currentAction.stainChange).ToString();
+            skillRow.SetResource(amount, currentAction.isUltimate ? "Tuyệt kỹ" : "Tinh lực");
+            return;
+        }
 
         if (currentAction.type == ActionData.ActionType.Item)
         {

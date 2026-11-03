@@ -34,6 +34,30 @@ public static class MapStreamingBuilder
             if (!SceneManager.GetSceneByPath(chunk.scenePath).isLoaded) EditorSceneManager.OpenScene(chunk.scenePath, OpenSceneMode.Additive);
         SceneManager.SetActiveScene(map);
     }
+    [MenuItem("Tools/Adventure/Streaming/Open nearby chunks for editing")]
+    public static void OpenNearbyChunks()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode) return;
+        var map = SceneManager.GetSceneByPath(Map);
+        if (!map.isLoaded) map = EditorSceneManager.OpenScene(Map, OpenSceneMode.Additive);
+        var setup = map.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<MapGameSetup>(true)).Single();
+        var streamer = setup.GetComponent<MapChunkStreamer>();
+        var player = setup.player != null ? setup.player : map.GetRootGameObjects()
+            .SelectMany(root => root.GetComponentsInChildren<PlayerScript>(true)).FirstOrDefault();
+        if (streamer == null || player == null) throw new InvalidOperationException("Missing map streamer or player.");
+        int opened = 0;
+        foreach (var chunk in streamer.chunks)
+        {
+            if (MapChunkStreamer.Distance(chunk, player.transform.position) > streamer.loadDistance ||
+                SceneManager.GetSceneByPath(chunk.scenePath).isLoaded) continue;
+            EditorSceneManager.OpenScene(chunk.scenePath, OpenSceneMode.Additive);
+            opened++;
+        }
+        SceneManager.SetActiveScene(map);
+        if (SceneView.lastActiveSceneView != null)
+            SceneView.lastActiveSceneView.Frame(new Bounds(player.transform.position + Vector3.up, Vector3.one * 12f), false);
+        Debug.Log("Opened " + opened + " nearby chunks for editing. Map data and streaming settings are unchanged.");
+    }
     [MenuItem("Tools/Adventure/Streaming/Close chunks before Play")]
     static void CloseChunks()
     {
