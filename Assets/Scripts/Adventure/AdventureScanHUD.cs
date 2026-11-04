@@ -3,7 +3,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>Bounded, pooled scan markers and a transparent cooldown readout.</summary>
+/// <summary>Bounded scan markers and a circular key/cooldown indicator.</summary>
 [DisallowMultipleComponent]
 public sealed class AdventureScanHUD : MonoBehaviour
 {
@@ -24,7 +24,8 @@ public sealed class AdventureScanHUD : MonoBehaviour
     readonly Stack<Marker> pool = new Stack<Marker>();
     AdventureScanSettings settings;
     Canvas canvas;
-    RectTransform canvasRect, cooldownRoot, cooldownFill;
+    RectTransform canvasRect, cooldownRoot;
+    AdventureScanCooldownGraphic cooldownRing;
     TMP_Text cooldownLabel;
     string lastCooldownText;
 
@@ -46,24 +47,21 @@ public sealed class AdventureScanHUD : MonoBehaviour
         scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         scaler.matchWidthOrHeight = .5f;
 
-        cooldownRoot = CreateRect("Scan Cooldown", canvasRect, new Vector2(1f, 0f), new Vector2(1f, 0f));
+        cooldownRoot = CreateRect("Scan Cooldown Circle", canvasRect, new Vector2(1f, 0f), new Vector2(1f, 0f));
         cooldownRoot.pivot = new Vector2(1f, 0f);
         cooldownRoot.anchoredPosition = settings.cooldownPosition;
         cooldownRoot.sizeDelta = settings.cooldownSize;
-        cooldownLabel = CreateLabel("Status", cooldownRoot, 17f);
-        Stretch(cooldownLabel.rectTransform, new Vector2(0f, 7f), Vector2.zero);
-        cooldownLabel.alignment = TextAlignmentOptions.MidlineRight;
-        var track = CreateRect("Cooldown Track", cooldownRoot, Vector2.zero, new Vector2(1f, 0f));
-        track.pivot = Vector2.zero;
-        track.sizeDelta = new Vector2(0f, 2f);
-        var trackImage = track.gameObject.AddComponent<Image>();
-        trackImage.color = new Color(settings.markerColor.r, settings.markerColor.g, settings.markerColor.b, .18f);
-        trackImage.raycastTarget = false;
-        cooldownFill = CreateRect("Ready Fill", track, Vector2.zero, Vector2.one);
-        Stretch(cooldownFill, Vector2.zero, Vector2.zero);
-        var fill = cooldownFill.gameObject.AddComponent<Image>();
-        fill.color = settings.markerColor;
-        fill.raycastTarget = false;
+        var ring = CreateRect("Cooldown Ring", cooldownRoot, Vector2.zero, Vector2.one);
+        Stretch(ring, Vector2.zero, Vector2.zero);
+        // Register the renderer before the custom Graphic's OnEnable/rebuild.
+        ring.gameObject.AddComponent<CanvasRenderer>();
+        cooldownRing = ring.gameObject.AddComponent<AdventureScanCooldownGraphic>();
+        cooldownRing.raycastTarget = false;
+        cooldownRing.color = Color.white;
+        cooldownLabel = CreateLabel("Scan Key", cooldownRoot, settings.cooldownKeyFontSize);
+        Stretch(cooldownLabel.rectTransform, Vector2.zero, Vector2.zero);
+        cooldownLabel.alignment = TextAlignmentOptions.Center;
+        cooldownLabel.fontWeight = FontWeight.Medium;
         canvas.gameObject.SetActive(false);
     }
 
@@ -113,25 +111,28 @@ public sealed class AdventureScanHUD : MonoBehaviour
         if (canvas.gameObject.activeSelf != show)
         {
             canvas.gameObject.SetActive(show);
-            if (show) Canvas.ForceUpdateCanvases();
+            if (show)
+            {
+                cooldownRing.SetAllDirty();
+                Canvas.ForceUpdateCanvases();
+            }
         }
         if (!show) return;
 
         cooldownRoot.anchoredPosition = settings.cooldownPosition;
         cooldownRoot.sizeDelta = settings.cooldownSize;
-        int seconds = Mathf.CeilToInt(Mathf.Max(0f, cooldownRemaining));
-        bool english = GameLocalization.IsEnglish;
-        string cooldownText = seconds > 0
-            ? (english ? "SCAN  " : "QUÉT  ") + seconds + "s"
-            : english ? "SCAN READY" : "QUÉT SẴN SÀNG";
+        string cooldownText = settings.scanKey.ToString().ToUpperInvariant();
         if (lastCooldownText != cooldownText)
         {
             cooldownLabel.text = cooldownText;
             lastCooldownText = cooldownText;
         }
-        cooldownLabel.color = settings.markerColor;
         float ready = settings.cooldown <= 0f ? 1f : 1f - Mathf.Clamp01(cooldownRemaining / settings.cooldown);
-        cooldownFill.anchorMax = new Vector2(ready, 1f);
+        bool cooling = cooldownRemaining > 0f;
+        cooldownLabel.color = new Color(1f, 1f, 1f, cooling ? .48f : 1f);
+        cooldownLabel.fontSize = settings.cooldownKeyFontSize;
+        cooldownRing.SetState(ready, cooling, settings.markerColor,
+            settings.cooldownRingThickness, settings.cooldownGlowWidth);
 
         foreach (Marker marker in markers)
         {
@@ -238,6 +239,7 @@ public sealed class AdventureScanHUD : MonoBehaviour
 }
 
 /// <summary>A small outline diamond that does not depend on a font glyph or texture.</summary>
+[RequireComponent(typeof(CanvasRenderer))]
 public sealed class AdventureScanDiamond : MaskableGraphic
 {
     protected override void OnPopulateMesh(VertexHelper vh)

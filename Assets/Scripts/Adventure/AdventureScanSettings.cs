@@ -6,7 +6,7 @@ public sealed class AdventureScanSettings : ScriptableObject
 {
     [Header("Input and range")]
     public bool scanEnabled = true;
-    public KeyCode scanKey = KeyCode.V;
+    public KeyCode scanKey = KeyCode.Q;
     [Min(1f)] public float radius = 45f;
     [Min(1f)] public float waveSpeed = 22f;
     [Min(0f)] public float cooldown = 8f;
@@ -51,7 +51,11 @@ public sealed class AdventureScanSettings : ScriptableObject
     public Color markerColor = new Color(.45f, .92f, 1f, 1f);
     [Min(8f)] public float markerSize = 24f;
     public Vector2 cooldownPosition = new Vector2(-32f, 112f);
-    public Vector2 cooldownSize = new Vector2(180f, 38f);
+    [Tooltip("Kích thước vùng HUD tròn. Dùng Width và Height bằng nhau để giữ hình tròn.")]
+    public Vector2 cooldownSize = new Vector2(72f, 72f);
+    [Min(1f)] public float cooldownRingThickness = 2.5f;
+    [Min(0f)] public float cooldownGlowWidth = 7f;
+    [Min(8f)] public float cooldownKeyFontSize = 28f;
     [Header("Audio (optional)")]
     public AudioClip scanSound;
     [Range(0f, 1f)] public float volume = .6f;

@@ -58,6 +58,12 @@ public class BattleUnit : MonoBehaviour
     [Tooltip("Ảnh viền HP riêng của enemy. Để trống dùng viền mặc định; HP Fill vẫn dùng chung.")]
     public Sprite enemyHpBorderSprite;
 
+    [Header("Party HUD Portraits")]
+    [Tooltip("Ảnh khi chờ lượt. Để trống dùng cặp ảnh trong PartyHUDStyle.")]
+    public Sprite partyHudWaitingPortrait;
+    [Tooltip("Ảnh khi đến lượt. Để trống dùng cặp ảnh trong PartyHUDStyle.")]
+    public Sprite partyHudTurnPortrait;
+
     [Header("Ultimate Energy")]
     [Range(0, 100)] public float parryUltimateGain = 15f;
     [Range(0, 100), Tooltip("Energy gained per 100% of maximum HP actually lost. Shield damage does not charge.")]

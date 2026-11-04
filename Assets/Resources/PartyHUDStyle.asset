@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee959f3576194c9d90b1272e0c4ca6dd, type: 3}
+  m_Name: PartyHUDStyle
+  m_EditorClassIdentifier: Assembly-CSharp::PartyHUDStyle
+  barFrame: {fileID: -2031141861, guid: 4dc581f86abd33f4b9dd74396d884ef5, type: 3}
+  portraits:
+  - characterKey: player (3)
+    waiting: {fileID: -418760586, guid: 49eff14882a616b4993eb8374fd69399, type: 3}
+    acting: {fileID: 503092623, guid: 8241ed81923d19947aa8a4425643688a, type: 3}
+  - characterKey: SK_Lauren Red
+    waiting: {fileID: 53184956, guid: 2a1ba1e2d589eba448dfd45a0ad998a5, type: 3}
+    acting: {fileID: -1793391239, guid: f0250ca3f8df6ae4a83e964db3ca6816, type: 3}
+  slotSize: {x: 210, y: 220}
+  slotSpacing: 44
+  activeScale: 1.22
+  transitionDuration: 0.18
+  activeLift: 8
+  hpColor: {r: 1, g: 0.08, b: 0.18, a: 1}
+  ultimateColor: {r: 0, g: 0.94, b: 1, a: 1}

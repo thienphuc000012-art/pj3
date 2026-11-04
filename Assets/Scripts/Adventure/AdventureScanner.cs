@@ -89,8 +89,8 @@ public sealed class AdventureScanner : MonoBehaviour
     bool InputPressed()
     {
 #if ENABLE_INPUT_SYSTEM
-        if (scanAction != null && scanAction.action != null)
-            return scanAction.action.WasPressedThisFrame();
+        if (scanAction != null && scanAction.action != null && scanAction.action.WasPressedThisFrame())
+            return true;
 #endif
 #if ENABLE_LEGACY_INPUT_MANAGER
         return Input.GetKeyDown(settings.scanKey);

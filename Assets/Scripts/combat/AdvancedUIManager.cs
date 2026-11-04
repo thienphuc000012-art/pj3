@@ -488,6 +488,14 @@ public class AdvancedUIManager : MonoBehaviour
             {
                 hud.UpdateBuffBlinking(buffBlinkAlpha);
                 hud.AnimateUltimate(Time.unscaledDeltaTime);
+                if (hud.turnCard != null)
+                {
+                    CombatManager combat = CombatManager.Instance;
+                    bool active = combat != null && combat.currentActiveUnit == hud.BoundUnit &&
+                        (combat.state == CombatState.PlayerTurn || combat.state == CombatState.Executing);
+                    hud.turnCard.SetTurn(active);
+                    hud.turnCard.Tick(Time.unscaledDeltaTime);
+                }
             }
         }
     }
@@ -942,10 +950,11 @@ public class AdvancedUIManager : MonoBehaviour
         if (fill == null) return;
         if (trail == null)
         {
-            var go = new GameObject("HP Damage Trail", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(LayoutElement));
+            var go = new GameObject("HP Damage Trail", typeof(RectTransform), typeof(CanvasRenderer), typeof(LayoutElement));
             go.layer = fill.gameObject.layer;
             go.GetComponent<LayoutElement>().ignoreLayout = true;
-            trail = go.GetComponent<Image>();
+            trail = fill is PartyHUDSlantedFill ? go.AddComponent<PartyHUDSlantedFill>() : go.AddComponent<Image>();
+            if (trail is PartyHUDSlantedFill slanted && fill is PartyHUDSlantedFill shape) slanted.CopyShape(shape);
             trail.rectTransform.SetParent(fill.transform.parent, false);
             trail.raycastTarget = false;
             trail.color = Color.white;
@@ -1478,6 +1487,7 @@ public class PartyHUDUnit
 {
     private readonly DebuffIconUI debuffIcon = new DebuffIconUI();
     public GameObject gameObject;
+    public PartyTurnHUDCard turnCard;
     public Image hpFill;
     public Image shieldFill;
     public TextMeshProUGUI hpText;
@@ -1576,6 +1586,7 @@ public class PartyHUDUnit
         boundUnit = unit;
         EnsureUltimateBar();
         EnsureElementIcon();
+        if (turnCard != null) turnCard.Bind(unit);
         UpdateElementIcon();
         boundUnit.OnUltimateEnergyChanged += OnUltimateChanged;
         OnUltimateChanged(boundUnit.UltimateEnergy);
@@ -1602,7 +1613,9 @@ public class PartyHUDUnit
 
         if (hpText != null)
         {
-            hpText.text = shield > 0 ? $"{current}/{max} <color=white>[+{shield}]</color>" : $"{current} / {max}";
+            hpText.text = turnCard != null
+                ? (shield > 0 ? $"{current} <size=55%>+{shield}</size>" : current.ToString())
+                : (shield > 0 ? $"{current}/{max} <color=white>[+{shield}]</color>" : $"{current} / {max}");
         }
 
         // --- BUFF UI: gộp các buff cùng BuffStat thành 1 icon ---
@@ -1739,6 +1752,8 @@ public class PartyHUDUnit
     private void EnsureElementIcon()
     {
         if (gameObject == null || hpFill == null) return;
+        // Authored turn cards keep their own element placement inside the animated visual.
+        if (turnCard != null && elementIcon != null && elementLabel != null) return;
         RectTransform root = gameObject.GetComponent<RectTransform>();
         if (root == null) return;
         if (elementIcon == null)

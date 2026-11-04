@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: AdventureScanSettings
   m_EditorClassIdentifier: Assembly-CSharp::AdventureScanSettings
   scanEnabled: 1
-  scanKey: 118
+  scanKey: 113
   radius: 45
   waveSpeed: 22
   cooldown: 8
@@ -54,6 +54,9 @@ MonoBehaviour:
   markerColor: {r: 0.45, g: 0.92, b: 1, a: 1}
   markerSize: 24
   cooldownPosition: {x: -32, y: 112}
-  cooldownSize: {x: 180, y: 38}
+  cooldownSize: {x: 72, y: 72}
+  cooldownRingThickness: 2.5
+  cooldownGlowWidth: 7
+  cooldownKeyFontSize: 28
   scanSound: {fileID: 0}
   volume: 0.6
