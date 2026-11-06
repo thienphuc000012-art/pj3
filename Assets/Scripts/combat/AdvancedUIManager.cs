@@ -112,6 +112,18 @@ public class AdvancedUIManager : MonoBehaviour
     [Header("Turn Order UI (Left Bar)")]
     public Transform turnOrderContainer;
     public GameObject portraitPrefab;
+    [Tooltip("Kích thước tối đa của mỗi ảnh. Tự thu nhỏ thêm nếu thanh lượt không đủ chỗ.")]
+    public Vector2 turnPortraitSize = new Vector2(64f, 64f);
+    [Min(0)] public float turnPortraitSpacing = 12f;
+    [Min(0)] public float turnPortraitInset = 8f;
+    [Range(1f, 1.5f)] public float turnPortraitActiveScale = 1.2f;
+    [Tooltip("Hiện khung bao quanh các ảnh trong TurnOrderBar.")]
+    public bool showTurnPortraitFrames = true;
+    [Tooltip("Ảnh khung tùy chọn. Để trống dùng khung cắt góc được vẽ tự động.")]
+    public Sprite turnPortraitFrameSprite;
+    public Color turnPortraitFrameColor = new Color(.92f, .92f, .92f, 1f);
+    public Vector2 turnPortraitFramePadding = new Vector2(3f, 3f);
+    [Min(.5f)] public float turnPortraitFrameThickness = 2f;
     private List<GameObject> activePortraits = new List<GameObject>();
 
     [Header("Boss / Enemy HP Bar (Top Screen)")]
@@ -122,8 +134,6 @@ public class AdvancedUIManager : MonoBehaviour
     public TextMeshProUGUI enemyElementLabel;
     public Vector2 enemyElementIconSize = new Vector2(26f, 26f);
     public Vector2 enemyElementIconOffset = new Vector2(-5f, 0f);
-    [Tooltip("Image viền nằm trên HP Fill. Để trống sẽ tự tạo khi chạy.")]
-    public Image enemyHpBorder;
     [Tooltip("BuffContainer Enemy độc lập với phần name. Để trống sẽ tự tạo làm object cùng cấp với name.")]
     public Transform enemyBuffContainer;
     [Tooltip("RectTransform làm cha cho BuffContainer Enemy. Để trống sẽ dùng cùng vùng cha với HP/name.")]
@@ -159,15 +169,7 @@ public class AdvancedUIManager : MonoBehaviour
         }
     }
     private readonly Dictionary<BattleUnit, DamageTrailState> damageStates = new Dictionary<BattleUnit, DamageTrailState>();
-    [Tooltip("Lề trái / dưới của viền HP tự tạo, tính từ panel HP.")]
-    public Vector2 enemyHpBorderOffsetMin = new Vector2(-25.45506f, -55.93742f);
-    [Tooltip("Lề phải / trên của viền HP tự tạo, tính từ panel HP.")]
-    public Vector2 enemyHpBorderOffsetMax = new Vector2(0.000041008f, 44.18607f);
     private BattleUnit boundEnemy;
-    private Sprite defaultEnemyBorder;
-    private Color defaultEnemyBorderColor;
-    private bool defaultEnemyBorderEnabled;
-    private bool enemyBorderInitialized;
     public TextMeshProUGUI enemyNameText;
     public TextMeshProUGUI enemyHpText;
     [Header("Boss Phase Indicator")]
@@ -218,6 +220,12 @@ public class AdvancedUIManager : MonoBehaviour
     [Header("Buff UI Settings")]
     public GameObject buffIconPrefab; // Prefab Image dùng làm Icon Buff
     public List<BuffSpriteMapping> buffSprites; // Map loại Buff với hình ảnh
+    [Min(1f), Tooltip("Kích thước tối đa của icon buff/debuff. Icon Party được giới hạn theo chiều cao và chiều rộng của hàng.")]
+    public float buffDebuffIconSize = 36f;
+    [Min(0f), Tooltip("Khoảng cách giữa các icon buff/debuff (đơn vị UI). Thay đổi được áp dụng ngay khi đang chạy.")]
+    public float buffDebuffIconSpacing = 8f;
+    private float lastAppliedBuffIconSize = -1f;
+    private float lastAppliedBuffIconSpacing = -1f;
 
     [Header("Status Effect Info Panel")]
     public Vector2 statusTooltipSize = new Vector2(300f, 120f);
@@ -448,6 +456,7 @@ public class AdvancedUIManager : MonoBehaviour
 
     void Update()
     {
+        ApplyBuffIconSettingsIfChanged();
         UpdateEnemyBinding();
         enemyDebuffIcon.Blink(Mathf.PingPong(Time.time * 5f, 0.7f) + 0.3f);
         UpdateDamageTrails();
@@ -754,7 +763,7 @@ public class AdvancedUIManager : MonoBehaviour
 
         foreach (GameObject obj in activePortraits)
         {
-            if (obj != null) Destroy(obj);
+            DestroyTurnPortrait(obj);
         }
         activePortraits.Clear();
 
@@ -770,12 +779,80 @@ public class AdvancedUIManager : MonoBehaviour
             if (imgComponent != null && unit.unitPortrait != null)
             {
                 imgComponent.sprite = unit.unitPortrait;
+                imgComponent.preserveAspect = true;
             }
 
             if (!unit.isPlayer && imgComponent != null) imgComponent.color = Color.red;
+            ApplyTurnPortraitFrame(portrait.transform as RectTransform);
 
-            if (i == 0) portrait.transform.localScale = Vector3.one * 1.2f;
+            if (i == 0) portrait.transform.localScale = Vector3.one * turnPortraitActiveScale;
             else portrait.transform.localScale = Vector3.one;
+        }
+        RefreshTurnOrderLayout();
+    }
+
+    public void RefreshTurnOrderLayout()
+    {
+        if (!(turnOrderContainer is RectTransform container) || activePortraits.Count == 0) return;
+        var layout = container.GetComponent<HorizontalOrVerticalLayoutGroup>();
+        if (layout == null) layout = container.gameObject.AddComponent<VerticalLayoutGroup>();
+        bool horizontal = layout is HorizontalLayoutGroup;
+        float activeScale = Mathf.Max(1, turnPortraitActiveScale);
+        Vector2 framePadding = showTurnPortraitFrames ? Vector2.Max(Vector2.zero, turnPortraitFramePadding) : Vector2.zero;
+        int insetX = Mathf.CeilToInt(Mathf.Max(turnPortraitInset, framePadding.x * activeScale + 2));
+        int insetY = Mathf.CeilToInt(Mathf.Max(turnPortraitInset, framePadding.y * activeScale + 2));
+        layout.padding = new RectOffset(Mathf.Max(layout.padding.left, insetX), Mathf.Max(layout.padding.right, insetX),
+            Mathf.Max(layout.padding.top, insetY), Mathf.Max(layout.padding.bottom, insetY));
+        layout.childControlWidth = layout.childControlHeight = true;
+        layout.childForceExpandWidth = layout.childForceExpandHeight = false;
+        // Layout must reserve the scaled portrait size, plus space for the frame outside its rect.
+        layout.childScaleWidth = layout.childScaleHeight = true;
+        int count = activePortraits.Count;
+        Vector2 available = container.rect.size - new Vector2(layout.padding.horizontal, layout.padding.vertical);
+        float along = horizontal ? available.x : available.y;
+        float frameGap = 2 * (horizontal ? framePadding.x : framePadding.y) * activeScale + 4;
+        float spacing = Mathf.Max(turnPortraitSpacing, frameGap);
+        if (count > 1) spacing = Mathf.Min(spacing, Mathf.Max(0, (along - activeScale - count + 1) / (count - 1)));
+        layout.spacing = spacing;
+        float scaleSum = count - 1 + activeScale;
+        Vector2 wanted = new Vector2(Mathf.Max(1, turnPortraitSize.x), Mathf.Max(1, turnPortraitSize.y));
+        float fitAlong = (along - spacing * (count - 1)) / (scaleSum * (horizontal ? wanted.x : wanted.y));
+        float fitAcross = (horizontal ? available.y / wanted.y : available.x / wanted.x) / activeScale;
+        float fit = Mathf.Clamp(Mathf.Min(fitAlong, fitAcross), .001f, 1);
+        Vector2 size = wanted * fit;
+        foreach (var portrait in activePortraits)
+        {
+            if (portrait == null) continue;
+            var rect = portrait.transform as RectTransform;
+            if (rect == null) continue;
+            rect.pivot = new Vector2(.5f, .5f);
+            rect.sizeDelta = size;
+            var element = portrait.GetComponent<LayoutElement>();
+            if (element == null) element = portrait.AddComponent<LayoutElement>();
+            element.minWidth = element.preferredWidth = size.x;
+            element.minHeight = element.preferredHeight = size.y;
+            element.flexibleWidth = element.flexibleHeight = 0;
+        }
+        LayoutRebuilder.ForceRebuildLayoutImmediate(container);
+    }
+
+    static void DestroyTurnPortrait(GameObject portrait)
+    {
+        if (portrait == null) return;
+        portrait.SetActive(false);
+        if (Application.isPlaying) Destroy(portrait); else DestroyImmediate(portrait);
+    }
+
+    public void ApplyTurnPortraitFrame(RectTransform portrait)
+    {
+        if (portrait == null) return;
+        if (showTurnPortraitFrames)
+            TurnOrderPortraitFrame.Apply(portrait, turnPortraitFrameSprite, turnPortraitFrameColor,
+                turnPortraitFramePadding, turnPortraitFrameThickness).gameObject.SetActive(true);
+        else
+        {
+            var frame = portrait.Find("Portrait Frame");
+            if (frame != null) frame.gameObject.SetActive(false);
         }
     }
 
@@ -785,13 +862,14 @@ public class AdvancedUIManager : MonoBehaviour
         {
             GameObject firstPortrait = activePortraits[0];
             activePortraits.RemoveAt(0);
-            if (firstPortrait != null) Destroy(firstPortrait);
+            DestroyTurnPortrait(firstPortrait);
 
             // --- CẬP NHẬT: Phóng to chân dung của nhân vật vừa được đẩy lên đầu (người đang đánh) ---
             if (activePortraits.Count > 0 && activePortraits[0] != null)
             {
-                activePortraits[0].transform.localScale = Vector3.one * 1.2f;
+                activePortraits[0].transform.localScale = Vector3.one * turnPortraitActiveScale;
             }
+            RefreshTurnOrderLayout();
         }
     }
 
@@ -806,7 +884,6 @@ public class AdvancedUIManager : MonoBehaviour
         boundEnemy = enemy;
         enemy.OnStatsChanged -= UpdateEnemyHPUISafe;
         enemy.OnStatsChanged += UpdateEnemyHPUISafe;
-        ApplyEnemyBorder(enemy);
         UpdateEnemyHPUISafe(enemy.currentHP, enemy.maxHP, enemy.GetTotalShield());
 
         if (enemyNameText != null) enemyNameText.text = enemy.unitName;
@@ -841,36 +918,6 @@ public class AdvancedUIManager : MonoBehaviour
         if (enemy == null && boundEnemy != null && !boundEnemy.IsDead) enemy = boundEnemy;
         if (enemy != null && !enemy.isPlayer && enemy != boundEnemy) RegisterEnemyHP(enemy);
         else if (enemy == null && enemyHudPanel != null) enemyHudPanel.SetActive(false);
-    }
-
-    private void ApplyEnemyBorder(BattleUnit enemy)
-    {
-        if (!enemyBorderInitialized)
-        {
-            if (enemyHpBorder == null && enemyHpFill != null)
-            {
-                var go = new GameObject("Enemy HP Border", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-                var rect = go.GetComponent<RectTransform>();
-                // The existing fill's parent is the shared HP background.
-                rect.SetParent(enemyHpFill.transform.parent, false);
-                rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
-                rect.offsetMin = enemyHpBorderOffsetMin;
-                rect.offsetMax = enemyHpBorderOffsetMax;
-                rect.SetAsLastSibling();
-                enemyHpBorder = go.GetComponent<Image>();
-                enemyHpBorder.raycastTarget = false;
-                enemyHpBorder.enabled = false;
-            }
-            if (enemyHpBorder == null || enemyHpBorder == enemyHpFill) return;
-            defaultEnemyBorder = enemyHpBorder.sprite;
-            defaultEnemyBorderColor = enemyHpBorder.color;
-            defaultEnemyBorderEnabled = enemyHpBorder.enabled;
-            enemyBorderInitialized = true;
-        }
-        bool custom = enemy.enemyHpBorderSprite != null;
-        enemyHpBorder.sprite = custom ? enemy.enemyHpBorderSprite : defaultEnemyBorder;
-        enemyHpBorder.color = custom ? Color.white : defaultEnemyBorderColor;
-        enemyHpBorder.enabled = custom || defaultEnemyBorderEnabled;
     }
 
     private void OnDestroy()
@@ -1207,18 +1254,116 @@ public class AdvancedUIManager : MonoBehaviour
         enemyBuffContainer.gameObject.SetActive(battleUIVisible);
         // Icons flow left-to-right, starting at the left edge of the container.
         layout.childAlignment = TextAnchor.MiddleLeft;
-        layout.spacing = 0f;
-        layout.childControlWidth = layout.childControlHeight = false;
+        layout.spacing = buffDebuffIconSpacing;
+        layout.childControlWidth = layout.childControlHeight = true;
         layout.childForceExpandWidth = layout.childForceExpandHeight = false;
-        layout.childScaleWidth = true;
+        layout.childScaleWidth = layout.childScaleHeight = false;
+        ConfigureBuffIconContainer(enemyBuffContainer);
+    }
+
+    public void ConfigureBuffIconContainer(Transform container)
+    {
+        if (!(container is RectTransform rect) || rect == null) return;
+        bool isPartyRow = container != enemyBuffContainer;
+        var layout = container.GetComponent<HorizontalLayoutGroup>();
+        if (layout != null)
+        {
+            layout.childControlWidth = layout.childControlHeight = true;
+            layout.childForceExpandWidth = layout.childForceExpandHeight = false;
+            layout.childScaleWidth = layout.childScaleHeight = false;
+        }
+
+        var activeIcons = new List<Image>();
+        foreach (Transform child in container)
+        {
+            if (child.gameObject.activeSelf && child.TryGetComponent(out Image image))
+                activeIcons.Add(image);
+        }
+
+        float iconSize = Mathf.Max(1f, buffDebuffIconSize);
+        float spacing = Mathf.Max(0f, buffDebuffIconSpacing);
+        if (activeIcons.Count > 0)
+        {
+            RectOffset padding = layout != null ? layout.padding : null;
+            float availableWidth = Mathf.Max(0f, rect.rect.width - (padding?.horizontal ?? 0));
+            int gapCount = activeIcons.Count - 1;
+            if (gapCount > 0)
+                spacing = Mathf.Min(spacing, Mathf.Max(0f, (availableWidth - activeIcons.Count) / gapCount));
+            iconSize = Mathf.Min(iconSize, (availableWidth - spacing * gapCount) / activeIcons.Count);
+
+            if (isPartyRow)
+            {
+                float availableHeight = Mathf.Max(0f, rect.rect.height - (padding?.vertical ?? 0));
+                iconSize = Mathf.Min(iconSize, availableHeight);
+            }
+            else
+            {
+                rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, Mathf.Max(rect.rect.height, iconSize + 2f));
+            }
+        }
+
+        if (layout != null) layout.spacing = spacing;
+        var sizeLayout = container.GetComponent<PartyHUDBuffLayout>();
+        if (sizeLayout != null) sizeLayout.iconSize = iconSize;
+        foreach (Image icon in activeIcons)
+        {
+            // Match the drawn icon to its layout cell. The shared prefab is scaled to 25%.
+            if (isPartyRow) icon.rectTransform.localScale = Vector3.one;
+            ApplyBuffIconSize(icon.gameObject, iconSize);
+        }
+        if (layout != null) LayoutRebuilder.MarkLayoutForRebuild(rect);
+    }
+
+    private void ApplyBuffIconSettingsIfChanged()
+    {
+        if (Mathf.Approximately(lastAppliedBuffIconSize, buffDebuffIconSize) &&
+            Mathf.Approximately(lastAppliedBuffIconSpacing, buffDebuffIconSpacing))
+            return;
+
+        lastAppliedBuffIconSize = buffDebuffIconSize;
+        lastAppliedBuffIconSpacing = buffDebuffIconSpacing;
+
+        if (partyHUDList != null)
+        {
+            foreach (PartyHUDUnit hud in partyHUDList)
+                if (hud != null && hud.buffContainer != null)
+                    ConfigureBuffIconContainer(hud.buffContainer);
+        }
+
+        if (enemyBuffContainer != null)
+            ConfigureBuffIconContainer(enemyBuffContainer);
+    }
+
+    public void ConfigureBuffIcon(GameObject icon, bool resizeParent = true)
+    {
+        if (icon == null) return;
+        if (resizeParent && icon.transform.parent != null)
+        {
+            ConfigureBuffIconContainer(icon.transform.parent);
+            return;
+        }
+        ApplyBuffIconSize(icon, Mathf.Max(1f, buffDebuffIconSize));
+    }
+
+    private static void ApplyBuffIconSize(GameObject icon, float size)
+    {
+        if (icon == null) return;
+        var rect = icon.GetComponent<RectTransform>();
+        if (rect != null) rect.sizeDelta = Vector2.one * size;
+        var element = icon.GetComponent<LayoutElement>();
+        if (element == null) element = icon.AddComponent<LayoutElement>();
+        element.minWidth = element.preferredWidth = size;
+        element.minHeight = element.preferredHeight = size;
+        element.flexibleWidth = element.flexibleHeight = 0f;
     }
 
     private void RefreshEnemyBuffIcons()
     {
         if (enemyBuffIcons.Count > 0) HideStatusTooltip();
         foreach (GameObject icon in enemyBuffIcons)
-            if (icon != null) Destroy(icon);
+            if (icon != null) { icon.SetActive(false); Destroy(icon); }
         enemyBuffIcons.Clear();
+        if (enemyBuffContainer != null) ConfigureBuffIconContainer(enemyBuffContainer);
         if (boundEnemy == null || boundEnemy.IsDead || enemyBuffContainer == null || buffIconPrefab == null) return;
 
         var groups = new List<EnemyBuffDisplay>();
@@ -1242,6 +1387,7 @@ public class AdvancedUIManager : MonoBehaviour
         {
             GameObject icon = Instantiate(buffIconPrefab, enemyBuffContainer);
             icon.name = "Enemy Buff " + group.stat;
+            ConfigureBuffIcon(icon);
             Image image = icon.GetComponent<Image>();
             if (image == null) { Destroy(icon); continue; }
             Sprite sprite = GetBuffSprite(group.stat);
@@ -1252,6 +1398,7 @@ public class AdvancedUIManager : MonoBehaviour
             BindBuffTooltip(icon, group.stat, group.amount, group.stacks, group.turns);
             enemyBuffIcons.Add(icon);
         }
+        ConfigureBuffIconContainer(enemyBuffContainer);
     }
 
     private sealed class EnemyBuffDisplay
@@ -1621,6 +1768,7 @@ public class PartyHUDUnit
         // --- BUFF UI: gộp các buff cùng BuffStat thành 1 icon ---
         if (boundUnit != null && buffContainer != null)
         {
+            AdvancedUIManager.Instance?.ConfigureBuffIconContainer(buffContainer);
             if (spawnedBuffIcons.Count > 0)
                 AdvancedUIManager.Instance?.HideStatusTooltip();
             groupedBuffs.Clear();
@@ -1675,6 +1823,7 @@ public class PartyHUDUnit
             {
                 if (icon != null)
                 {
+                    icon.gameObject.SetActive(false);
                     UnityEngine.Object.Destroy(
                         icon.gameObject
                     );
@@ -1699,6 +1848,7 @@ public class PartyHUDUnit
                         AdvancedUIManager.Instance.buffIconPrefab,
                         buffContainer
                     );
+                AdvancedUIManager.Instance.ConfigureBuffIcon(newIcon);
 
                 Image img =
                     newIcon.GetComponent<Image>();
@@ -1746,6 +1896,8 @@ public class PartyHUDUnit
 
                 spawnedBuffIcons.Add(img);
             }
+
+            AdvancedUIManager.Instance?.ConfigureBuffIconContainer(buffContainer);
         }
     }
 
@@ -1864,8 +2016,10 @@ public sealed class DebuffIconUI
                 if (image.gameObject.activeSelf) AdvancedUIManager.Instance?.HideStatusTooltip();
                 image.gameObject.SetActive(false);
             }
+            if (container != null) AdvancedUIManager.Instance?.ConfigureBuffIconContainer(container);
             return;
         }
+        AdvancedUIManager.Instance?.ConfigureBuffIconContainer(container);
         if (image == null)
         {
             var manager = AdvancedUIManager.Instance;
@@ -1875,6 +2029,7 @@ public sealed class DebuffIconUI
             go.transform.SetParent(container, false);
             image = go.GetComponent<Image>();
             if (image == null) image = go.AddComponent<Image>();
+            manager?.ConfigureBuffIcon(go);
             if (image.rectTransform.sizeDelta == Vector2.zero) image.rectTransform.sizeDelta = new Vector2(36, 36);
             label = go.GetComponentInChildren<TextMeshProUGUI>(true);
             if (label == null)
@@ -1904,6 +2059,7 @@ public sealed class DebuffIconUI
         label.alignment = hasIcon ? TextAlignmentOptions.BottomRight : TextAlignmentOptions.Center;
         label.color = Color.white;
         AdvancedUIManager.Instance?.BindDebuffTooltip(image.gameObject, effect);
+        AdvancedUIManager.Instance?.ConfigureBuffIconContainer(container);
     }
 
     public void Blink(float alpha)

@@ -43,7 +43,7 @@ public static class PartyTurnHUDSetup
         if (File.Exists(ValidateRequest))
         {
             File.Delete(ValidateRequest);
-            try { ValidatePreview(AssetDatabase.LoadAssetAtPath<PartyHUDStyle>(StylePath)); WriteStatus("passed", "HP / Ultimate layout, energy gain/spend, turn portraits, delayed HP shape and hidden HUD validated; previews rendered."); }
+            try { ValidatePreview(AssetDatabase.LoadAssetAtPath<PartyHUDStyle>(StylePath)); WriteStatus("passed", "HP / Ultimate colors and energy; 5/8-unit turn portraits fit inside the bar without overlap, including rebuilds and promotion; previews rendered."); }
             catch (Exception ex) { WriteStatus("failed", ex.ToString()); Debug.LogException(ex); }
         }
         if (File.Exists(ResourceRequest))
@@ -332,6 +332,7 @@ public static class PartyTurnHUDSetup
                     "HP trail and ultimate must use independent fill Images.");
                 ValidateResourceReferences(hud);
             }
+            ValidateAuthoredColorsAndTurnFrames(canvas, cards, units);
             target = new RenderTexture(1100, 560, 24); target.Create(); camera.targetTexture = target;
             for (int selected = 1; selected <= 2; selected++)
             {
@@ -361,7 +362,9 @@ public static class PartyTurnHUDSetup
                 {
                     RenderTexture.active = target; image = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
                     image.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0); image.Apply();
-                    File.WriteAllBytes(Output + "/PartyTurnHUD-" + (selected == 1 ? "Middle" : "Third") + ".png", image.EncodeToPNG());
+                    string previewPath = "Library/CombatValidation/PartyTurnHUD-" + (selected == 1 ? "Middle-" : "Third-") + DateTime.Now.ToString("yyyyMMdd-HHmmssfff") + ".png";
+                    Directory.CreateDirectory(Path.GetDirectoryName(previewPath));
+                    File.WriteAllBytes(previewPath, image.EncodeToPNG());
                 }
                 finally { RenderTexture.active = previous; if (image != null) UnityEngine.Object.DestroyImmediate(image); image = null; }
             }
@@ -420,6 +423,102 @@ public static class PartyTurnHUDSetup
             "Ultimate must use the lower slanted rail inside the supplied art.");
         Require(root.Find("Ultimate Energy") == null && root.Find("Resource Divider") != null,
             "Only the two art rails should remain, with a divider between HP and Ultimate values.");
+    }
+
+    private static void ValidateAuthoredColorsAndTurnFrames(Canvas canvas, List<PartyHUDUnit> cards, List<BattleUnit> units)
+    {
+        Color hpColor = cards[0].hpText.color;
+        Color ultimateColor = cards[0].turnCard.ultimateText.color;
+        // Reproduce both scene theme passes and an already attached color component's LateUpdate.
+        var existingColor = cards[0].hpText.gameObject.AddComponent<GameUITextColor>();
+        GameUITheme.Apply(canvas.gameObject);
+        GameUITheme.Apply(canvas.gameObject);
+        GameLocalization.SetText(cards[0].hpText, cards[0].hpText.text);
+        typeof(GameUITextColor).GetMethod("LateUpdate", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            .Invoke(existingColor, null);
+        Require(cards[0].hpText.color == hpColor && cards[0].turnCard.ultimateText.color == ultimateColor,
+            "Theme, localization and LateUpdate must preserve Canvas-authored Party HP / Ultimate colors.");
+        var ordinary = new GameObject("Ordinary UI Text", typeof(RectTransform), typeof(TextMeshProUGUI));
+        ordinary.transform.SetParent(canvas.transform, false);
+        var ordinaryText = ordinary.GetComponent<TextMeshProUGUI>(); ordinaryText.color = Color.red;
+        GameUITextColor.Apply(ordinaryText);
+        Require(ordinaryText.color == Color.white, "Other UI must retain its shared white text style.");
+        UnityEngine.Object.DestroyImmediate(ordinary);
+
+        var managerGo = new GameObject("Turn Order Preview Manager", typeof(AdvancedUIManager));
+        managerGo.transform.SetParent(canvas.transform, false);
+        var manager = managerGo.GetComponent<AdvancedUIManager>();
+        var row = new GameObject("Turn Order Portrait Preview", typeof(RectTransform), typeof(VerticalLayoutGroup));
+        row.layer = 5; row.transform.SetParent(canvas.transform, false);
+        var rect = row.GetComponent<RectTransform>(); rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0, 1);
+        rect.anchoredPosition = new Vector2(20, -20); rect.sizeDelta = new Vector2(104, 420);
+        // Start with the actual legacy scene layout; runtime must repair its zero spacing and unscaled sizing.
+        var layout = row.GetComponent<VerticalLayoutGroup>();
+        layout.childAlignment = TextAnchor.UpperLeft; layout.spacing = 0;
+        layout.childForceExpandWidth = layout.childForceExpandHeight = true;
+        layout.childControlWidth = layout.childControlHeight = layout.childScaleWidth = layout.childScaleHeight = false;
+        manager.turnOrderContainer = rect;
+        manager.portraitPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/prefab/button/Image.prefab");
+        for (int i = 0; i < units.Count; i++) units[i].unitPortrait = cards[i].turnCard.portrait.sprite;
+        foreach (int count in new[] { 5, 8 })
+        {
+            var repeated = Enumerable.Range(0, count).Select(i => units[i % units.Count]).ToList();
+            manager.UpdateTurnOrderUI(repeated);
+            ValidateTurnPortraitBounds(manager, rect, count);
+            manager.UpdateTurnOrderUI(repeated);
+            ValidateTurnPortraitBounds(manager, rect, count);
+            var nextPortrait = rect.GetChild(1);
+            manager.RemoveFirstPortrait();
+            Require(rect.GetChild(0) == nextPortrait, "Removing the first portrait must promote the next existing unit.");
+            ValidateTurnPortraitBounds(manager, rect, count - 1);
+        }
+        manager.UpdateTurnOrderUI(units);
+        ValidateTurnPortraitBounds(manager, rect, units.Count);
+        Require(rect.childCount == units.Count, "Turn order must create one framed portrait per unit.");
+        for (int i = 0; i < rect.childCount; i++)
+        {
+            var portrait = (RectTransform)rect.GetChild(i);
+            var frame = portrait.Find("Portrait Frame")?.GetComponent<TurnOrderPortraitFrame>();
+            Require(frame != null && frame.color.a > 0 && !frame.raycastTarget && frame.sprite == null,
+                "Turn portraits need a visible default frame that does not capture input.");
+            Require(portrait.GetComponent<Image>().sprite == units[i].unitPortrait, "Frame creation must preserve the unit portrait.");
+            Require(portrait.localScale == Vector3.one * (i == 0 ? manager.turnPortraitActiveScale : 1f), "Framing must preserve the active turn scale.");
+            manager.showTurnPortraitFrames = false; manager.ApplyTurnPortraitFrame(portrait);
+            Require(!frame.gameObject.activeSelf, "The Inspector toggle must hide turn portrait frames.");
+            manager.showTurnPortraitFrames = true; manager.ApplyTurnPortraitFrame(portrait);
+            Require(frame.gameObject.activeSelf && portrait.childCount == 1, "Refreshing the frame must reuse it.");
+        }
+        // Frames remain untouched by the shared theme, including after a subsequent refresh.
+        GameUITheme.Apply(row);
+        Require(rect.GetChild(0).Find("Portrait Frame").GetComponent<TurnOrderPortraitFrame>().color == manager.turnPortraitFrameColor,
+            "The shared theme must preserve turn portrait frame colors.");
+    }
+
+    private static void ValidateTurnPortraitBounds(AdvancedUIManager manager, RectTransform container, int expectedCount)
+    {
+        Canvas.ForceUpdateCanvases();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(container);
+        Require(container.childCount == expectedCount, "Turn order updates must remove old portrait rows immediately.");
+        Rect bounds = container.rect;
+        float previousBottom = float.PositiveInfinity;
+        for (int i = 0; i < container.childCount; i++)
+        {
+            var portrait = (RectTransform)container.GetChild(i);
+            Require(portrait.GetComponent<Image>().preserveAspect, "Turn portraits must preserve the source artwork aspect ratio.");
+            Require(portrait.rect.width <= manager.turnPortraitSize.x + .05f && portrait.rect.height <= manager.turnPortraitSize.y + .05f,
+                "Turn portrait dimensions must not exceed the configured maximum size.");
+            Require(portrait.localScale == Vector3.one * (i == 0 ? manager.turnPortraitActiveScale : 1f),
+                "Only the current turn portrait may use the active scale.");
+            var frame = (RectTransform)portrait.Find("Portrait Frame");
+            var corners = new Vector3[4]; frame.GetWorldCorners(corners);
+            var local = corners.Select(container.InverseTransformPoint).ToArray();
+            float minX = local.Min(v => v.x), maxX = local.Max(v => v.x);
+            float minY = local.Min(v => v.y), maxY = local.Max(v => v.y);
+            Require(minX >= bounds.xMin - .05f && maxX <= bounds.xMax + .05f && minY >= bounds.yMin - .05f && maxY <= bounds.yMax + .05f,
+                "Every scaled portrait frame must stay inside TurnOrderBar (count " + expectedCount + ", index " + i + ").");
+            Require(maxY <= previousBottom + .05f, "Consecutive portrait frames must not overlap (count " + expectedCount + ", index " + i + ").");
+            previousBottom = minY;
+        }
     }
 
     private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }

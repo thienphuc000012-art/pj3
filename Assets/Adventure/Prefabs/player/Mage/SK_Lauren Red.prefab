@@ -2061,12 +2061,15 @@ MonoBehaviour:
   summonOwner: {fileID: 0}
   summonDeathOwnerMaxHpCostPercent: 0
   enemyHpBorderSprite: {fileID: 0}
+  partyHudWaitingPortrait: {fileID: 53184956, guid: 2a1ba1e2d589eba448dfd45a0ad998a5, type: 3}
+  partyHudTurnPortrait: {fileID: -1793391239, guid: f0250ca3f8df6ae4a83e964db3ca6816, type: 3}
   parryUltimateGain: 15
   damageUltimateGain: 50
   baseAtk: 10
   baseDef: 5
   baseCrit: 10
   baseCritDamage: 150
+  element: 0
   defaultAttack: {fileID: 11400000, guid: 39755a63f54e7974396bbbf389df346c, type: 2}
   characterSkills:
   - {fileID: 11400000, guid: 7caca4445e732f448bfb7b0130e732f0, type: 2}
@@ -2079,6 +2082,7 @@ MonoBehaviour:
   baseActionPattern: []
   startingBattleEffects: []
   bossPhases: []
+  phase1Icon: {fileID: 0}
   phase2AnimationTriggerName: Phase2
   phase2IntroDuration: 2.5
   phase2IntroPlayed: 0
@@ -2093,7 +2097,7 @@ MonoBehaviour:
   phase2CriticalHitClip: {fileID: 0}
   lastTarget: {fileID: 0}
   speed: 1000
-  unitPortrait: {fileID: 0}
+  unitPortrait: {fileID: -1793391239, guid: f0250ca3f8df6ae4a83e964db3ca6816, type: 3}
   deathStateName: death
   deathAnimationTimeout: 30
   enemyDeathDissolveMaterial: {fileID: 0}

@@ -1366,7 +1366,7 @@ public class CampaignSession : MonoBehaviour
     {
         if (!CanUpgrade || memberIndex < 0 || memberIndex >= Data.party.Count) return false;
         var p = Data.party[memberIndex];
-        if (!p.TryAllocateStats(points, Template(p).baseCrit)) return false;
+        if (!p.TryAllocateStats(points)) return false;
         Save(); Notify("Đã áp dụng điểm thuộc tính."); return true;
     }
     public bool IsSkillUnlocked(PartyMemberProgress p, ActionData skill)
@@ -1488,10 +1488,18 @@ public class CampaignSession : MonoBehaviour
         float encounterPreviousTimeScale = Time.timeScale;
         bool loadingStarted = false;
         GameObject blackHole = null;
+        float encounterVfxStartedAt = -1f;
         GameObject encounterContactProbe = null;
         SphereCollider enemyAttackCollider = null;
         EncounterAnimationProgress playerAction = null;
         EncounterAnimationProgress enemyAction = null;
+
+        void StartHitVfx()
+        {
+            if (encounterVfxStartedAt >= 0f) return;
+            encounterVfxStartedAt = Time.unscaledTime;
+            blackHole = SpawnEncounterVfx(playerTransform, enemyTransform);
+        }
 
         try
         {
@@ -1507,6 +1515,7 @@ public class CampaignSession : MonoBehaviour
             {
                 playerAction = StartEncounterAnimation(playerAnimator, Config.mapPlayerAttackTrigger, Config.mapPlayerAttackState, .7f);
                 enemyAction = StartEncounterAnimation(enemyAnimator, Config.mapEnemyHitTrigger, Config.mapEnemyHitState, .7f);
+                StartHitVfx();
 
                 float animationDeadline = Time.unscaledTime + 3.5f;
                 bool playerAnimationFinished = false;
@@ -1549,8 +1558,11 @@ public class CampaignSession : MonoBehaviour
                         contactConfirmed = EncounterContactConfirmed(playerTransform, playerController,
                             enemyAttackCollider);
                         if (contactConfirmed)
+                        {
                             playerAction = StartEncounterAnimation(playerAnimator, Config.mapPlayerHitTrigger,
                                 Config.mapPlayerHitState, .7f);
+                            StartHitVfx();
+                        }
                     }
 
                     if (contactConfirmed) playerAnimationFinished = UpdateEncounterAnimation(playerAction);
@@ -1569,44 +1581,15 @@ public class CampaignSession : MonoBehaviour
             if (playerTransform == null || enemyTransform == null || !OnMap)
                 yield break;
 
-            // Hold the final frame of each one-shot reaction while the encounter VFX plays.
+            // The VFX started with Hit. Let both one-shots finish before freezing the map.
             if (playerAnimator != null) playerAnimator.speed = 0f;
             if (enemyAnimator != null) enemyAnimator.speed = 0f;
             Time.timeScale = 0f;
 
-            Camera viewCamera = Camera.main;
-            if (Config.encounterBlackHoleVfxPrefab != null)
-            {
-                if (viewCamera != null)
-                {
-                    const float portalBaseDiameter = 7.57f;
-                    float cameraDistance = Mathf.Max(2.5f, viewCamera.nearClipPlane + .5f);
-                    float screenHeight = viewCamera.orthographic
-                        ? viewCamera.orthographicSize * 2f
-                        : cameraDistance * 2f * Mathf.Tan(viewCamera.fieldOfView * .5f * Mathf.Deg2Rad);
-                    float screenWidth = screenHeight * viewCamera.aspect;
-                    float screenFillScale = Mathf.Max(screenHeight, screenWidth) * 1.15f / portalBaseDiameter;
-                    blackHole = Instantiate(Config.encounterBlackHoleVfxPrefab, viewCamera.transform, false);
-                    blackHole.transform.localPosition = Vector3.forward * cameraDistance;
-                    blackHole.transform.localRotation = Quaternion.identity;
-                    blackHole.transform.localScale = Vector3.one * Mathf.Max(.1f, Config.encounterVfxScale, screenFillScale);
-                }
-                else
-                {
-                    Vector3 midpoint = (playerTransform.position + enemyTransform.position) * .5f + Vector3.up * .75f;
-                    blackHole = Instantiate(Config.encounterBlackHoleVfxPrefab, midpoint, Quaternion.identity);
-                    blackHole.transform.localScale = Vector3.one * Mathf.Max(.1f, Config.encounterVfxScale);
-                }
-                blackHole.SetActive(false);
-                PrepareEncounterVfxForUnscaledTime(blackHole);
-                blackHole.SetActive(true);
-                foreach (ParticleSystem particles in blackHole.GetComponentsInChildren<ParticleSystem>(true))
-                    if (particles != null && !particles.isPlaying) particles.Play(true);
-            }
-
-            // The world remains frozen; only the camera-facing encounter VFX advances.
+            // Do not replay the effect or wait its full duration again after the animations.
             float vfxDuration = Mathf.Max(0f, Config.encounterVfxDuration);
-            if (vfxDuration > 0f) yield return new WaitForSecondsRealtime(vfxDuration);
+            float vfxRemaining = Mathf.Max(0f, vfxDuration - (Time.unscaledTime - encounterVfxStartedAt));
+            if (vfxRemaining > 0f) yield return new WaitForSecondsRealtime(vfxRemaining);
 
             if (!LoadingScreen.Load(Config.battleScene))
             {
@@ -1652,6 +1635,41 @@ public class CampaignSession : MonoBehaviour
         Vector3 direction = target - actor.position;
         direction.y = 0f;
         if (direction.sqrMagnitude > .001f) actor.rotation = Quaternion.LookRotation(direction.normalized, Vector3.up);
+    }
+
+    private GameObject SpawnEncounterVfx(Transform player, Transform enemy)
+    {
+        if (Config.encounterBlackHoleVfxPrefab == null) return null;
+        Camera viewCamera = Camera.main;
+        GameObject effect;
+        if (viewCamera != null)
+        {
+            const float portalBaseDiameter = 7.57f;
+            float cameraDistance = Mathf.Max(2.5f, viewCamera.nearClipPlane + .5f);
+            float screenHeight = viewCamera.orthographic
+                ? viewCamera.orthographicSize * 2f
+                : cameraDistance * 2f * Mathf.Tan(viewCamera.fieldOfView * .5f * Mathf.Deg2Rad);
+            float screenWidth = screenHeight * viewCamera.aspect;
+            float screenFillScale = Mathf.Max(screenHeight, screenWidth) * 1.15f / portalBaseDiameter;
+            effect = Instantiate(Config.encounterBlackHoleVfxPrefab, viewCamera.transform, false);
+            effect.transform.localPosition = Vector3.forward * cameraDistance;
+            effect.transform.localRotation = Quaternion.identity;
+            effect.transform.localScale = Vector3.one * Mathf.Max(.1f, Config.encounterVfxScale, screenFillScale);
+        }
+        else
+        {
+            Vector3 midpoint = player != null && enemy != null
+                ? (player.position + enemy.position) * .5f + Vector3.up * .75f
+                : player != null ? player.position : enemy != null ? enemy.position : Vector3.zero;
+            effect = Instantiate(Config.encounterBlackHoleVfxPrefab, midpoint, Quaternion.identity);
+            effect.transform.localScale = Vector3.one * Mathf.Max(.1f, Config.encounterVfxScale);
+        }
+        effect.SetActive(false);
+        PrepareEncounterVfxForUnscaledTime(effect);
+        effect.SetActive(true);
+        foreach (ParticleSystem particles in effect.GetComponentsInChildren<ParticleSystem>(true))
+            if (particles != null && !particles.isPlaying) particles.Play(true);
+        return effect;
     }
 
     private static GameObject CreateEncounterContactProbe(Transform enemy, EnemyEncounterBehaviour patrol, float attackRange)
@@ -1833,7 +1851,7 @@ public class CampaignSession : MonoBehaviour
             var unit = Instantiate(Template(member), manager.playerSlots[i].position, manager.playerSlots[i].rotation);
             unit.gameObject.SetActive(true); unit.isPlayer = true;
             if (battleSetup != null) battleSetup.ApplyStartingEffects(unit, true, i);
-            unit.maxHP = MaxHP(member); unit.baseAtk += member.atkBonus; unit.baseDef += member.defBonus;
+            unit.maxHP = MaxHP(member); unit.baseAtk += member.atkBonus; unit.baseDef += member.defBonus; unit.speed += member.speedBonus;
             unit.baseCrit += member.critBonus; unit.baseCritDamage += member.critDamageBonus;
             unit.SetPersistentHP(member.hp);
             unit.characterSkills = EquippedSkills(member);

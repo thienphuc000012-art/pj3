@@ -96,13 +96,13 @@ public sealed class PartyTurnHUDCard : MonoBehaviour
         hud.elementIcon = Picture("Element Icon", card.visualRoot, new Vector2(-98, 54), new Vector2(20, 20), null);
         hud.elementLabel = Label("Element Label", hud.elementIcon.transform, Vector2.zero, new Vector2(20, 20), 12, Color.white);
         hud.elementIconSize = new Vector2(20, 20);
-        hud.buffContainer = Rect("BuffContainer", card.visualRoot, new Vector2(3, 20), new Vector2(190, 25));
+        hud.buffContainer = Rect("BuffContainer", card.visualRoot, new Vector2(3, 20), new Vector2(220, 40));
         var buffs = hud.buffContainer.gameObject.AddComponent<HorizontalLayoutGroup>();
-        buffs.childAlignment = TextAnchor.MiddleLeft; buffs.spacing = 3;
+        buffs.childAlignment = TextAnchor.MiddleLeft; buffs.spacing = 8;
         buffs.childControlWidth = buffs.childControlHeight = true;
         buffs.childForceExpandHeight = buffs.childForceExpandWidth = false;
         var size = hud.buffContainer.gameObject.AddComponent<PartyHUDBuffLayout>();
-        size.iconSize = 23;
+        size.iconSize = 36;
         card.SetTurn(false, true);
         return hud;
     }

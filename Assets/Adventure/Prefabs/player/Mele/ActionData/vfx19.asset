@@ -47,7 +47,18 @@ MonoBehaviour:
   buffStat: 1
   buffAmount: 100
   buffDuration: 2
-  debuffs: []
+  debuffs:
+  - type: 0
+    icon: {fileID: 21300000, guid: 106801f2cfd75bc41af053078a3ada07, type: 3}
+    applyChance: 100
+    turns: 200
+    burnDamage: 10
+    burnAttackReductionPercent: 8.4
+    paralysisSkipChance: 0
+    poisonMaxHpPercent: 0
+    turnVfxPrefab: {fileID: 1769391663779456, guid: d8dc9cc283ad7df45ae1b14f1fe58dbc, type: 3}
+    turnVfxLocalOffset: {x: 0, y: 0, z: 0}
+    turnVfxLifetime: 0
   cleanse: 0
   statusOnly: 0
   isMelee: 0

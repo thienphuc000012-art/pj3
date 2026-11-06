@@ -32,6 +32,37 @@ Transform:
   - {fileID: 6215687113789371333}
   m_Father: {fileID: 7269714474076168757}
   m_LocalEulerAnglesHint: {x: -0.0000016263818, y: 0.0000006729285, z: -8.441473}
+--- !u!1 &196565664845502026
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4105444907706977321}
+  m_Layer: 7
+  m_Name: GameObject (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4105444907706977321
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 196565664845502026}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1.862, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8068091269041767039}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &357429364006602460
 GameObject:
   m_ObjectHideFlags: 0
@@ -777,7 +808,7 @@ GameObject:
   - component: {fileID: 7591498749875572052}
   - component: {fileID: 1070983913225245249}
   - component: {fileID: 7011409249108863872}
-  - component: {fileID: 937070191134412644}
+  - component: {fileID: -8382372811957834497}
   m_Layer: 7
   m_Name: Vampire
   m_TagString: Player
@@ -801,6 +832,7 @@ Transform:
   - {fileID: 65273043111648683}
   - {fileID: 1755417282915002984}
   - {fileID: 954114591473631081}
+  - {fileID: 4105444907706977321}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!95 &4564545755168078879
@@ -843,12 +875,15 @@ MonoBehaviour:
   summonOwner: {fileID: 0}
   summonDeathOwnerMaxHpCostPercent: 0
   enemyHpBorderSprite: {fileID: 0}
+  partyHudWaitingPortrait: {fileID: 0}
+  partyHudTurnPortrait: {fileID: 0}
   parryUltimateGain: 15
   damageUltimateGain: 50
   baseAtk: 10
   baseDef: 5
   baseCrit: 10
   baseCritDamage: 150
+  element: 0
   defaultAttack: {fileID: 0}
   characterSkills: []
   isBoss: 0
@@ -858,10 +893,12 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 99de3be6ba1a61f459516fd503e34872, type: 2}
   startingBattleEffects: []
   bossPhases:
-  - actionsPerTurn: 2
+  - phaseIcon: {fileID: 0}
+    actionsPerTurn: 2
     phaseActionPattern:
     - {fileID: 11400000, guid: 99de3be6ba1a61f459516fd503e34872, type: 2}
     - {fileID: 11400000, guid: 60996dce4e5bb1749a52c607abe63b1f, type: 2}
+  phase1Icon: {fileID: 0}
   phase2AnimationTriggerName: Phase2
   phase2IntroDuration: 2.5
   phase2IntroPlayed: 0
@@ -961,7 +998,7 @@ CapsuleCollider:
   m_Height: 2.7682683
   m_Direction: 1
   m_Center: {x: -0.029999971, y: 1.4141341, z: 0.060000002}
---- !u!114 &937070191134412644
+--- !u!114 &-8382372811957834497
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -970,11 +1007,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 3483169480956464294}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1758a02abf5f4234186376f47b9180a2, type: 3}
+  m_Script: {fileID: 11500000, guid: 7704a430a6684fc98729f7ee502e30ca, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WeaponEquipController
-  hipSword: {fileID: 0}
-  handSword: {fileID: 0}
+  m_EditorClassIdentifier: Assembly-CSharp::CombatTargetAnchor
+  center: {fileID: 4105444907706977321}
+  localOffset: {x: 0, y: 0, z: 0}
+  markerScale: 1
+  outlineRenderers: []
 --- !u!1 &3931339224240956647
 GameObject:
   m_ObjectHideFlags: 0

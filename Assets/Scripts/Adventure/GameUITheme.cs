@@ -103,6 +103,7 @@ public static class GameUITheme
         foreach (var image in root.GetComponentsInChildren<Image>(true))
         {
             if (image == null) continue;
+            if (AdventureCanvasRoot.IsInteractLabelBackground(image.transform)) continue;
             if (IsSkillPresentationElement(image.transform)) continue;
             if (IsSaveSlotsElement(image.transform) || IsQuestElement(image.transform)) continue;
             if (image.GetComponentInParent<AdventureDialogueView>(true) != null) continue;
@@ -206,12 +207,13 @@ public static class GameUITheme
                 Image skillPlate = PreparePersistentSkillBackground(button, SkillBackgroundSprite);
                 if (skillPlate == null) continue;
                 button.transition = Selectable.Transition.None;
-                RemoveButtonDecorations(button, false, skillPlate);
+                bool useHoverScale = IsMainMenuOrRestButton(button.transform) || IsAttributeConfirmButton(button.transform);
+                RemoveButtonDecorations(button, false, skillPlate, useHoverScale);
                 var hover = skillPlate.GetComponent<UIHoverOutline>();
                 if (hover == null) hover = skillPlate.gameObject.AddComponent<UIHoverOutline>();
                 hover.Configure(new Color(.88f, .9f, .93f, .95f), new Vector2(3f, 3f));
 
-                if (IsMainMenuOrRestButton(button.transform) || IsAttributeConfirmButton(button.transform))
+                if (useHoverScale)
                 {
                     RemoveDynamicButtonUI(button);
                     AddHoverScale(button);
@@ -495,7 +497,7 @@ public static class GameUITheme
         button.transition = Selectable.Transition.None;
     }
 
-    static void RemoveButtonDecorations(Button button, bool removeOutlines, Image keepOutlineOn = null)
+    static void RemoveButtonDecorations(Button button, bool removeOutlines, Image keepOutlineOn = null, bool keepHoverScale = false)
     {
         if (button == null) return;
         var wipe = button.GetComponent<UIButtonWipeReveal>();
@@ -506,7 +508,7 @@ public static class GameUITheme
         }
 
         var scale = button.GetComponent<SmoothButtonHoverScale>();
-        if (scale != null)
+        if (scale != null && !keepHoverScale)
         {
             scale.enabled = false;
             Object.Destroy(scale);
@@ -601,7 +603,7 @@ public static class GameUITheme
 
         // Resolve the actual menu scopes directly. This keeps Party/Inventory and
         // every Rest action covered even when buttons are nested or rebuilt later.
-        foreach (string path in new[] { "Menu/Party/Overview", "Menu/Rest", "Menu/Attributes/Confirm" })
+        foreach (string path in new[] { "Menu/Party/Overview", "Menu/Rest", "Menu/FastTravelList", "Menu/FastTravelConfirmation", "Menu/Attributes/Confirm" })
         {
             Transform scope = canvas.transform.Find(path);
             if (scope == null) continue;
@@ -751,7 +753,7 @@ public static class GameUITheme
         var canvas = button.GetComponentInParent<AdventureCanvasRoot>();
         if (canvas != null)
         {
-            foreach (string path in new[] { "Menu/Party/Overview", "Menu/Rest" })
+            foreach (string path in new[] { "Menu/Party/Overview", "Menu/Rest", "Menu/FastTravelList", "Menu/FastTravelConfirmation" })
             {
                 var scope = canvas.transform.Find(path);
                 if (scope != null && (button == scope || button.IsChildOf(scope))) return true;
@@ -786,6 +788,8 @@ public sealed class UIHoverOutline : MonoBehaviour, IPointerEnterHandler, IPoint
     Outline outline;
     bool hovered;
     bool selected;
+    bool selectionOnly;
+    bool IsHighlighted => selected || (!selectionOnly && hovered);
 
     void Awake() => EnsureOutline();
 
@@ -797,13 +801,20 @@ public sealed class UIHoverOutline : MonoBehaviour, IPointerEnterHandler, IPoint
         outline.effectColor = color;
         outline.effectDistance = effectDistance;
         outline.useGraphicAlpha = false;
-        outline.enabled = hovered || selected;
+        outline.enabled = IsHighlighted;
     }
 
     public void SetSelected(bool value)
     {
         selected = value;
-        if (outline != null) outline.enabled = hovered || selected;
+        if (outline != null) outline.enabled = IsHighlighted;
+    }
+
+    public void SetSelectionOnly(bool value)
+    {
+        selectionOnly = value;
+        if (value) hovered = false;
+        if (outline != null) outline.enabled = IsHighlighted;
     }
 
     void EnsureOutline()
@@ -816,8 +827,8 @@ public sealed class UIHoverOutline : MonoBehaviour, IPointerEnterHandler, IPoint
         outline.enabled = false;
     }
 
-    public void OnPointerEnter(PointerEventData eventData) { hovered = true; if (outline != null) outline.enabled = true; }
+    public void OnPointerEnter(PointerEventData eventData) { if (selectionOnly) return; hovered = true; if (outline != null) outline.enabled = true; }
     public void OnPointerExit(PointerEventData eventData) { hovered = false; if (outline != null) outline.enabled = selected; }
-    public void OnSelect(BaseEventData eventData) { selected = true; if (outline != null) outline.enabled = true; }
-    public void OnDeselect(BaseEventData eventData) { selected = false; if (outline != null) outline.enabled = hovered; }
+    public void OnSelect(BaseEventData eventData) { if (selectionOnly) return; selected = true; if (outline != null) outline.enabled = true; }
+    public void OnDeselect(BaseEventData eventData) { if (selectionOnly) return; selected = false; if (outline != null) outline.enabled = hovered; }
 }

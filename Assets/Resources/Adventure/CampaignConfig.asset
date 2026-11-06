@@ -16,6 +16,7 @@ MonoBehaviour:
   additionalMapScenes:
   - m
   battleScene: combattest
+  saveSlotCount: 10
   encounterBlackHoleVfxPrefab: {fileID: 8016646600747896881, guid: 156ed5bf7d1fca448b8bf68959aef780, type: 3}
   encounterVfxDuration: 1.5
   encounterVfxScale: 1.5
@@ -27,8 +28,8 @@ MonoBehaviour:
   mapEnemyHitTrigger: Hit
   mapEnemyHitState: hit
   startingParty:
-  - {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
-  - {fileID: 3158844213249854169, guid: 294942f0dd0ce6f42beba7c2a3fb2673, type: 3}
+  - {fileID: 7229521429613955948, guid: a5b3fe05ee26e4b419eaeab72c77c4b0, type: 3}
+  - {fileID: 3750319964840296008, guid: 6420f2b6c7cb7f141a78467b70d2f49a, type: 3}
   partyPreviews:
   - member: {fileID: 444026039, guid: dc7d861b0bfa4e2c94d52c1b1bb21402, type: 3}
     image: {fileID: 0}
@@ -68,11 +69,4 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 84f0d647190015646836c1ed7fbde30a, type: 2}
   defeatReturnsToCheckpoint: 1
   equippedSkillSlots: 4
-  skillUnlocks:
-  - skill: {fileID: 0}
-    cost: 0
-    initiallyUnlocked: 0
-    prerequisites:
-    - {fileID: 0}
-    - {fileID: 0}
-    - {fileID: 0}
+  skillUnlocks: []

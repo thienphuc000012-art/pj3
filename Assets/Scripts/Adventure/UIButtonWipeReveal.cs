@@ -19,6 +19,7 @@ public sealed class UIButtonWipeReveal : MonoBehaviour,
     bool hovered;
     bool selected;
     bool forcedReveal;
+    bool selectionOnly;
 
     public void Configure(Image background, Sprite sprite)
         => Configure(background, sprite, new Color(.70f, .58f, .34f, .96f));
@@ -99,18 +100,28 @@ public sealed class UIButtonWipeReveal : MonoBehaviour,
 
     public void SetForcedReveal(bool value) => forcedReveal = value;
 
+    // Party loadout rows are driven by their selected slot, not transient pointer focus.
+    public void SetSelectionOnly(bool value)
+    {
+        selectionOnly = value;
+        if (value) hovered = selected = false;
+    }
+
     public void SetBaseColor(Color color)
     {
         if (plate != null) plate.color = color;
     }
 
-    void Update()
+    void Update() => Advance(Time.unscaledDeltaTime);
+
+    void Advance(float deltaTime)
     {
         if (reveal == null) return;
         bool canReveal = selectable == null || selectable.IsInteractable();
-        float target = canReveal && (hovered || selected || forcedReveal) ? 1f : 0f;
+        bool active = selectionOnly ? forcedReveal : hovered || selected || forcedReveal;
+        float target = canReveal && active ? 1f : 0f;
         float seconds = target > progress ? RevealSeconds : HideSeconds;
-        progress = Mathf.MoveTowards(progress, target, Time.unscaledDeltaTime / seconds);
+        progress = Mathf.MoveTowards(progress, target, Mathf.Max(0f, deltaTime) / seconds);
         reveal.fillAmount = Mathf.SmoothStep(0f, 1f, progress);
         UpdateRevealEdge();
     }
@@ -123,10 +134,10 @@ public sealed class UIButtonWipeReveal : MonoBehaviour,
         rect.anchorMin = rect.anchorMax = new Vector2(Mathf.SmoothStep(0f, 1f, progress), .5f);
     }
 
-    public void OnPointerEnter(PointerEventData eventData) => hovered = true;
+    public void OnPointerEnter(PointerEventData eventData) { if (!selectionOnly) hovered = true; }
     public void OnPointerExit(PointerEventData eventData) => hovered = false;
-    public void OnSelect(BaseEventData eventData) => selected = true;
-    public void OnDeselect(BaseEventData eventData) => selected = false;
+    public void OnSelect(BaseEventData eventData) { if (!selectionOnly) selected = true; }
+    public void OnDeselect(BaseEventData eventData) { if (!selectionOnly) selected = false; }
 
     void OnDisable()
     {

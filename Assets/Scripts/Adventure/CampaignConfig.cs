@@ -14,9 +14,10 @@ public class CampaignConfig : ScriptableObject
     [Range(1, 99), Tooltip("Số ô lưu thủ công trong menu Lưu/Tải game. Tự lưu vẫn dùng file riêng.")]
     public int saveSlotCount = 10;
     [Header("Encounter Transition")]
-    [Tooltip("VFX encounter phát phủ khung hình trước khi chuyển sang trận đấu.")]
+    [Tooltip("VFX encounter phủ khung hình, bắt đầu cùng animation Hit trước khi chuyển sang trận đấu.")]
     public GameObject encounterBlackHoleVfxPrefab;
-    [Min(0f)] public float encounterVfxDuration = 1.5f;
+    [Min(0f), Tooltip("Thời gian VFX tính từ lúc bắt đầu Hit. Chỉ chuyển scene sau khi cả animation và thời gian này đã kết thúc.")]
+    public float encounterVfxDuration = 1.5f;
     [Min(0.1f)] public float encounterVfxScale = 1.5f;
     [Min(0)] public int initiativeSpeedBonus = 100;
     [Tooltip("Trigger trên Animator player map khi player chủ động mở trận.")]
@@ -112,7 +113,7 @@ public class PartyMemberProgress
     public int hp = 100;
     public int statPoints;
     public int skillPoints;
-    public int hpBonus, atkBonus, defBonus, critBonus, critDamageBonus;
+    public int hpBonus, atkBonus, defBonus, critBonus, critDamageBonus, speedBonus;
     public List<SkillRank> skills = new List<SkillRank>();
     public bool loadoutInitialized;
     public List<string> equippedSkills = new List<string>();
@@ -153,15 +154,14 @@ public class PartyMemberProgress
         if (level >= 100) xp = Mathf.Min(xp, RequiredXP);
     }
     public int Rank(ActionData skill) => skill == null ? 0 : skills.Find(x => x.id == skill.name)?.rank ?? 0;
-    public bool TryAllocateStats(int[] points, int baseCrit)
+    public bool TryAllocateStats(int[] points)
     {
         if (points == null || points.Length != 5 || points.Any(x => x < 0) || points.Sum() <= 0 || points.Sum() > statPoints) return false;
-        int remainingCrit = Math.Max(0, 100 - baseCrit - critBonus);
-        if (points[3] > (remainingCrit + 1) / 2) return false;
         statPoints -= points.Sum();
         hpBonus += points[0] * 10; hp += points[0] * 10;
         atkBonus += points[1] * 2; defBonus += points[2];
-        critBonus += Math.Min(points[3] * 2, remainingCrit); critDamageBonus += points[4] * 5;
+        speedBonus += points[3] * 2;
+        critDamageBonus += points[4] * 5;
         return true;
     }
     public bool TryUnlock(ActionData skill, int cost)

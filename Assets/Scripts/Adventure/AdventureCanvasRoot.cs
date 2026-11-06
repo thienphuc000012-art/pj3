@@ -20,6 +20,9 @@ public class AdventureCanvasRoot : MonoBehaviour
     public Font languageFont;
     public TMP_FontAsset defaultFont;
     public Color defeatAccent = new Color(.64f, .22f, .19f);
+    [Header("Interaction Label")]
+    public Color interactLabelBackgroundColor = new Color(0f, 0f, 0f, .82f);
+    public Vector2 interactLabelBackgroundPadding = new Vector2(8f, 3f);
     readonly Dictionary<string, Transform> nodes = new Dictionary<string, Transform>();
     readonly Dictionary<string, List<GameObject>> rows = new Dictionary<string, List<GameObject>>();
     TMP_FontAsset runtimeFont;
@@ -65,9 +68,43 @@ public class AdventureCanvasRoot : MonoBehaviour
         }
         GameLocalization.BindHierarchy(gameObject);
         GameUITheme.Apply(gameObject);
+        EnsureInteractLabelBackground();
         EnsureEventSystem();
         if (kind == AdventureCanvasKind.Adventure && GetComponent<AdventureCompassHUD>() == null)
             gameObject.AddComponent<AdventureCompassHUD>();
+    }
+
+    public void EnsureInteractLabelBackground()
+    {
+        if (kind != AdventureCanvasKind.Adventure) return;
+        Transform prompt = transform.Find("HUD/Interact");
+        var label = prompt != null ? prompt.Find("Label") as RectTransform : null;
+        if (label == null) return;
+        Transform existing = prompt.Find("Label Background");
+        var background = existing != null ? existing.GetComponent<Image>() : null;
+        if (background == null)
+        {
+            var go = existing != null ? existing.gameObject : new GameObject("Label Background", typeof(RectTransform), typeof(CanvasRenderer));
+            go.layer = prompt.gameObject.layer;
+            go.transform.SetParent(prompt, false);
+            background = go.AddComponent<Image>();
+        }
+        RectTransform rect = background.rectTransform;
+        rect.anchorMin = label.anchorMin; rect.anchorMax = label.anchorMax; rect.pivot = label.pivot;
+        rect.offsetMin = label.offsetMin - interactLabelBackgroundPadding;
+        rect.offsetMax = label.offsetMax + interactLabelBackgroundPadding;
+        rect.localRotation = label.localRotation; rect.localScale = label.localScale;
+        int labelIndex = label.GetSiblingIndex();
+        rect.SetSiblingIndex(Mathf.Max(0, labelIndex - (rect.GetSiblingIndex() < labelIndex ? 1 : 0)));
+        background.sprite = null; background.type = Image.Type.Simple;
+        background.color = interactLabelBackgroundColor; background.raycastTarget = false;
+        background.enabled = true; background.gameObject.SetActive(true);
+    }
+
+    public static bool IsInteractLabelBackground(Transform node)
+    {
+        if (node == null || node.name != "Label Background" || node.parent == null || node.parent.name != "Interact") return false;
+        return node.parent.GetComponentInParent<AdventureCanvasRoot>(true) != null;
     }
 
     static TMP_FontAsset AcquireLanguageFont(Font source, out int key)
@@ -95,7 +132,7 @@ public class AdventureCanvasRoot : MonoBehaviour
     {
         foreach (var root in FindObjectsByType<AdventureCanvasRoot>(FindObjectsInactive.Include, FindObjectsSortMode.None))
             if (root.kind == kind && root.gameObject.scene == SceneManager.GetActiveScene())
-            { root.gameObject.SetActive(true); EnsureEventSystem(); return root; }
+            { root.gameObject.SetActive(true); root.EnsureInteractLabelBackground(); EnsureEventSystem(); return root; }
         var prefab = Resources.Load<AdventureCanvasRoot>("Adventure/UI/" + kind + "Canvas");
         if (prefab == null) throw new InvalidOperationException("Missing Canvas prefab: " + kind);
         var instance = Instantiate(prefab); instance.gameObject.SetActive(true); return instance;

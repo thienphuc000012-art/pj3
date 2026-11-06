@@ -5,7 +5,7 @@ using UnityEngine.UI;
 [DisallowMultipleComponent]
 public sealed class PartyHUDBuffLayout : MonoBehaviour
 {
-    [Min(1)] public float iconSize = 23;
+    [Min(1)] public float iconSize = 36;
     void OnTransformChildrenChanged()
     {
         foreach (Transform child in transform)

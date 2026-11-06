@@ -9,6 +9,19 @@ Scene `combattest`: `Canvas > HP Party > Party Slot 1..4 > Turn Visual`.
 
 Chỉnh trực tiếp RectTransform của các phần tử con trên Canvas. `Turn Visual` do script điều khiển scale và vị trí trong lúc chơi; chỉnh offset cố định bằng các phần tử con.
 
+Màu chữ của thẻ được giữ theo `TextMeshPro > Color` trên Canvas khi vào game, kể cả sau khi theme/ngôn ngữ cập nhật. Quy tắc chữ trắng chung không áp dụng lên thẻ HP Party.
+
+Trong `AdvancedUIManager > Turn Order UI`:
+
+- `Turn Portrait Size`: kích thước tối đa mỗi ảnh (64×64); tự thu nhỏ thêm khi thanh không đủ chỗ.
+- `Turn Portrait Spacing`, `Turn Portrait Inset`: khoảng cách giữa các ảnh và lề bên trong thanh (12 và 8).
+- `Turn Portrait Active Scale`: độ phóng lớn của ảnh đang đến lượt (1.2). Layout tính cả độ phóng lớn và phần khung để tránh chồng/lệch ra ngoài.
+- `Show Turn Portrait Frames`: bật/tắt khung ảnh trong thanh thứ tự lượt.
+- `Turn Portrait Frame Sprite`: ảnh khung riêng; để trống dùng khung trắng cắt góc, rỗng ở giữa.
+- `Turn Portrait Frame Color`, `Padding`, `Thickness`: màu, khoảng nới và độ dày khung tự vẽ. Với sprite riêng, độ dày nằm trong ảnh.
+
+Khung được tạo dưới từng portrait khi thanh lượt cập nhật, không đổi sprite, kích thước hoặc thứ tự nhân vật.
+
 `Assets/Resources/PartyHUDStyle.asset`:
 
 - `Active Scale`: kích thước lúc đến lượt (mặc định 1.22).

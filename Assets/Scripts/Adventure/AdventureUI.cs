@@ -252,6 +252,7 @@ public class AdventureUI : MonoBehaviour
     RectTransform travelContent;
     Button travelButtonTemplate;
     TMPro.TMP_Text travelQuestion;
+    TMPro.TMP_Text travelEmpty;
     string travelDestination;
     void CloseTravel()
     {
@@ -320,9 +321,14 @@ public class AdventureUI : MonoBehaviour
         var contentObj = new GameObject("Content", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
         travelContent = TravelRect(contentObj, viewport, new Vector2(0,1), Vector2.one);
         travelContent.pivot = new Vector2(.5f,1);
-        var layout = contentObj.GetComponent<VerticalLayoutGroup>(); layout.spacing = 10; layout.childControlHeight = true; layout.childForceExpandHeight = false;
+        var layout = contentObj.GetComponent<VerticalLayoutGroup>();
+        layout.spacing = 10; layout.padding = new RectOffset(8, 8, 8, 8);
+        layout.childControlWidth = layout.childControlHeight = true;
+        layout.childForceExpandWidth = true; layout.childForceExpandHeight = false;
         contentObj.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         var scroll = scrollObj.GetComponent<ScrollRect>(); scroll.viewport = viewport; scroll.content = travelContent; scroll.horizontal = false;
+        travelEmpty = TravelText(listBox.transform, "Empty", "Chưa có điểm nghỉ nào được mở khóa.", new Vector2(.08f,.45f), new Vector2(.92f,.6f));
+        travelEmpty.gameObject.SetActive(false);
         TravelButton(listBox.transform, "Back", "Trở lại", new Vector2(.6f,.03f), new Vector2(.95f,.14f), CloseTravel);
         travelDialog = TravelPanel("FastTravelConfirmation", view.Node("Menu"), Vector2.zero, Vector2.one);
         travelDialog.GetComponent<Image>().color = new Color(.012f, .014f, .017f, .96f);
@@ -656,20 +662,40 @@ public class AdventureUI : MonoBehaviour
     void OpenTravel()
     {
         if (!S.CanUpgrade) return;
-        foreach (Transform child in travelContent) { child.gameObject.SetActive(false); Destroy(child.gameObject); }
-        foreach (var point in S.Data.unlockedRestPoints.Where(x => x != null).OrderBy(x => x.displayName))
+        travelPanel.SetActive(true); travelPanel.transform.SetAsLastSibling();
+        PopulateTravelDestinations(S.Data.unlockedRestPoints, S.RestPoint.Id);
+    }
+
+    void PopulateTravelDestinations(IEnumerable<UnlockedRestPoint> points, string currentId)
+    {
+        foreach (Transform child in travelContent.Cast<Transform>().ToArray())
+        {
+            child.gameObject.SetActive(false);
+            if (Application.isPlaying) Destroy(child.gameObject); else DestroyImmediate(child.gameObject);
+        }
+        var destinations = (points ?? Enumerable.Empty<UnlockedRestPoint>())
+            .Where(x => x != null && !string.IsNullOrWhiteSpace(x.id)).OrderBy(x => x.displayName).ToList();
+        foreach (var point in destinations)
         {
             var destination = point;
-            bool current = point.id == S.RestPoint.Id;
-            var row = TravelButton(travelContent, "Destination", point.displayName + (current ? GameLocalization.Translate(" (Hiện tại)") : ""), Vector2.zero, Vector2.one, () => {
+            bool current = point.id == currentId;
+            string displayName = string.IsNullOrWhiteSpace(point.displayName) ? GameLocalization.Translate("Điểm nghỉ") : point.displayName;
+            var row = TravelButton(travelContent, "Destination", displayName + (current ? GameLocalization.Translate(" (Hiện tại)") : ""), Vector2.zero, Vector2.one, () => {
                 travelDestination = destination.id;
-                GameLocalization.SetText(travelQuestion, GameLocalization.Translate("Bạn có chắc muốn dịch chuyển đến {0}?").Replace("{0}", destination.displayName));
+                GameLocalization.SetText(travelQuestion, GameLocalization.Translate("Bạn có chắc muốn dịch chuyển đến {0}?").Replace("{0}", displayName));
                 travelDialog.SetActive(true); travelDialog.transform.SetAsLastSibling();
             });
-            var size = row.gameObject.AddComponent<LayoutElement>(); size.preferredHeight = 58; size.minHeight = 48;
+            var size = row.GetComponent<LayoutElement>();
+            if (size == null) size = row.gameObject.AddComponent<LayoutElement>();
+            size.ignoreLayout = false; size.preferredHeight = 64; size.minHeight = 64;
+            size.flexibleHeight = 0; row.transform.localScale = Vector3.one;
             row.interactable = !current;
         }
-        travelPanel.SetActive(true); travelPanel.transform.SetAsLastSibling();
+        if (travelEmpty != null) travelEmpty.gameObject.SetActive(destinations.Count == 0);
+        Canvas.ForceUpdateCanvases();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(travelContent);
+        var scroll = travelContent.GetComponentInParent<ScrollRect>();
+        if (scroll != null) { scroll.StopMovement(); scroll.verticalNormalizedPosition = 1f; }
     }
 
     void SelectMember(int direction)
@@ -748,11 +774,14 @@ public class AdventureUI : MonoBehaviour
         var slots = view.Rows(prefix + "/Slots" + Content, S.SkillSlots, (row, i) => {
             AdventureCanvasRoot.RowClick(row, "Select", () => { selectedSlot = i; CloseSkillChange(); });
             row.AddComponent<SkillSlotPointer>().rightClick = () => OpenSkillContext(i);
-            row.transform.Find("Select").gameObject.AddComponent<SkillSlotPointer>().rightClick = () => OpenSkillContext(i);
+            var selectPointer = row.transform.Find("Select").gameObject.AddComponent<SkillSlotPointer>();
+            selectPointer.rightClick = () => OpenSkillContext(i);
+            selectPointer.select = () => { selectedSlot = i; CloseSkillChange(); };
         });
         for (int i = 0; i < S.SkillSlots; i++) {
             var skill = all.FirstOrDefault(x => x.name == p.equippedSkills[i]);
             AdventureCanvasRoot.RowSelected(slots[i], selectedSlot == i);
+            slots[i].GetComponent<SkillSlotPointer>().SetSelected(selectedSlot == i);
             AdventureCanvasRoot.RowText(slots[i], "Select/Label", "Ô " + (i + 1) + " • " + (skill != null ? VietnameseGameUIText.ActionName(skill) : "Trống"));
         }
         view.Active(prefix + "/SkillContext", skillContextOpen);
@@ -842,7 +871,7 @@ public class AdventureUI : MonoBehaviour
         view.Text(prefix + "/Name", u.unitName);
         view.Text(prefix + "/Progress", "Cấp " + p.level + " • " + p.xp + " / " + p.RequiredXP + " KN");
         view.Fill(prefix + "/XP/Fill", (float)p.xp / p.RequiredXP);
-        view.Text(prefix + "/Details", "Máu " + p.hp + " / " + S.MaxHP(p) + "\nCông " + (u.baseAtk + p.atkBonus) + "    Thủ " + (u.baseDef + p.defBonus) + "\nChí mạng " + Mathf.Clamp(u.baseCrit + p.critBonus, 0, 100) + "%\nSát thương chí mạng " + (u.baseCritDamage + p.critDamageBonus) + "%");
+        view.Text(prefix + "/Details", "Máu " + p.hp + " / " + S.MaxHP(p) + "\nCông " + (u.baseAtk + p.atkBonus) + "    Thủ " + (u.baseDef + p.defBonus) + "\n" + GameLocalization.Translate("Tốc độ lượt") + " " + (u.speed + p.speedBonus) + "\nSát thương chí mạng " + (u.baseCritDamage + p.critDamageBonus) + "%");
     }
     void Rest()
     {
@@ -864,14 +893,14 @@ public class AdventureUI : MonoBehaviour
         if (draftMember != p) { ResetStatDraft(); draftMember = p; }
         int spent = pendingStats.Sum();
         view.Text("Menu/Attributes/Points", u.unitName + " • ĐIỂM RIÊNG: " + (p.statPoints - spent) + " • ĐANG CHỌN: " + spent);
-        string[] labels = { "Sinh lực", "Sức mạnh", "Phòng thủ", "Tỉ lệ chí mạng", "Sát thương chí mạng" };
-        int[] values = { S.MaxHP(p), u.baseAtk + p.atkBonus, u.baseDef + p.defBonus, Mathf.Clamp(u.baseCrit + p.critBonus, 0, 100), u.baseCritDamage + p.critDamageBonus };
+        string[] labels = { "Sinh lực", "Sức mạnh", "Phòng thủ", "Tốc độ lượt", "Sát thương chí mạng" };
+        int[] values = { S.MaxHP(p), u.baseAtk + p.atkBonus, u.baseDef + p.defBonus, u.speed + p.speedBonus, u.baseCritDamage + p.critDamageBonus };
         int[] deltas = { 10, 2, 1, 2, 5 };
         UpdateAttributeSpiderChart(values, deltas);
         var rows = view.Rows("Menu/Attributes/Stats" + Content, 5, (row, i) => {
             AdventureCanvasRoot.RowClick(row, "Upgrade", () => {
                 var member = S.Data.party[selectedMember];
-                if (S.CanUpgrade && pendingStats.Sum() < member.statPoints && (i != 3 || S.Template(member).baseCrit + member.critBonus + pendingStats[3] * 2 < 100)) pendingStats[i]++;
+                if (S.CanUpgrade && pendingStats.Sum() < member.statPoints) pendingStats[i]++;
             });
             AdventureCanvasRoot.RowClick(row, "Reduce", () => { if (pendingStats[i] > 0) pendingStats[i]--; });
             var nameRect = row.transform.Find("Name")?.GetComponent<RectTransform>();
@@ -889,9 +918,9 @@ public class AdventureUI : MonoBehaviour
         {
             AdventureCanvasRoot.RowText(rows[i], "Name", labels[i]);
             AdventureCanvasRoot.RowSelected(rows[i], pendingStats[i] > 0);
-            int next = values[i] + pendingStats[i] * deltas[i]; if (i == 3) next = Mathf.Min(100, next);
+            int next = values[i] + pendingStats[i] * deltas[i];
             AdventureCanvasRoot.RowText(rows[i], "Value", values[i] + " → " + next);
-            rows[i].transform.Find("Upgrade").GetComponent<Button>().interactable = S.CanUpgrade && spent < p.statPoints && (i != 3 || next < 100);
+            rows[i].transform.Find("Upgrade").GetComponent<Button>().interactable = S.CanUpgrade && spent < p.statPoints;
             rows[i].transform.Find("Reduce").GetComponent<Button>().interactable = pendingStats[i] > 0;
         }
         attributeUpgradeHold.SetAvailable(S.CanUpgrade && spent > 0 && spent <= p.statPoints);
@@ -946,11 +975,11 @@ public class AdventureUI : MonoBehaviour
         chart.raycastTarget = false;
 
         // The five axes follow the five upgrade rows: HP, attack, defense,
-        // critical chance, and critical damage. Square-root compression keeps
+        // turn speed, and critical damage. Square-root compression keeps
         // low and high values legible while preserving their order.
         // Keep the same scale for every party member so selecting another
         // character does not rescale the chart and hide a stat difference.
-        float[] axisRanges = { 300f, 100f, 60f, 100f, 300f };
+        float[] axisRanges = { 300f, 100f, 60f, 1200f, 300f };
         var current = new float[5];
         var preview = new float[5];
         for (int i = 0; i < 5; i++)
@@ -966,9 +995,8 @@ public class AdventureUI : MonoBehaviour
         view.Fill("Menu/Attributes/Summary/HealthBar/Fill", (float)member.hp / S.MaxHP(member));
         SetCombatStat("Health", S.MaxHP(member).ToString());
         SetCombatStat("AttackPower", (unit.baseAtk + member.atkBonus).ToString());
-        SetCombatStat("Speed", unit.speed.ToString());
+        SetCombatStat("Speed", (unit.speed + member.speedBonus).ToString());
         SetCombatStat("Defense", (unit.baseDef + member.defBonus).ToString());
-        SetCombatStat("CriticalRate", Mathf.Clamp(unit.baseCrit + member.critBonus, 0, 100) + "%");
     }
 
     void SetCombatStat(string id, string value)
@@ -1022,11 +1050,19 @@ public class AdventureUI : MonoBehaviour
             stats.SetParent(summary, false);
             SetTopLeftRect((RectTransform)stats, new Vector2(25, -190), new Vector2(305, 76));
             CreateStatCell(stats, "Health", "Máu", 0, 0, 95, 99, 42, style);
-            CreateStatCell(stats, "Speed", "Tốc độ", 159, 0, 83, 258, 47, style);
             CreateStatCell(stats, "AttackPower", "Lực tấn công", 0, -24, 99, 99, 42, style);
-            CreateStatCell(stats, "CriticalRate", "Tỉ lệ chí mạng", 159, -24, 99, 258, 47, style);
             CreateStatCell(stats, "Defense", "Phòng thủ", 0, -48, 95, 99, 42, style);
         }
+
+        // Speed is the value CombatManager uses to order turns. Keep a single
+        // turn-speed entry even when an older runtime-built panel still has
+        // the former Speed + Critical Rate pair.
+        if (stats.Find("Speed") == null)
+            CreateStatCell(stats, "Speed", "Tốc độ lượt", 159, 0, 99, 258, 47, style);
+        var speedLabel = stats.Find("Speed/Label")?.GetComponent<TMPro.TMP_Text>();
+        if (speedLabel != null) GameLocalization.SetText(speedLabel, "Tốc độ lượt");
+        var oldCriticalRate = stats.Find("CriticalRate");
+        if (oldCriticalRate != null && oldCriticalRate.gameObject.activeSelf) oldCriticalRate.gameObject.SetActive(false);
 
         if (summary.Find("AttributesTitle") == null)
             CreateSummaryText(summary, "AttributesTitle", style, "THUỘC TÍNH", new Vector2(25, -276), new Vector2(305, 24), 18, TextAlignmentOptions.Left, new Color(.89f, .73f, .48f, 1f));
@@ -1079,7 +1115,7 @@ public class AdventureUI : MonoBehaviour
 
     static void CreateSpiderChartLabels(Transform chart, TMPro.TMP_Text style)
     {
-        string[] labels = { "Sinh lực", "Sức mạnh", "Phòng thủ", "Tỉ lệ chí mạng", "Sát thương chí mạng" };
+        string[] labels = { "Sinh lực", "Sức mạnh", "Phòng thủ", "Tốc độ lượt", "Sát thương chí mạng" };
         Vector2[] positions = { new Vector2(0, 77), new Vector2(91, 31), new Vector2(86, -61), new Vector2(-86, -61), new Vector2(-80, 31) };
         for (int i = 0; i < labels.Length; i++)
         {

@@ -54,9 +54,6 @@ public class BattleUnit : MonoBehaviour
     [HideInInspector] public BattleUnit summonOwner;
     [HideInInspector] public float summonDeathOwnerMaxHpCostPercent;
     private bool summonDeathCostApplied;
-    [Header("Enemy HP Appearance")]
-    [Tooltip("Ảnh viền HP riêng của enemy. Để trống dùng viền mặc định; HP Fill vẫn dùng chung.")]
-    public Sprite enemyHpBorderSprite;
 
     [Header("Party HUD Portraits")]
     [Tooltip("Ảnh khi chờ lượt. Để trống dùng cặp ảnh trong PartyHUDStyle.")]
