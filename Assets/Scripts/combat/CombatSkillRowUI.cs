@@ -26,6 +26,8 @@ public sealed class CombatSkillRowUI : MonoBehaviour, IPointerEnterHandler, IPoi
     Vector3 backgroundScale = Vector3.one, numberScale = Vector3.one;
     bool captured, focused, pointerInside, navigationFocused;
     float focusStarted;
+    float transitionAlpha = 1f;
+    bool transitionInputEnabled = true;
     string previousNumber, previousLabel;
 
     public bool IsFocused => focused;
@@ -33,6 +35,32 @@ public sealed class CombatSkillRowUI : MonoBehaviour, IPointerEnterHandler, IPoi
     public bool HasAction => Source != null && Source.CurrentAction != null;
     public bool HasNavigationFocus => navigationFocused && EventSystem.current != null &&
         EventSystem.current.currentSelectedGameObject == gameObject;
+    public bool TransitionInputEnabled => transitionInputEnabled;
+
+    // Keep transition opacity separate from resource availability opacity.
+    // Otherwise this row's LateUpdate would overwrite the entrance fade.
+    public void SetTransitionAlpha(float value)
+    {
+        transitionAlpha = Mathf.Clamp01(value);
+        ApplyOpacity();
+    }
+
+    public void SetTransitionInputEnabled(bool value)
+    {
+        transitionInputEnabled = value;
+        if (!value)
+        {
+            pointerInside = navigationFocused = false;
+            if (owner != null) owner.Release(this);
+            SetFocused(false);
+        }
+    }
+
+    void ApplyOpacity()
+    {
+        if (rowGroup != null)
+            rowGroup.alpha = transitionAlpha * (button != null && !button.interactable ? unavailableAlpha : 1f);
+    }
 
     public void Bind(CombatSkillListUI list, ActionButtonUI action)
     {
@@ -123,7 +151,7 @@ public sealed class CombatSkillRowUI : MonoBehaviour, IPointerEnterHandler, IPoi
 
     public void SetFocused(bool value)
     {
-        bool next = value && HasAction && isActiveAndEnabled;
+        bool next = value && transitionInputEnabled && HasAction && isActiveAndEnabled;
         if (next && !focused) focusStarted = Time.unscaledTime;
         focused = next;
         if (!captured)
@@ -159,6 +187,7 @@ public sealed class CombatSkillRowUI : MonoBehaviour, IPointerEnterHandler, IPoi
 
     public void SetNavigationFocus()
     {
+        if (!transitionInputEnabled) return;
         navigationFocused = true;
         if (owner != null) owner.Focus(this);
     }
@@ -167,13 +196,12 @@ public sealed class CombatSkillRowUI : MonoBehaviour, IPointerEnterHandler, IPoi
     {
         if (!captured) return;
         ApplyMotion(Time.unscaledTime - focusStarted);
-        if (rowGroup != null)
-            rowGroup.alpha = button != null && !button.IsInteractable() ? unavailableAlpha : 1f;
+        ApplyOpacity();
     }
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        if (!HasAction || owner == null) return;
+        if (!transitionInputEnabled || !HasAction || owner == null) return;
         pointerInside = true;
         navigationFocused = false;
         if (EventSystem.current != null && EventSystem.current.currentSelectedGameObject != gameObject)
@@ -187,6 +215,7 @@ public sealed class CombatSkillRowUI : MonoBehaviour, IPointerEnterHandler, IPoi
     }
     public void OnSelect(BaseEventData eventData)
     {
+        if (!transitionInputEnabled) return;
         navigationFocused = eventData is AxisEventData;
         if ((pointerInside || navigationFocused) && owner != null) owner.Focus(this);
     }
@@ -197,15 +226,19 @@ public sealed class CombatSkillRowUI : MonoBehaviour, IPointerEnterHandler, IPoi
     }
     public void OnMove(AxisEventData eventData)
     {
+        if (!transitionInputEnabled) return;
         if (eventData.moveDir != MoveDirection.None && EventSystem.current != null && EventSystem.current.currentSelectedGameObject == gameObject)
             SetNavigationFocus();
     }
     public void OnSubmit(BaseEventData eventData)
     {
+        if (!transitionInputEnabled) return;
         if (EventSystem.current != null && EventSystem.current.currentSelectedGameObject == gameObject) SetNavigationFocus();
     }
     void OnDisable()
     {
+        transitionAlpha = 1f;
+        transitionInputEnabled = true;
         pointerInside = navigationFocused = false;
         if (owner != null) owner.Release(this);
         focused = false;

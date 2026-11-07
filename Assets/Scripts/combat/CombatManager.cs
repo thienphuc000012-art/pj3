@@ -182,6 +182,8 @@ public class CombatManager : MonoBehaviour
     [HideInInspector] public bool isAttackAnimationFinished = false;
 
     private OpenMenuType currentOpenMenu = OpenMenuType.None;
+    public bool CanShowBattleCommands => isActiveAndEnabled && state == CombatState.PlayerTurn &&
+        currentActiveUnit != null && !currentActiveUnit.IsDead && selectedAction == null && currentOpenMenu == OpenMenuType.None;
 
     // Dùng cho ParrySystem:
     // true khi Enemy hiện tại đang thực hiện một đòn AoE gây damage.
@@ -253,7 +255,7 @@ public class CombatManager : MonoBehaviour
     {
         if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
 
-        if (Input.GetMouseButtonDown(1))
+        if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Escape))
         {
             CancelCurrentAction();
         }
@@ -310,7 +312,7 @@ public class CombatManager : MonoBehaviour
         OnActionSelected(selectedAction);
     }
 
-    private void CancelCurrentAction()
+    public void CancelCurrentAction()
     {
         if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
 
@@ -362,10 +364,8 @@ public class CombatManager : MonoBehaviour
             currentOpenMenu = OpenMenuType.None;
             ResetMenuAnimations();
 
-            if (AdvancedUIManager.Instance.subMenuPanel != null)
-                AdvancedUIManager.Instance.subMenuPanel.SetActive(false);
-
-            AdvancedUIManager.Instance.ShowActionMenu(true); // Bật lại 3 nút
+            if (!AdvancedUIManager.Instance.CloseSubMenuImmediately())
+                AdvancedUIManager.Instance.ShowActionMenu(true);
 
             int playerIndex = playerParty.IndexOf(currentActiveUnit);
             if (playerIndex >= 0)
@@ -636,7 +636,8 @@ public class CombatManager : MonoBehaviour
         yield return new WaitForSeconds(delay);
 
         // Kiểm tra an toàn: Chỉ bật UI nếu vẫn đang ở lượt Player và chưa mở Menu/chọn mục tiêu
-        if (state == CombatState.PlayerTurn && selectedAction == null && currentOpenMenu == OpenMenuType.None)
+        if (state == CombatState.PlayerTurn && selectedAction == null && currentOpenMenu == OpenMenuType.None &&
+            !AdvancedUIManager.Instance.SkillTransitionBusy)
         {
             AdvancedUIManager.Instance.ShowActionMenu(true);
         }
@@ -644,6 +645,7 @@ public class CombatManager : MonoBehaviour
 
     public void OnRunAwayClicked()
     {
+        if (AdvancedUIManager.Instance != null && AdvancedUIManager.Instance.SkillTransitionBusy) return;
         if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead ||
             isTransitioningTurn || runAwayAttemptInProgress)
             return;
@@ -717,6 +719,7 @@ public class CombatManager : MonoBehaviour
     public void OnAttackClicked()
     {
         if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
+        if (AdvancedUIManager.Instance.SkillTransitionBusy) return;
 
         ActionData attackAction = currentActiveUnit.defaultAttack;
 
@@ -765,15 +768,10 @@ public class CombatManager : MonoBehaviour
 
         if (currentOpenMenu == OpenMenuType.Skills)
         {
-            currentOpenMenu = OpenMenuType.None;
-            ResetMenuAnimations();
-            AdvancedUIManager.Instance.subMenuPanel.SetActive(false);
-            AdvancedUIManager.Instance.ShowActionMenu(true); // Hiện lại 3 nút
-
-            int playerIndex = playerParty.IndexOf(currentActiveUnit);
-            CameraManager.Instance.SwitchToPlayerTurnCam(playerIndex, true);
+            CancelCurrentAction();
             return;
         }
+        if (AdvancedUIManager.Instance.SkillTransitionBusy) return;
 
         currentOpenMenu = OpenMenuType.Skills;
         selectedAction = null;
@@ -792,25 +790,18 @@ public class CombatManager : MonoBehaviour
             CameraManager.Instance.SwitchToPlayerMenuCam(activePlayerIdx);
         }
 
-        AdvancedUIManager.Instance.ShowActionMenu(false); // Ẩn 3 nút đi
         AdvancedUIManager.Instance.PopulateSkillSubMenu(currentActiveUnit.characterSkills);
     }
 
     public void OnItemsClicked()
     {
         if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
-
         if (currentOpenMenu == OpenMenuType.Items)
         {
-            currentOpenMenu = OpenMenuType.None;
-            ResetMenuAnimations();
-            AdvancedUIManager.Instance.subMenuPanel.SetActive(false);
-            AdvancedUIManager.Instance.ShowActionMenu(true); // Hiện lại 3 nút
-
-            int playerIndex = playerParty.IndexOf(currentActiveUnit);
-            CameraManager.Instance.SwitchToPlayerTurnCam(playerIndex, true);
+            CancelCurrentAction();
             return;
         }
+        if (AdvancedUIManager.Instance.SkillTransitionBusy) return;
 
         currentOpenMenu = OpenMenuType.Items;
         selectedAction = null;
@@ -829,13 +820,13 @@ public class CombatManager : MonoBehaviour
             CameraManager.Instance.SwitchToPlayerMenuCam(activePlayerIdx);
         }
 
-        AdvancedUIManager.Instance.ShowActionMenu(false); // Ẩn 3 nút đi
         AdvancedUIManager.Instance.PopulateSubMenu(inventoryItems);
     }
 
     public void OnSkillButtonClicked(ActionData skillAction)
     {
         if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
+        if (AdvancedUIManager.Instance.SkillTransitionBusy) return;
         if (!currentActiveUnit.CanUseAction(skillAction)) return;
 
         if (skillAction.isSummonSkill && !CanSummonUnits(currentActiveUnit, skillAction))
@@ -856,10 +847,7 @@ public class CombatManager : MonoBehaviour
         isSelectingBuffTarget = skillAction.isFriendlyAction || isSelectingSelfOnly;
         currentOpenMenu = OpenMenuType.None;
 
-        if (AdvancedUIManager.Instance.subMenuPanel != null)
-        {
-            AdvancedUIManager.Instance.subMenuPanel.SetActive(false);
-        }
+        AdvancedUIManager.Instance.HideSubMenu();
 
         if (isSelectingSelfOnly)
         {

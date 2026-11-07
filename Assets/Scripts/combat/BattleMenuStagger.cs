@@ -14,7 +14,10 @@ public sealed class BattleMenuStagger : MonoBehaviour
     public bool selectFirstButton = true;
     Coroutine pendingEntrance;
 
-    void OnEnable() => Play();
+    void OnEnable()
+    {
+        Play();
+    }
 
     public void Play()
     {

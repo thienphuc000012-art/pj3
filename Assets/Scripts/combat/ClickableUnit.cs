@@ -1,8 +1,13 @@
 ﻿using UnityEngine;
+using System.Collections.Generic;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 public class ClickableUnit : MonoBehaviour
 {
     private BattleUnit battleUnit;
+    private readonly List<RaycastResult> uiHits = new List<RaycastResult>();
 
     void Awake()
     {
@@ -15,6 +20,7 @@ public class ClickableUnit : MonoBehaviour
         // Chỉ cho phép chọn mục tiêu nếu đang trong lượt của Player
         if (CombatManager.Instance != null && CombatManager.Instance.state == CombatState.PlayerTurn)
         {
+            if (AdvancedUIManager.Instance?.SkillTransitionBusy == true || IsOverUIButton()) return;
             // --- THÊM MỚI: Ưu tiên kiểm tra nếu là skill chỉ buff cho bản thân ---
             if (CombatManager.Instance.isSelectingSelfOnly)
             {
@@ -55,5 +61,20 @@ public class ClickableUnit : MonoBehaviour
                 }
             }
         }
+    }
+
+    bool IsOverUIButton()
+    {
+        var eventSystem = EventSystem.current;
+        var mouse = Mouse.current;
+        if (eventSystem == null || mouse == null) return false;
+
+        // OnMouseDown can run before the UI input module refreshes its hover state.
+        var pointer = new PointerEventData(eventSystem) { position = mouse.position.ReadValue() };
+        eventSystem.RaycastAll(pointer, uiHits);
+        foreach (var hit in uiHits)
+            if (hit.module is GraphicRaycaster && hit.gameObject.GetComponentInParent<Button>() != null)
+                return true;
+        return false;
     }
 }

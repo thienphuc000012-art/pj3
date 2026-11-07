@@ -25,6 +25,9 @@ public class AdvancedUIManager : MonoBehaviour
     public GameObject actionButtonPrefab;
     [Tooltip("Editable skill rows and shared description panel on the Canvas.")]
     public CombatSkillListUI skillListUI;
+    [Tooltip("Ink reveal for Skills and Items. Timings and directions are editable on the Canvas component.")]
+    public SkillPanelTransitionController skillPanelTransition;
+    public bool SkillTransitionBusy => skillPanelTransition != null && skillPanelTransition.IsTransitioning;
     private ScrollRect subMenuScroll;
     private bool subMenuScrollInitiallyEnabled;
     private bool subMenuScrollCaptured;
@@ -42,6 +45,8 @@ public class AdvancedUIManager : MonoBehaviour
             subMenuScroll.StopMovement();
             subMenuScroll.enabled = skills ? false : subMenuScrollInitiallyEnabled;
         }
+        var viewport = GetItemsViewport();
+        if (viewport != null) viewport.gameObject.SetActive(!skills);
         subMenuContent.gameObject.SetActive(!skills);
         if (skillListUI == null) skillListUI = subMenuPanel.GetComponent<CombatSkillListUI>();
         if (skills)
@@ -55,6 +60,7 @@ public class AdvancedUIManager : MonoBehaviour
     public void PopulateSkillSubMenu(List<ActionData> actions)
     {
         if (subMenuPanel == null || subMenuContent == null || actionButtonPrefab == null) return;
+        if (skillPanelTransition != null) skillPanelTransition.ResetTransition();
         subMenuPanel.SetActive(true);
         SetFixedSkillMode(true);
         for (int childIndex = skillListUI.rowsRoot.childCount - 1; childIndex >= 0; childIndex--)
@@ -97,7 +103,59 @@ public class AdvancedUIManager : MonoBehaviour
             button.GetComponent<CombatSkillRowUI>().Bind(skillListUI, button);
             go.SetActive(true);
         }
-        skillListUI.FocusFirstRow();
+        EnsureSkillTransition();
+        if (!skillPanelTransition.TryOpenPanel(false))
+        {
+            SetActionMenuVisible(false, false);
+            skillListUI.FocusFirstRow();
+        }
+    }
+
+    public void EnsureSkillTransition()
+    {
+        if (skillPanelTransition == null) skillPanelTransition = GetComponent<SkillPanelTransitionController>();
+        if (skillPanelTransition == null) skillPanelTransition = gameObject.AddComponent<SkillPanelTransitionController>();
+        if (skillListUI != null && skillListUI.presentationRoot != null)
+        {
+            skillPanelTransition.skillsPanel = skillListUI.presentationRoot.transform as RectTransform;
+            skillPanelTransition.skillItemsRoot = skillListUI.rowsRoot;
+        }
+        skillPanelTransition.itemsViewport = GetItemsViewport();
+        skillPanelTransition.itemsScroll = subMenuScroll != null ? subMenuScroll : subMenuPanel?.GetComponent<ScrollRect>();
+        skillPanelTransition.itemRowsRoot = subMenuContent as RectTransform;
+        skillPanelTransition.commandMenu = actionMenuPanel;
+        if (actionMenuPanel != null && (skillPanelTransition.skillsButton == null || skillPanelTransition.itemsButton == null))
+            foreach (var button in actionMenuPanel.GetComponentsInChildren<Button>(true))
+                for (int i = 0; i < button.onClick.GetPersistentEventCount(); i++)
+                {
+                    string method = button.onClick.GetPersistentMethodName(i);
+                    if (skillPanelTransition.skillsButton == null && method == nameof(CombatManager.OnSkillsClicked))
+                        skillPanelTransition.skillsButton = button;
+                    if (skillPanelTransition.itemsButton == null && method == nameof(CombatManager.OnItemsClicked))
+                        skillPanelTransition.itemsButton = button;
+                }
+        skillPanelTransition.Bind(() =>
+        {
+            if (skillListUI != null) skillListUI.FocusFirstRow();
+        }, () =>
+        {
+            var combat = CombatManager.Instance;
+            if (combat != null && combat.CanShowBattleCommands) ShowActionMenu(true);
+        }, () => CombatManager.Instance?.CancelCurrentAction());
+    }
+
+    private RectTransform GetItemsViewport()
+    {
+        var scroll = subMenuScroll != null ? subMenuScroll : subMenuPanel?.GetComponent<ScrollRect>();
+        var viewport = scroll != null && scroll.viewport != null ? scroll.viewport : subMenuContent?.parent as RectTransform;
+        return viewport != null && viewport.gameObject != subMenuPanel ? viewport : null;
+    }
+
+    public bool CloseSubMenuImmediately()
+    {
+        if (skillPanelTransition == null || !skillPanelTransition.IsVisible) return false;
+        skillPanelTransition.CloseSkillPanel();
+        return true;
     }
 
     [Header("Hints")]
@@ -672,6 +730,7 @@ public class AdvancedUIManager : MonoBehaviour
 
     public void HideSubMenu()
     {
+        if (skillPanelTransition != null) skillPanelTransition.ResetTransition();
         if (skillListUI == null && subMenuPanel != null) skillListUI = subMenuPanel.GetComponent<CombatSkillListUI>();
         if (skillListUI != null) skillListUI.SetVisible(false);
         if (subMenuPanel != null) subMenuPanel.SetActive(false);
@@ -696,6 +755,7 @@ public class AdvancedUIManager : MonoBehaviour
     public void PopulateSubMenu(List<ActionData> actionList)
     {
         if (subMenuPanel == null || subMenuContent == null || actionButtonPrefab == null) return;
+        if (skillPanelTransition != null) skillPanelTransition.ResetTransition();
         subMenuPanel.SetActive(true);
         SetFixedSkillMode(false);
         ConfigureItemListLayout();
@@ -724,6 +784,11 @@ public class AdvancedUIManager : MonoBehaviour
                 btnUI.Setup(action);
                 btnUI.FitFixedSlot();
             }
+        }
+        if (Application.isPlaying)
+        {
+            EnsureSkillTransition();
+            if (!skillPanelTransition.TryOpenPanel(true)) SetActionMenuVisible(false, false);
         }
     }
 

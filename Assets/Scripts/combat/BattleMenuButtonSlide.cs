@@ -40,6 +40,8 @@ public sealed class BattleMenuButtonSlide : MonoBehaviour,
     Vector2 entranceOffset;
     float focusOffset;
     float authoredAlpha = 1f;
+    Vector2 transitionOffset;
+    bool transitionOwnsMotion;
     bool initialized, focused, entrancePlayed;
     bool pointerInside, navigationFocused;
     Sequence focusTween;
@@ -87,6 +89,7 @@ public sealed class BattleMenuButtonSlide : MonoBehaviour,
     public void SetFocused(bool value)
     {
         if (!EnsureInitialized()) return;
+        if (transitionOwnsMotion) return;
         value &= isActiveAndEnabled && (button == null || button.IsInteractable());
         // An early input should not wait behind this button's stagger delay.
         // Finish its remaining entrance from its current pose without snapping.
@@ -127,7 +130,22 @@ public sealed class BattleMenuButtonSlide : MonoBehaviour,
     void ApplyPosition()
     {
         if (cachedTarget != null)
-            cachedTarget.anchoredPosition = authoredPosition + horizontalAxis * focusOffset + entranceOffset;
+            cachedTarget.anchoredPosition = authoredPosition + horizontalAxis * focusOffset + entranceOffset + transitionOffset;
+    }
+
+    // A separate offset avoids two tweens writing the same RectTransform when
+    // Skills hands its button over to the ink transition.
+    public void SetTransitionMotion(bool active, float canvasOffset = 0f)
+    {
+        if (!EnsureInitialized()) return;
+        if (active && !transitionOwnsMotion)
+        {
+            KillFocusTween();
+            KillEntranceTween();
+        }
+        transitionOwnsMotion = active;
+        transitionOffset = active ? ToTargetParentSpace(new Vector2(canvasOffset, 0f)) : Vector2.zero;
+        ApplyPosition();
     }
 
     public void PlayEntrance(float delay)
@@ -170,6 +188,8 @@ public sealed class BattleMenuButtonSlide : MonoBehaviour,
         focused = false;
         pointerInside = navigationFocused = false;
         focusOffset = 0f;
+        transitionOwnsMotion = false;
+        transitionOffset = Vector2.zero;
         entranceOffset = Vector2.zero;
         entrancePlayed = false;
         if (!initialized) return;
