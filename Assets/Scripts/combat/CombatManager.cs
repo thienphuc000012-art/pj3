@@ -2896,6 +2896,8 @@ public class CombatManager : MonoBehaviour
             System.Action impact = UsesSwordSlashImpactDamage(action)
                 ? CreateImpactCallback(slashVfx, attacker, target, action) : null;
             if (impact != null) flight.Cancelled += () => pendingVfxImpacts.Remove(slashVfx);
+            flight.ConfigureGrounding(action.swordSlashGroundLayers,
+                action.swordSlashGroundProbeDistance, action.swordSlashGroundHeightOffset);
             flight.Initialize(target, targetPosition, action.projectileTargetOffset,
                 action.swordSlashTravelSpeed, action.swordSlashVfxLifetime,
                 releaseBladeAxis, action.swordSlashVfxLocalEuler, impact);

@@ -24,6 +24,9 @@ namespace MaykerStudio.VFX
 
         private ParticleSystem decal;
 
+        // Read-only access for integrations that ground the whole subtree independently of slash roll.
+        public Quaternion AuthoredGroundRotation => Quaternion.Euler(rotation);
+
         private CapsuleCollider slashCollider;
 
         void Start()

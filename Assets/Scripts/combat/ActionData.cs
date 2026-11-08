@@ -254,6 +254,14 @@ public class ActionData : ScriptableObject
     [Min(0.1f), Tooltip("Flight speed for a traveling sword slash, in Unity units per second.")]
     public float swordSlashTravelSpeed = 24f;
 
+    [Header("Sword Slash Ground VFX")]
+    [Tooltip("Layers có collider mặt đất cho Decal/Debris. Bao gồm Ground/Surface theo map; collider nhân vật và trigger được bỏ qua.")]
+    public LayerMask swordSlashGroundLayers = Physics.DefaultRaycastLayers;
+    [Min(.1f), Tooltip("Khoảng dò thẳng xuống từ projectile để đặt hiệu ứng mặt đất.")]
+    public float swordSlashGroundProbeDistance = 20f;
+    [Tooltip("Độ cao Decal/Debris so với mặt đất. Có thể dùng số âm để chìm nhẹ vào sàn.")]
+    public float swordSlashGroundHeightOffset = .02f;
+
     [Header("Enemy Claw Attack Trail")]
     [Tooltip("Emit three fine, tapered claw streaks from the animated hand during this attack.")]
     public bool useClawAttackTrailVfx;

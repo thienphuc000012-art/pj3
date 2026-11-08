@@ -117,10 +117,15 @@ public static class SwordSlashProjectileValidation
             Check(root != null && root.isPlaying, "Root particles were not explicitly started.");
             Check(effect.GetComponentsInChildren<ParticleSystem>(true).All(particles => particles.main.stopAction == ParticleSystemStopAction.None),
                 "A particle Stop Action can destroy still-alive child trails.");
-            root.Simulate(.2f, true, false, false);
-            Check(effect.GetComponentsInChildren<ParticleSystem>(true).Sum(particles => particles.particleCount) > 0,
+            var airborne = effect.GetComponentsInChildren<ParticleSystem>(true)
+                .Where(particles => particles.GetComponentInParent<MaykerStudio.VFX.SlashDecal>(true) == null).ToArray();
+            foreach (var particles in airborne)
+            {
+                particles.Simulate(.2f, false, false, false);
+                particles.Play(false);
+            }
+            Check(airborne.Sum(particles => particles.particleCount) > 0,
                 "The started projectile emitted no particles.");
-            root.Play(true);
             Check(impacts == 0 && target.currentHP == 100 && !flight.HasArrived, "Damage resolved before the projectile travelled.");
             for (int frame = 1; frame <= 20; frame++)
             {

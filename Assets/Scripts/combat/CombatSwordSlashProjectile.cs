@@ -9,8 +9,18 @@ public sealed class CombatSwordSlashProjectile : MonoBehaviour
     float speed, lifetime, elapsed, flightTimeout;
     bool initialized, cancelled;
     Action onImpact;
+    CombatSlashGroundVfx groundVfx;
+    int groundLayers = Physics.DefaultRaycastLayers;
+    float groundProbeDistance = 20f, groundHeightOffset = .02f;
     public bool HasArrived { get; private set; }
     public event Action Cancelled;
+
+    public void ConfigureGrounding(LayerMask layers, float probeDistance, float heightOffset)
+    {
+        groundLayers = layers;
+        groundProbeDistance = Mathf.Max(.1f, probeDistance);
+        groundHeightOffset = heightOffset;
+    }
 
     public static bool IsPackageProjectile(GameObject prefab) => prefab != null &&
         prefab.GetComponent<MaykerStudio.Demo.Projectile>() != null;
@@ -50,11 +60,14 @@ public sealed class CombatSwordSlashProjectile : MonoBehaviour
             // A root system destroying itself would also erase the still-alive child trails.
             main.stopAction = ParticleSystemStopAction.None;
         }
+        groundVfx = new CombatSlashGroundVfx(transform, groundLayers, groundProbeDistance, groundHeightOffset);
         transform.rotation = FlightRotation(destination - transform.position, bladeAxis, localEuler);
         if (!gameObject.activeSelf) gameObject.SetActive(true);
-        var root = GetComponent<ParticleSystem>();
-        if (root != null) root.Play(true);
-        else foreach (var particles in GetComponentsInChildren<ParticleSystem>(true)) particles.Play(false);
+        // Position ground emitters first, then start only airborne systems.
+        // Play(true) would also burst the rocks/puddles at the sword's altitude.
+        groundVfx.Tick();
+        foreach (var particles in GetComponentsInChildren<ParticleSystem>(true))
+            if (!groundVfx.Owns(particles)) particles.Play(false);
     }
 
     void Update() => Tick(Time.deltaTime);
@@ -68,6 +81,7 @@ public sealed class CombatSwordSlashProjectile : MonoBehaviour
         if (direction.sqrMagnitude > .000001f)
             transform.rotation = FlightRotation(direction, bladeAxis, localEuler);
         transform.position = Vector3.MoveTowards(transform.position, destination, speed * step);
+        groundVfx?.Tick();
         if ((destination - transform.position).sqrMagnitude <= .0001f)
         {
             transform.position = destination;
@@ -99,6 +113,7 @@ public sealed class CombatSwordSlashProjectile : MonoBehaviour
 
     void StopEmitting()
     {
+        groundVfx?.Stop();
         // Prevent the grounding helper from starting new decal particles after impact.
         foreach (var decal in GetComponentsInChildren<MaykerStudio.VFX.SlashDecal>(true)) decal.enabled = false;
         foreach (var particles in GetComponentsInChildren<ParticleSystem>(true))
