@@ -65,7 +65,7 @@ public sealed class CombatSwordSlashProjectile : MonoBehaviour
         if (!gameObject.activeSelf) gameObject.SetActive(true);
         // Position ground emitters first, then start only airborne systems.
         // Play(true) would also burst the rocks/puddles at the sword's altitude.
-        groundVfx.Tick();
+        groundVfx.Tick(destination - transform.position);
         foreach (var particles in GetComponentsInChildren<ParticleSystem>(true))
             if (!groundVfx.Owns(particles)) particles.Play(false);
     }
@@ -81,7 +81,7 @@ public sealed class CombatSwordSlashProjectile : MonoBehaviour
         if (direction.sqrMagnitude > .000001f)
             transform.rotation = FlightRotation(direction, bladeAxis, localEuler);
         transform.position = Vector3.MoveTowards(transform.position, destination, speed * step);
-        groundVfx?.Tick();
+        groundVfx?.Tick(direction);
         if ((destination - transform.position).sqrMagnitude <= .0001f)
         {
             transform.position = destination;

@@ -67,6 +67,9 @@ public static class SwordSlashGroundValidation
             }
 
             floor.enabled = true;
+            Physics.SyncTransforms();
+            ValidateHeadings(Load("Earth"), staging.transform, floor, preview);
+            results.Add("PASS: Earth decals follow true +X/diagonal travel despite visual Euler correction, emit flat world-oriented stamps immediately, overlap by distance, and retain earlier stamp orientation while turning.");
             floor.transform.rotation = Quaternion.Euler(0f, 0f, 18f);
             Physics.SyncTransforms();
             var slopeEffect = Clone(Load("Earth"), staging.transform, preview);
@@ -143,7 +146,7 @@ public static class SwordSlashGroundValidation
             effect.transform.SetPositionAndRotation(new Vector3(2f, 5f, 2f), Quaternion.Euler(37f, 121f, -68f));
             Physics.SyncTransforms();
             flight.Tick(0f);
-            AssertGroundPose(effect, floor, .02f);
+            AssertGroundPose(effect, floor, .02f, Destination - effect.transform.position);
             if (debris != null) AssertDebris(debris, fixedDebrisPosition);
 
             var oldGroundPositions = decals.Select(decal => decal.transform.position).ToArray();
@@ -183,6 +186,41 @@ public static class SwordSlashGroundValidation
         finally { UnityEngine.Object.DestroyImmediate(effect); }
     }
 
+    static void ValidateHeadings(GameObject prefab, Transform staging, BoxCollider floor, Scene preview)
+    {
+        foreach (var direction in new[] { Vector3.right, new Vector3(1f, 0f, 1f).normalized })
+        {
+            var effect = Clone(prefab, staging, preview);
+            try
+            {
+                var flight = effect.AddComponent<CombatSwordSlashProjectile>();
+                var destination = Release + direction * 12f;
+                flight.Initialize(null, destination, Vector3.zero, 2f, 1.5f, BladeAxis, new Vector3(23f, 31f, 47f), null);
+                AssertGroundPose(effect, floor, .02f, direction);
+                var decal = effect.GetComponentsInChildren<MaykerStudio.VFX.SlashDecal>(true).Single();
+                var particles = decal.GetComponent<ParticleSystem>();
+                var oldParticles = new ParticleSystem.Particle[Mathf.Max(1, particles.particleCount)];
+                int oldCount = particles.GetParticles(oldParticles);
+                Check(oldCount > 0, "A valid floor must receive the first stamp immediately.");
+                flight.Tick(.25f);
+                AssertGroundPose(effect, floor, .02f, direction);
+                Check(Vector3.Distance(effect.transform.position, Release + direction * .5f) < .002f,
+                    "Ground heading changed the projectile's actual travel vector.");
+                effect.transform.position += new Vector3(1f, 0f, -1f);
+                flight.Tick(0f);
+                AssertGroundPose(effect, floor, .02f, destination - effect.transform.position);
+                var after = new ParticleSystem.Particle[Mathf.Max(1, particles.particleCount)];
+                int afterCount = particles.GetParticles(after);
+                foreach (var old in oldParticles.Take(oldCount))
+                    Check(after.Take(afterCount).Any(particle => particle.randomSeed == old.randomSeed &&
+                        Vector3.Distance(particle.position, old.position) < .002f &&
+                        Quaternion.Angle(Quaternion.Euler(particle.rotation3D), Quaternion.Euler(old.rotation3D)) < .05f),
+                        "Changing the ground heading moved or rotated an already-emitted world stamp.");
+            }
+            finally { UnityEngine.Object.DestroyImmediate(effect); }
+        }
+    }
+
     static void AddExcludedColliders(Scene preview)
     {
         var actor = ObjectInScene("Ignored BattleUnit Collider", preview);
@@ -207,18 +245,38 @@ public static class SwordSlashGroundValidation
         otherVfx.AddComponent<BoxCollider>().size = new Vector3(6f, .3f, 6f);
     }
 
-    static void AssertGroundPose(GameObject effect, BoxCollider floor, float offset)
+    static void AssertGroundPose(GameObject effect, BoxCollider floor, float offset, Vector3? travelDirection = null)
     {
         Check(floor.Raycast(new Ray(effect.transform.position + Vector3.up * .25f, Vector3.down), out var surface, 20.25f),
             "The isolated floor did not intersect the downward test ray.");
         foreach (var decal in effect.GetComponentsInChildren<MaykerStudio.VFX.SlashDecal>(true))
         {
             var expectedPosition = surface.point + surface.normal * offset;
-            var expectedRotation = Quaternion.FromToRotation(Vector3.up, surface.normal) * decal.AuthoredGroundRotation;
+            var heading = Vector3.ProjectOnPlane(travelDirection ?? Vector3.forward, surface.normal).normalized;
+            var expectedRotation = Quaternion.LookRotation(heading, surface.normal) * decal.AuthoredGroundRotation;
             Check(Vector3.Distance(decal.transform.position, expectedPosition) < .003f,
                 "Ground effect used the sword/actor height instead of the floor: " + decal.transform.position + ".");
             Check(Quaternion.Angle(decal.transform.rotation, expectedRotation) < .05f,
-                "Ground art inherited the rolling projectile rotation.");
+                "Ground art did not follow the true surface-projected travel heading.");
+            var renderer = decal.GetComponent<ParticleSystemRenderer>();
+            if (renderer != null && renderer.renderMode == ParticleSystemRenderMode.Mesh && renderer.mesh != null)
+            {
+                var particles = decal.GetComponent<ParticleSystem>();
+                var main = particles.main;
+                Check(renderer.alignment == ParticleSystemRenderSpace.World && main.startRotation3D,
+                    "A persistent ground stamp needs world renderer alignment and explicit 3D birth rotation.");
+                foreach (float spin in new[] { main.startRotationZ.constantMin, main.startRotationZ.constantMax })
+                {
+                    var rotation = Quaternion.Euler(new Vector3(main.startRotationX.constantMax,
+                        main.startRotationY.constantMax, spin) * Mathf.Rad2Deg);
+                    Check(Vector3.Dot(rotation * Vector3.back, surface.normal) > .999f &&
+                        Mathf.Abs(Vector3.Dot(rotation * Vector3.up, heading)) > .998f,
+                        "The stamp's Quad plane is not flat on the floor or its long +Y axis crosses the travel path.");
+                }
+                float stampLength = Mathf.Max(.1f, (main.startSize3D ? main.startSizeY.constantMax : main.startSize.constantMax) * renderer.mesh.bounds.size.y);
+                Check(particles.emission.rateOverDistance.constantMax + .0001f >= 4f / stampLength,
+                    "Ground stamps are too far apart to overlap along the path.");
+            }
         }
         Check(Mathf.Abs(effect.transform.position.y - 5f) < .002f, "Grounding moved the projectile down to the floor.");
     }

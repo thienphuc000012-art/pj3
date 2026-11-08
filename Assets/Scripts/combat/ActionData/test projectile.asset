@@ -103,6 +103,11 @@ MonoBehaviour:
   swordSlashVfxLifetime: 2
   swordSlashTravelsToTarget: 1
   swordSlashTravelSpeed: 24
+  swordSlashGroundLayers:
+    serializedVersion: 2
+    m_Bits: 4083
+  swordSlashGroundProbeDistance: 20
+  swordSlashGroundHeightOffset: 0.02
   useClawAttackTrailVfx: 0
   clawAttackTrailColor: {r: 0.88, g: 0.92, b: 0.96, a: 1}
   clawAttackTrailLifetime: 0.14

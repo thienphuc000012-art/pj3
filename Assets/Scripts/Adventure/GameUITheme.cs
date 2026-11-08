@@ -94,6 +94,7 @@ public static class GameUITheme
     public static void Apply(GameObject root)
     {
         if (root == null) return;
+        if (root.GetComponentInParent<PreserveAuthoredUI>(true) != null) return;
         if (root.scene.name == "combattest")
             foreach (var frame in root.GetComponentsInChildren<GameUIFrameGraphic>(true))
             {
