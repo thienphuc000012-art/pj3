@@ -33,8 +33,11 @@ public class CampaignConfig : ScriptableObject
     [Tooltip("Tên state Hit tương ứng với trigger của enemy.")]
     public string mapEnemyHitState = "hit";
     public List<BattleUnit> startingParty = new List<BattleUnit>();
+    [Tooltip("Ảnh preview riêng cho từng nhân vật, dùng chung tại Party, Attributes và Skills. Kéo ảnh từ Assets/asset/Ui/Preview vào Image.")]
     public List<PartyPreviewImage> partyPreviews = new List<PartyPreviewImage>();
-    public Sprite PreviewImage(BattleUnit member) => partyPreviews?.Find(x => x != null && x.member == member)?.image;
+    public Sprite PreviewImage(BattleUnit member) => member != null
+        ? partyPreviews?.Find(x => x != null && x.member == member && x.image != null)?.image
+        : null;
     public BattleUnit demoEnemy;
     public List<AdventureItem> items = new List<AdventureItem>();
     public List<CraftRecipe> recipes = new List<CraftRecipe>();
@@ -56,7 +59,9 @@ public class CampaignConfig : ScriptableObject
 [Serializable]
 public class PartyPreviewImage
 {
+    [Tooltip("Prefab nhân vật tương ứng trong Starting Party.")]
     public BattleUnit member;
+    [Tooltip("Ảnh toàn thân riêng dùng cho preview Party và CharacterPreview của Attributes/Skills.")]
     public Sprite image;
 }
 

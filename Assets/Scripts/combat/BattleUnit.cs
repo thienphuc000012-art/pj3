@@ -107,6 +107,12 @@ public class BattleUnit : MonoBehaviour
     public ActionData defaultAttack;
     public List<ActionData> characterSkills; // Danh sách skill hiển thị ở Menu cho Player
 
+    [Header("Player Battle Entry")]
+    [Tooltip("State walk lặp, in-place để đi vào vị trí chiến đấu lúc mở đầu trận. Chỉ dùng cho player.")]
+    public string battleEntryWalkStateName = "Base Layer.BattleEntryWalk";
+    [Min(.01f), Tooltip("Tốc độ phát animation walk lúc vào trận. Tốc độ di chuyển chỉnh riêng trên CombatManager.")]
+    public float battleEntryAnimationSpeed = 1f;
+
     [Header("Enemy AI & Boss Settings")]
     public bool isBoss = false;
     [Tooltip("Số lượt đánh mặc định (Quái thường để 1)")]

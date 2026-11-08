@@ -249,9 +249,9 @@ public class ActionData : ScriptableObject
     public Vector3 swordSlashVfxLocalEuler = Vector3.zero;
     public Vector3 swordSlashVfxScale = Vector3.one;
     [Min(0.1f)] public float swordSlashVfxLifetime = 2f;
-    [Tooltip("Shoot/Beam actions with a Sword Slash VFX launch it from the sword toward the target.")]
+    [Tooltip("Launch from sword to target for Shoot/Beam, or automatically for a Free Slash VFX Projectile prefab even when Vfx Type is None. A standalone slash projectile releases on each DealDamage animation event and deals damage on arrival.")]
     public bool swordSlashTravelsToTarget = true;
-    [Min(0.1f), Tooltip("Travel speed for a sword slash used by a Shoot or Beam action.")]
+    [Min(0.1f), Tooltip("Flight speed for a traveling sword slash, in Unity units per second.")]
     public float swordSlashTravelSpeed = 24f;
 
     [Header("Enemy Claw Attack Trail")]

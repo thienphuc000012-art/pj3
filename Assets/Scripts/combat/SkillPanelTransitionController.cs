@@ -47,6 +47,8 @@ public sealed class SkillPanelTransitionController : MonoBehaviour, ICancelHandl
     public float itemSlideDistance = 24f;
     public MotionEase itemEase = MotionEase.OutCubic;
     [Min(0f)] public float minimumOpenDuration = .48f;
+    [Tooltip("Maximum time the ink animation advances per rendered frame. Keeps a scene-loading or camera/shader hitch from skipping the entire wipe. Only affects this UI transition.")]
+    [Range(.016f, .1f)] public float maximumFrameStep = .05f;
 
     [Header("Standalone callbacks")]
     public UnityEvent onOpened = new UnityEvent();
@@ -71,6 +73,7 @@ public sealed class SkillPanelTransitionController : MonoBehaviour, ICancelHandl
     bool returnNavigationFocus;
     float savedCommandAlpha = 1f;
     float clock, reveal;
+    int openingFrame;
     Action openedCallback, closedCallback, cancelCallback;
     Coroutine fallbackRoutine;
 #if DOTWEEN
@@ -85,6 +88,14 @@ public sealed class SkillPanelTransitionController : MonoBehaviour, ICancelHandl
     }
 
     public bool Initialize() => InitializePanel(false);
+
+    /// <summary>Build both masks during battle setup, before the command menu accepts input.</summary>
+    public void PreparePanels()
+    {
+        if (!isActiveAndEnabled || IsVisible) return;
+        if (InitializePanel(false)) ResetTransition();
+        if (InitializePanel(true)) ResetTransition();
+    }
 
     bool InitializePanel(bool forItems)
     {
@@ -157,10 +168,15 @@ public sealed class SkillPanelTransitionController : MonoBehaviour, ICancelHandl
         if (!InitializePanel(forItems)) return false;
         KillTimeline();
         State = TransitionState.Opening;
+        openingFrame = Time.frameCount;
         returnNavigationFocus = false;
         activePanel.gameObject.SetActive(true);
-        Canvas.ForceUpdateCanvases();
         activeBrush.CancelPlayback();
+        // Set the hidden mask before rebuilding the newly enabled Canvas. On
+        // subsequent opens it still contains the previous fully revealed pose.
+        activeBrush.SetProgress(0f);
+        activeBrush.SetBrushOpacity(0f);
+        Canvas.ForceUpdateCanvases();
         if (showingItems && itemsScroll != null && itemsScroll.enabled)
         {
             restoreItemScrolling = true;
@@ -341,7 +357,10 @@ public sealed class SkillPanelTransitionController : MonoBehaviour, ICancelHandl
     {
         clock = 0f;
 #if DOTWEEN
-        var timeline = DOTween.Sequence().SetUpdate(true).SetTarget(this).SetAutoKill(true);
+        // Drive only this sequence with a bounded presentation clock. A raw
+        // independent tween can consume the entire wipe on the first heavy
+        // frame after switching from the exploration map/camera.
+        var timeline = DOTween.Sequence().SetUpdate(UpdateType.Manual, true).SetTarget(this).SetAutoKill(true);
         sequence = timeline;
         timeline.Append(DOTween.To(() => clock, t =>
         {
@@ -365,7 +384,7 @@ public sealed class SkillPanelTransitionController : MonoBehaviour, ICancelHandl
         while (clock < duration)
         {
             yield return null;
-            clock = Mathf.Min(duration, clock + Time.unscaledDeltaTime);
+            clock = Mathf.Min(duration, clock + FrameStep(Time.unscaledDeltaTime));
             sample(clock);
         }
         fallbackRoutine = null;
@@ -390,6 +409,20 @@ public sealed class SkillPanelTransitionController : MonoBehaviour, ICancelHandl
 
     static float Segment(float time, float start, float duration) => Mathf.Clamp01((time - start) / Mathf.Max(.001f, duration));
 
+    float FrameStep(float unscaledDelta) => Mathf.Min(Mathf.Max(0f, unscaledDelta), Mathf.Clamp(maximumFrameStep, .016f, .1f));
+
+    void AdvanceTimeline(float unscaledDelta)
+    {
+#if DOTWEEN
+        var timeline = sequence;
+        if (timeline != null && timeline.IsActive())
+        {
+            float step = FrameStep(unscaledDelta);
+            timeline.ManualUpdate(step, step);
+        }
+#endif
+    }
+
     public static float Ease(float t, MotionEase ease, float back = 1.4f)
     {
         t = Mathf.Clamp01(t);
@@ -413,7 +446,13 @@ public sealed class SkillPanelTransitionController : MonoBehaviour, ICancelHandl
 
     void Update()
     {
-        if (IsVisible && (activePanel == null || !activePanel.gameObject.activeInHierarchy)) ResetTransition();
+        if (IsVisible && (activePanel == null || !activePanel.gameObject.activeInHierarchy))
+        {
+            ResetTransition();
+            return;
+        }
+        // The opening frame's delta belongs to the frame before the click.
+        if (IsTransitioning && Time.frameCount != openingFrame) AdvanceTimeline(Time.unscaledDeltaTime);
     }
     void OnDisable() => ResetTransition();
 }

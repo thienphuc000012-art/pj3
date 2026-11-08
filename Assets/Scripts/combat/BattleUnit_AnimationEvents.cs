@@ -73,28 +73,17 @@ public class BattleUnit_AnimationEvents : MonoBehaviour
         if (CombatManager.Instance == null)
             return;
 
-        // Shoot / Beam gây damage khi VFX impact.
-        // Nếu clip cũ vẫn còn DealDamage event thì bỏ qua hoàn toàn.
-        if (CombatManager.Instance.IsVfxImpactDamageAction(ownerUnit))
-        {
-            Debug.Log(
-                $"[Animation Event] {ownerUnit.unitName}: " +
-                "bỏ qua DealDamage vì Shoot/Beam dùng VFX Impact Damage."
-            );
-
-            return;
-        }
-
-        Debug.Log(
-            $"[Animation Event] {ownerUnit.unitName} " +
-            "chạm mục tiêu (DealDamage)!"
-        );
+        // Let the manager distinguish a melee hit from a standalone sword
+        // projectile release. Main Shoot/Beam still do no animation damage.
+        bool usesImpact = CombatManager.Instance.IsVfxImpactDamageAction(ownerUnit);
+        Debug.Log($"[Animation Event] {ownerUnit.unitName} " +
+            (usesImpact ? "phát tín hiệu projectile (damage khi tới mục tiêu)." : "chạm mục tiêu (DealDamage)!"));
 
         CombatManager.Instance.ApplyDamageFromAnimation(
             ownerUnit
         );
 
-        if (ParrySystem.Instance != null)
+        if (!usesImpact && ParrySystem.Instance != null)
         {
             ParrySystem.Instance.CloseWindow();
         }

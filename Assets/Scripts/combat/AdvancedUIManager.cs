@@ -512,6 +512,15 @@ public class AdvancedUIManager : MonoBehaviour
         ShowActionMenu(false);
     }
 
+    IEnumerator Start()
+    {
+        // Run after scene-loaded styling and CombatManager.PrepareBattle, for
+        // both direct combat tests and asynchronous encounters from a map.
+        yield return null;
+        EnsureSkillTransition();
+        skillPanelTransition.PreparePanels();
+    }
+
     void Update()
     {
         ApplyBuffIconSettingsIfChanged();

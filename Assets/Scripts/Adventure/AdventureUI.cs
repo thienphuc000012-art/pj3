@@ -123,7 +123,7 @@ public class AdventureUI : MonoBehaviour
             var assigned = S.Config.PreviewImage(unit);
             string prefix = restPage == 1 ? "Menu/Attributes/CharacterPreview" : "Menu/Skills/CharacterPreview";
             var portrait = view.Component<Image>(prefix + "/Portrait");
-            portrait.sprite = assigned != null ? assigned : unit.unitPortrait;
+            portrait.sprite = assigned;
             portrait.preserveAspect = true; portrait.enabled = portrait.sprite != null;
             var preview = view.Component<RawImage>(prefix + "/Render");
             if (assigned != null) stage.Hide(); else stage.Show(new[] { unit });
@@ -752,7 +752,7 @@ public class AdventureUI : MonoBehaviour
             AdventureCanvasRoot.RowFill(rows[i], "XP/Fill", (float)p.xp / p.RequiredXP);
             AdventureCanvasRoot.RowText(rows[i], "Experience", "KN " + p.xp + " / " + p.RequiredXP);
             var assigned = S.Config.PreviewImage(S.Template(p));
-            AdventureCanvasRoot.RowPortrait(rows[i], "Portrait", assigned != null ? assigned : S.Template(p).unitPortrait);
+            AdventureCanvasRoot.RowPortrait(rows[i], "Portrait", assigned);
             if (assigned != null) cardStages[i].Hide();
             else if (!preparing) { cardStages[i].Show(new[] { S.Template(p) }); preparing = !cardStages[i].Ready; }
             var preview = rows[i].transform.Find("Preview").GetComponent<RawImage>();

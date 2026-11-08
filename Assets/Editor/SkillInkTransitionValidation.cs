@@ -228,6 +228,13 @@ public static class SkillInkTransitionValidation
         controller.OpenSkillPanel();
         Check(controller.IsTransitioning && !controller.IsOpen, "Opening must lock selection.");
         Check(rows.All(row => !row.GetComponent<Button>().IsInteractable()), "A skill can be submitted before reveal completes.");
+        var advance = typeof(SkillPanelTransitionController).GetMethod("AdvanceTimeline", PrivateInstance);
+        advance.Invoke(controller, new object[] { 2f });
+        Check(controller.IsTransitioning && controller.brushReveal.Progress < .01f,
+            "One long loading/camera frame skipped the ink reveal.");
+        for (int frame = 0; frame < 4; frame++) advance.Invoke(controller, new object[] { .05f });
+        Check(controller.IsTransitioning && controller.brushReveal.Progress > 0f && controller.brushReveal.Progress < 1f,
+            "Bounded UI time did not render intermediate reveal frames after a hitch.");
         DOTween.Goto(controller, .3f, false);
         Check(rows[0].GetComponent<SkillItemAnimator>().Progress > rows[4].GetComponent<SkillItemAnimator>().Progress,
             "Skill items must enter in staggered order, not all at once.");
@@ -261,6 +268,7 @@ public static class SkillInkTransitionValidation
         Check(!DOTween.IsTweening(controller) && !controller.IsVisible && !panel.gameObject.activeSelf,
             "Disabling the controller leaves an active transition.");
         results.Add("PASS: skill input gate, stagger order, exact settle, availability preserved, immediate selected-row Cancel, 12 mid-wipe cancellations and disable cleanup.");
+        results.Add("PASS: a two-second loading/camera hitch cannot complete the wipe in one frame; intermediate mask poses remain visible.");
     }
 
     static void CheckItems(SkillPanelTransitionController controller, RectTransform commands, Camera camera,
@@ -287,6 +295,12 @@ public static class SkillInkTransitionValidation
         commands.gameObject.SetActive(true);
         Layout(canvas, scaler);
         var viewportBefore = WorldCorners(viewport);
+        controller.PreparePanels();
+        Check(!controller.IsVisible && !controller.skillsPanel.gameObject.activeSelf && !viewport.gameObject.activeSelf &&
+            !DOTween.IsTweening(controller), "Scene preparation left a panel or transition running.");
+        Check(controller.TryOpenPanel(false), "Prepared Skills did not reopen.");
+        DOTween.Complete(controller);
+        controller.CloseSkillPanel();
         Check(controller.TryOpenPanel(true) && !scroll.enabled && !button.IsInteractable(), "Item opening did not lock scroll and buttons.");
         DOTween.Goto(controller, .25f, false);
         var pixels = Capture(camera, canvas, scaler, Path.Combine(PreviewFolder, "ItemInkHalf.png"));
@@ -315,6 +329,7 @@ public static class SkillInkTransitionValidation
         Check(cancelDelivered && !viewport.gameObject.activeSelf && commands.gameObject.activeSelf && !DOTween.IsTweening(controller),
             "Items Cancel left the panel or wipe active.");
         results.Add("PASS: Items right-to-left reveal, nested viewport clipping, input lock, scrolling after reveal, immediate Cancel both mid-wipe and fully open.");
+        results.Add("PASS: scene preparation → first Skills open → cancel → first Items open preserves viewport geometry and ScrollRect references.");
     }
 #endif
 

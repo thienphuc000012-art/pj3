@@ -162,19 +162,23 @@ Không gán sprite mực đen vào mask đang dùng. Các lỗ xước trang tr�
 
 ## Timeline, gọi hàm và hủy
 
-DOTween Sequence chạy một clock unscaled, Linear. SampleOpen tách clock thành các khoảng chồng nhau rồi áp dụng OutBack/OutCubic cho từng track. Cách này giúp bản coroutine và DOTween dùng chính xác cùng logic thời gian:
+DOTween Sequence chạy một clock unscaled riêng, Linear. SampleOpen tách clock thành các khoảng chồng nhau rồi áp dụng OutBack/OutCubic cho từng track. Controller tự cập nhật duy nhất sequence này, giới hạn mỗi bước bằng `Maximum Frame Step` (mặc định 0,05 giây), để một frame tải scene/camera quá lâu không làm hiệu ứng nhảy thẳng đến cuối. Không đổi Time.timeScale hoặc clock của tween khác:
 
 ```csharp
-sequence = DOTween.Sequence().SetUpdate(true).SetTarget(this);
+sequence = DOTween.Sequence().SetUpdate(UpdateType.Manual, true).SetTarget(this);
 sequence.Append(DOTween.To(() => clock,
     time => { clock = time; SampleOpen(time); },
     duration, duration).SetEase(DG.Tweening.Ease.Linear));
+// Trong Update, bỏ qua frame vừa bấm nút:
+float step = Mathf.Min(Time.unscaledDeltaTime, maximumFrameStep);
+sequence.ManualUpdate(step, step);
 ```
 
 Các API của controller:
 
 - `OpenSkillPanel()`: mở phần trình bày đã có dữ liệu. Trong combat hãy đi qua `CombatManager.OnSkillsClicked()` để chuẩn bị đúng skills/camera/state.
 - `TryOpenPanel(true)`: mở hiệu ứng cho danh sách Vật phẩm đã được tạo.
+- `PreparePanels()`: tạo trước hai mask trong lúc mở đầu trận. AdvancedUIManager tự gọi sau khi scene đã khởi tạo, kể cả khi vào trận từ map qua loading.
 - `CloseSkillPanel()`: đóng bảng hiện tại và trả về command menu ngay.
 - `ResetTransition()`: hủy ngay, khôi phục pose và tắt panel. Dùng khi chọn kỹ năng hoặc ẩn HUD.
 - `BrushRevealController.PlayBrushReveal()` và `PlayReverseBrushReveal()`: thử mask riêng sau Initialize.

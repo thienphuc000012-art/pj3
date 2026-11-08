@@ -106,6 +106,12 @@ public class CombatManager : MonoBehaviour
 
     private void OnDisable()
     {
+        if (battleStartRoutine != null)
+        {
+            StopCoroutine(battleStartRoutine);
+            battleStartRoutine = null;
+        }
+        FinishBattleEntryWalks();
         acceptingActionAnimationEvents = false;
         if (battleCompletionRoutine != null)
         {
@@ -133,6 +139,20 @@ public class CombatManager : MonoBehaviour
     [Header("Battle Positions (Slots)")]
     public Transform[] playerSlots;
     public Transform[] enemySlots;
+
+    [Header("Battle Start — Player Walk In")]
+    [Tooltip("Player xuất hiện phía sau slot rồi đi bộ vào. Enemy vẫn dùng trigger BattleStart như cũ.")]
+    public bool playersWalkIn = true;
+    [Min(0f), Tooltip("Khoảng cách player xuất hiện phía sau vị trí chiến đấu, tính theo hướng của slot.")]
+    public float playerEntryDistance = 3f;
+    [Min(.01f), Tooltip("Tốc độ đi tới slot, đơn vị Unity/giây.")]
+    public float playerEntryMoveSpeed = 1.8f;
+    [Min(0f), Tooltip("Thời gian tối thiểu giữ camera mở đầu. Luôn đợi tất cả player đi tới slot trước khi bắt đầu lượt.")]
+    public float battleStartMinimumDuration = 2.5f;
+    [Min(0f), Tooltip("Chờ blend từ walk về idle sau khi mọi player đã vào vị trí.")]
+    public float playerEntryIdleSettleTime = .1f;
+    readonly List<BattleEntryWalk> battleEntryWalks = new List<BattleEntryWalk>();
+    Coroutine battleStartRoutine;
 
     [Header("Inventory & Resources")]
     public List<ActionData> inventoryItems = new List<ActionData>();
@@ -222,7 +242,7 @@ public class CombatManager : MonoBehaviour
         }
         AdvancedUIManager.Instance.RegisterPartyHP(playerParty);
 
-        StartCoroutine(BattleStartRoutine());
+        battleStartRoutine = StartCoroutine(BattleStartRoutine());
     }
 
     private IEnumerator BattleStartRoutine()
@@ -234,21 +254,40 @@ public class CombatManager : MonoBehaviour
 
         AdvancedUIManager.Instance.ToggleAllUI(false);
 
-        foreach (var p in playerParty.Where(u => u != null && !u.IsDead && u.animator != null))
-        {
-            p.animator.SetTrigger("BattleStart");
-        }
+        FinishBattleEntryWalks();
+        foreach (var p in playerParty.Where(u => u != null && !u.IsDead))
+            if (playersWalkIn) battleEntryWalks.Add(new BattleEntryWalk(p, playerEntryDistance, playerEntryMoveSpeed));
+            else if (p.animator != null) p.animator.SetTrigger("BattleStart");
         foreach (var e in enemyParty.Where(u => u != null && u.animator != null))
         {
             e.animator.SetTrigger("BattleStart");
         }
 
-        // Chờ thời gian Animation dạo đầu (Bạn có thể tăng số này lên 2-3s để xem rõ camera tổng)
-        yield return new WaitForSeconds(2.5f);
+        // Spawn offsets are set before the first rendered frame. Do not consume
+        // the scene-loading frame's delta as the first step of the walk.
+        float elapsed = 0f;
+        yield return null;
+        while (elapsed < battleStartMinimumDuration || battleEntryWalks.Any(walk => !walk.IsComplete))
+        {
+            float step = Time.deltaTime;
+            foreach (var walk in battleEntryWalks) walk.Tick(step);
+            elapsed += step;
+            yield return null;
+        }
+        FinishBattleEntryWalks();
+        if (playersWalkIn && playerEntryIdleSettleTime > 0f)
+            yield return new WaitForSeconds(playerEntryIdleSettleTime);
 
         AdvancedUIManager.Instance.ToggleAllUI(true);
 
+        battleStartRoutine = null;
         DetermineTurnOrder();
+    }
+
+    void FinishBattleEntryWalks()
+    {
+        foreach (var walk in battleEntryWalks) walk.Finish();
+        battleEntryWalks.Clear();
     }
 
     void Update()
@@ -1537,6 +1576,16 @@ public class CombatManager : MonoBehaviour
         // ============================================================
         if (UsesVfxImpactDamage(actionToUse))
         {
+            // A sword-only projectile still uses the sword hit event as its
+            // release signal. Each combo hit launches once; arrival owns damage.
+            if (UsesSwordSlashImpactDamage(actionToUse))
+            {
+                IEnumerable<BattleUnit> slashTargets = actionToUse.isAoE
+                    ? (attacker.isPlayer ? enemyParty : playerParty)
+                    : new[] { currentTarget };
+                foreach (var slashTarget in slashTargets.Where(u => u != null && !u.IsDead && !u.HasPendingBossPhaseTransition))
+                    SpawnSwordSlashVFX(attacker, slashTarget, actionToUse);
+            }
             // Nếu đây là skill của Enemy, giữ lại kết quả Parry tại timing
             // của animation event (nếu clip vẫn còn AnimEvent_DealDamage).
             // Nếu clip không có event này thì callback impact vẫn đọc trực tiếp
@@ -1691,9 +1740,7 @@ public class CombatManager : MonoBehaviour
         // A Shoot/Beam action's optional sword slash is a separate projectile.
         // Launch it from the current sword pose at cast time; the regular VFX
         // callback still owns damage timing and hit effects.
-        if ((action.vfxType == ActionData.VfxType.Shoot || action.vfxType == ActionData.VfxType.Beam) &&
-            action.swordSlashTravelsToTarget &&
-            action.swordSlashVfxPrefab != null &&
+        if (HasTravelingSwordSlash(action) && !UsesSwordSlashImpactDamage(action) &&
             !action.isFriendlyAction && !action.isHeal)
         {
             foreach (BattleUnit u in targetList.Where(u => u != null && !u.IsDead))
@@ -1888,14 +1935,24 @@ public class CombatManager : MonoBehaviour
         }
     }
 
+    private static bool HasMainImpactVfx(ActionData action) => action != null && action.vfxPrefab != null &&
+        (action.vfxType == ActionData.VfxType.Shoot || action.vfxType == ActionData.VfxType.Beam);
+
+    private static bool HasTravelingSwordSlash(ActionData action) => action != null &&
+        action.swordSlashTravelsToTarget && action.swordSlashVfxPrefab != null &&
+        (action.vfxType == ActionData.VfxType.Shoot || action.vfxType == ActionData.VfxType.Beam ||
+         CombatSwordSlashProjectile.IsPackageProjectile(action.swordSlashVfxPrefab));
+
+    private static bool UsesSwordSlashImpactDamage(ActionData action) => HasTravelingSwordSlash(action) &&
+        CombatSwordSlashProjectile.IsPackageProjectile(action.swordSlashVfxPrefab) && !HasMainImpactVfx(action) &&
+        !action.isFriendlyAction && !action.isHeal && !action.isSummonSkill;
+
     private static bool UsesVfxImpactDamage(ActionData action)
     {
         return action != null &&
-               action.vfxPrefab != null &&
                !action.isFriendlyAction &&
                !action.isHeal &&
-               (action.vfxType == ActionData.VfxType.Shoot ||
-                action.vfxType == ActionData.VfxType.Beam);
+               (HasMainImpactVfx(action) || UsesSwordSlashImpactDamage(action));
     }
 
     private ActionData GetCurrentActionForUnit(BattleUnit unit)
@@ -1981,7 +2038,7 @@ public class CombatManager : MonoBehaviour
                 return;
             }
 
-            // Chỉ Shoot/Beam offensive mới gây damage bằng impact callback.
+            // Main Shoot/Beam or a standalone sword projectile owns this impact.
             if (!UsesVfxImpactDamage(action))
                 return;
 
@@ -2052,9 +2109,7 @@ public class CombatManager : MonoBehaviour
 
         // For projectile/beam actions, wait until the visual impact confirms
         // the hit before showing an explicitly configured sword slash.
-        if (!action.isFriendlyAction && !action.isHeal &&
-            !((action.vfxType == ActionData.VfxType.Shoot || action.vfxType == ActionData.VfxType.Beam) &&
-              action.swordSlashTravelsToTarget))
+        if (!action.isFriendlyAction && !action.isHeal && !HasTravelingSwordSlash(action))
             SpawnSwordSlashVFX(attacker, target, action);
 
         PrepareVfxImpactDamage(
@@ -2265,8 +2320,8 @@ public class CombatManager : MonoBehaviour
         Vector3 previousPosition =
             travelTransform.position;
 
-        float measuredSpeed =
-            Mathf.Max(0.01f, action.vfxSpeed);
+        float measuredSpeed = Mathf.Max(0.01f,
+            UsesSwordSlashImpactDamage(action) ? action.swordSlashTravelSpeed : action.vfxSpeed);
 
         while (projectile != null &&
                travelTransform != null &&
@@ -2770,9 +2825,8 @@ public class CombatManager : MonoBehaviour
         // sword. Fit its roughly three-unit arc to the current blade length.
         float swordFitScale = Mathf.Clamp(swordLength * 0.5f, 0.25f, 1f);
 
-        bool travelingSlash = (action.vfxType == ActionData.VfxType.Shoot ||
-            action.vfxType == ActionData.VfxType.Beam) &&
-            action.swordSlashTravelsToTarget && target != null;
+        bool travelingSlash = HasTravelingSwordSlash(action) && target != null;
+        bool packageProjectile = travelingSlash && CombatSwordSlashProjectile.IsPackageProjectile(action.swordSlashVfxPrefab);
         Vector3 targetPosition = target != null
             ? target.GetVfxTargetPosition(action.projectileTargetOffset)
             : position + attacker.transform.forward;
@@ -2799,7 +2853,8 @@ public class CombatManager : MonoBehaviour
         if (Vector3.Dot(slashNormal, towardTarget) < 0f)
             slashNormal = -slashNormal;
 
-        if (travelingSlash)
+        Vector3 releaseBladeAxis = bladeAxis;
+        if (travelingSlash && !packageProjectile)
         {
             // Keep the slash visible as it travels forward: its long local
             // mesh axis follows the flight path and its second axis stays upright.
@@ -2811,20 +2866,47 @@ public class CombatManager : MonoBehaviour
             slashNormal = Vector3.Cross(swingDirection, bladeAxis).normalized;
         }
 
-        Quaternion rotation = GetSwordSlashRotation(
+        Quaternion rotation = packageProjectile
+            ? CombatSwordSlashProjectile.FlightRotation(towardTarget, releaseBladeAxis, action.swordSlashVfxLocalEuler)
+            : GetSwordSlashRotation(
             action.swordSlashVfxPrefab,
             swingDirection,
             bladeAxis,
             slashNormal) * Quaternion.Euler(action.swordSlashVfxLocalEuler);
         position += rotation * action.swordSlashVfxLocalOffset;
-        GameObject slashVfx = Instantiate(action.swordSlashVfxPrefab, position, rotation);
+        // Configure offscreen/inactive before any particle or demo movement can
+        // run. Keep the instance in the combat scene (also supports preview tests).
+        GameObject slashStaging = new GameObject("Sword Slash Setup");
+        slashStaging.SetActive(false);
+        UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(slashStaging, gameObject.scene);
+        GameObject slashVfx = Instantiate(action.swordSlashVfxPrefab, position, rotation, slashStaging.transform);
+        slashVfx.SetActive(false);
+        slashVfx.transform.SetParent(null, true);
+        if (Application.isPlaying) Destroy(slashStaging); else DestroyImmediate(slashStaging);
         float slashScale = travelingSlash ? 1f : swordFitScale;
         slashVfx.transform.localScale = Vector3.Scale(
             slashVfx.transform.localScale,
             action.swordSlashVfxScale * slashScale);
+        SetVfxPlaybackSpeed(slashVfx, action.vfxPlaybackSpeed);
+
+        TrackCombatVFX(slashVfx);
+        if (packageProjectile)
+        {
+            var flight = slashVfx.AddComponent<CombatSwordSlashProjectile>();
+            System.Action impact = UsesSwordSlashImpactDamage(action)
+                ? CreateImpactCallback(slashVfx, attacker, target, action) : null;
+            if (impact != null) flight.Cancelled += () => pendingVfxImpacts.Remove(slashVfx);
+            flight.Initialize(target, targetPosition, action.projectileTargetOffset,
+                action.swordSlashTravelSpeed, action.swordSlashVfxLifetime,
+                releaseBladeAxis, action.swordSlashVfxLocalEuler, impact);
+            if (impact != null && ShouldStartVfxParry(attacker, action))
+                StartCoroutine(MonitorProjectileParry(slashVfx, attacker, target, action, vfxActionState));
+            return;
+        }
 
         // Free Slash VFX keeps Play On Awake disabled so it can be placed in
         // the demo selector. Start its root system here; child systems follow.
+        slashVfx.SetActive(true);
         ParticleSystem rootParticles = slashVfx.GetComponent<ParticleSystem>();
         if (rootParticles != null)
         {
@@ -2836,7 +2918,6 @@ public class CombatManager : MonoBehaviour
                 particles.Play(false);
         }
 
-        TrackCombatVFX(slashVfx);
         if (travelingSlash)
         {
             StartCoroutine(MoveSwordSlashVFXRoutine(
@@ -2850,7 +2931,7 @@ public class CombatManager : MonoBehaviour
         }
         else
         {
-            Destroy(slashVfx, GetVfxLifeTime(slashVfx, action.swordSlashVfxLifetime));
+            if (Application.isPlaying) Destroy(slashVfx, GetVfxLifeTime(slashVfx, action.swordSlashVfxLifetime));
         }
     }
 

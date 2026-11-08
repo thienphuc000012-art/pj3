@@ -973,6 +973,7 @@ MonoBehaviour:
   itemSlideDistance: 24
   itemEase: 1
   minimumOpenDuration: 0.48
+  maximumFrameStep: 0.05
   onOpened:
     m_PersistentCalls:
       m_Calls: []
@@ -4929,6 +4930,11 @@ MonoBehaviour:
   - {fileID: 1956373212}
   - {fileID: 1462361508}
   - {fileID: 1507879753}
+  playersWalkIn: 1
+  playerEntryDistance: 4
+  playerEntryMoveSpeed: 1.8
+  battleStartMinimumDuration: 2.5
+  playerEntryIdleSettleTime: 0.1
   inventoryItems:
   - {fileID: 11400000, guid: ff83eafb89cc4d0489f523f4f3805d89, type: 2}
   currentStains: 0
@@ -19435,6 +19441,10 @@ PrefabInstance:
       propertyPath: 'characterSkills.Array.data[2]'
       value: 
       objectReference: {fileID: 11400000, guid: 9c2d4533a27c9f542afeed2d9c8c4450, type: 2}
+    - target: {fileID: 7229521429613955948, guid: a5b3fe05ee26e4b419eaeab72c77c4b0, type: 3}
+      propertyPath: 'characterSkills.Array.data[3]'
+      value: 
+      objectReference: {fileID: 11400000, guid: 1eb254b917932f24ab84165e603ea5ef, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
