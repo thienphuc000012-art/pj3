@@ -1,0 +1,422 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 282db69e591b4b0a90a246b75676e63e, type: 3}
+  m_Name: CombatCameraSettings
+  m_EditorClassIdentifier: Assembly-CSharp::CombatCameraSettings
+  battleIdle:
+    followOffset: {x: 0, y: 0.35, z: 0}
+    lookAtOffset: {x: 0, y: 0, z: 0}
+    fieldOfView: 42
+    cameraDistance: 3.35
+    maximumDistance: 4.45
+    orbitAngle: -24
+    targetWeight: 0
+    primaryScreenPosition: {x: 0.29, y: 0.48}
+    damping: 0.16
+    blendDuration: 0.38
+    easing: 1
+    customBlend:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+  playerMenu:
+    followOffset: {x: 0, y: 0.5, z: 0}
+    lookAtOffset: {x: 0, y: 0, z: 0}
+    fieldOfView: 43
+    cameraDistance: 2.5
+    maximumDistance: 3
+    orbitAngle: -20
+    targetWeight: 0
+    primaryScreenPosition: {x: 0.29, y: 0.4}
+    damping: 0.16
+    blendDuration: 0.26
+    easing: 1
+    customBlend:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+  targetSelection:
+    followOffset: {x: 0, y: 0.16, z: 0}
+    lookAtOffset: {x: 0, y: 0, z: 0}
+    fieldOfView: 44
+    cameraDistance: 3.15
+    maximumDistance: 7.8
+    orbitAngle: 0
+    targetWeight: 0
+    primaryScreenPosition: {x: 0.5, y: 0.5}
+    damping: 0.16
+    blendDuration: 0.32
+    easing: 1
+    customBlend:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+  enemyAnticipation:
+    followOffset: {x: 0, y: 0.65, z: 0}
+    lookAtOffset: {x: 0, y: 0, z: 0}
+    fieldOfView: 45
+    cameraDistance: 4.15
+    maximumDistance: 5.7
+    orbitAngle: -31
+    targetWeight: 0.22
+    primaryScreenPosition: {x: 0.32, y: 0.46}
+    damping: 0.16
+    blendDuration: 0.34
+    easing: 1
+    customBlend:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+  enemyExecution:
+    followOffset: {x: 0, y: 0.5, z: 0}
+    lookAtOffset: {x: 0, y: 0, z: 0}
+    fieldOfView: 46
+    cameraDistance: 3.85
+    maximumDistance: 5.8
+    orbitAngle: -35
+    targetWeight: 0.3
+    primaryScreenPosition: {x: 0.36, y: 0.45}
+    damping: 0.16
+    blendDuration: 0.21
+    easing: 1
+    customBlend:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+  enemyRecovery:
+    followOffset: {x: 0, y: 0.7, z: 0}
+    lookAtOffset: {x: 0, y: 0, z: 0}
+    fieldOfView: 45
+    cameraDistance: 4.1
+    maximumDistance: 5.7
+    orbitAngle: -32
+    targetWeight: 0.22
+    primaryScreenPosition: {x: 0.34, y: 0.47}
+    damping: 0.16
+    blendDuration: 0.27
+    easing: 1
+    customBlend:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+  playerAction:
+    followOffset: {x: 0, y: 0.65, z: 0}
+    lookAtOffset: {x: 0, y: 0, z: 0}
+    fieldOfView: 45
+    cameraDistance: 3.6
+    maximumDistance: 6.6
+    orbitAngle: -34
+    targetWeight: 0.3
+    primaryScreenPosition: {x: 0.34, y: 0.49}
+    damping: 0.16
+    blendDuration: 0.26
+    easing: 1
+    customBlend:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+  ultimate:
+    followOffset: {x: 0, y: 0.55, z: 0}
+    lookAtOffset: {x: 0, y: 0, z: 0}
+    fieldOfView: 44
+    cameraDistance: 3.15
+    maximumDistance: 0
+    orbitAngle: -28
+    targetWeight: 0.48
+    primaryScreenPosition: {x: 0.5, y: 0.5}
+    damping: 0.16
+    blendDuration: 0.35
+    easing: 1
+    customBlend:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+  bossWide:
+    followOffset: {x: 0, y: 2.2, z: 0}
+    lookAtOffset: {x: 0, y: 0, z: 0}
+    fieldOfView: 47
+    cameraDistance: 7
+    maximumDistance: 14
+    orbitAngle: -43
+    targetWeight: 0.5
+    primaryScreenPosition: {x: 0.5, y: 0.5}
+    damping: 0.16
+    blendDuration: 0.38
+    easing: 1
+    customBlend:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+  battleIntro:
+    followOffset: {x: 0, y: 2.8, z: 0}
+    lookAtOffset: {x: 0, y: 0, z: 0}
+    fieldOfView: 49
+    cameraDistance: 7.5
+    maximumDistance: 14.5
+    orbitAngle: -52
+    targetWeight: 0.5
+    primaryScreenPosition: {x: 0.5, y: 0.5}
+    damping: 0.16
+    blendDuration: 0
+    easing: 1
+    customBlend:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+  statusFocus:
+    followOffset: {x: 0, y: 0.5, z: 0}
+    lookAtOffset: {x: 0, y: 0, z: 0}
+    fieldOfView: 44
+    cameraDistance: 3.7
+    maximumDistance: 7.3
+    orbitAngle: -31
+    targetWeight: 0
+    primaryScreenPosition: {x: 0.5, y: 0.5}
+    damping: 0.16
+    blendDuration: 0.3
+    easing: 1
+    customBlend:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+  viewportFit: 0.81
+  targetYawLimit: 18
+  targetBlendSecondsPerMeter: 0.018
+  targetBlendExtraLimit: 0.16
+  bossPadding: 1.13
+  idleDrift: 0.12
+  idleDriftSpeed: 0.65
+  obstructionLayers:
+    serializedVersion: 2
+    m_Bits: 512
+  obstructionRadius: 0.23
+  minimumClearDistance: 1

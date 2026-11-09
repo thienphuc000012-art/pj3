@@ -107,6 +107,7 @@ public class CombatManager : MonoBehaviour
     private void OnDisable()
     {
         guidedTutorial?.Close();
+        CameraManager.Instance?.ResetCombatCameraPresentation();
         if (battleStartRoutine != null)
         {
             StopCoroutine(battleStartRoutine);
@@ -183,9 +184,10 @@ public class CombatManager : MonoBehaviour
     private int currentTimelineIndex = 0;
     private ActionData selectedAction;
     private bool targetSelectionConfirmed;
-    public bool IsChoosingTarget => isActiveAndEnabled && state == CombatState.PlayerTurn &&
+    private bool HasPendingTargetSelection => isActiveAndEnabled && state == CombatState.PlayerTurn &&
         !targetSelectionConfirmed && selectedAction != null && currentActiveUnit != null &&
-        !currentActiveUnit.IsDead && currentTarget != null && !currentTarget.IsDead;
+        !currentActiveUnit.IsDead;
+    public bool IsChoosingTarget => HasPendingTargetSelection && IsEligibleTarget(currentTarget);
 
     [Header("Melee Approach Position")]
     [Min(0f), Tooltip("Khoảng cách dùng chung để Player dừng trước Enemy khi áp sát đánh.")]
@@ -309,19 +311,20 @@ public class CombatManager : MonoBehaviour
         if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Escape))
         {
             CancelCurrentAction();
+            return;
         }
 
-        if (selectedAction != null)
+        if (HasPendingTargetSelection && RefreshTargetSelection())
         {
             if (!isSelectingSelfOnly)
             {
                 if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow))
                 {
-                    CycleTarget(-1);
+                    SelectPreviousTarget();
                 }
                 else if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow))
                 {
-                    CycleTarget(1);
+                    SelectNextTarget();
                 }
             }
 
@@ -332,36 +335,115 @@ public class CombatManager : MonoBehaviour
         }
     }
 
+    private List<BattleUnit> TargetParty => isSelectingBuffTarget ? playerParty : enemyParty;
+
+    private bool IsEligibleTarget(BattleUnit unit)
+    {
+        return unit != null && unit.isActiveAndEnabled && !unit.IsDead &&
+               (isSelectingSelfOnly ? unit == currentActiveUnit : TargetParty.Contains(unit));
+    }
+
+    public void EnterTargetSelection()
+    {
+        if (!HasPendingTargetSelection || IsGuidedTutorialBlockingInput) return;
+        if (IsEligibleTarget(currentTarget)) PresentSelectedTarget(currentTarget);
+        else RefreshTargetSelection();
+    }
+
+    public void SelectNextTarget() => CycleTarget(1);
+
+    public void SelectPreviousTarget() => CycleTarget(-1);
+
     private void CycleTarget(int direction)
     {
-        List<BattleUnit> validTargets = isSelectingBuffTarget ?
-            playerParty.Where(u => u != null && !u.IsDead).ToList() :
-            enemyParty.Where(u => u != null && !u.IsDead).ToList();
+        if (!HasPendingTargetSelection || IsGuidedTutorialBlockingInput || isSelectingSelfOnly) return;
+        if (!IsEligibleTarget(currentTarget))
+        {
+            RefreshTargetSelection();
+            return;
+        }
 
-        if (validTargets.Count == 0) return;
-
-        int currentIndex = validTargets.IndexOf(currentTarget);
-        if (currentIndex == -1) currentIndex = 0;
-
-        currentIndex += direction;
-        if (currentIndex < 0) currentIndex = validTargets.Count - 1;
-        else if (currentIndex >= validTargets.Count) currentIndex = 0;
-
-        currentTarget = validTargets[currentIndex];
-
-        AdvancedUIManager.Instance.UpdateTargetUI(currentTarget.unitName);
-        CameraManager.Instance.SwitchToTargetCam(currentTarget);
+        var party = TargetParty;
+        int currentIndex = party.IndexOf(currentTarget);
+        for (int i = 1; i < party.Count; ++i)
+        {
+            int index = (currentIndex + direction * i + party.Count) % party.Count;
+            if (!IsEligibleTarget(party[index])) continue;
+            PresentSelectedTarget(party[index]);
+            return;
+        }
     }
+
+    public void SetSelectedTarget(Transform target)
+    {
+        if (!HasPendingTargetSelection || IsGuidedTutorialBlockingInput || target == null) return;
+        var unit = target.GetComponentInParent<BattleUnit>();
+        if (unit != currentTarget && IsEligibleTarget(unit)) PresentSelectedTarget(unit);
+    }
+
+    private bool RefreshTargetSelection()
+    {
+        if (IsEligibleTarget(currentTarget)) return true;
+        var fallback = TargetParty.FirstOrDefault(IsEligibleTarget);
+        if (fallback != null)
+        {
+            PresentSelectedTarget(fallback);
+            return true;
+        }
+
+        // This is an automatic recovery, so an impossible tutorial practice
+        // cannot leave the player locked in a selection with no valid units.
+        guidedTutorial?.AbandonPractice();
+        LeaveTargetSelection();
+        return false;
+    }
+
+    private void PresentSelectedTarget(BattleUnit unit)
+    {
+        currentTarget = unit;
+        AdvancedUIManager.Instance?.UpdateTargetUI(unit.unitName);
+        AdvancedUIManager.Instance?.ToggleChangeTargetHint(true);
+        CameraManager.Instance?.SwitchToTargetCam(unit);
+    }
+
+    public void ConfirmTarget() => ConfirmSelectedTarget();
 
     public void ConfirmSelectedTarget()
     {
-        if (IsGuidedTutorialBlockingInput) return;
-        if (currentTarget == null || selectedAction == null) return;
-        CameraManager.Instance.ResetTargetCam();
-
-        AdvancedUIManager.Instance.ToggleChangeTargetHint(false); // Tắt UI hint
-
+        if (IsGuidedTutorialBlockingInput || !HasPendingTargetSelection) return;
+        if (!IsEligibleTarget(currentTarget))
+        {
+            RefreshTargetSelection();
+            return;
+        }
         OnActionSelected(selectedAction);
+    }
+
+    public void CancelTargetSelection()
+    {
+        if (IsGuidedTutorialBlockingInput || IsGuidedTutorialPracticeLocked || !HasPendingTargetSelection) return;
+        LeaveTargetSelection();
+    }
+
+    private void LeaveTargetSelection()
+    {
+        selectedAction = null;
+        targetSelectionConfirmed = false;
+        isSelectingBuffTarget = false;
+        isSelectingSelfOnly = false;
+        currentTarget = enemyParty.FirstOrDefault(IsEligibleTarget);
+        currentOpenMenu = OpenMenuType.None;
+        ResetMenuAnimations();
+
+        var ui = AdvancedUIManager.Instance;
+        if (ui != null)
+        {
+            ui.UpdateStainsUI(currentStains, 0);
+            ui.UpdateTargetUI(currentTarget != null ? currentTarget.unitName : "");
+            ui.ToggleChangeTargetHint(false);
+            ui.ShowActionMenu(true);
+        }
+        CameraManager.Instance?.ResetTargetCam();
     }
 
     public void CancelCurrentAction()
@@ -370,44 +452,9 @@ public class CombatManager : MonoBehaviour
         if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
 
         // 1. Trường hợp đang ở bước Chọn Mục Tiêu (Sau khi bấm Attack hoặc chọn Skill/Item)
-        if (selectedAction != null)
+        if (HasPendingTargetSelection)
         {
-            CameraManager.Instance.ResetTargetCam();
-
-            selectedAction = null;
-            isSelectingBuffTarget = false;
-            isSelectingSelfOnly = false;
-
-            AdvancedUIManager.Instance.UpdateStainsUI(currentStains, 0);
-
-            currentTarget = enemyParty.FirstOrDefault(e => e != null && !e.IsDead);
-            if (currentTarget != null)
-            {
-                AdvancedUIManager.Instance.UpdateTargetUI(currentTarget.unitName);
-            }
-            else
-            {
-                AdvancedUIManager.Instance.UpdateTargetUI("");
-            }
-
-            AdvancedUIManager.Instance.ToggleChangeTargetHint(false); // Tắt UI hint
-            AdvancedUIManager.Instance.ShowActionMenu(true); // Bật lại 3 nút
-
-            if (AdvancedUIManager.Instance.subMenuPanel != null)
-            {
-                AdvancedUIManager.Instance.subMenuPanel.SetActive(false);
-            }
-
-            currentOpenMenu = OpenMenuType.None;
-            ResetMenuAnimations();
-
-            // --- THÊM MỚI Ở ĐÂY: Trả camera về lại nhân vật đang đánh ---
-            int activePlayerIndex = playerParty.IndexOf(currentActiveUnit);
-            if (activePlayerIndex >= 0)
-            {
-                CameraManager.Instance.SwitchToPlayerTurnCam(activePlayerIndex, true);
-            }
-
+            CancelTargetSelection();
             return;
         }
 
@@ -420,11 +467,7 @@ public class CombatManager : MonoBehaviour
             if (!AdvancedUIManager.Instance.CloseSubMenuImmediately())
                 AdvancedUIManager.Instance.ShowActionMenu(true);
 
-            int playerIndex = playerParty.IndexOf(currentActiveUnit);
-            if (playerIndex >= 0)
-            {
-                CameraManager.Instance.SwitchToPlayerTurnCam(playerIndex, true);
-            }
+            CameraManager.Instance?.ResetTargetCam();
         }
     }
     void SetupPositions()
@@ -527,7 +570,7 @@ public class CombatManager : MonoBehaviour
 
         if (CameraManager.Instance != null)
         {
-            CameraManager.Instance.SwitchToEnemyPhase2Cam();
+            CameraManager.Instance.SwitchToEnemyPhase2Cam(boss);
         }
 
         // Trigger animation chỉ chạy đúng 1 lần vì phase2IntroPlayed đã được đánh dấu.
@@ -568,6 +611,7 @@ public class CombatManager : MonoBehaviour
         if (battleCompletionStarted) return;
         battleCompletionStarted = true;
         guidedTutorial?.Close();
+        CameraManager.Instance?.ResetCombatCameraPresentation();
         acceptingActionAnimationEvents = false;
         isTransitioningTurn = true;
         GetComponent<UltimateCinematic>()?.End();
@@ -653,7 +697,7 @@ public class CombatManager : MonoBehaviour
             AdvancedUIManager.Instance.PositionActionMenu(currentActiveUnit.transform);
 
             // 3. Gọi Coroutine chờ Camera lia xong rồi mới bật UI lên
-            StartCoroutine(ShowActionMenuAfterCamera(CameraManager.Instance.transitionSpeed));
+            StartCoroutine(ShowActionMenuAfterCamera(CameraManager.Instance.TurnCameraDelay));
 
             currentTarget = enemyParty.FirstOrDefault(e => e != null && !e.IsDead);
         }
@@ -832,8 +876,9 @@ public class CombatManager : MonoBehaviour
         if (AdvancedUIManager.Instance.SkillTransitionBusy) return;
 
         ActionData attackAction = currentActiveUnit.defaultAttack;
+        if (attackAction == null) return;
 
-        if (attackAction != null && currentStains + attackAction.stainChange < 0)
+        if (currentStains + attackAction.stainChange < 0)
         {
             Debug.LogWarning("[Hệ thống] Không đủ Stain để thực hiện Attack!");
             return;
@@ -846,29 +891,12 @@ public class CombatManager : MonoBehaviour
         selectedAction = attackAction;
         targetSelectionConfirmed = false;
 
-        if (currentTarget == null || currentTarget.IsDead || currentTarget.isPlayer)
+        EnterTargetSelection();
+        if (IsChoosingTarget)
         {
-            currentTarget = enemyParty.FirstOrDefault(e => e != null && !e.IsDead);
-        }
-
-        if (currentTarget != null)
-        {
-            AdvancedUIManager.Instance.UpdateTargetUI(currentTarget.unitName);
             AdvancedUIManager.Instance.ShowActionMenu(false);
-
-            AdvancedUIManager.Instance.ToggleChangeTargetHint(true); // Bật UI Hint
-
-            if (AdvancedUIManager.Instance.subMenuPanel != null)
-            {
-                AdvancedUIManager.Instance.subMenuPanel.SetActive(false);
-            }
-
-            CameraManager.Instance.SwitchToTargetCam(currentTarget);
-
-            if (selectedAction != null)
-            {
-                AdvancedUIManager.Instance.UpdateStainsUI(currentStains, selectedAction.stainChange);
-            }
+            AdvancedUIManager.Instance.HideSubMenu();
+            AdvancedUIManager.Instance.UpdateStainsUI(currentStains, attackAction.stainChange);
         }
     }
 
@@ -962,34 +990,19 @@ public class CombatManager : MonoBehaviour
         selectedAction = skillAction;
         targetSelectionConfirmed = false;
         isSelectingSelfOnly = skillAction.isSelfOnly || skillAction.isSummonSkill;
-        isSelectingBuffTarget = skillAction.isFriendlyAction || isSelectingSelfOnly;
+        isSelectingBuffTarget = skillAction.isFriendlyAction || skillAction.isHeal || isSelectingSelfOnly;
         currentOpenMenu = OpenMenuType.None;
 
         AdvancedUIManager.Instance.HideSubMenu();
 
-        if (isSelectingSelfOnly)
-        {
-            currentTarget = currentActiveUnit;
-        }
-        else if (isSelectingBuffTarget)
-        {
-            currentTarget = currentActiveUnit;
-        }
-        else
-        {
-            currentTarget = enemyParty.FirstOrDefault(e => e != null && !e.IsDead);
-        }
+        currentTarget = isSelectingBuffTarget ? currentActiveUnit : enemyParty.FirstOrDefault(IsEligibleTarget);
+        EnterTargetSelection();
 
-        if (currentTarget != null)
+        if (IsChoosingTarget)
         {
-            AdvancedUIManager.Instance.UpdateTargetUI(currentTarget.unitName);
-            AdvancedUIManager.Instance.ToggleChangeTargetHint(true); // Bật UI Hint
-
-            CameraManager.Instance.SwitchToTargetCam(currentTarget);
+            AdvancedUIManager.Instance.UpdateStainsUI(currentStains, skillAction.stainChange);
+            AdvancedUIManager.Instance.ShowActionMenu(false);
         }
-
-        AdvancedUIManager.Instance.UpdateStainsUI(currentStains, skillAction.stainChange);
-        AdvancedUIManager.Instance.ShowActionMenu(false);
     }
 
     public void OnActionSelected(ActionData action)
@@ -1005,7 +1018,8 @@ public class CombatManager : MonoBehaviour
                  !currentActiveUnit.characterSkills.Contains(action)))
                 return;
         }
-        if (!currentActiveUnit.CanUseAction(action) || currentTarget == null || currentTarget.IsDead) return;
+        if ((targetSelectionConfirmed && selectedAction != null) ||
+            !currentActiveUnit.CanUseAction(action) || !IsEligibleTarget(currentTarget)) return;
         if (currentStains + action.stainChange < 0) return;
         if (action.type == ActionData.ActionType.Item && CampaignSession.Instance != null && CampaignSession.Instance.InEncounter)
         {
@@ -1019,6 +1033,7 @@ public class CombatManager : MonoBehaviour
 
         ResetMenuAnimations();
         AdvancedUIManager.Instance.ShowActionMenu(false);
+        AdvancedUIManager.Instance.ToggleChangeTargetHint(false);
         AdvancedUIManager.Instance.UpdateTargetUI("");
 
         // Truyền thêm cờ true để Player tự động kết thúc lượt sau khi đánh xong 1 hit
@@ -1074,21 +1089,7 @@ public class CombatManager : MonoBehaviour
         }
 
 
-        // Enemy dùng skill AoE -> dùng camera AoE riêng.
-        // Skill thường -> ưu tiên Action Camera riêng của chính enemy này.
-        // Nếu encounter chưa setup Action Camera thì fallback về camera cũ nhìn Player bị nhắm.
-        if (selectedAction != null && selectedAction.isAoE)
-        {
-            CameraManager.Instance.SwitchToEnemyAoECam();
-        }
-        else
-        {
-            bool usedEnemyActionCamera =
-                CameraManager.Instance.SwitchToEnemyActionCam(currentActiveUnit);
-
-            if (!usedEnemyActionCamera)
-                CameraManager.Instance.SwitchToTargetHitCam(currentTarget);
-        }
+        CameraManager.Instance?.PrepareEnemyAttack(currentActiveUnit, currentTarget, selectedAction);
 
         yield return new WaitForSeconds(0.5f);
 
@@ -1144,6 +1145,8 @@ public class CombatManager : MonoBehaviour
         }
         finally
         {
+            CameraManager.Instance?.StopSkillCinematic();
+            CameraManager.Instance?.RecoverCombatAction(attacker, target);
             FinishUltimateAuraVFX(attacker);
             StopClawAttackTrail(attacker);
             acceptingActionAnimationEvents = false;
@@ -1434,14 +1437,7 @@ public class CombatManager : MonoBehaviour
             ParrySystem.Instance?.ResetParryState();
         }
 
-        if (attacker.isPlayer)
-        {
-            int playerIndex = playerParty.IndexOf(attacker);
-            if (playerIndex >= 0)
-            {
-                CameraManager.Instance.SwitchToPlayerActionCam(playerIndex, action.isUltimate);
-            }
-        }
+        CameraManager.Instance?.BeginCombatAction(attacker, target, action);
 
         if (action.isUltimate)
         {
@@ -1452,6 +1448,9 @@ public class CombatManager : MonoBehaviour
             if (attacker == null || attacker.IsDead) yield break;
             SpawnUltimateAuraVFX(attacker, action);
         }
+
+        if (target != null)
+            CameraManager.Instance?.PlaySkillCinematic(attacker, target, action);
 
         if (action != null && attacker.isPlayer)
         {
@@ -1483,6 +1482,7 @@ public class CombatManager : MonoBehaviour
             }
 
             attacker.animator.Play("JumpBack");
+            CameraManager.Instance?.RecoverCombatAction(attacker, target);
             yield return StartCoroutine(MoveToPosition(attacker.transform, originalPosition, 0.35f));
             attacker.transform.rotation = originalRotation;
         }
@@ -1777,6 +1777,8 @@ public class CombatManager : MonoBehaviour
                     int hpBefore = enemy.currentHP;
                     int targetRawDamage = CalculateActionDamage(attacker, enemy, actionToUse, isCrit);
                     if (!actionToUse.statusOnly) enemy.TakeDamage(targetRawDamage, false, isCrit);
+                    if (!actionToUse.statusOnly && targetRawDamage > 0)
+                        CameraManager.Instance?.PlayCombatImpact(actionToUse, attacker, enemy, isCrit, false, true);
                     ApplyActionStatus(enemy, actionToUse);
                     int actualDamageTaken = hpBefore - enemy.currentHP;
                     GetComponent<BattleResultPanel>()?.RecordDamage(true, actualDamageTaken);
@@ -1803,6 +1805,8 @@ public class CombatManager : MonoBehaviour
                 int hpBefore = ally.currentHP;
                 int targetRawDamage = CalculateActionDamage(attacker, ally, actionToUse, isCrit);
                 if (!actionToUse.statusOnly) ally.TakeDamage(targetRawDamage, parried, isCrit);
+                if (!actionToUse.statusOnly && (targetRawDamage > 0 || parried))
+                    CameraManager.Instance?.PlayCombatImpact(actionToUse, attacker, ally, isCrit, parried, false);
                 if (!parried) ApplyActionStatus(ally, actionToUse);
                 int actualDamageTaken = hpBefore - ally.currentHP;
                 GetComponent<BattleResultPanel>()?.RecordDamage(false, actualDamageTaken);
@@ -2249,6 +2253,8 @@ public class CombatManager : MonoBehaviour
 
             // DAMAGE xảy ra đúng lúc VFX impact.
             if (!action.statusOnly) target.TakeDamage(rawDamage, false, isCrit);
+            if (!action.statusOnly && rawDamage > 0)
+                CameraManager.Instance?.PlayCombatImpact(action, attacker, target, isCrit, false, false);
             ApplyActionStatus(target, action);
             // AoE projectiles are one volley; each callback is already guarded
             // against duplicate impacts. A normal projectile awards on arrival.
@@ -2306,6 +2312,8 @@ public class CombatManager : MonoBehaviour
             target.currentHP;
 
         if (!action.statusOnly) target.TakeDamage(rawDamage, parried, isCrit);
+        if (!action.statusOnly && (rawDamage > 0 || parried))
+            CameraManager.Instance?.PlayCombatImpact(action, attacker, target, isCrit, parried, false);
         if (!parried) ApplyActionStatus(target, action);
 
         int playerDamageTaken =
@@ -3364,26 +3372,18 @@ public class CombatManager : MonoBehaviour
     {
         if (IsGuidedTutorialBlockingInput) return;
         if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
+        if ((targetSelectionConfirmed && selectedAction != null) || !IsEligibleTarget(newTarget)) return;
 
-        if (newTarget != null && !newTarget.IsDead)
+        if (HasPendingTargetSelection)
         {
-            if (isSelectingSelfOnly && newTarget != currentActiveUnit)
-            {
-                Debug.LogWarning("[Chọn mục tiêu] Skill này chỉ có thể buff cho bản thân!");
-                return;
-            }
-
-            if (isSelectingBuffTarget && !newTarget.isPlayer) return;
-            if (!isSelectingBuffTarget && newTarget.isPlayer) return;
-
-            currentTarget = newTarget;
-            AdvancedUIManager.Instance.UpdateTargetUI(currentTarget.unitName);
-
-            if (selectedAction != null)
-            {
-                ConfirmSelectedTarget();
-            }
+            if (newTarget != currentTarget) PresentSelectedTarget(newTarget);
+            ConfirmSelectedTarget();
+            return;
         }
+
+        // A click before an action is chosen stores the preferred enemy for Attack.
+        currentTarget = newTarget;
+        AdvancedUIManager.Instance?.UpdateTargetUI(currentTarget.unitName);
     }
 
     public void AddStain(int amount)

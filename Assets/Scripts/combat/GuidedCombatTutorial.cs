@@ -216,6 +216,8 @@ internal sealed class GuidedCombatTutorial
         PendingPractice = GuidedCombatPractice.None;
     }
 
+    public void AbandonPractice() => PendingPractice = GuidedCombatPractice.None;
+
     static Button FindCommand(Button[] buttons, string method)
     {
         foreach (var button in buttons)

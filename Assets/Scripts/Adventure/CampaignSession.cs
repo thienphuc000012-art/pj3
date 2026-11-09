@@ -1874,7 +1874,8 @@ public class CampaignSession : MonoBehaviour
             foreach (BattleUnit unit in advantagedSide)
                 if (unit != null) unit.speed += initiativeBonus;
         }
-        RebindCameras(oldPlayers, oldEnemies, manager);
+        if (CameraManager.Instance == null || !CameraManager.Instance.UsesDynamicCombatCamera)
+            RebindCameras(oldPlayers, oldEnemies, manager);
 
         if (battleSetup != null && CameraManager.Instance != null)
             CameraManager.Instance.ApplyEncounterSetup(battleSetup, manager.enemyParty);

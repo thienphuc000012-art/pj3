@@ -2079,7 +2079,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 203175422}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.021174362, y: 0.3696603, z: -0.010416302, w: -0.9288673}
+  m_LocalRotation: {x: -0.021174254, y: 0.3696603, z: -0.010416248, w: -0.9288673}
   m_LocalPosition: {x: -2.369995, y: 4.0700073, z: -1.663}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -4915,6 +4915,7 @@ MonoBehaviour:
   playerParty:
   - {fileID: 1990521131073506164}
   - {fileID: 2114613866}
+  - {fileID: 627121954}
   enemyParty:
   - {fileID: 1186066390}
   allUnitsTimeline:
@@ -11330,6 +11331,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1136687342}
   - component: {fileID: 1136687343}
+  - component: {fileID: 241158374606574013}
   m_Layer: 0
   m_Name: CameraManager
   m_TagString: Untagged
@@ -11364,6 +11366,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c78571f8f8be8ef49918dd038be65ed2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraManager
+  useDynamicCombatCamera: 1
   transitionSpeed: 1
   ultimateTransitionDuration: 0.8
   battleStartCam: {fileID: 290278560}
@@ -17226,6 +17229,20 @@ Transform:
   - {fileID: 950460153}
   m_Father: {fileID: 773909417}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &241158374606574013
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1136687341}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9822c13942c2410092c6bcb022c1c072, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CombatCameraDirector
+  settings: {fileID: 11400000, guid: df79b9fab82d434eb99ca147f02fe46c, type: 2}
+  drawFramingGizmos: 1
 --- !u!1001 &896000000000000010
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -17685,7 +17702,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: isPlayer
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1990521130417414024, guid: 08169c7300cf7d34297276830d738c07, type: 3}
       propertyPath: idleVfx.Array.size

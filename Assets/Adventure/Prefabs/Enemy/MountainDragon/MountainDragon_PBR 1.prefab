@@ -2277,6 +2277,7 @@ GameObject:
   - component: {fileID: 2494988780953767546}
   - component: {fileID: 4985681423217481559}
   - component: {fileID: 1098431236880400544}
+  - component: {fileID: 7614391125094886403}
   m_Layer: 0
   m_Name: MountainDragon_PBR 1
   m_TagString: Untagged
@@ -2301,6 +2302,25 @@ Transform:
   - {fileID: 4459983850288894382}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7614391125094886403
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6266577605059562847}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f726ae9252014e518af1d9e53787cfa6, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::CombatCameraFraming
+  focusAnchor: {fileID: 0}
+  selectionAnchor: {fileID: 7451550347248750122}
+  selectionBoundsSize: {x: 2.6, y: 2.3, z: 2.4}
+  attackAnchor: {fileID: 0}
+  frameAnchors: []
+  boundsCenterOffset: {x: 0, y: 1, z: 0}
+  boundsSize: {x: 0, y: 0, z: 0}
 --- !u!95 &2230492105771871988
 Animator:
   serializedVersion: 7

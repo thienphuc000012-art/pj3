@@ -120,6 +120,10 @@ public class ActionData : ScriptableObject
     [Tooltip("Bật cho skill chỉ gây trạng thái/xóa hiệu ứng, không gây damage trực tiếp. Friendly Action chọn đồng minh.")]
     public bool statusOnly;
 
+    [Header("Skill Cinematic")]
+    [Tooltip("Timeline camera rig for this action. Leave empty to use combat tracking.")]
+    public SkillCinematicDefinition skillCinematic;
+
     [Header("Attack Distance Type")]
     public bool isMelee = true;
 
@@ -239,6 +243,10 @@ public class ActionData : ScriptableObject
     [Header("RFX4 Projectile Settings")]
     [Tooltip("Chỉ dùng khi Projectile Move Mode = RFX4Prefab.")]
     public bool rfxUseGravity = false;
+
+    [Header("Camera Impact")]
+    [Tooltip("Optional camera shake, push-in and local Player hit stop profile for this action.")]
+    public CombatCameraImpactProfile cameraImpactProfile;
 
     [Header("Sword Slash VFX")]
     [Tooltip("Optional slash effect played at each resolved sword hit. Leave empty for actions that are not sword strikes.")]

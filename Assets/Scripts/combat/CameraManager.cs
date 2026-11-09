@@ -6,6 +6,14 @@ public class CameraManager : MonoBehaviour
 {
     public static CameraManager Instance;
 
+    [Header("Cinematic Combat Camera")]
+    [SerializeField] bool useDynamicCombatCamera = true;
+    CombatCameraDirector director;
+    public bool UsesDynamicCombatCamera => useDynamicCombatCamera && mainBrain != null &&
+        (director == null || director.isActiveAndEnabled);
+    public float TurnCameraDelay => UsesDynamicCombatCamera && director != null
+        ? director.IdleBlendDuration : transitionSpeed;
+
     [Header("Camera Transition Settings")]
     [Tooltip("Thời gian lia camera (giây). Chỉnh số này nhỏ lại (VD: 0.3 - 0.5) để cam lia nhanh hơn.")]
     public float transitionSpeed = 0.4f; // --- THÊM MỚI: Tốc độ lia cam ---
@@ -52,10 +60,19 @@ public class CameraManager : MonoBehaviour
         {
             mainBrain = Camera.main.GetComponent<CinemachineBrain>();
         }
+        director = GetComponent<CombatCameraDirector>();
+    }
+
+    bool UseDirector()
+    {
+        if (!UsesDynamicCombatCamera || CombatManager.Instance == null) return false;
+        if (director == null) director = gameObject.AddComponent<CombatCameraDirector>();
+        return director.Initialize(mainBrain, CombatManager.Instance);
     }
 
     public void SwitchToBattleStartCam()
     {
+        if (UseDirector()) { director.ShowIntro(); return; }
         SetFastBlend();
         ResetAllCams();
 
@@ -67,6 +84,13 @@ public class CameraManager : MonoBehaviour
 
     public void SwitchToPlayerTurnCam(int playerIndex, bool instantCut = false)
     {
+        if (UseDirector())
+        {
+            // The old menu calls request a cut. Dynamic framing blends from
+            // the current shot so canceling a target never jumps.
+            director.ShowIdle(CombatManager.Instance.currentActiveUnit);
+            return;
+        }
         if (instantCut) SetInstantCutBlend();
         else SetFastBlend(); // Chuyển sang lia nhanh thay vì lia mặc định
 
@@ -96,6 +120,7 @@ public class CameraManager : MonoBehaviour
 
     public void SwitchToPlayerMenuCam(int playerIndex)
     {
+        if (UseDirector()) { director.ShowPlayerMenu(CombatManager.Instance.currentActiveUnit); return; }
         SetInstantCutBlend();
         ResetAllCams();
 
@@ -122,6 +147,7 @@ public class CameraManager : MonoBehaviour
     public void SwitchToDebuffCam(BattleUnit unit)
     {
         if (unit == null || CombatManager.Instance == null) return;
+        if (UseDirector()) { director.ShowStatus(unit); return; }
         int index = unit.isPlayer ? CombatManager.Instance.playerParty.IndexOf(unit) : CombatManager.Instance.enemyParty.IndexOf(unit);
         CinemachineCamera camera = null;
         if (unit.isPlayer && index >= 0 && index < playerHitCams.Count) camera = playerHitCams[index];
@@ -133,8 +159,9 @@ public class CameraManager : MonoBehaviour
         camera.Priority = 20;
     }
 
-    public void SwitchToEnemyPhase2Cam()
+    public void SwitchToEnemyPhase2Cam(BattleUnit boss = null)
     {
+        if (boss != null && UseDirector()) { director.ShowBoss(boss); return; }
         SetFastBlend();
         ResetAllCams();
 
@@ -157,6 +184,8 @@ public class CameraManager : MonoBehaviour
 
     public void SwitchToTargetCam(BattleUnit targetUnit)
     {
+        if (targetUnit == null) return;
+        if (UseDirector()) { director.Select(CombatManager.Instance.currentActiveUnit, targetUnit); return; }
         SetInstantCutBlend();
         ResetAllCams();
 
@@ -201,6 +230,12 @@ public class CameraManager : MonoBehaviour
     {
         if (setup == null || enemies == null)
             return;
+
+        if (UsesDynamicCombatCamera)
+        {
+            setup.SetAllCameraPriorities(0);
+            return;
+        }
 
         // Camera chung của encounter: chỉ override khi preset có gán.
         if (setup.battleStartCamera != null)
@@ -267,8 +302,52 @@ public class CameraManager : MonoBehaviour
 
     public void ResetTargetCam()
     {
-        SetInstantCutBlend();
-        ResetAllCams();
+        var combat = CombatManager.Instance;
+        if (UseDirector()) { director.ShowIdle(combat.currentActiveUnit); return; }
+        if (combat != null && combat.currentActiveUnit != null && combat.currentActiveUnit.isPlayer)
+            SwitchToPlayerTurnCam(combat.playerParty.IndexOf(combat.currentActiveUnit), true);
+        else
+            ResetAllCams();
+    }
+
+    public void PrepareEnemyAttack(BattleUnit attacker, BattleUnit target, ActionData action)
+    {
+        if (UseDirector()) { director.Anticipate(attacker, target, action != null && action.isAoE); return; }
+        if (action != null && action.isAoE) SwitchToEnemyAoECam();
+        else if (!SwitchToEnemyActionCam(attacker)) SwitchToTargetHitCam(target);
+    }
+
+    public void BeginCombatAction(BattleUnit attacker, BattleUnit target, ActionData action)
+    {
+        if (UseDirector()) { director.BeginAction(attacker, target, action, ultimateTransitionDuration); return; }
+        if (attacker.isPlayer) SwitchToPlayerActionCam(CombatManager.Instance.playerParty.IndexOf(attacker), action.isUltimate);
+    }
+
+    public void PlaySkillCinematic(BattleUnit attacker, BattleUnit target, ActionData action)
+    {
+        if (UsesDynamicCombatCamera && director != null) director.PlaySkill(attacker, target, action);
+    }
+
+    public void PlayCombatImpact(ActionData action, BattleUnit attacker, BattleUnit target,
+        bool critical, bool parried, bool allowLocalHitStop)
+    {
+        if (UsesDynamicCombatCamera && director != null)
+            director.PlayImpact(action, attacker, target, critical, parried, allowLocalHitStop);
+    }
+
+    public void RecoverCombatAction(BattleUnit attacker, BattleUnit target)
+    {
+        if (UsesDynamicCombatCamera && director != null) director.Recover(attacker, target);
+    }
+
+    public void StopSkillCinematic()
+    {
+        if (director != null) director.StopSkill();
+    }
+
+    public void ResetCombatCameraPresentation()
+    {
+        if (director != null) director.ResetPresentation();
     }
 
     private void ResetAllCams()

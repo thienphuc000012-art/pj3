@@ -18,7 +18,7 @@ MonoBehaviour:
   type: 1
   element: 0
   isUltimate: 0
-  ultimateEnergyGain: 10
+  ultimateEnergyGain: 100
   power: 10
   damageMultiplier: 1
   useLifeSteal: 0
@@ -50,6 +50,7 @@ MonoBehaviour:
   debuffs: []
   cleanse: 0
   statusOnly: 0
+  skillCinematic: {fileID: 0}
   isMelee: 0
   screenSlash: 0
   screenSlashColor: {r: 0.25, g: 0.8, b: 1, a: 1}
@@ -96,6 +97,7 @@ MonoBehaviour:
   curveHeight: 2
   curveSideOffset: 0
   rfxUseGravity: 0
+  cameraImpactProfile: {fileID: 0}
   swordSlashVfxPrefab: {fileID: 4416080445347060711, guid: 0a6aa35eeb2241a43befc4ccae423907, type: 3}
   swordSlashVfxLocalOffset: {x: 0, y: 0, z: 0}
   swordSlashVfxLocalEuler: {x: 0, y: 0, z: 0}
