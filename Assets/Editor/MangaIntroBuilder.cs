@@ -98,7 +98,8 @@ public static class MangaIntroBuilder
             }
             var overlay = Rect("FadeOverlay", canvas.transform); Stretch(overlay);
             overlay.gameObject.AddComponent<Image>().color = Color.black;
-            overlay.gameObject.AddComponent<CanvasGroup>().alpha = 1f;
+            var fadeOverlay = overlay.gameObject.AddComponent<CanvasGroup>();
+            fadeOverlay.alpha = 1f;
             var overlayAnimator = overlay.gameObject.AddComponent<Animator>();
             var fadeTrack = master.CreateTrack<AnimationTrack>(null, "Shared FadeOverlay — move with chapter controls");
             masterDirector.SetGenericBinding(fadeTrack, overlayAnimator);
@@ -108,6 +109,7 @@ public static class MangaIntroBuilder
                 Curve(animation, "", typeof(CanvasGroup), "m_Alpha", new[] { 0f, .6f, (float)ChapterLength - .8f, (float)ChapterLength }, new[] { 1f, 0f, 0f, 1f });
                 AddAnimation(fadeTrack, animation, index * (ChapterLength + .2), ChapterLength, data[index].id + " — shared black fade");
             }
+            AddSkipPrompt(masterDirector, canvas, fadeOverlay, font);
             DisableRaycasts(canvasObject);
             foreach (var root in chapterRoots) root.SetActive(false);
             EditorUtility.SetDirty(masterDirector);
@@ -126,6 +128,49 @@ public static class MangaIntroBuilder
             if (previous.IsValid() && previous.isLoaded) SceneManager.SetActiveScene(previous);
             if (scene.IsValid()) EditorSceneManager.CloseScene(scene, true);
         }
+    }
+
+    internal static void AddSkipPrompt(PlayableDirector master, Canvas canvas, CanvasGroup fadeOverlay, TMP_FontAsset font)
+    {
+        if (master.GetComponent<MangaIntroSkip>() != null) return;
+
+        var prompt = Rect("Skip Prompt", canvas.transform);
+        prompt.anchorMin = prompt.anchorMax = prompt.pivot = Vector2.one;
+        prompt.anchoredPosition = new Vector2(-42f, -36f);
+        prompt.sizeDelta = new Vector2(136f, 52f);
+        prompt.gameObject.AddComponent<Image>().color = new Color(.07f, .07f, .07f, .92f);
+
+        var label = SkipText("Label", prompt, font, "BỎ QUA", 21f, TextAlignmentOptions.Center);
+        var outline = Rect("Hold Outline", label);
+        Stretch(outline);
+        var progress = outline.gameObject.AddComponent<HoldProgressRingGraphic>();
+        progress.ConfigureOutline(new Color(1f, 1f, 1f, .24f), Color.white);
+        outline.gameObject.SetActive(false);
+        prompt.gameObject.SetActive(false);
+        DisableRaycasts(prompt.gameObject);
+
+        var skip = new SerializedObject(master.gameObject.AddComponent<MangaIntroSkip>());
+        skip.FindProperty("director").objectReferenceValue = master;
+        skip.FindProperty("prompt").objectReferenceValue = prompt.gameObject;
+        skip.FindProperty("progress").objectReferenceValue = progress;
+        skip.FindProperty("fadeOverlay").objectReferenceValue = fadeOverlay;
+        skip.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    static RectTransform SkipText(string name, Transform parent, TMP_FontAsset font, string text, float size,
+        TextAlignmentOptions alignment)
+    {
+        var rect = Rect(name, parent);
+        Stretch(rect);
+        var label = rect.gameObject.AddComponent<TextMeshProUGUI>();
+        label.font = font;
+        label.text = text;
+        label.fontSize = size;
+        label.fontStyle = FontStyles.Bold;
+        label.color = new Color(.97f, .95f, .91f);
+        label.alignment = alignment;
+        label.textWrappingMode = TextWrappingModes.NoWrap;
+        return rect;
     }
 
     static GameObject BuildChapter(MangaIntroLayout.Chapter chapter, Transform parent, TMP_FontAsset font)
@@ -286,6 +331,9 @@ public static class MangaIntroBuilder
             throw new IOException("Could not create the dedicated intro font.");
         var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(path);
         font.name = "MangaIntro SDF";
+        font.boldStyle = 1.5f;
+        font.material.SetFloat("_WeightBold", font.boldStyle);
+        EditorUtility.SetDirty(font.material);
         font.atlasPopulationMode = AtlasPopulationMode.Dynamic; font.isMultiAtlasTexturesEnabled = true;
         string text = string.Join("", chapters.SelectMany(chapter => chapter.panels).SelectMany(panel => panel.dialogue).Select(line => line.text));
         font.TryAddCharacters(text, out string missing);
@@ -344,16 +392,23 @@ public static class MangaIntroBuilder
         for (int i = 1; i < controls.Length; i++)
             if (controls[i].start < controls[i - 1].end) throw new InvalidOperationException("Chapter Control clips overlap. Move them apart before playback.");
         var fadeTrack = master.GetOutputTracks().OfType<AnimationTrack>().Single();
-        Undo.RecordObject(fadeTrack, "Sync Manga chapter fades");
-        foreach (var control in controls)
+        var pairs = Enumerable.Range(1, 3).Select(index =>
         {
-            var chapterId = control.displayName.Substring(0, 10);
-            var fade = fadeTrack.GetClips().Single(clip => clip.displayName.StartsWith(chapterId, StringComparison.Ordinal));
+            var chapterId = "Chapter_" + index.ToString("00");
+            var binding = new PropertyName("MangaIntro_" + chapterId);
+            var control = controls.Single(clip => clip.asset is ControlPlayableAsset asset && asset.sourceGameObject.exposedName == binding);
+            var fade = fadeTrack.GetClips().Single(clip => clip.asset is AnimationPlayableAsset asset &&
+                asset.clip != null && asset.clip.name == "Master_Fade_" + chapterId);
+            return (control, fade);
+        }).ToArray();
+        Undo.RecordObject(fadeTrack, "Sync Manga chapter fades");
+        foreach (var (control, fade) in pairs)
+        {
             fade.start = control.start; fade.duration = control.duration; fade.clipIn = 0;
             fade.timeScale = ((AnimationPlayableAsset)fade.asset).clip.length / control.duration;
         }
         EditorUtility.SetDirty(fadeTrack); EditorUtility.SetDirty(master);
-        AssetDatabase.SaveAssets();
+        AssetDatabase.SaveAssetIfDirty(master);
         Debug.Log("Shared FadeOverlay clips now match chapter control intervals. Keep Control clips nonoverlapping.");
     }
 }

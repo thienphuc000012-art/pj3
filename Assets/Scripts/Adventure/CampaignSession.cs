@@ -35,6 +35,7 @@ public class CampaignSession : MonoBehaviour
     public string Message { get; private set; }
     public float MessageUntil { get; private set; }
     public bool InEncounter => encounter != null;
+    public bool IsGuidedTutorialEncounter => encounter != null && encounter.guidedTutorial;
     public bool EncounterHasBoss => encounter != null && encounter.enemies != null && encounter.enemies.Any(enemy => enemy != null && enemy.isBoss);
     public int ResultExperience => encounter?.xp ?? 0;
     public List<ItemStack> ResultRewards => encounter?.rewards ?? new List<ItemStack>();
@@ -212,6 +213,7 @@ public class CampaignSession : MonoBehaviour
         public List<BattleUnit> enemies;
         public string combatSetupId;
         public bool playerInitiated;
+        public bool guidedTutorial;
     }
 
     private sealed class EncounterAnimationProgress
@@ -1458,7 +1460,8 @@ public class CampaignSession : MonoBehaviour
             rewards = point.rewards.Select(x => new ItemStack(x.id, x.count)).ToList(),
             enemies = new List<BattleUnit>(point.enemyPrefabs),
             combatSetupId = point.combatSetupId,
-            playerInitiated = playerInitiated
+            playerInitiated = playerInitiated,
+            guidedTutorial = Config.IsGuidedTutorialEncounter(point)
         };
         Busy = true;
         StartCoroutine(PlayEncounterTransition(point, playerInitiated));

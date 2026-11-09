@@ -1,6 +1,8 @@
 # Manga Intro — hướng dẫn chỉnh sửa
 
-Mở `Assets/Scenes/MangaIntro.unity`, rồi nhấn Play để xem liên tục ba chương truyện trong khoảng 100,9 giây. Scene độc lập này dùng Canvas, TextMeshPro, Animator và Unity Timeline. Không có nút Next, Close hoặc Replay; không cần mua thêm asset.
+Mở `Assets/Scenes/MangaIntro.unity`, chuyển sang tab Game rồi nhấn Play để xem liên tục ba chương truyện trong khoảng 100,9 giây. Nếu đang kéo thử playhead trong Timeline Editor, tắt Preview trước khi nhấn Play. Scene độc lập này dùng Canvas, TextMeshPro, Animator và Unity Timeline.
+
+Trong lúc intro phát, bấm **Esc** hoặc **Space** để hiện chữ **Bỏ qua**. Giữ **Space** để viền trắng chạy quanh ô chữ. Thả sớm sẽ đặt lại viền, và chữ **Bỏ qua** tự ẩn sau 2 giây. Chỉnh thời gian giữ và thời gian hiện chữ ở `MangaIntro_Master → Manga Intro Skip → Hold Seconds / Prompt Seconds`. Chỉnh vị trí hoặc kiểu chữ trong `MangaCanvas → Skip Prompt`. Khi giữ đủ, Master Timeline kết thúc và màn hình về đen.
 
 ## Các tệp chính
 
@@ -34,7 +36,7 @@ Mỗi chương có cấu trúc `PageSafeArea/Page/Panel_01` đến `Panel_05`. T
 
 Khoảng cách 0,2 giây giữa hai chương giữ màn hình đen và tránh hai chương cùng hiện. Mỗi fade bắt đầu đen, mở rõ trong 0,6 giây, giữ trong suốt, rồi về đen trong 0,8 giây cuối.
 
-Khi dời cả chương, giữ Ctrl và chọn đồng thời Control clip cùng fade clip tương ứng; kéo cả cặp để giữ chúng khớp nhau. Có thể dùng Inspector để nhập Start chính xác. Giữ ba Control clip theo thứ tự và không chồng lấn. Sau khi đổi vị trí hoặc độ dài các Control clip, chọn `Tools > Manga Intro > Sync Shared Fades To Chapter Clips` để căn lại ba fade clip theo các khoảng chương hiện tại. Công cụ cũng điều chỉnh tốc độ clip fade cho vừa thời lượng mới; kiểm tra lại đường cong nếu cần giữ chính xác 0,6 giây mở và 0,8 giây đóng. Sau khi đổi thời lượng, kiểm tra lại điểm bắt đầu chương sau, khoảng đen và thời điểm fade; không chỉ kéo một đầu của Control clip.
+Khi dời cả chương, chọn đồng thời Control clip và fade clip tương ứng rồi kéo cả cặp để giữ chúng khớp nhau. Có thể dùng Inspector để nhập Start chính xác. Thứ tự phát theo vị trí Control clip từ trái sang phải. Giữ các clip tách nhau để mỗi lần chỉ kích hoạt một chương. Sau khi đổi vị trí, thứ tự hoặc độ dài các Control clip, chọn `Tools > Manga Intro > Sync Shared Fades To Chapter Clips` để căn lại fade theo từng chương. Công cụ ghép cặp theo binding gốc và asset animation fade, nên tên hiển thị của clip có thể thay đổi. Công cụ cũng điều chỉnh tốc độ clip fade cho vừa thời lượng mới. Kiểm tra lại đường cong nếu cần giữ chính xác 0,6 giây mở và 0,8 giây đóng.
 
 ## Sửa từng chương và thời gian đọc
 

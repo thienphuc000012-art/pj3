@@ -10,6 +10,20 @@ public class CampaignConfig : ScriptableObject
     [Tooltip("Các scene khám phá thuộc cùng campaign. mapScene vẫn là điểm bắt đầu; thêm các scene như m để giữ chung save/party/inventory.")]
     public List<string> additionalMapScenes = new List<string>();
     public string battleScene = "combattest";
+    [SerializeField, HideInInspector] private string guidedTutorialEncounterKey;
+    public bool HasGuidedTutorialEncounter => !string.IsNullOrEmpty(guidedTutorialEncounterKey);
+
+    public bool IsGuidedTutorialEncounter(WorldInteraction point) =>
+        HasGuidedTutorialEncounter && point != null && point.kind == WorldInteractionKind.Encounter &&
+        string.Equals(guidedTutorialEncounterKey, point.GuidedTutorialEncounterKey, StringComparison.Ordinal);
+
+    public void SetGuidedTutorialEncounter(WorldInteraction point)
+    {
+        guidedTutorialEncounterKey = point != null && point.kind == WorldInteractionKind.Encounter
+            ? point.GuidedTutorialEncounterKey
+            : string.Empty;
+    }
+
     [Header("Save Slots")]
     [Range(1, 99), Tooltip("Số ô lưu thủ công trong menu Lưu/Tải game. Tự lưu vẫn dùng file riêng.")]
     public int saveSlotCount = 10;

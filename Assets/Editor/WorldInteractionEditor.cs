@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 // Scene-authoring helpers only;
@@ -446,6 +447,7 @@ public class WorldInteractionEditor : Editor
             }
         }
         bool changed = serializedObject.ApplyModifiedProperties();
+        if (kind == WorldInteractionKind.Encounter) DrawGuidedTutorial(point);
         if ((kind == WorldInteractionKind.Pickup || kind == WorldInteractionKind.Chest) && !EditorApplication.isPlaying)
         {
             bool useDefaultChest = kind == WorldInteractionKind.Chest && GUILayout.Button("Dùng Gold Chest mặc định");
@@ -678,6 +680,45 @@ public class WorldInteractionEditor : Editor
     // ============================================================
     // REWARDS
     // ============================================================
+
+    static void DrawGuidedTutorial(WorldInteraction point)
+    {
+        EditorGUILayout.Space(8);
+        EditorGUILayout.LabelField("Guided Tutorial", EditorStyles.boldLabel);
+        var scene = point.gameObject.scene;
+        if (EditorUtility.IsPersistent(point) || string.IsNullOrEmpty(scene.path) ||
+            PrefabStageUtility.GetPrefabStage(point.gameObject) != null)
+        {
+            EditorGUILayout.HelpBox("Chọn Enemy Encounter trong một scene map đã lưu.", MessageType.Info);
+            return;
+        }
+
+        var setups = FindObjectsByType<MapGameSetup>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        var setup = setups.FirstOrDefault(map => map.gameObject.scene == scene) ??
+            setups.FirstOrDefault(map => map.GetComponent<MapChunkStreamer>() is MapChunkStreamer streamer &&
+                streamer.chunks != null && streamer.chunks.Any(chunk => chunk != null && chunk.scenePath == scene.path));
+        var config = setup != null && setup.config != null ? setup.config : Resources.Load<CampaignConfig>("Adventure/CampaignConfig");
+        if (config == null)
+        {
+            EditorGUILayout.HelpBox("Không tìm thấy Campaign Config của map.", MessageType.Warning);
+            return;
+        }
+
+        bool selected = config.IsGuidedTutorialEncounter(point);
+        EditorGUILayout.HelpBox(selected
+            ? "Encounter này đang được chọn để hiện Guided Tutorial."
+            : config.HasGuidedTutorialEncounter
+                ? "Chọn encounter này sẽ thay thế encounter hướng dẫn hiện tại."
+                : "Chọn encounter duy nhất sẽ hiện hướng dẫn chiến đấu.", MessageType.Info);
+        using (new EditorGUI.DisabledScope(EditorApplication.isPlayingOrWillChangePlaymode))
+        {
+            if (!GUILayout.Button(selected ? "Bỏ chọn Guided Tutorial" : "Chọn encounter cho Guided Tutorial")) return;
+            Undo.RecordObject(config, "Set Guided Tutorial Encounter");
+            config.SetGuidedTutorialEncounter(selected ? null : point);
+            EditorUtility.SetDirty(config);
+            AssetDatabase.SaveAssetIfDirty(config);
+        }
+    }
 
     void DrawRewards()
     {

@@ -106,6 +106,7 @@ public class CombatManager : MonoBehaviour
 
     private void OnDisable()
     {
+        guidedTutorial?.Close();
         if (battleStartRoutine != null)
         {
             StopCoroutine(battleStartRoutine);
@@ -193,6 +194,10 @@ public class CombatManager : MonoBehaviour
     public Vector3 playerMeleePositionOffset;
 
     [HideInInspector] public BattleEncounterSetup activeEncounterSetup;
+    private GuidedCombatTutorial guidedTutorial;
+    public bool IsGuidedTutorialBlockingInput => guidedTutorial != null && guidedTutorial.BlocksInput;
+    private bool IsGuidedTutorialPracticeLocked =>
+        guidedTutorial != null && guidedTutorial.PendingPractice != GuidedCombatPractice.None;
 
     [HideInInspector] public bool isSelectingBuffTarget = false;
     [HideInInspector] public bool isSelectingSelfOnly = false;
@@ -203,7 +208,8 @@ public class CombatManager : MonoBehaviour
 
     private OpenMenuType currentOpenMenu = OpenMenuType.None;
     public bool CanShowBattleCommands => isActiveAndEnabled && state == CombatState.PlayerTurn &&
-        currentActiveUnit != null && !currentActiveUnit.IsDead && selectedAction == null && currentOpenMenu == OpenMenuType.None;
+        currentActiveUnit != null && !currentActiveUnit.IsDead && selectedAction == null && currentOpenMenu == OpenMenuType.None &&
+        !IsGuidedTutorialBlockingInput && !IsGuidedTutorialPracticeLocked;
 
     // Dùng cho ParrySystem:
     // true khi Enemy hiện tại đang thực hiện một đòn AoE gây damage.
@@ -222,8 +228,13 @@ public class CombatManager : MonoBehaviour
     void Start()
     {
         if (GetComponent<BattleResultPanel>() == null) gameObject.AddComponent<BattleResultPanel>();
-        if (CampaignSession.Instance != null && CampaignSession.Instance.InEncounter)
-            CampaignSession.Instance.PrepareBattle(this);
+        var session = CampaignSession.Instance;
+        if (session != null && session.InEncounter)
+        {
+            session.PrepareBattle(this);
+            if (session.IsGuidedTutorialEncounter)
+                guidedTutorial = GuidedCombatTutorial.Create(AdvancedUIManager.Instance);
+        }
         state = CombatState.Start;
         SetupPositions();
 
@@ -292,6 +303,7 @@ public class CombatManager : MonoBehaviour
 
     void Update()
     {
+        if (IsGuidedTutorialBlockingInput) return;
         if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
 
         if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Escape))
@@ -343,6 +355,7 @@ public class CombatManager : MonoBehaviour
 
     public void ConfirmSelectedTarget()
     {
+        if (IsGuidedTutorialBlockingInput) return;
         if (currentTarget == null || selectedAction == null) return;
         CameraManager.Instance.ResetTargetCam();
 
@@ -353,6 +366,7 @@ public class CombatManager : MonoBehaviour
 
     public void CancelCurrentAction()
     {
+        if (IsGuidedTutorialBlockingInput || IsGuidedTutorialPracticeLocked) return;
         if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
 
         // 1. Trường hợp đang ở bước Chọn Mục Tiêu (Sau khi bấm Attack hoặc chọn Skill/Item)
@@ -553,6 +567,7 @@ public class CombatManager : MonoBehaviour
     {
         if (battleCompletionStarted) return;
         battleCompletionStarted = true;
+        guidedTutorial?.Close();
         acceptingActionAnimationEvents = false;
         isTransitioningTurn = true;
         GetComponent<UltimateCinematic>()?.End();
@@ -678,12 +693,67 @@ public class CombatManager : MonoBehaviour
         if (state == CombatState.PlayerTurn && selectedAction == null && currentOpenMenu == OpenMenuType.None &&
             !AdvancedUIManager.Instance.SkillTransitionBusy)
         {
-            AdvancedUIManager.Instance.ShowActionMenu(true);
+            var ui = AdvancedUIManager.Instance;
+            ui.ShowActionMenu(true);
+            if (guidedTutorial != null)
+                yield return guidedTutorial.ShowPlayerLessons(ui,
+                    CanPracticeBasicAttack(currentActiveUnit), HasUsableTutorialSkill(currentActiveUnit));
         }
+    }
+
+    internal bool HasStartedGuidedPractice(GuidedCombatPractice practice)
+    {
+        if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead)
+            return false;
+
+        if (practice == GuidedCombatPractice.Attack)
+            return currentActiveUnit.defaultAttack != null && selectedAction == currentActiveUnit.defaultAttack && IsChoosingTarget;
+
+        if (practice == GuidedCombatPractice.Skill)
+            return currentOpenMenu == OpenMenuType.Skills && selectedAction == null;
+
+        return false;
+    }
+
+    private bool CanPracticeBasicAttack(BattleUnit unit)
+    {
+        ActionData attack = unit != null ? unit.defaultAttack : null;
+        return unit != null && !unit.IsDead && attack != null && unit.CanUseAction(attack) &&
+               currentStains + attack.stainChange >= 0 && enemyParty.Any(enemy => enemy != null && !enemy.IsDead);
+    }
+
+    private bool HasUsableTutorialSkill(BattleUnit unit)
+    {
+        if (unit == null || unit.IsDead || unit.characterSkills == null) return false;
+        var visibleSkills = new ActionData[5];
+        int normalIndex = 0;
+        foreach (ActionData action in unit.characterSkills)
+        {
+            if (action == null) continue;
+            if (action.isUltimate)
+            {
+                if (visibleSkills[4] == null) visibleSkills[4] = action;
+            }
+            else if (normalIndex < 4)
+            {
+                visibleSkills[normalIndex++] = action;
+            }
+        }
+
+        foreach (ActionData skill in visibleSkills)
+        {
+            if (skill == null || skill.type != ActionData.ActionType.Skill || !unit.CanUseAction(skill) ||
+                currentStains + skill.stainChange < 0)
+                continue;
+            if (skill.isSummonSkill && !CanSummonUnits(unit, skill)) continue;
+            return true;
+        }
+        return false;
     }
 
     public void OnRunAwayClicked()
     {
+        if (IsGuidedTutorialBlockingInput || IsGuidedTutorialPracticeLocked) return;
         if (AdvancedUIManager.Instance != null && AdvancedUIManager.Instance.SkillTransitionBusy) return;
         if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead ||
             isTransitioningTurn || runAwayAttemptInProgress)
@@ -757,6 +827,7 @@ public class CombatManager : MonoBehaviour
 
     public void OnAttackClicked()
     {
+        if (IsGuidedTutorialBlockingInput || IsGuidedTutorialPracticeLocked) return;
         if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
         if (AdvancedUIManager.Instance.SkillTransitionBusy) return;
 
@@ -803,6 +874,7 @@ public class CombatManager : MonoBehaviour
 
     public void OnSkillsClicked()
     {
+        if (IsGuidedTutorialBlockingInput || IsGuidedTutorialPracticeLocked) return;
         if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
 
         if (currentOpenMenu == OpenMenuType.Skills)
@@ -834,6 +906,7 @@ public class CombatManager : MonoBehaviour
 
     public void OnItemsClicked()
     {
+        if (IsGuidedTutorialBlockingInput || IsGuidedTutorialPracticeLocked) return;
         if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
         if (currentOpenMenu == OpenMenuType.Items)
         {
@@ -864,7 +937,13 @@ public class CombatManager : MonoBehaviour
 
     public void OnSkillButtonClicked(ActionData skillAction)
     {
+        if (IsGuidedTutorialBlockingInput) return;
         if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
+        if (IsGuidedTutorialPracticeLocked &&
+            (guidedTutorial.PendingPractice != GuidedCombatPractice.Skill || currentOpenMenu != OpenMenuType.Skills ||
+             skillAction == null || skillAction.type != ActionData.ActionType.Skill ||
+             currentActiveUnit.characterSkills == null || !currentActiveUnit.characterSkills.Contains(skillAction)))
+            return;
         if (AdvancedUIManager.Instance.SkillTransitionBusy) return;
         if (!currentActiveUnit.CanUseAction(skillAction)) return;
 
@@ -915,7 +994,17 @@ public class CombatManager : MonoBehaviour
 
     public void OnActionSelected(ActionData action)
     {
+        if (IsGuidedTutorialBlockingInput) return;
         if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead || action == null) return;
+        if (IsGuidedTutorialPracticeLocked)
+        {
+            if (guidedTutorial.PendingPractice == GuidedCombatPractice.Attack && action != currentActiveUnit.defaultAttack)
+                return;
+            if (guidedTutorial.PendingPractice == GuidedCombatPractice.Skill &&
+                (action.type != ActionData.ActionType.Skill || currentActiveUnit.characterSkills == null ||
+                 !currentActiveUnit.characterSkills.Contains(action)))
+                return;
+        }
         if (!currentActiveUnit.CanUseAction(action) || currentTarget == null || currentTarget.IsDead) return;
         if (currentStains + action.stainChange < 0) return;
         if (action.type == ActionData.ActionType.Item && CampaignSession.Instance != null && CampaignSession.Instance.InEncounter)
@@ -939,6 +1028,16 @@ public class CombatManager : MonoBehaviour
     System.Collections.IEnumerator EnemyAICore()
     {
         yield return new WaitForSeconds(0.5f);
+
+        // An ambush can put the enemy first. Introduce the controls without changing turn order.
+        if (guidedTutorial?.NeedsOpeningLessons == true)
+        {
+            var ui = AdvancedUIManager.Instance;
+            ui.ShowActionMenu(true);
+            yield return guidedTutorial.ShowPlayerLessons(ui, false, false);
+            if (!isActiveAndEnabled || state != CombatState.EnemyTurn) yield break;
+            ui.ShowActionMenu(false);
+        }
 
         // ĐÃ XÓA: currentActiveUnit.CheckPhase(); 
         // -> Boss sẽ không đổi phase ngay giữa Turn Order nữa, 
@@ -993,6 +1092,14 @@ public class CombatManager : MonoBehaviour
 
         yield return new WaitForSeconds(0.5f);
 
+        if (guidedTutorial != null && selectedAction != null && currentTarget != null &&
+            currentTarget.isPlayer && !currentTarget.IsDead && !selectedAction.isFriendlyAction &&
+            !selectedAction.isHeal && !selectedAction.isSummonSkill)
+        {
+            yield return guidedTutorial.ShowParryLesson(AdvancedUIManager.Instance, playerParty.IndexOf(currentTarget));
+            if (!isActiveAndEnabled || state != CombatState.EnemyTurn) yield break;
+        }
+
         // Do Timeline đã nhân bản sẵn các lượt đánh, ta chỉ việc đánh 1 đòn rồi kết thúc
         // EndCurrentTurn() sẽ lo việc chuyển sang đòn thứ 2 tự động nếu còn lượt
         StartCoroutine(ExecuteActionRoutine(currentActiveUnit, currentTarget, selectedAction, true));
@@ -1024,6 +1131,14 @@ public class CombatManager : MonoBehaviour
         try
         {
             yield return ExecuteActionBody(attacker, target, action);
+            if (attacker.isPlayer && attacker == currentActiveUnit && guidedTutorial != null)
+            {
+                if (action == attacker.defaultAttack)
+                    guidedTutorial.CompletePractice(GuidedCombatPractice.Attack);
+                else if (action.type == ActionData.ActionType.Skill && attacker.characterSkills != null &&
+                         attacker.characterSkills.Contains(action))
+                    guidedTutorial.CompletePractice(GuidedCombatPractice.Skill);
+            }
             if (cinematic != null && state != CombatState.Won && state != CombatState.Lost)
                 yield return cinematic.Transition(false);
         }
@@ -3118,7 +3233,7 @@ public class CombatManager : MonoBehaviour
 
     public void EndCurrentTurn()
     {
-        if (isTransitioningTurn) return;
+        if (isTransitioningTurn || IsGuidedTutorialBlockingInput || IsGuidedTutorialPracticeLocked) return;
         isTransitioningTurn = true;
         state = CombatState.Executing;
         turnTransitionRoutine = StartCoroutine(FinishTurnAfterVfx());
@@ -3247,6 +3362,7 @@ public class CombatManager : MonoBehaviour
 
     public void SetTargetUnit(BattleUnit newTarget)
     {
+        if (IsGuidedTutorialBlockingInput) return;
         if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
 
         if (newTarget != null && !newTarget.IsDead)

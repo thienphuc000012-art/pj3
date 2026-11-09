@@ -540,6 +540,8 @@ public class WorldInteraction : MonoBehaviour
     public bool IsConsumed => CampaignSession.Instance != null && CampaignSession.Instance.Data != null && CampaignSession.Instance.Data.collected.Contains(Id);
     // A duplicated prefab must not share collection/defeat state with another instance.
     public string Id => string.IsNullOrEmpty(savedWorldId) ? gameObject.scene.name + ":" + persistentId + ":" + HierarchyPath(transform) : savedWorldId;
+    // Scene and hierarchy distinguish encounters duplicated in the Hierarchy with the same saved ID.
+    internal string GuidedTutorialEncounterKey => gameObject.scene.path + "|" + Id + "|" + HierarchyPath(transform);
     private static string HierarchyPath(Transform t) => t.parent == null ? t.name + "#" + t.GetSiblingIndex() : HierarchyPath(t.parent) + "/" + t.name + "#" + t.GetSiblingIndex();
     void OnValidate() { if (string.IsNullOrEmpty(persistentId)) persistentId = Guid.NewGuid().ToString("N"); }
 
