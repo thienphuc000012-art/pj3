@@ -828,6 +828,9 @@ MonoBehaviour:
     vietnamese: "\u0110\xE3 h\u1ECDc k\u1EF9 n\u0103ng n\xE0y. \u0110\u1ED5i k\u1EF9
       n\u0103ng mang theo trong \u0110\u1ED9i h\xECnh."
     english: This skill is already learned. Change equipped skills in Party.
+  - key: skill.reason.ultimate
+    vietnamese: "Tuy\u1EC7t k\u1EF9 c\xF3 s\u1EB5n. C\u1EA7n \u0111\u1EA7y n\u0103ng l\u01B0\u1EE3ng \u0111\u1EC3 d\xF9ng trong tr\u1EADn."
+    english: Ultimate is available from the start. Fully charge its energy to use it in battle.
   - key: skill.reason.rest
     vietnamese: "C\u1EA7n \u0111\u1EE9ng t\u1EA1i \u0111i\u1EC3m ngh\u1EC9 \u0111\u1EC3
       h\u1ECDc k\u1EF9 n\u0103ng."
@@ -966,3 +969,54 @@ MonoBehaviour:
   - key: fasttravel.empty
     vietnamese: Chưa có điểm nghỉ nào được mở khóa.
     english: No rest points have been unlocked yet.
+  - key: title.subtitle
+    vietnamese: TÀN TÍCH THỨC TỈNH
+    english: THE RUINS AWAKEN
+  - key: title.press
+    vietnamese: NHẤN PHÍM BẤT KỲ
+    english: PRESS ANY BUTTON
+  - key: title.continue
+    vietnamese: Tiếp tục
+    english: Continue
+  - key: title.new
+    vietnamese: Chơi mới
+    english: New Game
+  - key: title.settings
+    vietnamese: Cài đặt
+    english: Settings
+  - key: title.quit
+    vietnamese: Thoát
+    english: Quit
+  - key: title.error.no_save
+    vietnamese: Không tìm thấy bản lưu hợp lệ.
+    english: No valid save was found.
+  - key: title.error.save_list
+    vietnamese: Không thể mở danh sách bản lưu.
+    english: Could not open the save list.
+  - key: title.error.map
+    vietnamese: Không thể tải bản đồ.
+    english: Could not load the map.
+  - key: title.error.setup
+    vietnamese: Kiểm tra scene intro, bản đồ và điểm xuất phát.
+    english: Check the intro scene, starting map, and spawn point.
+  - key: title.error.intro
+    vietnamese: Không thể tải intro.
+    english: Could not load the intro.
+  - key: title.error.timeline
+    vietnamese: Không tìm thấy Timeline chính của intro.
+    english: The intro master Timeline was not found.
+  - key: title.error.new
+    vietnamese: Không thể bắt đầu game mới.
+    english: Could not start a new game.
+  - key: menu.return.title
+    vietnamese: Về Title
+    english: Return to Title
+  - key: menu.return.title.error
+    vietnamese: Không thể quay về Title.
+    english: Could not return to the title screen.
+  - key: menu.return.title.confirm
+    vietnamese: Bạn có chắc muốn về Title?
+    english: Are you sure you want to return to the title screen?
+  - key: quest.untrack.prompt
+    vietnamese: Hủy theo dõi nhiệm vụ?
+    english: Stop tracking this quest?

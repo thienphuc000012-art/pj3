@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.AI;
 
-[RequireComponent(typeof(WorldInteraction))]
+[RequireComponent(typeof(WorldInteraction), typeof(EnemyCombatOrigin))]
 public sealed class EnemyEncounterBehaviour : MonoBehaviour
 {
     public enum TravelMode { Ground, Flying, GroundAndFlying }
@@ -68,6 +68,8 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
     public int EncounterMovementLayerIndex => mapAnimator != null ? mapAnimator.GetLayerIndex(movementLayer) : -1;
     public Activity CurrentActivity { get; private set; }
     WorldInteraction point;
+    EnemyCombatOrigin combatOrigin;
+    uint spawnRevision;
     NavMeshAgent agent;
     Vector3 home, destination, lastPosition;
     float idleUntil, nextPath, stuckTime, nextAttack;
@@ -79,8 +81,7 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
     {
         point = GetComponent<WorldInteraction>();
         if (point.kind != WorldInteractionKind.Encounter) { enabled = false; return; }
-        home = transform.position;
-        patrolPoints = waypoints == null ? new Vector3[0] : System.Array.ConvertAll(waypoints, w => w == null ? home : w.position);
+        combatOrigin = EnemyCombatOrigin.CaptureFor(point);
         if (mapAnimator == null) mapAnimator = GetComponentInChildren<Animator>(true);
         if (mapAnimator == null)
         {
@@ -104,8 +105,21 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
             if (layer >= 0) mapAnimator.SetLayerWeight(layer, 1);
             if (!HasValidAttackContactPoint) attackContactPoint = FindAnimatedAttackContactPoint();
         }
-        airborne = travelMode == TravelMode.Flying;
         agent = GetComponent<NavMeshAgent>();
+        InitializePatrolAtSpawn();
+        initialized = true;
+    }
+
+    void InitializePatrolAtSpawn()
+    {
+        home = combatOrigin.SpawnPosition;
+        spawnRevision = combatOrigin.Revision;
+        patrolPoints = waypoints == null ? System.Array.Empty<Vector3>() :
+            System.Array.ConvertAll(waypoints, w => w == null ? home : w.position);
+        waypointIndex = animationHash = 0;
+        nextPath = stuckTime = nextAttack = transitionProgress = 0f;
+        lastSeenTime = float.NegativeInfinity;
+        airborne = travelMode == TravelMode.Flying;
         if (travelMode != TravelMode.Flying)
         {
             if (agent == null) agent = gameObject.AddComponent<NavMeshAgent>();
@@ -114,6 +128,7 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
             agent.acceleration = 12; agent.stoppingDistance = .3f;
             agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
             if (NavMesh.SamplePosition(home, out var hit, 2, new NavMeshQueryFilter { agentTypeID = agent.agentTypeID, areaMask = agent.areaMask })) agent.Warp(hit.position);
+            if (agent.isOnNavMesh) agent.ResetPath();
             if (!agent.isOnNavMesh) Debug.LogWarning("Bake Patrol NavMesh before running this ground enemy.", this);
         }
         else
@@ -123,7 +138,7 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
             Vector3 rise = Vector3.up * flightHeight;
             if (!Blocked(transform.position, rise, rise.magnitude)) transform.position += rise;
         }
-        initialized = true; lastPosition = transform.position;
+        lastPosition = transform.position;
         Idle();
         modeUntil = Time.time + (travelMode == TravelMode.GroundAndFlying && startInAir ? 0 : groundPatrolSeconds);
     }
@@ -196,6 +211,8 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
         var session = CampaignSession.Instance;
         if (session == null || !session.OnMap || session.MapPlayer == null || CampaignSession.InputBlocked)
         { StopMovement(); return; }
+        if (combatOrigin == null || !combatOrigin.HasSpawnPoint) { StopMovement(); return; }
+        if (spawnRevision != combatOrigin.Revision) InitializePatrolAtSpawn();
         if (CurrentActivity == Activity.TakeOff || CurrentActivity == Activity.Landing)
         { UpdateFlightTransition(); return; }
         var player = session.MapPlayer.transform;
@@ -433,6 +450,7 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
         Play(attackState, flyAttackState);
     }
     void Idle() { CurrentActivity = Activity.Idle; idleUntil = Time.time + idleSeconds; StopMovement(); Play(idleState, flyIdleState); }
+    public void PauseForEncounter() => StopMovement();
     void StopMovement() { if (agent != null && agent.enabled && agent.isOnNavMesh) agent.isStopped = true; }
     void OnDisable() { StopMovement(); lastSeenTime = float.NegativeInfinity; }
     void OnDrawGizmosSelected()

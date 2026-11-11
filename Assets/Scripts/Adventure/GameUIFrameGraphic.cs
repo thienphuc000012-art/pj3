@@ -5,14 +5,15 @@ using UnityEngine.UI;
 [DisallowMultipleComponent]
 public sealed class GameUIFrameGraphic : MaskableGraphic
 {
-    Color tint = new Color(.83f, .67f, .38f, .44f);
+    [SerializeField] Color tint = new Color(.83f, .67f, .38f, .44f);
     bool ornate;
 
     public void Configure(Color color, bool useOrnament)
     {
+        raycastTarget = false;
+        if (tint == color && ornate == useOrnament) return;
         tint = color;
         ornate = useOrnament;
-        raycastTarget = false;
         SetVerticesDirty();
     }
 

@@ -12,6 +12,9 @@ using UnityEngine.UI;
 [DisallowMultipleComponent]
 public sealed class AdventureSaveSlotsView : MonoBehaviour
 {
+    public const int AutosaveSlot = 0;
+    public delegate bool LoadSlotHandler(int slot, out string error);
+
     [Header("Save / Load list")]
     public GameObject slotsPanel;
     public TMP_Text title;
@@ -37,10 +40,13 @@ public sealed class AdventureSaveSlotsView : MonoBehaviour
         public Button button;
         public TMP_Text date, location, playCaption, playTime;
         public CanvasGroup group;
+        public int slot;
     }
     readonly List<Row> rows = new List<Row>();
-    AdventureCanvasRoot canvasRoot;
     CampaignSession session;
+    Func<IReadOnlyList<CampaignSaveSlotInfo>> titleEntries;
+    LoadSlotHandler titleLoad;
+    Action titleClosed;
     TMP_Text fontSource;
     CanvasGroup listGroup;
     AdventureMenu openingMenu;
@@ -55,6 +61,42 @@ public sealed class AdventureSaveSlotsView : MonoBehaviour
     {
         session = campaign;
         EnsureHierarchy(view, buttonTemplate);
+        BindButtons();
+    }
+
+    public void BindTitle(AdventureSaveSlotsView template, Button buttonTemplate,
+        Func<IReadOnlyList<CampaignSaveSlotInfo>> entries, LoadSlotHandler load, Action closed)
+    {
+        titleEntries = entries;
+        titleLoad = load;
+        titleClosed = closed;
+        slotsPanel = Instantiate(template.slotsPanel, transform, false);
+        confirmationPanel = Instantiate(template.confirmationPanel, transform, false);
+        slotsPanel.name = template.slotsPanel.name;
+        confirmationPanel.name = template.confirmationPanel.name;
+        rowBackground = template.rowBackground;
+        confirmationBackground = template.confirmationBackground;
+        EnsureHierarchy(transform, buttonTemplate);
+
+        // AdventureCanvas normally supplies the dynamic Vietnamese font at runtime.
+        // These panels live in Title, so use its equivalent for the shared default font.
+        var adventureFont = template.GetComponent<AdventureCanvasRoot>()?.defaultFont;
+        if (fontSource != null)
+        {
+            ApplyTitleFont(slotsPanel, adventureFont);
+            ApplyTitleFont(confirmationPanel, adventureFont);
+        }
+        BindButtons();
+    }
+
+    void ApplyTitleFont(GameObject panel, TMP_FontAsset adventureFont)
+    {
+        foreach (var text in panel.GetComponentsInChildren<TMP_Text>(true))
+            if (text.font == null || text.font == adventureFont) text.font = fontSource.font;
+    }
+
+    void BindButtons()
+    {
         backButton.onClick.RemoveListener(Close);
         backButton.onClick.AddListener(Close);
         yesButton.onClick.RemoveListener(Confirm);
@@ -67,14 +109,16 @@ public sealed class AdventureSaveSlotsView : MonoBehaviour
     // Also callable by an Editor builder with no live campaign session.
     public void EnsureHierarchy(AdventureCanvasRoot view, Button buttonTemplate)
     {
-        if (view == null) return;
-        canvasRoot = view;
-        fontSource = buttonTemplate != null ? buttonTemplate.GetComponentInChildren<TMP_Text>(true) : view.GetComponentInChildren<TMP_Text>(true);
+        if (view != null) EnsureHierarchy(view.transform.Find("Menu"), buttonTemplate);
+    }
+
+    void EnsureHierarchy(Transform menu, Button buttonTemplate)
+    {
+        if (menu == null) return;
+        fontSource = buttonTemplate != null ? buttonTemplate.GetComponentInChildren<TMP_Text>(true) : menu.GetComponentInChildren<TMP_Text>(true);
         var settings = Resources.Load<GameUIThemeSettings>("Adventure/UI/GameUIThemeSettings");
         if (rowBackground == null && settings != null) rowBackground = settings.skillBackground;
         if (confirmationBackground == null) confirmationBackground = rowBackground;
-        var menu = view.transform.Find("Menu");
-        if (menu == null) return;
         if (slotsPanel == null)
         {
             var existing = menu.Find("Save Slots");
@@ -174,9 +218,17 @@ public sealed class AdventureSaveSlotsView : MonoBehaviour
 
     public void Open(bool forSaving)
     {
-        if (session == null || canvasRoot == null || !session.OnMap || session.Busy || slotsPanel == null) return;
+        if (session == null || !session.OnMap || session.Busy || slotsPanel == null) return;
         if (forSaving && (session.Menu != AdventureMenu.Rest || !session.CanUpgrade)) return;
-        saving = forSaving; deleting = false; openingMenu = session.Menu; committing = false; selectedInfo = null; lastFocused = null;
+        openingMenu = session.Menu;
+        OpenList(forSaving);
+    }
+
+    public void OpenTitle() => OpenList(false);
+
+    void OpenList(bool forSaving)
+    {
+        saving = forSaving; deleting = false; committing = false; selectedInfo = null; lastFocused = null;
         confirmationPanel.SetActive(false);
         listGroup.interactable = listGroup.blocksRaycasts = true;
         slotsPanel.SetActive(true); slotsPanel.transform.SetAsLastSibling();
@@ -188,6 +240,7 @@ public sealed class AdventureSaveSlotsView : MonoBehaviour
 
     public void Close()
     {
+        bool wasOpen = IsOpen;
         if (EventSystem.current != null && EventSystem.current.currentSelectedGameObject != null &&
             ((slotsPanel != null && EventSystem.current.currentSelectedGameObject.transform.IsChildOf(slotsPanel.transform)) ||
              (confirmationPanel != null && EventSystem.current.currentSelectedGameObject.transform.IsChildOf(confirmationPanel.transform))))
@@ -196,6 +249,7 @@ public sealed class AdventureSaveSlotsView : MonoBehaviour
         if (confirmationPanel != null) confirmationPanel.SetActive(false);
         if (listGroup != null) listGroup.interactable = listGroup.blocksRaycasts = true;
         selectedInfo = null; selectedSlot = 0; deleting = false; committing = false; lastFocused = null;
+        if (wasOpen) titleClosed?.Invoke();
     }
 
     public bool HandleBack()
@@ -211,7 +265,8 @@ public sealed class AdventureSaveSlotsView : MonoBehaviour
     void Update()
     {
         if (!IsOpen) return;
-        if (session == null || !session.OnMap || session.Busy || LoadingScreen.IsLoading || session.Menu != openingMenu) { Close(); return; }
+        if (LoadingScreen.IsLoading || (titleEntries == null &&
+            (session == null || !session.OnMap || session.Busy || session.Menu != openingMenu))) { Close(); return; }
         var selected = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
         if (selected != lastFocused)
         {
@@ -221,41 +276,43 @@ public sealed class AdventureSaveSlotsView : MonoBehaviour
     }
     void RefreshLanguage()
     {
-        if (!IsOpen || session == null) return;
+        if (!IsOpen || (session == null && titleEntries == null)) return;
         RefreshRows();
         if (confirmationPanel.activeSelf) ShowConfirmationText();
     }
 
     void RefreshRows()
     {
-        var entries = session.GetSaveSlots();
-        int count = Mathf.Clamp(session.SaveSlotCount, 1, 99);
+        var entries = GetEntries();
+        int count = entries.Count;
         while (rows.Count < count)
         {
-            int slot = rows.Count + 1;
-            var button = Instantiate(slotTemplate, slotContent); button.name = "Slot " + slot.ToString("D2");
+            var button = Instantiate(slotTemplate, slotContent);
             var row = EnsureRow(button);
             button.onClick = new Button.ButtonClickedEvent();
-            button.onClick.AddListener(() => SelectSlot(slot));
+            button.onClick.AddListener(() => SelectSlot(row.slot));
             var contextClick = button.GetComponent<SaveSlotContextClick>();
             if (contextClick == null) contextClick = button.gameObject.AddComponent<SaveSlotContextClick>();
-            contextClick.Configure(() => SelectSlot(slot, true));
+            contextClick.Configure(() => SelectSlot(row.slot, true));
             rows.Add(row);
         }
         bool anyLoadable = false;
         for (int i = 0; i < rows.Count; i++)
         {
-            var row = rows[i]; row.button.gameObject.SetActive(i < count);
+            var row = rows[i];
+            row.button.gameObject.SetActive(i < count);
             if (i >= count) continue;
-            CampaignSaveSlotInfo info = null;
-            foreach (var entry in entries) if (entry != null && entry.slot == i + 1) { info = entry; break; }
-            info = info ?? new CampaignSaveSlotInfo { slot = i + 1, isEmpty = true };
+            var info = entries[i];
+            row.slot = info.slot;
+            row.button.name = info.slot == AutosaveSlot ? "Autosave" : "Slot " + info.slot.ToString("D2");
             bool valid = !info.isEmpty && !info.isCorrupt;
             anyLoadable |= valid;
             row.button.interactable = saving || valid;
             row.group.alpha = saving || valid ? 1f : .48f;
             Set(row.date, info.isEmpty ? Pick("Ô lưu trống", "Empty slot") : info.isCorrupt ? Pick("Bản lưu không đọc được", "Unreadable save") : FormatDate(info));
-            Set(row.location, info.isEmpty ? "" : !string.IsNullOrWhiteSpace(info.locationName) ? info.locationName : info.mapScene ?? "");
+            string location = !string.IsNullOrWhiteSpace(info.locationName) ? info.locationName : info.mapScene ?? "";
+            if (info.slot == AutosaveSlot) location = Pick("Tự động lưu", "Autosave") + " • " + location;
+            Set(row.location, info.isEmpty ? "" : location);
             Set(row.playCaption, valid ? Pick("Thời gian chơi", "Play Time") : "");
             Set(row.playTime, valid ? FormatPlayTime(info.playTimeSeconds) : "—");
         }
@@ -271,11 +328,13 @@ public sealed class AdventureSaveSlotsView : MonoBehaviour
         }
     }
 
+    IReadOnlyList<CampaignSaveSlotInfo> GetEntries() => titleEntries != null ? titleEntries() : session.GetSaveSlots();
+
     void SelectSlot(int slot, bool forDeletion = false)
     {
-        if (!IsOpen || committing || confirmationPanel.activeSelf || session == null || (forDeletion && !saving)) return;
+        if (!IsOpen || committing || confirmationPanel.activeSelf || (session == null && titleEntries == null) || (forDeletion && !saving)) return;
         selectedInfo = null;
-        foreach (var entry in session.GetSaveSlots()) if (entry != null && entry.slot == slot) { selectedInfo = entry; break; }
+        foreach (var entry in GetEntries()) if (entry.slot == slot) { selectedInfo = entry; break; }
         selectedInfo = selectedInfo ?? new CampaignSaveSlotInfo { slot = slot, isEmpty = true };
         if (forDeletion && selectedInfo.isEmpty) return;
         if (!saving && (selectedInfo.isEmpty || selectedInfo.isCorrupt)) return;
@@ -305,18 +364,25 @@ public sealed class AdventureSaveSlotsView : MonoBehaviour
         if (committing) return;
         confirmationPanel.SetActive(false);
         listGroup.interactable = listGroup.blocksRaycasts = true;
-        if (selectedSlot > 0 && selectedSlot <= rows.Count && EventSystem.current != null)
-            EventSystem.current.SetSelectedGameObject(rows[selectedSlot - 1].button.gameObject);
+        if (EventSystem.current != null)
+            foreach (var row in rows)
+                if (row.slot == selectedSlot && row.button.isActiveAndEnabled && row.button.interactable)
+                {
+                    EventSystem.current.SetSelectedGameObject(row.button.gameObject);
+                    break;
+                }
         deleting = false;
     }
     void Confirm()
     {
-        if (!IsOpen || confirmationPanel == null || !confirmationPanel.activeSelf || committing || selectedSlot < 1 || selectedInfo == null || session == null) return;
+        if (!IsOpen || confirmationPanel == null || !confirmationPanel.activeSelf || committing || selectedInfo == null ||
+            (session == null && titleLoad == null)) return;
         committing = true;
         yesButton.interactable = noButton.interactable = false;
         string error;
         bool wasDeleting = deleting;
-        bool success = deleting ? session.TryDeleteSaveSlot(selectedSlot, out error)
+        bool success = titleLoad != null ? titleLoad(selectedSlot, out error)
+            : deleting ? session.TryDeleteSaveSlot(selectedSlot, out error)
             : saving ? session.TrySaveToSlot(selectedSlot, out error) : session.TryLoadFromSlot(selectedSlot, out error);
         committing = false;
         if (success && wasDeleting)
@@ -356,7 +422,7 @@ public sealed class AdventureSaveSlotsView : MonoBehaviour
         return row;
     }
 
-    static void ConfigureTextHover(Button button)
+    internal static void ConfigureTextHover(Button button)
     {
         if (button == null) return;
         var scale = button.GetComponent<SmoothButtonHoverScale>();

@@ -153,6 +153,7 @@ public class CombatManager : MonoBehaviour
     public float battleStartMinimumDuration = 2.5f;
     [Min(0f), Tooltip("Chờ blend từ walk về idle sau khi mọi player đã vào vị trí.")]
     public float playerEntryIdleSettleTime = .1f;
+    internal Vector3[][] arenaPlayerEntryPaths;
     readonly List<BattleEntryWalk> battleEntryWalks = new List<BattleEntryWalk>();
     Coroutine battleStartRoutine;
 
@@ -227,10 +228,11 @@ public class CombatManager : MonoBehaviour
 
     void Awake() { Instance = this; }
 
-    void Start()
+    IEnumerator Start()
     {
-        if (GetComponent<BattleResultPanel>() == null) gameObject.AddComponent<BattleResultPanel>();
         var session = CampaignSession.Instance;
+        while (session != null && session.CombatArenaPending) yield return null;
+        if (GetComponent<BattleResultPanel>() == null) gameObject.AddComponent<BattleResultPanel>();
         if (session != null && session.InEncounter)
         {
             session.PrepareBattle(this);
@@ -268,9 +270,17 @@ public class CombatManager : MonoBehaviour
         AdvancedUIManager.Instance.ToggleAllUI(false);
 
         FinishBattleEntryWalks();
-        foreach (var p in playerParty.Where(u => u != null && !u.IsDead))
-            if (playersWalkIn) battleEntryWalks.Add(new BattleEntryWalk(p, playerEntryDistance, playerEntryMoveSpeed));
+        for (int i = 0; i < playerParty.Count; i++)
+        {
+            BattleUnit p = playerParty[i];
+            if (p == null || p.IsDead) continue;
+            if (playersWalkIn)
+            {
+                Vector3[] entryPath = arenaPlayerEntryPaths?[i];
+                battleEntryWalks.Add(new BattleEntryWalk(p, playerEntryDistance, playerEntryMoveSpeed, entryPath));
+            }
             else if (p.animator != null) p.animator.SetTrigger("BattleStart");
+        }
         foreach (var e in enemyParty.Where(u => u != null && u.animator != null))
         {
             e.animator.SetTrigger("BattleStart");

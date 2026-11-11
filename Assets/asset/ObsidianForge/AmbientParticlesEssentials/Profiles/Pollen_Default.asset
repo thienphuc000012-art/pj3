@@ -1,0 +1,129 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: afa9c7f9f6f6e4aeb84ffeeded320ec7, type: 3}
+  m_Name: Pollen_Default
+  m_EditorClassIdentifier: AmbientParticlesEssentials.Runtime::ObsidianForge.AmbientParticlesEssentials.AmbientParticleProfile
+  brightness: 1.3
+  displayName: Pollen & Spores
+  description: Soft organic motes for forests, gardens, wetlands and magical biomes.
+  density: 0.8
+  maxParticles: 800
+  spawnRadius: 20
+  verticalRange: {x: -1, y: 4.8}
+  minimumCameraDistance: 1.25
+  lifetime: 30
+  particleSize: {x: 0.05, y: 0.11}
+  color: {r: 1, g: 0.92, b: 0.65, a: 0.45}
+  movementSpeed: {x: 0.03, y: 0.16}
+  windDirection: {x: 0.7, y: 0.22, z: 0.4}
+  windStrength: 0.18
+  turbulence: 0.2
+  gravityModifier: 0
+  layers:
+  - name: Golden pollen
+    budgetShare: 0.55
+    material: {fileID: 2100000, guid: f44147f9441ff48eeafeebf94880dee9, type: 2}
+    brightness: 1
+    sizeMultiplier: 1
+    lifetimeMultiplier: 1
+    speedMultiplier: 0.8
+    noiseMultiplier: 0.65
+    noiseFrequency: 0.15
+    noiseScroll: 0.08
+    verticalSpeed: {x: -0.025, y: 0.08}
+    angularSpeed: {x: 0, y: 0}
+    aspect: {x: 1, y: 1}
+    brightnessVariation: 0.2
+    tint: {r: 1, g: 1, b: 1, a: 1}
+    trails: 0
+    trailMaterial: {fileID: 0}
+    trailRatio: 1
+    trailLifetime: 1.6
+    trailWidth: 0.12
+    trailVertexDistance: 0.08
+    trailOpacity: 0.45
+  - name: Round luminous spores
+    budgetShare: 0.3
+    material: {fileID: 2100000, guid: 445441b08c71e408a8d18e6ad727eb58, type: 2}
+    brightness: 1
+    sizeMultiplier: 2.2
+    lifetimeMultiplier: 1
+    speedMultiplier: 0.5
+    noiseMultiplier: 1.2
+    noiseFrequency: 0.35
+    noiseScroll: 0.12
+    verticalSpeed: {x: 0.025, y: 0.12}
+    angularSpeed: {x: 0, y: 0}
+    aspect: {x: 1, y: 1}
+    brightnessVariation: 0.2
+    tint: {r: 0.82, g: 1, b: 0.82, a: 0.85}
+    trails: 0
+    trailMaterial: {fileID: 0}
+    trailRatio: 1
+    trailLifetime: 1.6
+    trailWidth: 0.12
+    trailVertexDistance: 0.08
+    trailOpacity: 0.45
+  - name: Rose spore halos
+    budgetShare: 0.1
+    material: {fileID: 2100000, guid: 44b2c7f835d7b4baeab7930af15cae8d, type: 2}
+    brightness: 1
+    sizeMultiplier: 4.5
+    lifetimeMultiplier: 1
+    speedMultiplier: 0.4
+    noiseMultiplier: 0.7
+    noiseFrequency: 0.15
+    noiseScroll: 0.08
+    verticalSpeed: {x: -0.015, y: 0.065}
+    angularSpeed: {x: 0, y: 0}
+    aspect: {x: 1, y: 1}
+    brightnessVariation: 0.2
+    tint: {r: 1, g: 0.48, b: 0.85, a: 0.5}
+    trails: 0
+    trailMaterial: {fileID: 0}
+    trailRatio: 1
+    trailLifetime: 1.6
+    trailWidth: 0.12
+    trailVertexDistance: 0.08
+    trailOpacity: 0.45
+  - name: Spore meanders
+    budgetShare: 0.05
+    material: {fileID: 2100000, guid: ecca1cb2135f54f7abc512708fee2409, type: 2}
+    brightness: 2
+    sizeMultiplier: 1.4
+    lifetimeMultiplier: 1
+    speedMultiplier: 4.5
+    noiseMultiplier: 0.65
+    noiseFrequency: 0.25
+    noiseScroll: 0.1
+    verticalSpeed: {x: 0.08, y: 0.2}
+    angularSpeed: {x: 0, y: 0}
+    aspect: {x: 1, y: 1}
+    brightnessVariation: 0.2
+    tint: {r: 1, g: 0.85, b: 0.6, a: 1.2}
+    trails: 1
+    trailMaterial: {fileID: 0}
+    trailRatio: 1
+    trailLifetime: 4.5
+    trailWidth: 1.15
+    trailVertexDistance: 0.08
+    trailOpacity: 0.75
+    trailMotesPerSample: 3
+    shedResidue: 1
+    residueBudgetShare: 0.75
+    residueLifetime: 2.2
+    residueRate: 6
+    residueSize: 2.8
+    residueSpread: 0.8
+    residueDrift: 0.16
+    residueOpacity: 0.85
+    residueEndTint: {r: 0.9, g: 0.62, b: 0.85, a: 0}

@@ -55,6 +55,7 @@ public static class SaveSlotInteractionValidation
             Check(!(bool)Get(view, "deleting"), "Cancel must clear the pending delete action.");
             Check(view.yesButton.GetComponent<SmoothButtonHoverScale>() == null && view.noButton.GetComponent<SmoothButtonHoverScale>() == null,
                 "Confirmation buttons must retain text-only hover.");
+            CheckTitleLoad(view, template);
 
             row = new GameObject("Save Slot Input Test", typeof(RectTransform), typeof(Image), typeof(Button), typeof(SaveSlotContextClick));
             int saves = 0, deletes = 0;
@@ -76,7 +77,7 @@ public static class SaveSlotInteractionValidation
             Check(settings != null && settings.npcChatIcon != null, "The shared NPC Chat sprite must resolve.");
             Check(AssetDatabase.GetAssetPath(settings.npcChatIcon) == "Assets/asset/Ui/chat.png", "The NPC marker must use the supplied Chat asset.");
             Directory.CreateDirectory(Path.GetDirectoryName(Result));
-            File.WriteAllText(Result, "PASS: save/overwrite/corrupt/delete/load questions; cancel returns to list and clears delete; fixed-scale text hover; left/right click separation and disabled rows; NPC Chat sprite reference resolves. No live saves or scenes changed.");
+            File.WriteAllText(Result, "PASS: save/overwrite/corrupt/delete/load questions; Title autosave and manual slot confirmation; cancel returns to list and clears delete; fixed-scale text hover; left/right click separation and disabled rows; NPC Chat sprite reference resolves. No live saves or scenes changed.");
             Debug.Log(File.ReadAllText(Result));
         }
         catch (Exception exception)
@@ -90,6 +91,38 @@ public static class SaveSlotInteractionValidation
             if (row != null) UnityEngine.Object.DestroyImmediate(row);
             if (contents != null) PrefabUtility.UnloadPrefabContents(contents);
         }
+    }
+
+    static void CheckTitleLoad(AdventureSaveSlotsView templateView, Button templateButton)
+    {
+        var canvas = new GameObject("Title Save Slots Test", typeof(RectTransform), typeof(Canvas));
+        try
+        {
+            var view = canvas.AddComponent<AdventureSaveSlotsView>();
+            var entries = new[]
+            {
+                new CampaignSaveSlotInfo { slot = AdventureSaveSlotsView.AutosaveSlot, playTimeSeconds = 60 },
+                new CampaignSaveSlotInfo { slot = 1, isEmpty = true },
+                new CampaignSaveSlotInfo { slot = 2, playTimeSeconds = 120 }
+            };
+            int loadedSlot = -1;
+            int closed = 0;
+            bool Load(int slot, out string error) { loadedSlot = slot; error = null; return true; }
+            view.BindTitle(templateView, templateButton, () => entries, Load, () => closed++);
+            view.OpenTitle();
+            Check(!view.slotContent.Find("Slot 01").GetComponent<Button>().interactable, "Empty Title slots must be disabled.");
+            view.slotContent.Find("Slot 02").GetComponent<Button>().onClick.Invoke();
+            Check(view.confirmationPanel.activeSelf && loadedSlot == -1, "Selecting a Title slot must request confirmation before loading.");
+            Check(view.HandleBack() && view.IsOpen && !view.confirmationPanel.activeSelf && loadedSlot == -1, "Cancel must return to the Title slot list.");
+            view.slotContent.Find("Autosave").GetComponent<Button>().onClick.Invoke();
+            view.yesButton.onClick.Invoke();
+            Check(loadedSlot == AdventureSaveSlotsView.AutosaveSlot && !view.IsOpen && closed == 1, "Title confirmation must load the chosen autosave.");
+            view.OpenTitle();
+            view.slotContent.Find("Slot 02").GetComponent<Button>().onClick.Invoke();
+            view.yesButton.onClick.Invoke();
+            Check(loadedSlot == 2 && !view.IsOpen && closed == 2, "Title confirmation must load the chosen manual slot.");
+        }
+        finally { UnityEngine.Object.DestroyImmediate(canvas); }
     }
 
     static void CheckQuestion(AdventureSaveSlotsView view, bool saving, bool deleting, bool empty, bool corrupt, string expected)

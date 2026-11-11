@@ -57,35 +57,36 @@ public static class InteractionPresentationValidation
 
             texture = new Texture2D(2, 2); texture.SetPixels(new[] { Color.white, Color.white, Color.white, Color.white }); texture.Apply();
             sprite = Sprite.Create(texture, new Rect(0, 0, 2, 2), Vector2.one * .5f);
-            var slot = Rect("Slot", canvasGo.transform); slot.gameObject.AddComponent<Image>();
-            var rootEdge = slot.gameObject.AddComponent<UIHoverOutline>(); rootEdge.Configure(Color.white);
-            var pointer = slot.gameObject.AddComponent<SkillSlotPointer>();
-            var select = Rect("Select", slot); var image = select.gameObject.AddComponent<Image>();
+            var slot = Rect("Slot", canvasGo.transform);
+            var background = slot.gameObject.AddComponent<Image>();
+            var select = Rect("Select", slot);
+            var hitArea = select.gameObject.AddComponent<Image>();
+            hitArea.color = Color.clear;
             select.gameObject.AddComponent<Button>();
-            var wipe = select.gameObject.AddComponent<UIButtonWipeReveal>(); wipe.Configure(image, sprite);
-            var edge = select.gameObject.AddComponent<UIHoverOutline>(); edge.Configure(Color.white);
-            var selectPointer = select.gameObject.AddComponent<SkillSlotPointer>();
-            var input = new PointerEventData(null);
+            var slotLabel = Rect("Label", select).gameObject.AddComponent<TextMeshProUGUI>();
+            var pointer = select.gameObject.AddComponent<SkillSlotPointer>();
+            pointer.BindStyle(background, slotLabel);
             pointer.SetSelected(false);
-            wipe.OnPointerEnter(input); edge.OnPointerEnter(input); rootEdge.OnPointerEnter(input);
-            Advance(wipe, 1);
-            Check(Reveal(wipe) == 0 && !edge.GetComponent<Outline>().enabled && !rootEdge.GetComponent<Outline>().enabled,
-                "Hovering an unselected Party slot must not reveal the plate or outline.");
-            pointer.SetSelected(true); Advance(wipe, .14f);
-            Check(Reveal(wipe) > 0 && Reveal(wipe) < 1 && edge.GetComponent<Outline>().enabled, "Selected slot must animate its reveal.");
-            Advance(wipe, 1); Check(Reveal(wipe) == 1, "Selected slot must reveal fully.");
-            pointer.SetSelected(false); wipe.OnPointerEnter(input); Advance(wipe, 1);
-            Check(Reveal(wipe) == 0 && !edge.GetComponent<Outline>().enabled, "Changing selection must hide the old slot even while hovered.");
-            selectPointer.select = () => pointer.SetSelected(true);
-            selectPointer.OnSelect(new BaseEventData(null)); Advance(wipe, 1);
-            Check(Reveal(wipe) == 1, "Keyboard/gamepad selection must reveal the selected slot.");
-            int rightClicks = 0; selectPointer.rightClick = () => rightClicks++;
-            selectPointer.OnPointerClick(new PointerEventData(null) { button = PointerEventData.InputButton.Right });
+            Check(background.color == Color.black && slotLabel.color == Color.white, "Unselected slot must have a black row and white text.");
+            pointer.select = () => pointer.SetSelected(true);
+            pointer.OnSelect(new BaseEventData(null));
+            Check(background.color == Color.white && slotLabel.color == Color.black, "Selection must invert the row and text.");
+            Check(((Color32)hitArea.color).a == 100, "Selected overlay must use alpha 100/255.");
+            pointer.SetSelected(false);
+            Check(background.color == Color.black && slotLabel.color == Color.white, "Deselecting must restore the idle colors.");
+            Check(hitArea.color.a == 0f, "Deselecting must clear the overlay.");
+            int rightClicks = 0; pointer.rightClick = () => rightClicks++;
+            pointer.OnPointerClick(new PointerEventData(null) { button = PointerEventData.InputButton.Right });
             Check(rightClicks == 1, "Right-click skill change must remain available.");
-            wipe.SetForcedReveal(false); wipe.SetSelectionOnly(false); wipe.OnPointerEnter(input); Advance(wipe, 1);
+            var otherButton = Rect("Other Button", canvasGo.transform).gameObject;
+            var image = otherButton.AddComponent<Image>();
+            otherButton.AddComponent<Button>();
+            var wipe = otherButton.AddComponent<UIButtonWipeReveal>();
+            wipe.Configure(image, sprite);
+            wipe.OnPointerEnter(new PointerEventData(null)); Advance(wipe, 1);
             Check(Reveal(wipe) == 1, "Buttons outside selection-only mode must retain hover reveal.");
 
-            File.WriteAllText(Result, "PASS: Interact black backdrop survives theme and repeat setup, stays behind text and does not block clicks; Party slot hover stays off, selection animates, deselection clears, navigation/right-click and other hover buttons remain functional.");
+            File.WriteAllText(Result, "PASS: Interact backdrop survives theme; Party slots invert on selection and restore on deselection, Select remains transparent, right-click works, and other buttons keep hover wipe.");
         }
         catch (Exception error) { File.WriteAllText(Result, "FAIL: " + error); Debug.LogException(error); }
         finally

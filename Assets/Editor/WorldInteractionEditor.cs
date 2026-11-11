@@ -364,6 +364,18 @@ public class WorldInteractionEditor : Editor
             );
 
 
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("combatArenaScan"),
+                new GUIContent("Combat Arena Scan"), true);
+            if (EditorApplication.isPlaying)
+            {
+                if (GUILayout.Button("Inspect Spawn and Scan"))
+                    CombatArenaStageValidation.InspectEncounter(point);
+            }
+            else if (GUILayout.Button("Validate Spawn and Scan"))
+            {
+                CombatArenaStageValidation.ValidateSpawnAndScan();
+            }
+
             if (combatSetupId != null)
             {
                 EditorGUILayout.PropertyField(
@@ -1125,5 +1137,116 @@ public class WorldInteractionEditor : Editor
             " • " +
             point.kind
         );
+    }
+}
+
+internal static class CombatArenaStageValidation
+{
+    const string ValidateMenu = "Tools/Adventure/Combat/Validate Spawn and Scan";
+    const string InspectMenu = "Tools/Adventure/Combat/Inspect Selected Encounter";
+
+    [MenuItem(ValidateMenu, true)]
+    static bool CanValidate() => !EditorApplication.isPlayingOrWillChangePlaymode;
+
+    [MenuItem(ValidateMenu)]
+    public static void ValidateSpawnAndScan()
+    {
+        var catalogue = new GameObject("Validation Chunk Catalogue") { hideFlags = HideFlags.HideAndDontSave };
+        var first = new GameObject("Validation Encounter A") { hideFlags = HideFlags.HideAndDontSave };
+        var second = new GameObject("Validation Encounter B") { hideFlags = HideFlags.HideAndDontSave };
+        try
+        {
+            var streamer = catalogue.AddComponent<MapChunkStreamer>();
+            streamer.chunks.Add(Chunk("boundary", new Vector3(13, 0, 0), new Vector3(8, 4, 4)));
+            streamer.chunks.Add(Chunk("boundary", new Vector3(13, 0, 0), new Vector3(8, 4, 4)));
+            streamer.chunks.Add(Chunk("remote", new Vector3(30, 0, 0), new Vector3(4, 4, 4)));
+            streamer.chunks.Add(Chunk("above", new Vector3(0, 15, 0), new Vector3(4, 4, 4)));
+
+            var point = CreateEncounter(first);
+            Assert(!CombatAreaScanner.TryScan(point, streamer, out _, out _), "Missing Spawn Anchor must fail.");
+            var origin = first.AddComponent<EnemyCombatOrigin>();
+            Quaternion rotation = Quaternion.Euler(0, 135, 0);
+            first.transform.SetPositionAndRotation(Vector3.zero, rotation);
+            origin.CaptureSpawnPoint();
+            AssertScan(point, streamer, Vector3.zero, rotation, "boundary");
+
+            first.transform.SetPositionAndRotation(Vector3.right * 4, Quaternion.identity);
+            origin.CaptureSpawnPoint();
+            AssertScan(point, streamer, Vector3.zero, rotation, "boundary");
+
+            first.transform.position = Vector3.right * 20;
+            AssertScan(point, streamer, Vector3.zero, rotation, "boundary");
+
+            var other = CreateEncounter(second);
+            second.transform.position = Vector3.right * 30;
+            second.AddComponent<EnemyCombatOrigin>().CaptureSpawnPoint();
+            AssertScan(other, streamer, second.transform.position, Quaternion.identity, "remote");
+            AssertScan(point, streamer, Vector3.zero, rotation, "boundary");
+
+            first.SetActive(false);
+            origin.ResetSpawnPoint();
+            Assert(!CombatAreaScanner.TryScan(point, streamer, out _, out _), "Reset must clear the old spawn.");
+            first.transform.SetPositionAndRotation(Vector3.right * 30, Quaternion.identity);
+            origin.SetSpawnPoint(first.transform.position, first.transform.rotation);
+            first.SetActive(true);
+            AssertScan(point, streamer, Vector3.right * 30, Quaternion.identity, "remote");
+            Debug.Log("[Combat Arena] PASS: origin survives movement and rotation, encounters stay independent, " +
+                "pool respawn replaces origin, and scan includes intersecting bounds once.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(first);
+            UnityEngine.Object.DestroyImmediate(second);
+            UnityEngine.Object.DestroyImmediate(catalogue);
+        }
+    }
+
+    [MenuItem(InspectMenu, true)]
+    static bool CanInspect() => EditorApplication.isPlaying && Selection.activeGameObject != null &&
+        Selection.activeGameObject.GetComponentInParent<WorldInteraction>() != null;
+
+    [MenuItem(InspectMenu)]
+    public static void InspectSelectedEncounter()
+    {
+        if (!CanInspect()) return;
+        InspectEncounter(Selection.activeGameObject.GetComponentInParent<WorldInteraction>());
+    }
+
+    internal static void InspectEncounter(WorldInteraction point)
+    {
+        if (!CombatAreaScanner.TryScan(point, MapChunkStreamer.Instance, out CombatAreaScan scan, out string error))
+        {
+            Debug.LogWarning("[Combat Arena] " + error, point);
+            return;
+        }
+        Debug.Log($"[Combat Arena] {point.name}\nSpawn: {scan.SpawnPose.position}\nCurrent: {point.transform.position}\n" +
+            $"Scan radius: {scan.Radius:0.#} m\nChunks: {scan.ChunkPaths.Count}\n" +
+            string.Join("\n", scan.ChunkPaths), point);
+    }
+
+    static WorldInteraction CreateEncounter(GameObject actor)
+    {
+        var point = actor.AddComponent<WorldInteraction>();
+        point.kind = WorldInteractionKind.Encounter;
+        point.combatArenaScan.scanRadius = 10f;
+        point.combatArenaScan.edgePadding = 0f;
+        return point;
+    }
+
+    static MapChunkStreamer.Chunk Chunk(string id, Vector3 center, Vector3 size) =>
+        new MapChunkStreamer.Chunk { scenePath = id, bounds = new Bounds(center, size) };
+
+    static void AssertScan(WorldInteraction point, MapChunkStreamer streamer,
+        Vector3 spawn, Quaternion rotation, params string[] expected)
+    {
+        Assert(CombatAreaScanner.TryScan(point, streamer, out CombatAreaScan scan, out string error), error);
+        Assert(scan.SpawnPose.position == spawn && Quaternion.Angle(scan.SpawnPose.rotation, rotation) < .01f,
+            "Scan used the wrong spawn pose.");
+        Assert(scan.ChunkPaths.SequenceEqual(expected), "Scan selected unexpected chunk paths.");
+    }
+
+    static void Assert(bool result, string message)
+    {
+        if (!result) throw new InvalidOperationException(message);
     }
 }

@@ -25,7 +25,7 @@ public class BattleStartEffect
 [System.Serializable]
 public class BossPhase
 {
-    [Tooltip("Icon tùy chọn cho phase này. Để trống sẽ hiện số phase trên HUD.")]
+    [HideInInspector]
     public Sprite phaseIcon;
 
     [Tooltip("Số lượt đánh trong 1 turn khi ở phase này")]
@@ -129,7 +129,7 @@ public class BattleUnit : MonoBehaviour
     [Tooltip("Mỗi phần tử tạo thêm một thanh HP đầy cho một phase tiếp theo. Boss chỉ chuyển phase khi thanh HP hiện tại cạn hết.")]
     public List<BossPhase> bossPhases;
 
-    [Tooltip("Icon tùy chọn cho Phase 1. Để trống sẽ hiện số phase trên HUD.")]
+    [HideInInspector]
     public Sprite phase1Icon;
 
     private int currentPhaseIndex = -1; // -1 = Phase 1/base, bossPhases[0] = Phase 2
@@ -304,6 +304,7 @@ public class BattleUnit : MonoBehaviour
     public int currentHP { get; private set; }
     public bool IsDead => currentHP <= 0 && !bossPhaseTransitionPending;
     public bool HasPendingBossPhaseTransition => bossPhaseTransitionPending;
+    public int BossPhaseCount => isBoss ? 1 + (bossPhases?.Count ?? 0) : 0;
     public int CurrentBossPhaseNumber => !isBoss ? 0 : currentPhaseIndex + 2;
     public Sprite CurrentBossPhaseIcon => !isBoss ? null : currentPhaseIndex < 0
         ? phase1Icon

@@ -104,6 +104,7 @@ public static class GameUITheme
         foreach (var image in root.GetComponentsInChildren<Image>(true))
         {
             if (image == null) continue;
+            if (IsPartySkillSlotRow(image.transform)) continue;
             if (AdventureCanvasRoot.IsInteractLabelBackground(image.transform)) continue;
             if (IsSkillPresentationElement(image.transform)) continue;
             if (IsSaveSlotsElement(image.transform) || IsQuestElement(image.transform)) continue;
@@ -191,7 +192,7 @@ public static class GameUITheme
             }
             if (IsInsidePickerRow(button.transform))
             {
-                MakeButtonBackgroundTransparent(button);
+                if (button.name != "Portrait") MakeButtonBackgroundTransparent(button);
                 RemoveButtonDecorations(button, true);
                 continue;
             }
@@ -201,6 +202,24 @@ public static class GameUITheme
                 RemoveButtonDecorations(button, true);
                 continue;
             }
+            if (IsAdventureSkillSelect(button.transform))
+            {
+                MakeButtonBackgroundTransparent(button);
+                RemoveButtonDecorations(button, true);
+                continue;
+            }
+            if (IsPartySkillAction(button.transform))
+            {
+                RemoveButtonDecorations(button, true);
+                if (button.transform.parent.name == "SkillContext")
+                {
+                    button.transition = Selectable.Transition.None;
+                    var highlight = button.GetComponent<QuestButtonHighlight>();
+                    if (highlight == null) highlight = button.gameObject.AddComponent<QuestButtonHighlight>();
+                    highlight.Configure(true, true, 100f / 255f);
+                }
+                continue;
+            }
 
             bool useSkillBackground = UsesSkillBackground(button.transform);
             if (useSkillBackground)
@@ -208,13 +227,27 @@ public static class GameUITheme
                 Image skillPlate = PreparePersistentSkillBackground(button, SkillBackgroundSprite);
                 if (skillPlate == null) continue;
                 button.transition = Selectable.Transition.None;
-                bool useHoverScale = IsMainMenuOrRestButton(button.transform) || IsAttributeConfirmButton(button.transform);
-                RemoveButtonDecorations(button, false, skillPlate, useHoverScale);
-                var hover = skillPlate.GetComponent<UIHoverOutline>();
-                if (hover == null) hover = skillPlate.gameObject.AddComponent<UIHoverOutline>();
-                hover.Configure(new Color(.88f, .9f, .93f, .95f), new Vector2(3f, 3f));
+                bool attributeConfirm = IsAttributeConfirmButton(button.transform);
+                bool destination = IsFastTravelDestination(button.transform);
+                bool useHoverScale = !destination && (IsMainMenuOrRestButton(button.transform) || attributeConfirm);
+                RemoveButtonDecorations(button, attributeConfirm || destination, skillPlate, useHoverScale);
+                if (!attributeConfirm && !destination)
+                {
+                    var hover = skillPlate.GetComponent<UIHoverOutline>();
+                    if (hover == null) hover = skillPlate.gameObject.AddComponent<UIHoverOutline>();
+                    hover.Configure(new Color(.88f, .9f, .93f, .95f), new Vector2(3f, 3f));
+                }
 
-                if (useHoverScale)
+                if (destination)
+                {
+                    if (button.navigation.mode == Navigation.Mode.None)
+                        button.navigation = new Navigation { mode = Navigation.Mode.Automatic };
+                    FitButtonLabelsInsideBackground(button);
+                    var highlight = button.GetComponent<QuestButtonHighlight>();
+                    if (highlight == null) highlight = button.gameObject.AddComponent<QuestButtonHighlight>();
+                    highlight.Configure(false, true, highlightOnHover: false);
+                }
+                else if (useHoverScale)
                 {
                     RemoveDynamicButtonUI(button);
                     AddHoverScale(button);
@@ -276,7 +309,8 @@ public static class GameUITheme
     static bool IsSaveSlotsElement(Transform target)
     {
         for (var parent = target; parent != null; parent = parent.parent)
-            if (parent.name == "Save Slots" || parent.name == "Save Slot Confirmation") return true;
+            if (parent.name == "Save Slots" || parent.name == "Save Slot Confirmation" ||
+                parent.name == "Return To Title Confirmation") return true;
         return false;
     }
 
@@ -398,7 +432,7 @@ public static class GameUITheme
     static void RemoveFrame(Image image)
     {
         if (image == null) return;
-        var frame = image.GetComponentInChildren<GameUIFrameGraphic>(true);
+        var frame = image.transform.Find("GameUIFrame")?.GetComponent<GameUIFrameGraphic>();
         if (frame != null) Object.Destroy(frame.gameObject);
     }
 
@@ -438,12 +472,54 @@ public static class GameUITheme
         return content != null && button.parent != null && button.parent.parent == content;
     }
 
+    static bool IsLearnedSkillRow(Transform row)
+    {
+        if (row.parent == null || row.parent.name != "Content") return false;
+        var canvas = row.GetComponentInParent<AdventureCanvasRoot>(true);
+        return canvas != null && row.parent == canvas.transform.Find("Menu/Party/Member/SkillDialog/Learned/Viewport/Content");
+    }
+
+    static bool IsPartySkillSlotRow(Transform row)
+    {
+        if (row.parent == null || row.parent.name != "Content") return false;
+        var canvas = row.GetComponentInParent<AdventureCanvasRoot>(true);
+        return canvas != null && row.parent == canvas.transform.Find("Menu/Party/Member/Slots/Viewport/Content");
+    }
+
+    static bool IsPartySkillAction(Transform button)
+    {
+        Transform panel = button.parent;
+        if (panel == null) return false;
+        bool isMoveButton = panel.name == "Member" && (button.name == "MoveLeft" || button.name == "MoveRight");
+        if (!isMoveButton && panel.name != "SkillContext" && panel.name != "SkillDialog") return false;
+        var canvas = button.GetComponentInParent<AdventureCanvasRoot>(true);
+        return canvas != null && panel == canvas.transform.Find(isMoveButton ? "Menu/Party/Member" : "Menu/Party/Member/" + panel.name);
+    }
+
+    static bool IsAdventureSkillSelect(Transform button)
+    {
+        if (button.name != "Select" || button.parent == null) return false;
+        if (IsLearnedSkillRow(button.parent) || IsPartySkillSlotRow(button.parent)) return true;
+        var content = button.parent.parent;
+        if (content == null || content.name != "Content") return false;
+        var canvas = button.GetComponentInParent<AdventureCanvasRoot>(true);
+        return canvas != null && content == canvas.transform.Find("Menu/Skills/Nodes/Viewport/Content");
+    }
+
     static bool IsAttributeConfirmButton(Transform button)
     {
         if (button == null) return false;
         var canvas = button.GetComponentInParent<AdventureCanvasRoot>();
         Transform confirm = canvas != null ? canvas.transform.Find("Menu/Attributes/Confirm") : null;
         return confirm != null && button == confirm;
+    }
+
+    static bool IsFastTravelDestination(Transform button)
+    {
+        if (button.name != "Destination") return false;
+        var canvas = button.GetComponentInParent<AdventureCanvasRoot>(true);
+        Transform list = canvas != null ? canvas.transform.Find("Menu/FastTravelList") : null;
+        return list != null && button.IsChildOf(list);
     }
 
     static Image PreparePersistentSkillBackground(Button button, Sprite sprite)
@@ -610,7 +686,7 @@ public static class GameUITheme
             if (scope == null) continue;
             foreach (var button in scope.GetComponentsInChildren<Button>(true))
             {
-                if (button == null) continue;
+                if (button == null || IsFastTravelDestination(button.transform)) continue;
                 RemoveDynamicButtonUI(button);
                 AddHoverScale(button);
                 FitButtonLabelsInsideBackground(button);
@@ -629,7 +705,7 @@ public static class GameUITheme
     {
         if (image != null && image.gameObject.scene.name == "combattest") return;
         if (image == null || image.name.ToLowerInvariant().Contains("background")) return;
-        var frame = image.GetComponentInChildren<GameUIFrameGraphic>(true);
+        var frame = image.transform.Find("GameUIFrame")?.GetComponent<GameUIFrameGraphic>();
         if (frame == null)
         {
             var go = new GameObject("GameUIFrame", typeof(RectTransform), typeof(CanvasRenderer), typeof(GameUIFrameGraphic));

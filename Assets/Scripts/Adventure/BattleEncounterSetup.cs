@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Unity.Cinemachine;
+using UnityEngine.Serialization;
 
 [Serializable]
 public class EnemyCombatSetup
@@ -41,19 +42,21 @@ public class BattleEncounterSetup : MonoBehaviour
     [Tooltip("Phải giống Combat Setup ID trên WorldInteraction ở map.")]
     public string setupId = "default";
 
-    [Header("Battle Map Objects")]
-    [Tooltip("Kéo các object gốc của map đấu trong scene combattest vào đây (địa hình, props, collider, đèn riêng). Khi chọn encounter này, chỉ các map trong danh sách này được bật; map thuộc setup khác sẽ tắt. Để trống ở tất cả setup để giữ cách hoạt động cũ. Không đặt các map lồng nhau hoặc chứa CombatManager, Canvas hay nhân vật.")]
-    public List<GameObject> battleMapObjects = new List<GameObject>();
+    [Header("Combat Arena")]
+    public CombatArenaSpawnSettings arenaSpawn = new CombatArenaSpawnSettings();
+
+    [SerializeField, HideInInspector, FormerlySerializedAs("battleMapObjects")]
+    List<GameObject> legacyBattleMaps = new List<GameObject>();
 
     // Resolve all desired states before changing objects: shared maps stay enabled.
-    public void ApplyBattleMap()
+    public void ApplyBattleMap(bool streamedArena = false)
     {
         var allMaps = new HashSet<GameObject>();
         var selectedMaps = new HashSet<GameObject>();
         foreach (var setup in FindObjectsByType<BattleEncounterSetup>(FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
-            if (setup.gameObject.scene != gameObject.scene || setup.battleMapObjects == null) continue;
-            foreach (var map in setup.battleMapObjects)
+            if (setup.gameObject.scene != gameObject.scene || setup.legacyBattleMaps == null) continue;
+            foreach (var map in setup.legacyBattleMaps)
             {
                 if (map == null) continue;
                 if (map.scene != gameObject.scene ||
@@ -65,7 +68,7 @@ public class BattleEncounterSetup : MonoBehaviour
                     return;
                 }
                 allMaps.Add(map);
-                if (setup == this) selectedMaps.Add(map);
+                if (setup == this && !streamedArena) selectedMaps.Add(map);
             }
         }
         foreach (var map in allMaps)

@@ -14,6 +14,9 @@ public class AdventureUI : MonoBehaviour
     ActionData pendingSkill;
     PartyMemberProgress skillDialogMember;
     HoldToConfirmButton attributeUpgradeHold;
+    PartyMemberProgress skillNodesMember;
+    ActionData[] skillNodes = System.Array.Empty<ActionData>();
+    bool skillNodeSelected;
     void CloseSkillChange() { skillContextOpen = false; skillDialogOpen = false; pendingSkill = null; skillDialogMember = null; }
     void OpenSkillContext(int slot) { selectedSlot = slot; CloseSkillChange(); skillContextOpen = true; skillDialogMember = S.Data.party[selectedMember]; }
 
@@ -25,6 +28,9 @@ public class AdventureUI : MonoBehaviour
     PartyMenuStage stage;
     AdventureCanvasRoot view;
     AdventureSaveSlotsView saveSlotsView;
+    GameObject returnTitleDialog;
+    CanvasGroup returnTitleMenuGroup;
+    Button returnTitleButton, returnTitleYes, returnTitleNo;
     GameObject questPage, questDialog, dialoguePage;
     Button languageToggleButton;
     RectTransform questContent, dialoguePanel, dialogueChoices;
@@ -34,6 +40,8 @@ public class AdventureUI : MonoBehaviour
     Button dialogueScreenButton;
     AdventureDialogueView dialogueView;
     AdventureQuest selectedQuest;
+    bool selectedQuestWasTracked;
+    CanvasGroup questListGroup;
     string renderedDialogueNode;
     int dialogueCharacterCount, dialogueVisibleCharacters;
     float dialogueTypewriterProgress;
@@ -67,6 +75,7 @@ public class AdventureUI : MonoBehaviour
         if (previousMenu != S.Menu)
         {
             saveSlotsView?.Close();
+            CloseReturnToTitleDialog();
             restPage = 0; selectedSkill = 0; CloseSkillChange(); CloseTravel();
             if (S.Menu != AdventureMenu.Tasks) CloseQuestDialog();
             previousMenu = S.Menu;
@@ -80,6 +89,7 @@ public class AdventureUI : MonoBehaviour
             }
             if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
         }
+        if (ReturnToTitleConfirmationOpen && Input.GetMouseButtonDown(1)) CloseReturnToTitleDialog();
         selectedMember = Mathf.Clamp(selectedMember, 0, Mathf.Max(0, S.Data.party.Count - 1));
         bool menuOpen = S.Menu != AdventureMenu.None;
         if (S.Menu != AdventureMenu.Main) foreach (var card in cardStages) card.Hide();
@@ -166,6 +176,7 @@ public class AdventureUI : MonoBehaviour
         BuildLanguageToggle();
         BuildDialogueUI();
         BuildSaveLoadUI();
+        BuildReturnToTitleUI();
         var attributeConfirm = view.Component<Button>("Menu/Attributes/Confirm");
         attributeUpgradeHold = attributeConfirm.GetComponent<HoldToConfirmButton>();
         if (attributeUpgradeHold == null) attributeUpgradeHold = attributeConfirm.gameObject.AddComponent<HoldToConfirmButton>();
@@ -203,11 +214,7 @@ public class AdventureUI : MonoBehaviour
         view.Click("Menu/Rest/Attributes", () => restPage = 1);
         view.Click("Menu/Rest/Skills", () => { restPage = 2; SelectLearnable(); });
         view.Click("Menu/Rest/Craft", () => restPage = 3);
-        view.Click("Menu/Skills/Detail/Upgrade", () =>
-        {
-            var skills = CurrentSkills();
-            if (selectedSkill < skills.Length) S.UnlockSkill(selectedMember, skills[selectedSkill]);
-        });
+        view.Active("Menu/Skills/Detail/Upgrade", false);
         // Runtime-created menu buttons are added after AdventureCanvasRoot.Awake themes the prefab.
         GameUITheme.RefreshMenuButtonHover(view.gameObject);
     }
@@ -231,6 +238,77 @@ public class AdventureUI : MonoBehaviour
         button.onClick.AddListener(() => OpenSaveSlots(false));
         GameLocalization.SetText(button.GetComponentInChildren<TMP_Text>(true), "Tải game");
         button.gameObject.SetActive(true);
+    }
+
+    void BuildReturnToTitleUI()
+    {
+        var overview = view.Node("Menu/Party/Overview");
+        var button = overview.Find("ReturnToTitle")?.GetComponent<Button>();
+        if (button == null)
+        {
+            button = Instantiate(view.Component<Button>("Menu/Party/Overview/LoadGame"), overview);
+            button.name = "ReturnToTitle";
+            ((RectTransform)button.transform).anchoredPosition += Vector2.down * 88f;
+        }
+        button.onClick = new Button.ButtonClickedEvent();
+        button.onClick.AddListener(OpenReturnToTitleDialog);
+        GameLocalization.SetText(button.GetComponentInChildren<TMP_Text>(true), "Về Title");
+        button.gameObject.SetActive(true);
+        returnTitleButton = button;
+        returnTitleMenuGroup = overview.GetComponent<CanvasGroup>();
+        if (returnTitleMenuGroup == null) returnTitleMenuGroup = overview.gameObject.AddComponent<CanvasGroup>();
+
+        var existing = view.transform.Find("Menu/Return To Title Confirmation");
+        returnTitleDialog = existing != null ? existing.gameObject
+            : Instantiate(saveSlotsView.confirmationPanel, view.Node("Menu"), false);
+        returnTitleDialog.name = "Return To Title Confirmation";
+        var panel = returnTitleDialog.transform.Find("Confirmation Panel");
+        GameLocalization.SetText(panel.Find("Question").GetComponent<TMP_Text>(), "Bạn có chắc muốn về Title?");
+        panel.Find("Details").gameObject.SetActive(false);
+        returnTitleYes = panel.Find("Yes").GetComponent<Button>();
+        returnTitleNo = panel.Find("No").GetComponent<Button>();
+        returnTitleYes.onClick = new Button.ButtonClickedEvent();
+        returnTitleYes.onClick.AddListener(ConfirmReturnToTitle);
+        returnTitleNo.onClick = new Button.ButtonClickedEvent();
+        returnTitleNo.onClick.AddListener(CloseReturnToTitleDialog);
+        GameLocalization.SetText(returnTitleYes.GetComponentInChildren<TMP_Text>(true), "Có");
+        GameLocalization.SetText(returnTitleNo.GetComponentInChildren<TMP_Text>(true), "Không");
+        AdventureSaveSlotsView.ConfigureTextHover(returnTitleYes);
+        AdventureSaveSlotsView.ConfigureTextHover(returnTitleNo);
+        returnTitleYes.navigation = new Navigation { mode = Navigation.Mode.Explicit,
+            selectOnUp = returnTitleNo, selectOnDown = returnTitleNo, selectOnLeft = returnTitleNo, selectOnRight = returnTitleNo };
+        returnTitleNo.navigation = new Navigation { mode = Navigation.Mode.Explicit,
+            selectOnUp = returnTitleYes, selectOnDown = returnTitleYes, selectOnLeft = returnTitleYes, selectOnRight = returnTitleYes };
+        returnTitleDialog.SetActive(false);
+    }
+
+    public bool ReturnToTitleConfirmationOpen => returnTitleDialog != null && returnTitleDialog.activeSelf;
+
+    void OpenReturnToTitleDialog()
+    {
+        if (S == null || S.Busy || S.Menu != AdventureMenu.Main || ReturnToTitleConfirmationOpen) return;
+        returnTitleMenuGroup.interactable = returnTitleMenuGroup.blocksRaycasts = false;
+        returnTitleYes.interactable = returnTitleNo.interactable = true;
+        returnTitleDialog.SetActive(true);
+        returnTitleDialog.transform.SetAsLastSibling();
+        EventSystem.current?.SetSelectedGameObject(returnTitleNo.gameObject);
+    }
+
+    void ConfirmReturnToTitle()
+    {
+        if (!ReturnToTitleConfirmationOpen || S == null) return;
+        if (S.ReturnToTitle()) returnTitleYes.interactable = returnTitleNo.interactable = false;
+        else CloseReturnToTitleDialog();
+    }
+
+    void CloseReturnToTitleDialog()
+    {
+        bool wasOpen = ReturnToTitleConfirmationOpen;
+        if (returnTitleDialog != null) returnTitleDialog.SetActive(false);
+        if (returnTitleMenuGroup != null)
+            returnTitleMenuGroup.interactable = returnTitleMenuGroup.blocksRaycasts = true;
+        if (wasOpen && S != null && S.Menu == AdventureMenu.Main)
+            EventSystem.current?.SetSelectedGameObject(returnTitleButton.gameObject);
     }
 
     public void OpenSaveSlots(bool forSaving)
@@ -371,6 +449,7 @@ public class AdventureUI : MonoBehaviour
         TravelRect(questPage, view.Node("Menu"), Vector2.zero, Vector2.one);
         questPage.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f);
         questPage.GetComponent<Image>().raycastTarget = false;
+        questListGroup = questPage.AddComponent<CanvasGroup>();
         var listPanel = TravelPanel("Quest List", questPage.transform, new Vector2(.09f, .16f), new Vector2(.91f, .84f));
         listPanel.GetComponent<Image>().color = new Color(.025f, .028f, .034f, 1f);
         TravelText(listPanel.transform, "Heading", "NHIỆM VỤ ĐANG CÓ", new Vector2(.04f, .87f), new Vector2(.96f, .98f));
@@ -389,8 +468,12 @@ public class AdventureUI : MonoBehaviour
         questDialog.GetComponent<Image>().color = new Color(0f, 0f, 0f, .62f);
         var box = TravelPanel("Panel", questDialog.transform, new Vector2(.27f, .3f), new Vector2(.73f, .7f));
         questPrompt = TravelText(box.transform, "Prompt", "", new Vector2(.07f, .38f), new Vector2(.93f, .91f));
-        QuestConfirmationButton(box.transform, "Yes", "Có", new Vector2(.08f, .1f), new Vector2(.46f, .3f), ConfirmTrackQuest);
-        QuestConfirmationButton(box.transform, "No", "Không", new Vector2(.54f, .1f), new Vector2(.92f, .3f), CloseQuestDialog);
+        var yes = QuestConfirmationButton(box.transform, "Yes", "Có", new Vector2(.08f, .1f), new Vector2(.46f, .3f), ConfirmTrackQuest);
+        var no = QuestConfirmationButton(box.transform, "No", "Không", new Vector2(.54f, .1f), new Vector2(.92f, .3f), CloseQuestDialog);
+        yes.navigation = new Navigation { mode = Navigation.Mode.Explicit,
+            selectOnUp = no, selectOnDown = no, selectOnLeft = no, selectOnRight = no };
+        no.navigation = new Navigation { mode = Navigation.Mode.Explicit,
+            selectOnUp = yes, selectOnDown = yes, selectOnLeft = yes, selectOnRight = yes };
         questDialog.SetActive(false);
     }
 
@@ -452,42 +535,53 @@ public class AdventureUI : MonoBehaviour
                 new Vector2(.025f, .1f), new Vector2(.975f, .9f));
             var size = row.GetComponent<LayoutElement>(); size.preferredHeight = 88f; size.minHeight = 88f;
             button.interactable = !progress.completed || !progress.rewardsClaimed;
-            row.AddComponent<QuestButtonHighlight>().Configure(true, false);
+            row.AddComponent<QuestButtonHighlight>().Configure(true, false, 100f / 255f,
+                normalBackgroundAlpha: 100f / 255f);
         }
     }
 
     void OpenQuestDialog(AdventureQuest quest)
     {
-        if (quest != null && S.Data.trackedQuestId == quest.Id)
-        {
-            S.TrackQuest(quest.Id);
-            RefreshQuestList();
-            return;
-        }
+        if (quest == null || questDialog.activeSelf) return;
         selectedQuest = quest;
-        var progress = quest != null ? S.QuestProgress(quest.Id) : null;
+        selectedQuestWasTracked = S.Data.trackedQuestId == quest.Id;
+        var progress = S.QuestProgress(quest.Id);
         string progressText = progress != null && progress.completed
             ? progress.rewardsClaimed ? GameLocalization.Translate("Đã báo cáo và nhận thưởng.") : GameLocalization.Translate("Mục tiêu đã xong. Hãy quay lại NPC để nhận thưởng.")
             : GameLocalization.Translate("Tiến độ: " + (progress?.objectiveCount ?? 0) + " / " + Mathf.Max(1, quest != null ? quest.requiredCount : 1));
-        string prompt = progress != null && progress.completed && !progress.rewardsClaimed
+        string prompt = selectedQuestWasTracked ? GameLocalization.Translate("Hủy theo dõi nhiệm vụ?")
+            : progress != null && progress.completed && !progress.rewardsClaimed
             ? GameLocalization.Translate("Theo dõi vị trí NPC để báo cáo nhiệm vụ?")
             : GameLocalization.Translate("Theo dõi nhiệm vụ?");
-        GameLocalization.SetText(questPrompt, quest == null ? prompt :
+        GameLocalization.SetText(questPrompt,
             quest.displayName + "\n\n" + quest.description + "\n\n" + progressText + "\n\n" + prompt);
+        questListGroup.interactable = questListGroup.blocksRaycasts = false;
         questDialog.SetActive(true);
         questDialog.transform.SetAsLastSibling();
+        EventSystem.current?.SetSelectedGameObject(questDialog.transform.Find("Panel/No").gameObject);
     }
 
     void ConfirmTrackQuest()
     {
-        if (selectedQuest != null && S.TrackQuest(selectedQuest.Id)) RefreshQuestList();
+        bool stillMatches = selectedQuest != null &&
+            (S.Data.trackedQuestId == selectedQuest.Id) == selectedQuestWasTracked;
+        if (stillMatches && S.TrackQuest(selectedQuest.Id)) RefreshQuestList();
         CloseQuestDialog();
     }
 
     void CloseQuestDialog()
     {
-        selectedQuest = null;
+        bool wasOpen = questDialog != null && questDialog.activeSelf;
         if (questDialog != null) questDialog.SetActive(false);
+        if (questListGroup != null) questListGroup.interactable = questListGroup.blocksRaycasts = true;
+        if (wasOpen && selectedQuest != null && questContent != null && S != null && S.Menu == AdventureMenu.Tasks)
+            foreach (Transform row in questContent)
+                if (row.name == "Quest " + selectedQuest.Id && row.gameObject.activeSelf)
+                {
+                    EventSystem.current?.SetSelectedGameObject(row.gameObject);
+                    break;
+                }
+        selectedQuest = null;
     }
 
     void BuildDialogueUI()
@@ -710,6 +804,7 @@ public class AdventureUI : MonoBehaviour
     }
     void SelectLearnable()
     {
+        skillNodeSelected = false;
         var skills = CurrentSkills(); selectedSkill = 0;
         if (S.Data.party.Count == 0) return;
         var p = S.Data.party[selectedMember];
@@ -719,6 +814,7 @@ public class AdventureUI : MonoBehaviour
     }
     public bool HandleBack()
     {
+        if (ReturnToTitleConfirmationOpen) { CloseReturnToTitleDialog(); return true; }
         if (saveSlotsView != null && saveSlotsView.HandleBack()) return true;
         if (S.Menu == AdventureMenu.Dialogue) return true;
         if (questDialog != null && questDialog.activeSelf) { CloseQuestDialog(); return true; }
@@ -770,30 +866,42 @@ public class AdventureUI : MonoBehaviour
         if (S.Data.party.Count == 0) return;
         var p = S.Data.party[selectedMember]; S.EnsureLoadout(p);
         selectedSlot = Mathf.Clamp(selectedSlot, 0, S.SkillSlots - 1);
-        var all = CurrentSkills(); var learned = S.LearnedSkills(p);
+        var learned = S.LearnedLoadoutSkills(p);
         var slots = view.Rows(prefix + "/Slots" + Content, S.SkillSlots, (row, i) => {
-            AdventureCanvasRoot.RowClick(row, "Select", () => { selectedSlot = i; CloseSkillChange(); });
-            row.AddComponent<SkillSlotPointer>().rightClick = () => OpenSkillContext(i);
-            var selectPointer = row.transform.Find("Select").gameObject.AddComponent<SkillSlotPointer>();
-            selectPointer.rightClick = () => OpenSkillContext(i);
-            selectPointer.select = () => { selectedSlot = i; CloseSkillChange(); };
+            var button = row.transform.Find("Select").GetComponent<Button>();
+            var pointer = button.gameObject.AddComponent<SkillSlotPointer>();
+            pointer.BindStyle(row.GetComponent<Image>(), button.transform.Find("Label").GetComponent<TMP_Text>());
+            pointer.rightClick = () => OpenSkillContext(i);
+            pointer.select = () => { selectedSlot = i; CloseSkillChange(); };
+            button.onClick.AddListener(() => pointer.select());
         });
         for (int i = 0; i < S.SkillSlots; i++) {
-            var skill = all.FirstOrDefault(x => x.name == p.equippedSkills[i]);
-            AdventureCanvasRoot.RowSelected(slots[i], selectedSlot == i);
-            slots[i].GetComponent<SkillSlotPointer>().SetSelected(selectedSlot == i);
+            var skill = learned.FirstOrDefault(x => x.name == p.equippedSkills[i]);
+            slots[i].transform.Find("Select").GetComponent<SkillSlotPointer>().SetSelected(selectedSlot == i);
             AdventureCanvasRoot.RowText(slots[i], "Select/Label", "Ô " + (i + 1) + " • " + (skill != null ? VietnameseGameUIText.ActionName(skill) : "Trống"));
         }
         view.Active(prefix + "/SkillContext", skillContextOpen);
         view.Active(prefix + "/SkillDialog", skillDialogOpen);
         view.Active(prefix + "/Hint", false);
         if (!skillDialogOpen) return;
-        var rows = view.Rows(prefix + "/SkillDialog/Learned" + Content, learned.Length, (row, i) => AdventureCanvasRoot.RowClick(row, "Select", () => {
-            var known = S.LearnedSkills(S.Data.party[selectedMember]); if (i < known.Length) pendingSkill = known[i];
-        }));
+        var rows = view.Rows(prefix + "/SkillDialog/Learned" + Content, learned.Length, (row, i) =>
+        {
+            row.transform.Find("Select").GetComponent<Button>().onClick.AddListener(() =>
+            {
+                var known = S.LearnedLoadoutSkills(S.Data.party[selectedMember]);
+                if (i < known.Length) pendingSkill = known[i];
+            });
+        });
         for (int i = 0; i < learned.Length; i++) {
-            AdventureCanvasRoot.RowSelected(rows[i], pendingSkill == learned[i]);
+            bool selected = pendingSkill == learned[i];
+            Color frame = selected ? new Color(1f, .83f, .51f) : new Color(.77f, .61f, .34f, .82f);
+            rows[i].GetComponent<GameUIFrameGraphic>().Configure(frame, false);
             AdventureCanvasRoot.RowText(rows[i], "Select/Label", VietnameseGameUIText.ActionName(learned[i]));
+            var label = rows[i].transform.Find("Select/Label").GetComponent<TMP_Text>();
+            Color textColor = selected ? Color.white : new Color(.55f, .55f, .55f);
+            var labelStyle = label.GetComponent<GameUITextColor>();
+            if (labelStyle != null) labelStyle.SetColorOverride(textColor);
+            else label.color = textColor;
             AdventureCanvasRoot.RowText(rows[i], "Description", VietnameseGameUIText.ActionDescription(learned[i]));
         }
         view.Text(prefix + "/SkillDialog/Title", "Đổi kỹ năng ô " + (selectedSlot + 1));
@@ -833,24 +941,24 @@ public class AdventureUI : MonoBehaviour
         bool canReorder = prefix == "Menu/Party/Member";
         var rows = view.Rows(prefix + "/Picker" + Content, S.Data.party.Count, (row, i) =>
         {
+            PartyMemberDragReorder drag = null;
             if (canReorder)
             {
-                var portrait = row.transform.Find("Portrait")?.GetComponent<Image>();
-                var drag = row.AddComponent<PartyMemberDragReorder>();
+                drag = row.AddComponent<PartyMemberDragReorder>();
                 drag.Configure(i, row.GetComponent<RectTransform>(), SwapPartyMembers);
-                if (portrait != null) portrait.raycastTarget = true;
-                AdventureCanvasRoot.RowClick(row, "Select", () =>
-                {
-                    if (!drag.SuppressClick()) ChooseMember(i);
-                });
             }
-            else AdventureCanvasRoot.RowClick(row, "Select", () => ChooseMember(i));
+            row.transform.Find("Portrait").GetComponent<Button>().onClick.AddListener(() =>
+            {
+                if (drag == null || !drag.SuppressClick()) ChooseMember(i);
+            });
         });
         for (int i = 0; i < S.Data.party.Count; i++)
         {
-            AdventureCanvasRoot.RowPortrait(rows[i], "Portrait", S.Template(S.Data.party[i]).unitPortrait);
-            AdventureCanvasRoot.RowText(rows[i], "Select/Label", prefix == "Menu/Party/Member" ? S.Template(S.Data.party[i]).unitName : "Chọn");
-            AdventureCanvasRoot.RowSelected(rows[i], selectedMember == i);
+            var portrait = rows[i].transform.Find("Portrait").GetComponent<Image>();
+            portrait.sprite = S.Template(S.Data.party[i]).unitPortrait;
+            float brightness = portrait.sprite == null ? .32f : 1f;
+            if (selectedMember != i) brightness *= .7f;
+            portrait.color = new Color(brightness, brightness, brightness, 1f);
         }
     }
 
@@ -1158,15 +1266,42 @@ public class AdventureUI : MonoBehaviour
         GameLocalization.SetText(text, label);
     }
     ActionData[] CurrentSkills() => S.Data.party.Count == 0 ? new ActionData[0] : S.Template(S.Data.party[selectedMember]).characterSkills.Where(x => x != null).Distinct().ToArray();
+
+    void SelectSkillNode(int index)
+    {
+        selectedSkill = index;
+        skillNodeSelected = true;
+    }
+
+    bool CanHoldSkill(int index)
+    {
+        var session = S;
+        return session != null && !session.Busy && session.Menu == AdventureMenu.Rest && restPage == 2 &&
+            skillNodesMember != null && session.Data != null && selectedMember < session.Data.party.Count &&
+            session.Data.party[selectedMember] == skillNodesMember && skillNodeSelected && selectedSkill == index &&
+            index < skillNodes.Length && session.CanUnlockSkill(skillNodesMember, skillNodes[index]);
+    }
+
     void Skills()
     {
         Picker("Menu/Skills"); Summary("Menu/Skills/Summary");
-        var skills = CurrentSkills();
+        var skills = skillNodes = CurrentSkills();
+        var p = S.Data.party.Count > 0 ? S.Data.party[selectedMember] : null;
+        bool memberChanged = skillNodesMember != p;
+        skillNodesMember = p;
         view.Active("Menu/Skills/Empty", skills.Length == 0); view.Active("Menu/Skills/Detail", skills.Length > 0);
         selectedSkill = Mathf.Clamp(selectedSkill, 0, Mathf.Max(0, skills.Length - 1));
-        var rows = view.Rows("Menu/Skills/Nodes" + Content, skills.Length, (row, i) => AdventureCanvasRoot.RowClick(row, "Select", () => selectedSkill = i));
-        if (S.Data.party.Count == 0) return;
-        var p = S.Data.party[selectedMember]; view.Text("Menu/Skills/Points", "ĐIỂM KỸ NĂNG : " + p.skillPoints);
+        var rows = view.Rows("Menu/Skills/Nodes" + Content, skills.Length, (row, i) =>
+        {
+            var button = row.transform.Find("Select").GetComponent<Button>();
+            button.onClick.AddListener(() => SelectSkillNode(i));
+            var hold = button.GetComponent<HoldToConfirmButton>();
+            if (hold == null) hold = button.gameObject.AddComponent<HoldToConfirmButton>();
+            hold.BindSkill(() => SelectSkillNode(i), () => CanHoldSkill(i), () =>
+                S.UnlockSkill(selectedMember, skillNodes[i]));
+        });
+        if (p == null) return;
+        view.Text("Menu/Skills/Points", "ĐIỂM KỸ NĂNG : " + p.skillPoints);
         if (skills.Length == 0) view.Text("Menu/Skills/Empty", "Chưa học kỹ năng nào.");
         for (int i = 0; i < skills.Length; i++)
         {
@@ -1175,16 +1310,15 @@ public class AdventureUI : MonoBehaviour
             AdventureCanvasRoot.RowPortrait(rows[i], "Icon", skills[i].icon);
             rows[i].transform.Find("Icon").GetComponent<Image>().color = S.IsSkillUnlocked(p, skills[i]) ? Color.white : new Color(.4f, .4f, .4f, 1);
             AdventureCanvasRoot.RowText(rows[i], "Name", VietnameseGameUIText.ActionName(skills[i]));
-            AdventureCanvasRoot.RowSelected(rows[i], selectedSkill == i);
+            var hold = rows[i].transform.Find("Select").GetComponent<HoldToConfirmButton>();
+            if (memberChanged) hold.SetSelected(false);
+            hold.SetSelected(skillNodeSelected && selectedSkill == i);
         }
         if (skills.Length == 0) return;
         var skill = skills[selectedSkill];
         view.Text("Menu/Skills/Detail/Name", VietnameseGameUIText.ActionName(skill));
-        bool unlocked = S.IsSkillUnlocked(p, skill);
         var required = S.Prerequisites(p, skill).Where(x => !S.IsSkillUnlocked(p, x)).ToArray();
         view.Text("Menu/Skills/Detail/Description", VietnameseGameUIText.ActionDescription(skill) + (required.Length > 0 ? "\nCần mở: " + string.Join(", ", required.Select(VietnameseGameUIText.ActionName)) : ""));
-        view.Text("Menu/Skills/Detail/Upgrade/Label", unlocked ? "Đã mở khóa" : "Mở khóa • " + S.SkillCost(skill) + " điểm");
-        view.Enabled("Menu/Skills/Detail/Upgrade", S.CanUnlockSkill(p, skill));
         view.Text("Menu/Skills/Reason", S.UnlockBlockedReason(p, skill));
     }
     void Craft()

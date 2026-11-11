@@ -1,0 +1,130 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: afa9c7f9f6f6e4aeb84ffeeded320ec7, type: 3}
+  m_Name: Ash_Default
+  m_EditorClassIdentifier: AmbientParticlesEssentials.Runtime::ObsidianForge.AmbientParticlesEssentials.AmbientParticleProfile
+  brightness: 1.5
+  displayName: Ambient Ash
+  description: Fine drifting ash for volcanic, burned, industrial and post-apocalyptic
+    biomes.
+  density: 0.8
+  maxParticles: 800
+  spawnRadius: 20
+  verticalRange: {x: -1.2, y: 4.5}
+  minimumCameraDistance: 1.25
+  lifetime: 28
+  particleSize: {x: 0.035, y: 0.09}
+  color: {r: 1, g: 0.82, b: 0.66, a: 0.5}
+  movementSpeed: {x: 0.02, y: 0.11}
+  windDirection: {x: 0.85, y: 0.03, z: 0.35}
+  windStrength: 0.22
+  turbulence: 0.14
+  gravityModifier: 0
+  layers:
+  - name: Cool drifting ash
+    budgetShare: 0.52
+    material: {fileID: 2100000, guid: 2732494658c7944bd92507b1b1da8d73, type: 2}
+    brightness: 1
+    sizeMultiplier: 1
+    lifetimeMultiplier: 1
+    speedMultiplier: 0.5
+    noiseMultiplier: 0.6
+    noiseFrequency: 0.15
+    noiseScroll: 0.08
+    verticalSpeed: {x: -0.18, y: -0.06}
+    angularSpeed: {x: 0, y: 0}
+    aspect: {x: 1, y: 1}
+    brightnessVariation: 0.2
+    tint: {r: 0.52, g: 0.65, b: 0.8, a: 0.75}
+    trails: 0
+    trailMaterial: {fileID: 0}
+    trailRatio: 1
+    trailLifetime: 1.6
+    trailWidth: 0.12
+    trailVertexDistance: 0.08
+    trailOpacity: 0.45
+  - name: Round glowing embers
+    budgetShare: 0.3
+    material: {fileID: 2100000, guid: 9318cd2068a794d1c9954753dc14e483, type: 2}
+    brightness: 1.6
+    sizeMultiplier: 2
+    lifetimeMultiplier: 1
+    speedMultiplier: 0.6
+    noiseMultiplier: 1.5
+    noiseFrequency: 0.4
+    noiseScroll: 0.16
+    verticalSpeed: {x: -0.05, y: 0.12}
+    angularSpeed: {x: 0, y: 0}
+    aspect: {x: 1, y: 1}
+    brightnessVariation: 0.2
+    tint: {r: 1, g: 0.35, b: 0.055, a: 1}
+    trails: 0
+    trailMaterial: {fileID: 0}
+    trailRatio: 1
+    trailLifetime: 1.6
+    trailWidth: 0.12
+    trailVertexDistance: 0.08
+    trailOpacity: 0.45
+  - name: Soft ember halos
+    budgetShare: 0.12
+    material: {fileID: 2100000, guid: c2a199678677b4a4aaede8cc2c702629, type: 2}
+    brightness: 1
+    sizeMultiplier: 5
+    lifetimeMultiplier: 1
+    speedMultiplier: 0.4
+    noiseMultiplier: 0.9
+    noiseFrequency: 0.15
+    noiseScroll: 0.08
+    verticalSpeed: {x: -0.09, y: 0.015}
+    angularSpeed: {x: 0, y: 0}
+    aspect: {x: 1, y: 1}
+    brightnessVariation: 0.2
+    tint: {r: 1, g: 0.23, b: 0.04, a: 0.45}
+    trails: 0
+    trailMaterial: {fileID: 0}
+    trailRatio: 1
+    trailLifetime: 1.6
+    trailWidth: 0.12
+    trailVertexDistance: 0.08
+    trailOpacity: 0.45
+  - name: Rising ember trails
+    budgetShare: 0.06
+    material: {fileID: 2100000, guid: 65648df9b00554564a359a6a8c0cc2d0, type: 2}
+    brightness: 2.8
+    sizeMultiplier: 1.1
+    lifetimeMultiplier: 1
+    speedMultiplier: 5.5
+    noiseMultiplier: 0.8
+    noiseFrequency: 0.32
+    noiseScroll: 0.12
+    verticalSpeed: {x: 0.18, y: 0.45}
+    angularSpeed: {x: 0, y: 0}
+    aspect: {x: 1, y: 1}
+    brightnessVariation: 0.2
+    tint: {r: 1, g: 0.25, b: 0.035, a: 1.3}
+    trails: 1
+    trailMaterial: {fileID: 0}
+    trailRatio: 1
+    trailLifetime: 3
+    trailWidth: 0.65
+    trailVertexDistance: 0.08
+    trailOpacity: 0.9
+    trailMotesPerSample: 3
+    shedResidue: 1
+    residueBudgetShare: 0.75
+    residueLifetime: 0.95
+    residueRate: 6
+    residueSize: 1.4
+    residueSpread: 0.35
+    residueDrift: 0.22
+    residueOpacity: 0.85
+    residueEndTint: {r: 0.5, g: 0.08, b: 0.015, a: 0}

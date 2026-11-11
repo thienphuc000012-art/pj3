@@ -1,5 +1,4 @@
 using System;
-using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -7,145 +6,128 @@ using UnityEngine.UI;
 using UnityEngine.InputSystem;
 #endif
 
-/// <summary>Applies pending attribute points only after the confirm button is held.</summary>
+/// <summary>Confirms an upgrade after a sustained press and draws progress around the control.</summary>
 [DisallowMultipleComponent]
 public sealed class HoldToConfirmButton : MonoBehaviour,
     IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
 {
     [SerializeField, Min(.2f)] float holdDuration = .85f;
 
+    static readonly Color ReadyBorder = new Color(.76f, .69f, .55f, .55f);
+    static readonly Color ProgressBorder = new Color(1f, .91f, .73f, 1f);
+
     Button button;
     CanvasGroup buttonGroup;
-    UIButtonWipeReveal reveal;
-    UIHoverOutline outline;
-    HoldProgressRingGraphic ring;
-    GameObject badge;
+    HoldProgressRingGraphic border;
     Action confirmed;
+    Action selectSkill;
+    Func<bool> canUnlockSkill;
+    PointerEventData heldPointer;
     float progress;
-    bool available;
-    bool pointerHeld;
-    bool wasHeld;
-    bool completedThisHold;
+    bool available, selected, wasHeld, completedThisHold;
 
     public void Bind(Action callback)
     {
         button = GetComponent<Button>();
         buttonGroup = GetComponent<CanvasGroup>();
         if (buttonGroup == null) buttonGroup = gameObject.AddComponent<CanvasGroup>();
-        reveal = GetComponent<UIButtonWipeReveal>();
-        outline = GetComponentInChildren<UIHoverOutline>(true);
         confirmed = callback;
-        EnsureBadge();
+        var plate = transform.Find("Skill Background Plate") as RectTransform;
+        EnsureBadge(plate);
+        border.ConfigureOutline(ReadyBorder, ProgressBorder);
         SetAvailable(false);
+    }
+
+    public void BindSkill(Action select, Func<bool> canUnlock, Action callback)
+    {
+        button = GetComponent<Button>();
+        selectSkill = select;
+        canUnlockSkill = canUnlock;
+        confirmed = callback;
+        EnsureBadge(null);
+        border.ConfigureOutline(Color.clear, ProgressBorder);
     }
 
     public void SetAvailable(bool value)
     {
         available = value;
-        if (button == null) button = GetComponent<Button>();
-        if (button != null) button.interactable = value;
-        if (buttonGroup == null) buttonGroup = GetComponent<CanvasGroup>();
-        if (buttonGroup != null)
-        {
-            buttonGroup.alpha = value ? 1f : .38f;
-            buttonGroup.interactable = value;
-            buttonGroup.blocksRaycasts = true;
-        }
-        if (reveal == null) reveal = GetComponent<UIButtonWipeReveal>();
-        reveal?.SetForcedReveal(value);
-        if (outline == null) outline = GetComponentInChildren<UIHoverOutline>(true);
-        outline?.SetSelected(value);
-        // Keep the key/ring badge visible as an affordance, dimming it together
-        // with the button until there are pending points to apply.
-        if (badge != null) badge.SetActive(true);
+        button.interactable = value;
+        buttonGroup.alpha = value ? 1f : .38f;
+        buttonGroup.interactable = value;
+        buttonGroup.blocksRaycasts = true;
         if (!value) ResetHold();
     }
 
-    void EnsureBadge()
+    public void SetSelected(bool value)
     {
-        if (badge != null) return;
-        Transform existing = transform.Find("Hold Badge");
-        if (existing != null)
-        {
-            badge = existing.gameObject;
-            ring = existing.GetComponentInChildren<HoldProgressRingGraphic>(true);
-            return;
-        }
-
-        badge = new GameObject("Hold Badge", typeof(RectTransform));
-        badge.transform.SetParent(transform, false);
-        badge.transform.SetAsLastSibling();
-        var badgeRect = (RectTransform)badge.transform;
-        badgeRect.anchorMin = badgeRect.anchorMax = new Vector2(.5f, 0f);
-        badgeRect.pivot = new Vector2(.5f, .5f);
-        badgeRect.anchoredPosition = new Vector2(0f, -27f);
-        badgeRect.sizeDelta = new Vector2(44f, 44f);
-
-        var ringObject = new GameObject("Hold Ring", typeof(RectTransform), typeof(CanvasRenderer), typeof(HoldProgressRingGraphic));
-        ringObject.transform.SetParent(badge.transform, false);
-        var ringRect = (RectTransform)ringObject.transform;
-        ringRect.anchorMin = Vector2.zero;
-        ringRect.anchorMax = Vector2.one;
-        ringRect.offsetMin = ringRect.offsetMax = Vector2.zero;
-        ring = ringObject.GetComponent<HoldProgressRingGraphic>();
-        ring.raycastTarget = false;
-
-        var labelObject = new GameObject("Hold Key", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
-        labelObject.transform.SetParent(badge.transform, false);
-        var labelRect = (RectTransform)labelObject.transform;
-        labelRect.anchorMin = Vector2.zero;
-        labelRect.anchorMax = Vector2.one;
-        labelRect.offsetMin = labelRect.offsetMax = Vector2.zero;
-        var label = labelObject.GetComponent<TextMeshProUGUI>();
-        TMP_Text source = GetComponentInChildren<TMP_Text>(true);
-        if (source != null)
-        {
-            label.font = source.font;
-            label.fontSharedMaterial = source.fontSharedMaterial;
-            label.fontSize = Mathf.Clamp(source.fontSize, 15f, 20f);
-            label.color = new Color(.94f, .86f, .68f, 1f);
-        }
-        label.text = "A";
-        label.alignment = TextAlignmentOptions.Center;
-        label.raycastTarget = false;
-        badge.SetActive(false);
+        if (selected == value) return;
+        selected = value;
+        border.ConfigureOutline(selected ? ReadyBorder : Color.clear, ProgressBorder);
+        if (!selected) ResetHold();
     }
+
+    void EnsureBadge(RectTransform plate)
+    {
+        var badge = transform.Find("Hold Badge") as RectTransform;
+        if (badge == null)
+        {
+            var go = new GameObject("Hold Badge", typeof(RectTransform));
+            badge = (RectTransform)go.transform;
+            badge.SetParent(transform, false);
+        }
+        foreach (Transform child in badge)
+            if (child.name == "Hold Key" || child.name == "Hold Ring") child.gameObject.SetActive(false);
+        badge.anchorMin = plate != null ? plate.anchorMin : Vector2.zero;
+        badge.anchorMax = plate != null ? plate.anchorMax : Vector2.one;
+        Vector2 padding = plate != null ? Vector2.one * 2f : Vector2.zero;
+        badge.offsetMin = (plate != null ? plate.offsetMin : Vector2.zero) - padding;
+        badge.offsetMax = (plate != null ? plate.offsetMax : Vector2.zero) + padding;
+        badge.SetAsLastSibling();
+        border = badge.GetComponent<HoldProgressRingGraphic>();
+        if (border == null) border = badge.gameObject.AddComponent<HoldProgressRingGraphic>();
+        border.raycastTarget = false;
+        badge.gameObject.SetActive(true);
+    }
+
+    bool CanConfirm() => button != null && button.IsInteractable() &&
+        (canUnlockSkill != null ? canUnlockSkill() : available);
 
     public void OnPointerDown(PointerEventData eventData)
     {
-        if (!available || (button != null && !button.interactable)) return;
-        pointerHeld = true;
+        if (eventData.button != PointerEventData.InputButton.Left || heldPointer != null ||
+            button == null || !button.IsInteractable()) return;
+        selectSkill?.Invoke();
+        if (CanConfirm()) heldPointer = eventData;
     }
 
-    public void OnPointerUp(PointerEventData eventData) => pointerHeld = false;
+    public void OnPointerUp(PointerEventData eventData)
+    {
+        if (eventData == heldPointer) ResetHold();
+    }
 
     public void OnPointerExit(PointerEventData eventData)
     {
-        if (eventData != null && eventData.pointerPress == gameObject) pointerHeld = false;
+        if (eventData == heldPointer) ResetHold();
     }
 
     void Update()
     {
-        bool keyboardHeld = available && IsUpgradeKeyHeld();
-        bool held = available && (pointerHeld || keyboardHeld);
-        if (held)
+        bool keyboardHeld = canUnlockSkill == null && available && IsUpgradeKeyHeld();
+        bool pointerHeld = heldPointer != null && !heldPointer.dragging;
+        if ((!pointerHeld && !keyboardHeld) || !CanConfirm())
         {
-            if (!wasHeld) { progress = 0f; completedThisHold = false; }
-            progress = Mathf.Min(1f, progress + Time.unscaledDeltaTime / holdDuration);
-            if (ring != null) ring.SetProgress(progress);
-            if (progress >= 1f && !completedThisHold)
-            {
-                completedThisHold = true;
-                confirmed?.Invoke();
-            }
+            if (wasHeld || heldPointer != null) ResetHold();
+            return;
         }
-        else if (wasHeld)
-        {
-            progress = 0f;
-            completedThisHold = false;
-            if (ring != null) ring.SetProgress(0f);
-        }
-        wasHeld = held;
+
+        wasHeld = true;
+        if (completedThisHold) return;
+        progress = Mathf.Min(1f, progress + Time.unscaledDeltaTime / holdDuration);
+        border.SetProgress(progress);
+        if (progress < 1f) return;
+
+        completedThisHold = true;
+        confirmed?.Invoke();
     }
 
     static bool IsUpgradeKeyHeld()
@@ -160,11 +142,12 @@ public sealed class HoldToConfirmButton : MonoBehaviour,
 
     void ResetHold()
     {
-        pointerHeld = false;
+        heldPointer = null;
         wasHeld = false;
         completedThisHold = false;
+        if (progress == 0f) return;
         progress = 0f;
-        if (ring != null) ring.SetProgress(0f);
+        if (border != null) border.SetProgress(0f);
     }
 
     void OnDisable() => ResetHold();

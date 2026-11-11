@@ -211,7 +211,26 @@ public static class BattleEntryWalkValidation
             walk.Finish();
             AssertPose(unit, Slot, "zero-distance entry");
             AssertRestored(unit, animator, "zero-distance entry");
-            results.Add("PASS: " + path + " / " + expectedClip.name + ". Offset behind yaw-127° slot; constant-speed halfway/final pose; animated bones; no root yaw/height drift; Idle return; speed/culling restored; repeat/cancel/Finish idempotence; missing-state and zero-distance fallback.");
+
+            Vector3 groundedStart = Slot - forward + Vector3.down * .35f;
+            Vector3 landing = Slot - forward * .5f;
+            walk = new BattleEntryWalk(unit, Distance, MoveSpeed, new[] { groundedStart, landing, Slot });
+            AssertPose(unit, groundedStart, "shortened arena path starts on the ground");
+            float uphillDistance = Vector3.Distance(groundedStart, landing);
+            walk.Tick(uphillDistance / MoveSpeed * .5f);
+            AssertPose(unit, Vector3.Lerp(groundedStart, landing, .5f), "arena path follows the slope");
+            walk.Tick((uphillDistance * .5f + .25f) / MoveSpeed);
+            AssertPose(unit, Vector3.Lerp(landing, Slot, .5f), "arena walk crosses a waypoint at constant speed");
+            walk.Tick(1f);
+            Check(walk.IsComplete, "Arena walk must finish after the shortened path.");
+            AssertPose(unit, Slot, "arena walk arrives at the slot");
+            AssertRestored(unit, animator, "arena walk completion");
+            SettleIdle(animator);
+            AssertIdle(unit, animator);
+            walk = new BattleEntryWalk(unit, Distance, MoveSpeed, Array.Empty<Vector3>());
+            Check(walk.IsComplete, "A blocked arena path must leave this player at the slot.");
+            AssertPose(unit, Slot, "blocked arena path");
+            results.Add("PASS: " + path + " / " + expectedClip.name + ". Offset behind yaw-127° slot; constant-speed travel; animated bones; Idle return; speed/culling restored; cancellation; missing-state fallback; grounded arena path and blocked slot.");
         }
         finally
         {

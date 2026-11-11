@@ -1,10 +1,11 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using System.Collections;
 using System.Linq;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.EventSystems;
+using UnityEngine.Serialization;
 
 public class AdvancedUIManager : MonoBehaviour
 {
@@ -231,15 +232,16 @@ public class AdvancedUIManager : MonoBehaviour
     public TextMeshProUGUI enemyNameText;
     public TextMeshProUGUI enemyHpText;
     [Header("Boss Phase Indicator")]
-    [Tooltip("Icon/badge hiển thị dưới góc trái thanh HP Boss. Để trống sẽ tự tạo.")]
-    public Image enemyBossPhaseIcon;
-    [Tooltip("Nhãn số phase nằm trong badge. Để trống sẽ tự tạo; icon phase riêng được gán thì nhãn ẩn.")]
-    public TextMeshProUGUI enemyBossPhaseLabel;
-    [Tooltip("Kích thước badge phase tự tạo.")]
-    public Vector2 enemyBossPhaseIconSize = new Vector2(42f, 34f);
-    [Tooltip("Dịch thêm badge so với vị trí tự tính ở góc dưới trái thanh HP.")]
+    [SerializeField, HideInInspector] private Image enemyBossPhaseIcon;
+    [SerializeField, HideInInspector] private TextMeshProUGUI enemyBossPhaseLabel;
+    [Min(4f)] public float bossPhasePipSize = 26f;
+    [Min(0f)] public float bossPhasePipSpacing = 6f;
+    [Tooltip("Dịch hàng ô phase so với góc dưới trái của thanh máu.")]
     public Vector2 enemyBossPhaseIconOffset;
-    public Color enemyBossPhaseBadgeColor = new Color(0.055f, 0.045f, 0.035f, 0.94f);
+    [FormerlySerializedAs("bossPhaseCurrentColor")]
+    public Color bossPhaseLitColor = new Color(1f, .79f, .31f);
+    public Color bossPhaseSpentColor = new Color(.25f, .17f, .12f);
+    private BossPhasePips bossPhasePips;
 
     [System.Serializable]
     public struct ElementSpriteMapping
@@ -485,8 +487,8 @@ public class AdvancedUIManager : MonoBehaviour
         CreateStatusTooltip();
 
         if (enemyHudPanel != null) enemyHudPanel.SetActive(false);
-        EnsureBossPhaseIndicator();
-        if (enemyBossPhaseIcon != null) enemyBossPhaseIcon.gameObject.SetActive(false);
+        if (enemyBossPhaseIcon != null) enemyBossPhaseIcon.enabled = false;
+        if (enemyBossPhaseLabel != null) enemyBossPhaseLabel.enabled = false;
         EnsureEnemyElementIcon();
         if (enemyElementIcon != null) enemyElementIcon.gameObject.SetActive(false);
         if (enemyBuffContainer != null) enemyBuffContainer.gameObject.SetActive(false);
@@ -1203,84 +1205,32 @@ public class AdvancedUIManager : MonoBehaviour
         }
     }
 
-    private void EnsureBossPhaseIndicator()
-    {
-        if (enemyHpFill == null) return;
-
-        if (enemyBossPhaseIcon == null)
-        {
-            var go = new GameObject("Boss Phase Icon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            go.layer = enemyHpFill.gameObject.layer;
-            var rect = go.GetComponent<RectTransform>();
-            rect.SetParent(enemyHpFill.transform.parent, false);
-            enemyBossPhaseIcon = go.GetComponent<Image>();
-        }
-
-        if (enemyBossPhaseIcon == null) return;
-        enemyBossPhaseIcon.raycastTarget = false;
-
-        if (enemyBossPhaseLabel == null)
-        {
-            var go = new GameObject("Phase Number", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
-            go.layer = enemyBossPhaseIcon.gameObject.layer;
-            var rect = go.GetComponent<RectTransform>();
-            rect.SetParent(enemyBossPhaseIcon.transform, false);
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
-            enemyBossPhaseLabel = go.GetComponent<TextMeshProUGUI>();
-            enemyBossPhaseLabel.font = enemyHpText != null ? enemyHpText.font : TMP_Settings.defaultFontAsset;
-            enemyBossPhaseLabel.fontSize = 17f;
-            enemyBossPhaseLabel.alignment = TextAlignmentOptions.Center;
-            enemyBossPhaseLabel.color = new Color(1f, 0.88f, 0.63f, 1f);
-            enemyBossPhaseLabel.raycastTarget = false;
-        }
-
-        RectTransform iconRect = enemyBossPhaseIcon.rectTransform;
-        RectTransform fillRect = enemyHpFill.rectTransform;
-        if (iconRect.parent != fillRect.parent)
-            iconRect.SetParent(fillRect.parent, false);
-        iconRect.anchorMin = iconRect.anchorMax = fillRect.anchorMin;
-        iconRect.pivot = new Vector2(0.5f, 0.5f);
-        iconRect.sizeDelta = enemyBossPhaseIconSize;
-        iconRect.anchoredPosition = fillRect.anchoredPosition + new Vector2(
-            -fillRect.rect.width * 0.5f - enemyBossPhaseIconSize.x * 0.5f - 8f,
-            -fillRect.rect.height * 0.5f - enemyBossPhaseIconSize.y * 0.5f - 6f) + enemyBossPhaseIconOffset;
-        iconRect.SetAsLastSibling();
-    }
-
     private void UpdateBossPhaseIndicator()
     {
-        if (enemyHpFill == null) return;
-        EnsureBossPhaseIndicator();
-        if (enemyBossPhaseIcon == null) return;
-
-        bool show = boundEnemy != null && !boundEnemy.IsDead && boundEnemy.isBoss;
-        enemyBossPhaseIcon.gameObject.SetActive(show);
-        if (!show) return;
-
-        Sprite phaseIcon = boundEnemy.CurrentBossPhaseIcon;
-        enemyBossPhaseIcon.sprite = phaseIcon;
-        enemyBossPhaseIcon.color = phaseIcon != null ? Color.white : enemyBossPhaseBadgeColor;
-        if (enemyBossPhaseLabel != null)
+        int count = boundEnemy != null && !boundEnemy.IsDead ? boundEnemy.BossPhaseCount : 0;
+        if (count == 0 || enemyHpFill == null)
         {
-            enemyBossPhaseLabel.gameObject.SetActive(phaseIcon == null);
-            enemyBossPhaseLabel.text = ToRomanPhase(boundEnemy.CurrentBossPhaseNumber);
+            if (bossPhasePips != null) bossPhasePips.gameObject.SetActive(false);
+            return;
         }
-    }
 
-    private static string ToRomanPhase(int phase)
-    {
-        switch (phase)
+        if (bossPhasePips == null)
         {
-            case 1: return "I";
-            case 2: return "II";
-            case 3: return "III";
-            case 4: return "IV";
-            case 5: return "V";
-            default: return phase.ToString();
+            var go = new GameObject("Boss Phase Pips", typeof(RectTransform), typeof(CanvasRenderer), typeof(BossPhasePips));
+            go.layer = enemyHpFill.gameObject.layer;
+            bossPhasePips = go.GetComponent<BossPhasePips>();
+            bossPhasePips.raycastTarget = false;
+            var rect = bossPhasePips.rectTransform;
+            rect.SetParent(enemyHpFill.rectTransform, false);
+            rect.anchorMin = rect.anchorMax = Vector2.zero;
+            rect.pivot = new Vector2(0f, 1f);
         }
+
+        bossPhasePips.rectTransform.anchoredPosition = new Vector2(0f, -14f) + enemyBossPhaseIconOffset;
+        int remainingPhases = count - boundEnemy.CurrentBossPhaseNumber + 1;
+        bossPhasePips.SetPhases(count, remainingPhases, bossPhasePipSize, bossPhasePipSpacing,
+            bossPhaseLitColor, bossPhaseSpentColor);
+        bossPhasePips.gameObject.SetActive(true);
     }
 
     private void EnsureEnemyBuffContainer()

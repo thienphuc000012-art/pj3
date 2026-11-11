@@ -104,6 +104,20 @@ public class MapChunkStreamer : MonoBehaviour
     }
     public static float Distance(Chunk chunk, Vector3 position)
         => Mathf.Sqrt(DistanceSquared(chunk, position));
+
+    public void CollectChunkPaths(Vector3 center, float radius, List<string> results)
+    {
+        results.Clear();
+        if (chunks == null) return;
+
+        float radiusSquared = Mathf.Max(0f, radius) * Mathf.Max(0f, radius);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var chunk in chunks)
+            if (chunk != null && !string.IsNullOrWhiteSpace(chunk.scenePath) &&
+                chunk.bounds.SqrDistance(center) <= radiusSquared && seen.Add(chunk.scenePath))
+                results.Add(chunk.scenePath);
+    }
+
     static float DistanceSquared(Chunk chunk, Vector3 position)
     {
         // Vertical map layers belong to the same streaming column.

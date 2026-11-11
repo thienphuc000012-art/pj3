@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
@@ -21,7 +22,7 @@ public class LoadingScreen : MonoBehaviour
     void Awake()
     {
         view = AdventureCanvasRoot.Acquire(AdventureCanvasKind.Loading);
-        view.Click("Retry", () => Load("mapgame"));
+        view.Click("Retry", () => Load(CampaignSession.Instance?.CurrentMapScene ?? "mapgame"));
         view.Active("Retry", false);
         view.Fill("Progress/Fill", 0);
     }
@@ -58,7 +59,115 @@ public class LoadingScreen : MonoBehaviour
             yield break;
         }
 
+        var session = CampaignSession.Instance;
+        CombatAreaScan arenaScan = session != null ? session.GetCombatArenaScan(target) : null;
+        if (arenaScan != null)
+        {
+            yield return LoadCombatArena(session, arenaScan);
+            yield break;
+        }
+
         yield return LoadSingleScene();
+    }
+
+    private IEnumerator LoadCombatArena(CampaignSession session, CombatAreaScan scan)
+    {
+        var chunks = new List<Scene>(scan.ChunkPaths.Count);
+        Scene battle = default;
+        string error = null;
+        loadingChunks = true;
+        foreach (string path in scan.ChunkPaths)
+        {
+            Scene chunk = SceneManager.GetSceneByPath(path);
+            if (!chunk.isLoaded)
+            {
+                AsyncOperation operation = BeginAdditiveLoad(path, out error);
+                if (operation == null) break;
+                while (!operation.isDone)
+                {
+                    progress = .7f * (chunks.Count + operation.progress) / scan.ChunkPaths.Count;
+                    yield return null;
+                }
+                chunk = SceneManager.GetSceneByPath(path);
+            }
+            if (!chunk.isLoaded) { error = "Không tải được chunk đấu trường: " + path; break; }
+            chunks.Add(chunk);
+            progress = .7f * chunks.Count / scan.ChunkPaths.Count;
+        }
+        loadingChunks = false;
+
+        if (error == null)
+        {
+            AsyncOperation operation = BeginAdditiveLoad(target, out error);
+            if (operation != null)
+            {
+                while (!operation.isDone)
+                {
+                    progress = .7f + operation.progress * .26f;
+                    yield return null;
+                }
+                battle = FindLoadedScene(target, Path.GetFileNameWithoutExtension(target));
+                if (!battle.IsValid() || !battle.isLoaded || !SceneManager.SetActiveScene(battle))
+                    error = "Không thể mở scene chiến đấu.";
+                else
+                {
+                    try
+                    {
+                        if (!session.TryBuildCombatArena(battle, chunks, out error) && string.IsNullOrEmpty(error))
+                            error = "Không thể dựng đấu trường.";
+                    }
+                    catch (System.Exception exception)
+                    {
+                        Debug.LogException(exception);
+                        error = "Gặp lỗi khi dựng đấu trường. Xem Console để biết chi tiết.";
+                    }
+                }
+            }
+        }
+
+        if (error != null)
+        {
+            // Keep CombatManager waiting until the partially loaded scene is gone.
+            SceneManager.SetActiveScene(gameObject.scene);
+            if (battle.IsValid() && battle.isLoaded)
+            {
+                foreach (var root in battle.GetRootGameObjects()) root.SetActive(false);
+                yield return SceneManager.UnloadSceneAsync(battle);
+            }
+            foreach (Scene chunk in chunks)
+                if (chunk.IsValid() && chunk.isLoaded)
+                    yield return SceneManager.UnloadSceneAsync(chunk);
+            session.CancelCombatArenaLoad();
+            Debug.LogWarning("[Combat Arena] " + error);
+            Fail(error);
+            yield break;
+        }
+
+        progress = 1f;
+        destination = null;
+        yield return null;
+        SceneManager.UnloadSceneAsync(gameObject.scene);
+    }
+
+    private static AsyncOperation BeginAdditiveLoad(string path, out string error)
+    {
+        if (!Application.CanStreamedLevelBeLoaded(path))
+        {
+            error = "Thiếu scene trong Build Settings: " + path;
+            return null;
+        }
+        try
+        {
+            AsyncOperation operation = SceneManager.LoadSceneAsync(path, LoadSceneMode.Additive);
+            error = operation == null ? "Không thể bắt đầu tải scene: " + path : null;
+            return operation;
+        }
+        catch (System.Exception exception)
+        {
+            Debug.LogException(exception);
+            error = "Không thể tải scene: " + path;
+            return null;
+        }
     }
 
     private IEnumerator LoadSingleScene()

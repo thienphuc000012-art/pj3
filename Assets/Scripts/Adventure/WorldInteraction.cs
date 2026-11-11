@@ -153,6 +153,7 @@ public class WorldInteraction : MonoBehaviour
     void OnEnable()
     {
         if (!Application.isPlaying) return;
+        if (kind == WorldInteractionKind.Encounter) EnemyCombatOrigin.CaptureFor(this);
         AdventureScanTarget.EnsureForInteraction(this);
         if (kind == WorldInteractionKind.DialogueNPC)
         {
@@ -537,6 +538,7 @@ public class WorldInteraction : MonoBehaviour
     [Header("Combat Scene Setup")]
     [Tooltip("ID của BattleEncounterSetup trong scene combat. Ví dụ: goblin_01, boss_dragon_01.")]
     public string combatSetupId = "default";
+    public CombatArenaScanSettings combatArenaScan = new CombatArenaScanSettings();
     public bool IsConsumed => CampaignSession.Instance != null && CampaignSession.Instance.Data != null && CampaignSession.Instance.Data.collected.Contains(Id);
     // A duplicated prefab must not share collection/defeat state with another instance.
     public string Id => string.IsNullOrEmpty(savedWorldId) ? gameObject.scene.name + ":" + persistentId + ":" + HierarchyPath(transform) : savedWorldId;
@@ -585,5 +587,22 @@ public class WorldInteraction : MonoBehaviour
     {
         Gizmos.color = kind == WorldInteractionKind.Encounter ? Color.red : Color.cyan;
         Gizmos.DrawWireSphere(transform.position, range);
+        if (kind != WorldInteractionKind.Encounter || combatArenaScan == null || !combatArenaScan.debugScanArea)
+            return;
+        Vector3 center = transform.position;
+        if (Application.isPlaying)
+        {
+            var origin = GetComponent<EnemyCombatOrigin>();
+            if (origin == null || !origin.HasSpawnPoint) return;
+            center = origin.SpawnPosition;
+        }
+        Gizmos.color = new Color(1f, .68f, .2f);
+        float radius = CombatArenaScanSettings.ResolveRadius(this);
+        Gizmos.DrawWireSphere(center, radius);
+        if (combatArenaScan.edgePadding > 0f)
+        {
+            Gizmos.color = new Color(1f, .68f, .2f, .45f);
+            Gizmos.DrawWireSphere(center, radius + combatArenaScan.edgePadding);
+        }
     }
 }

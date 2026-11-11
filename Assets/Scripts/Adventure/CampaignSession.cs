@@ -198,7 +198,7 @@ public class CampaignSession : MonoBehaviour
     private float dialoguePlayerPreviousMovementValue;
     private bool dialogueSpeakerPresentationSet;
     private bool dialoguePresentedPlayer;
-    private string SavePath => Path.Combine(Application.persistentDataPath, "adventure-save-v1.json");
+    private static string SavePath => Path.Combine(Application.persistentDataPath, "adventure-save-v1.json");
     private double playTimeSample = -1;
     private bool playTimePaused;
     public int SaveSlotCount => Mathf.Clamp(Config != null ? Config.saveSlotCount : 10, 1, 99);
@@ -214,6 +214,9 @@ public class CampaignSession : MonoBehaviour
         public string combatSetupId;
         public bool playerInitiated;
         public bool guidedTutorial;
+        public CombatAreaScan arenaScan;
+        public CombatArenaLayout arenaLayout;
+        public BattleEncounterSetup arenaSetup;
     }
 
     private sealed class EncounterAnimationProgress
@@ -235,12 +238,43 @@ public class CampaignSession : MonoBehaviour
             if (config != null) Instance.Config = config;
             return Instance;
         }
-        var obj = new GameObject("Campaign Session");
-        var session = obj.AddComponent<CampaignSession>();
-        session.Config = config;
+        var session = CreateSession(config);
         session.LoadOrCreate(startNewGame);
-        obj.AddComponent<AdventureUI>();
+        session.gameObject.AddComponent<AdventureUI>();
         return session;
+    }
+
+    static CampaignSession CreateSession(CampaignConfig config)
+    {
+        var session = new GameObject("Campaign Session").AddComponent<CampaignSession>();
+        session.Config = config;
+        return session;
+    }
+
+    internal static bool BeginFromTitle(CampaignConfig config, CampaignSave data)
+    {
+        if (Instance != null || !LoadingScreen.Load(data.currentMapScene)) return false;
+        var session = CreateSession(config);
+        session.Data = data;
+        session.playTimeSample = Time.realtimeSinceStartupAsDouble;
+        session.Busy = true;
+        session.gameObject.AddComponent<AdventureUI>();
+        return true;
+    }
+
+    public bool ReturnToTitle()
+    {
+        if (!OnMap || Busy || (Menu != AdventureMenu.Main && Menu != AdventureMenu.Party) || LoadingScreen.IsLoading)
+            return false;
+        if (!LoadingScreen.Load(AdventureTitleMenu.SceneName))
+        {
+            Notify("Không thể quay về Title.");
+            return false;
+        }
+        Busy = true;
+        previousTimeScale = 1f;
+        Destroy(gameObject);
+        return true;
     }
     void Awake()
     {
@@ -261,44 +295,59 @@ public class CampaignSession : MonoBehaviour
         Data.playTimeSeconds += elapsed;
     }
 
-    bool IsCompatibleSave(CampaignSave save) => save != null && save.version >= 1 && save.version <= 5 &&
+    bool IsCompatibleSave(CampaignSave save) => IsCompatibleSave(Config, save);
+
+    internal static bool IsCompatibleSave(CampaignConfig config, CampaignSave save) => save != null && save.version >= 1 && save.version <= 5 &&
         save.party != null && save.party.Count > 0 && save.inventory != null && save.collected != null &&
-        Config?.startingParty != null && save.party.All(member => member != null && member.prefabIndex >= 0 &&
-            member.prefabIndex < Config.startingParty.Count && Config.startingParty[member.prefabIndex] != null);
-    void LoadOrCreate(bool startNewGame = false)
+        config?.startingParty != null && save.party.All(member => member != null && member.prefabIndex >= 0 &&
+            member.prefabIndex < config.startingParty.Count && config.startingParty[member.prefabIndex] != null);
+
+    internal static CampaignSave ReadAutosave()
     {
-        playTimeSample = Time.realtimeSinceStartupAsDouble;
-        if (startNewGame && File.Exists(SavePath))
+        try
         {
-            try
+            return File.Exists(SavePath) ? JsonUtility.FromJson<CampaignSave>(File.ReadAllText(SavePath)) : null;
+        }
+        catch (Exception e) { Debug.LogWarning("Could not read adventure save: " + e.Message); return null; }
+    }
+
+    internal static bool TryBackupAutosave()
+    {
+        try
+        {
+            if (File.Exists(SavePath))
             {
                 string backup = SavePath + ".before-new-game-" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fffffff") + ".bak";
                 File.Copy(SavePath, backup);
                 Debug.Log("Đã sao lưu tiến trình trước khi chơi mới: " + backup);
             }
-            catch (Exception e)
-            {
-                startNewGame = false;
-                Debug.LogError("Không thể sao lưu tiến trình; tiếp tục bản lưu hiện tại: " + e.Message);
-            }
+            return true;
         }
-        if (!startNewGame && File.Exists(SavePath))
+        catch (Exception e) { Debug.LogError("Không thể sao lưu tiến trình: " + e.Message); return false; }
+    }
+
+    void LoadOrCreate(bool startNewGame = false)
+    {
+        playTimeSample = Time.realtimeSinceStartupAsDouble;
+        if (startNewGame) startNewGame = TryBackupAutosave();
+        if (!startNewGame)
         {
-            try
-            {
-                var loaded = JsonUtility.FromJson<CampaignSave>(File.ReadAllText(SavePath));
-                if (IsCompatibleSave(loaded))
-                    Data = loaded;
-            }
-            catch (Exception e) { Debug.LogWarning("Could not read adventure save: " + e.Message); }
+            var loaded = ReadAutosave();
+            if (IsCompatibleSave(loaded)) Data = loaded;
         }
         if (Data != null) { Data.MigrateSkillUnlocks();
             if (Data.unlockedRestPoints == null) Data.unlockedRestPoints = new List<UnlockedRestPoint>();
             return; }
-        Data = new CampaignSave();
-        for (int i = 0; i < Config.startingParty.Count; i++)
-            if (Config.startingParty[i] != null)
-                Data.party.Add(new PartyMemberProgress { prefabIndex = i, hp = Config.startingParty[i].maxHP });
+        Data = CreateFreshSave(Config);
+    }
+
+    internal static CampaignSave CreateFreshSave(CampaignConfig config)
+    {
+        var save = new CampaignSave();
+        for (int i = 0; i < config.startingParty.Count; i++)
+            if (config.startingParty[i] != null)
+                save.party.Add(new PartyMemberProgress { prefabIndex = i, hp = config.startingParty[i].maxHP });
+        return save;
     }
     public void BindMap(PlayerScript player)
     {
@@ -1055,7 +1104,7 @@ public class CampaignSession : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.P))
         {
             var ui = GetComponent<AdventureUI>();
-            if (ui != null && ui.SaveSlotsOpen) { ui.HandleBack(); return; }
+            if (ui != null && (ui.SaveSlotsOpen || ui.ReturnToTitleConfirmationOpen)) { ui.HandleBack(); return; }
             SetMenu(Menu == AdventureMenu.None ? AdventureMenu.Main : AdventureMenu.None);
         }
         if (Menu != AdventureMenu.None) return;
@@ -1373,9 +1422,11 @@ public class CampaignSession : MonoBehaviour
     }
     public bool IsSkillUnlocked(PartyMemberProgress p, ActionData skill)
     {
-        if (skill == null || !Template(p).characterSkills.Contains(skill)) return false;
+        var skills = Template(p).characterSkills;
+        if (skill == null || skills == null || !skills.Contains(skill)) return false;
+        if (skill.isUltimate) return true;
         var rule = Config.SkillRule(skill);
-        return p.Rank(skill) > 0 || (rule != null ? rule.initiallyUnlocked : Template(p).characterSkills.FirstOrDefault(x => x != null) == skill);
+        return p.Rank(skill) > 0 || (rule != null ? rule.initiallyUnlocked : skills.FirstOrDefault(x => x != null && !x.isUltimate) == skill);
     }
     public int SkillCost(ActionData skill) => Mathf.Max(1, Config.SkillRule(skill)?.cost ?? 1);
     public ActionData[] Prerequisites(PartyMemberProgress p, ActionData skill)
@@ -1384,7 +1435,8 @@ public class CampaignSession : MonoBehaviour
     }
     public string UnlockBlockedReason(PartyMemberProgress p, ActionData skill)
     {
-        if (skill == null || !Template(p).characterSkills.Contains(skill)) return "Kỹ năng không thuộc nhân vật này.";
+        if (skill == null || Template(p).characterSkills?.Contains(skill) != true) return "Kỹ năng không thuộc nhân vật này.";
+        if (skill.isUltimate) return "Tuyệt kỹ có sẵn. Cần đầy năng lượng để dùng trong trận.";
         if (IsSkillUnlocked(p, skill)) return "Đã học kỹ năng này. Đổi kỹ năng mang theo trong Đội hình.";
         if (!CanUpgrade) return "Cần đứng tại điểm nghỉ để học kỹ năng.";
         var missing = Prerequisites(p, skill).Where(x => !IsSkillUnlocked(p, x)).ToArray();
@@ -1403,33 +1455,45 @@ public class CampaignSession : MonoBehaviour
         EnsureLoadout(p); Save(); Notify("Đã mở khóa " + VietnameseGameUIText.ActionName(skill));
     }
     public int SkillSlots => Mathf.Max(1, Config.equippedSkillSlots);
-    public ActionData[] LearnedSkills(PartyMemberProgress p) => Template(p).characterSkills.Where(x => x != null && IsSkillUnlocked(p, x)).Distinct().ToArray();
+    public ActionData[] LearnedLoadoutSkills(PartyMemberProgress p) => Template(p).characterSkills
+        ?.Where(x => x != null && !x.isUltimate && IsSkillUnlocked(p, x)).Distinct().ToArray() ?? Array.Empty<ActionData>();
     public void EnsureLoadout(PartyMemberProgress p)
     {
-        bool initializedNow = !p.loadoutInitialized;
-        var known = LearnedSkills(p);
+        bool changed = !p.loadoutInitialized || p.equippedSkills == null;
+        var known = LearnedLoadoutSkills(p);
         if (!p.loadoutInitialized)
         {
             p.equippedSkills = known.Take(SkillSlots).Select(x => x.name).ToList(); p.loadoutInitialized = true;
         }
         if (p.equippedSkills == null) p.equippedSkills = new List<string>();
-        while (p.equippedSkills.Count < SkillSlots) p.equippedSkills.Add("");
         var seen = new HashSet<string>();
         for (int i = 0; i < p.equippedSkills.Count; i++)
-            if (i >= SkillSlots || !known.Any(x => x.name == p.equippedSkills[i]) || !seen.Add(p.equippedSkills[i])) p.equippedSkills[i] = "";
-        if (p.FillEmptySkillSlots(known.Select(x => x.name).ToArray(), SkillSlots) || initializedNow) Save();
+        {
+            string id = p.equippedSkills[i];
+            if (string.IsNullOrEmpty(id)) continue;
+            if (i < SkillSlots && known.Any(x => x.name == id) && seen.Add(id)) continue;
+            p.equippedSkills[i] = "";
+            changed = true;
+        }
+        if (p.FillEmptySkillSlots(known.Select(x => x.name).ToArray(), SkillSlots) || changed) Save();
     }
     public void EquipSkill(int memberIndex, int slot, ActionData skill)
     {
         if (!OnMap || Busy || Menu != AdventureMenu.Party || memberIndex < 0 || memberIndex >= Data.party.Count) return;
         var p = Data.party[memberIndex]; EnsureLoadout(p);
-        if (skill != null && !IsSkillUnlocked(p, skill)) return;
-        if (p.TryEquip(slot, skill?.name, LearnedSkills(p).Select(x => x.name).ToArray(), SkillSlots)) Save();
+        if (skill != null && (skill.isUltimate || !IsSkillUnlocked(p, skill))) return;
+        if (p.TryEquip(slot, skill?.name, LearnedLoadoutSkills(p).Select(x => x.name).ToArray(), SkillSlots)) Save();
     }
     public List<ActionData> EquippedSkills(PartyMemberProgress p)
     {
-        EnsureLoadout(p); var known = LearnedSkills(p);
-        return p.equippedSkills.Take(SkillSlots).Select(id => known.FirstOrDefault(x => x.name == id)).Where(x => x != null).ToList();
+        EnsureLoadout(p);
+        var known = LearnedLoadoutSkills(p);
+        var actions = p.equippedSkills.Take(SkillSlots)
+            .Select(id => known.FirstOrDefault(x => x.name == id)).Where(x => x != null).ToList();
+        ActionData ultimate = Template(p).characterSkills?.FirstOrDefault(x =>
+            x != null && x.isUltimate && x.type == ActionData.ActionType.Skill);
+        if (ultimate != null) actions.Add(ultimate);
+        return actions;
     }
     public bool CanCraft(CraftRecipe recipe)
     {
@@ -1506,6 +1570,7 @@ public class CampaignSession : MonoBehaviour
 
         try
         {
+            patrol?.PauseForEncounter();
             if (playerTransform != null && enemyTransform != null)
             {
                 FaceMapActor(playerTransform, enemyTransform.position);
@@ -1593,6 +1658,18 @@ public class CampaignSession : MonoBehaviour
             float vfxDuration = Mathf.Max(0f, Config.encounterVfxDuration);
             float vfxRemaining = Mathf.Max(0f, vfxDuration - (Time.unscaledTime - encounterVfxStartedAt));
             if (vfxRemaining > 0f) yield return new WaitForSecondsRealtime(vfxRemaining);
+
+            var streamer = MapChunkStreamer.Instance;
+            if (streamer != null && streamer.gameObject.scene == SceneManager.GetActiveScene())
+            {
+                if (!CombatAreaScanner.TryScan(point, streamer, out CombatAreaScan scan, out string scanError))
+                {
+                    Debug.LogWarning("[Combat Arena] " + scanError, point);
+                    Notify(scanError);
+                    yield break;
+                }
+                encounter.arenaScan = scan;
+            }
 
             if (!LoadingScreen.Load(Config.battleScene))
             {
@@ -1821,13 +1898,57 @@ public class CampaignSession : MonoBehaviour
         if (elapsed >= 3.5f) progress.finished = true;
         return progress.finished;
     }
+    internal bool CombatArenaPending => encounter != null && encounter.arenaScan != null && encounter.arenaLayout == null;
+
+    internal CombatAreaScan GetCombatArenaScan(string destination)
+        => encounter != null && Config != null && destination == Config.battleScene ? encounter.arenaScan : null;
+
+    internal void CancelCombatArenaLoad()
+    {
+        encounter = null;
+        Busy = false;
+    }
+
+    internal bool TryBuildCombatArena(Scene battleScene, IReadOnlyList<Scene> chunks, out string error)
+    {
+        if (!CombatArenaPending)
+        {
+            error = "Không tìm thấy encounter đang chờ dựng đấu trường.";
+            return false;
+        }
+        CombatManager manager = null;
+        foreach (var root in battleScene.GetRootGameObjects())
+        {
+            manager = root.GetComponentInChildren<CombatManager>();
+            if (manager != null) break;
+        }
+        if (manager == null)
+        {
+            error = "Scene chiến đấu thiếu CombatManager.";
+            return false;
+        }
+
+        var setup = FindBattleEncounterSetup(encounter.combatSetupId, manager);
+        var settings = setup != null && setup.arenaSpawn != null ? setup.arenaSpawn : new CombatArenaSpawnSettings();
+        if (!CombatArenaBuilder.TryBuild(battleScene, chunks, encounter.arenaScan, settings,
+            Data.party.Count, encounter.enemies, manager.playerSlots?.Length ?? 0, manager.enemySlots?.Length ?? 0,
+            manager.playersWalkIn ? manager.playerEntryDistance : 0f, out CombatArenaLayout layout, out error))
+            return false;
+
+        encounter.arenaSetup = setup;
+        encounter.arenaLayout = layout;
+        return true;
+    }
+
     public void PrepareBattle(CombatManager manager)
     {
         if (encounter == null) return;
 
-        BattleEncounterSetup battleSetup = FindBattleEncounterSetup(encounter.combatSetupId, manager);
+        CombatArenaLayout arena = encounter.arenaLayout;
+        BattleEncounterSetup battleSetup = arena != null ? encounter.arenaSetup :
+            FindBattleEncounterSetup(encounter.combatSetupId, manager);
         manager.activeEncounterSetup = battleSetup;
-        if (battleSetup != null) battleSetup.ApplyBattleMap();
+        if (battleSetup != null) battleSetup.ApplyBattleMap(arena != null);
 
         var oldPlayers = manager.playerParty.ToArray();
         var oldEnemies = manager.enemyParty.ToArray();
@@ -1842,11 +1963,26 @@ public class CampaignSession : MonoBehaviour
         // Preset ghi vị trí spawn vào enemySlots trước khi spawn, vì
         // CombatManager.SetupPositions() sẽ tiếp tục lấy vị trí từ chính các slot này.
         // CombatManager tính melee position từ target; mỗi Enemy lấy offset riêng trong setup.
-        ApplyEnemySpawnSetup(
-            battleSetup,
-            manager.enemySlots,
-            encounter.enemies.Count
-        );
+        if (arena == null)
+        {
+            ApplyEnemySpawnSetup(battleSetup, manager.enemySlots, encounter.enemies.Count);
+        }
+        else
+        {
+            for (int i = 0; i < manager.playerSlots.Length; i++)
+            {
+                if (i >= arena.usablePlayerSlots) { manager.playerSlots[i] = null; continue; }
+                if (manager.playerSlots[i] != null)
+                    manager.playerSlots[i].SetPositionAndRotation(arena.players[i].position, arena.players[i].rotation);
+            }
+            for (int i = 0; i < manager.enemySlots.Length; i++)
+            {
+                if (i >= arena.usableEnemySlots) { manager.enemySlots[i] = null; continue; }
+                if (manager.enemySlots[i] != null)
+                    manager.enemySlots[i].SetPositionAndRotation(arena.enemies[i].position, arena.enemies[i].rotation);
+            }
+            manager.arenaPlayerEntryPaths = arena.playerEntryPaths;
+        }
 
         for (int i = 0; i < Data.party.Count; i++)
         {
@@ -1886,7 +2022,7 @@ public class CampaignSession : MonoBehaviour
     }
     static BattleEncounterSetup FindBattleEncounterSetup(string setupId, CombatManager manager)
     {
-        if (manager == null || string.IsNullOrWhiteSpace(setupId))
+        if (manager == null)
             return null;
 
         BattleEncounterSetup fallback = null;

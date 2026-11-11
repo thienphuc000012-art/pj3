@@ -1550,7 +1550,6 @@ MonoBehaviour:
   isSummonedUnit: 0
   summonOwner: {fileID: 0}
   summonDeathOwnerMaxHpCostPercent: 0
-  enemyHpBorderSprite: {fileID: 0}
   partyHudWaitingPortrait: {fileID: -418760586, guid: 49eff14882a616b4993eb8374fd69399, type: 3}
   partyHudTurnPortrait: {fileID: 503092623, guid: 8241ed81923d19947aa8a4425643688a, type: 3}
   parryUltimateGain: 15
@@ -1562,11 +1561,13 @@ MonoBehaviour:
   element: 1
   defaultAttack: {fileID: 11400000, guid: fcb0cc7c27be4104a89d579861c52117, type: 2}
   characterSkills:
-  - {fileID: 11400000, guid: 6de9ab5777c744e44b2765fd39d350a3, type: 2}
+  - {fileID: 11400000, guid: 1eb254b917932f24ab84165e603ea5ef, type: 2}
   - {fileID: 11400000, guid: 865de14f15018634e8aca8aa0f8cb3a6, type: 2}
   - {fileID: 11400000, guid: 8041ddf7f5ced7248977ebb746a1a1f5, type: 2}
   - {fileID: 11400000, guid: 48e3c62249d02184a81587ede334f145, type: 2}
   - {fileID: 11400000, guid: 0d35c71ebbc4e1444a787ed6badd0fdd, type: 2}
+  battleEntryWalkStateName: Base Layer.BattleEntryWalk
+  battleEntryAnimationSpeed: 1
   isBoss: 0
   actionsPerTurn: 1
   baseActionPattern: []

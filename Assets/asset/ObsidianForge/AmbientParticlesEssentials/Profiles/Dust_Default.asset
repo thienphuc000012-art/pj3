@@ -1,0 +1,129 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: afa9c7f9f6f6e4aeb84ffeeded320ec7, type: 3}
+  m_Name: Dust_Default
+  m_EditorClassIdentifier: AmbientParticlesEssentials.Runtime::ObsidianForge.AmbientParticlesEssentials.AmbientParticleProfile
+  brightness: 1.15
+  displayName: Floating Dust
+  description: Subtle airborne dust designed for caves, ruins, dungeons and dry environments.
+  density: 0.8
+  maxParticles: 800
+  spawnRadius: 20
+  verticalRange: {x: -1.5, y: 4}
+  minimumCameraDistance: 1.25
+  lifetime: 26
+  particleSize: {x: 0.03, y: 0.085}
+  color: {r: 1, g: 0.82, b: 0.55, a: 0.26}
+  movementSpeed: {x: 0.015, y: 0.08}
+  windDirection: {x: 1, y: 0.08, z: 0.25}
+  windStrength: 0.12
+  turbulence: 0.08
+  gravityModifier: 0
+  layers:
+  - name: Fine golden dust
+    budgetShare: 0.64
+    material: {fileID: 2100000, guid: 15e68c802dc964b1ba60b0ba3aef3477, type: 2}
+    brightness: 1
+    sizeMultiplier: 1
+    lifetimeMultiplier: 1
+    speedMultiplier: 0.35
+    noiseMultiplier: 0.45
+    noiseFrequency: 0.15
+    noiseScroll: 0.08
+    verticalSpeed: {x: -0.015, y: 0.015}
+    angularSpeed: {x: 0, y: 0}
+    aspect: {x: 1, y: 1}
+    brightnessVariation: 0.2
+    tint: {r: 1, g: 1, b: 1, a: 1}
+    trails: 0
+    trailMaterial: {fileID: 0}
+    trailRatio: 1
+    trailLifetime: 1.6
+    trailWidth: 0.12
+    trailVertexDistance: 0.08
+    trailOpacity: 0.45
+  - name: Soft round motes
+    budgetShare: 0.25
+    material: {fileID: 2100000, guid: 4140ae9bad9e641d1a90edca965f7ee2, type: 2}
+    brightness: 1
+    sizeMultiplier: 2.3
+    lifetimeMultiplier: 1
+    speedMultiplier: 0.65
+    noiseMultiplier: 1
+    noiseFrequency: 0.15
+    noiseScroll: 0.08
+    verticalSpeed: {x: -0.04, y: 0.02}
+    angularSpeed: {x: 0, y: 0}
+    aspect: {x: 1, y: 1}
+    brightnessVariation: 0.2
+    tint: {r: 1, g: 0.94, b: 0.82, a: 0.8}
+    trails: 0
+    trailMaterial: {fileID: 0}
+    trailRatio: 1
+    trailLifetime: 1.6
+    trailWidth: 0.12
+    trailVertexDistance: 0.08
+    trailOpacity: 0.45
+  - name: Defocused dust
+    budgetShare: 0.08
+    material: {fileID: 2100000, guid: 7f7690ee4e3d64119b418f19e8e0f150, type: 2}
+    brightness: 1
+    sizeMultiplier: 5.8
+    lifetimeMultiplier: 1
+    speedMultiplier: 0.4
+    noiseMultiplier: 0.7
+    noiseFrequency: 0.15
+    noiseScroll: 0.08
+    verticalSpeed: {x: -0.025, y: 0.01}
+    angularSpeed: {x: 0, y: 0}
+    aspect: {x: 1, y: 1}
+    brightnessVariation: 0.2
+    tint: {r: 1, g: 0.9, b: 0.7, a: 0.28}
+    trails: 0
+    trailMaterial: {fileID: 0}
+    trailRatio: 1
+    trailLifetime: 1.6
+    trailWidth: 0.12
+    trailVertexDistance: 0.08
+    trailOpacity: 0.45
+  - name: Dust streamlets
+    budgetShare: 0.03
+    material: {fileID: 2100000, guid: ebf3bb7a63cf049d3a8da1547fbfc2fd, type: 2}
+    brightness: 2.8
+    sizeMultiplier: 1.1
+    lifetimeMultiplier: 1
+    speedMultiplier: 8
+    noiseMultiplier: 0.65
+    noiseFrequency: 0.2
+    noiseScroll: 0.08
+    verticalSpeed: {x: -0.02, y: 0.05}
+    angularSpeed: {x: 0, y: 0}
+    aspect: {x: 1, y: 1}
+    brightnessVariation: 0.2
+    tint: {r: 1, g: 0.94, b: 0.75, a: 1.3}
+    trails: 1
+    trailMaterial: {fileID: 0}
+    trailRatio: 1
+    trailLifetime: 4.2
+    trailWidth: 0.95
+    trailVertexDistance: 0.08
+    trailOpacity: 0.85
+    trailMotesPerSample: 3
+    shedResidue: 1
+    residueBudgetShare: 0.75
+    residueLifetime: 1.6
+    residueRate: 6
+    residueSize: 1.7
+    residueSpread: 0.42
+    residueDrift: 0.12
+    residueOpacity: 0.85
+    residueEndTint: {r: 0.72, g: 0.6, b: 0.44, a: 0}

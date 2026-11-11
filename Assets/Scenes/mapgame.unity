@@ -1187,6 +1187,7 @@ GameObject:
   - component: {fileID: 332917412}
   - component: {fileID: 332917411}
   - component: {fileID: 332917410}
+  - component: {fileID: 332917414}
   m_Layer: 0
   m_Name: Enemy Encounter Copy
   m_TagString: Untagged
@@ -1334,6 +1335,10 @@ MonoBehaviour:
   enemyPrefabs:
   - {fileID: 8798339202372134501, guid: 34c9cae981207ec4e9ee2c9c116d9442, type: 3}
   combatSetupId: default
+  combatArenaScan:
+    scanRadius: 0
+    edgePadding: 4
+    debugScanArea: 1
 --- !u!4 &332917413
 Transform:
   m_ObjectHideFlags: 0
@@ -1350,6 +1355,18 @@ Transform:
   - {fileID: 261163157}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &332917414
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 332917409}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99a2574b9ac8412e8c4defa7e1f1b646, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyCombatOrigin
 --- !u!1 &334658956
 GameObject:
   m_ObjectHideFlags: 0
@@ -1426,6 +1443,7 @@ GameObject:
   - component: {fileID: 344694491}
   - component: {fileID: 344694493}
   - component: {fileID: 344694494}
+  - component: {fileID: 344694495}
   m_Layer: 0
   m_Name: Enemy Encounter
   m_TagString: Untagged
@@ -1501,6 +1519,10 @@ MonoBehaviour:
   enemyPrefabs:
   - {fileID: 6754251023150294601, guid: 96659ae2a04725e4999e1124bc86d77c, type: 3}
   combatSetupId: dra
+  combatArenaScan:
+    scanRadius: 0
+    edgePadding: 4
+    debugScanArea: 1
 --- !u!4 &344694492
 Transform:
   m_ObjectHideFlags: 0
@@ -1510,7 +1532,7 @@ Transform:
   m_GameObject: {fileID: 344694490}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.409998, y: 280.56, z: -65}
+  m_LocalPosition: {x: -18.6, y: 280.56, z: -65}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1593,6 +1615,18 @@ NavMeshAgent:
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
+--- !u!114 &344694495
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 344694490}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99a2574b9ac8412e8c4defa7e1f1b646, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyCombatOrigin
 --- !u!1 &362906927
 GameObject:
   m_ObjectHideFlags: 0
@@ -7757,6 +7791,10 @@ MonoBehaviour:
   dialogueNpcModelSource: {fileID: 0}
   enemyPrefabs: []
   combatSetupId: default
+  combatArenaScan:
+    scanRadius: 0
+    edgePadding: 4
+    debugScanArea: 1
 --- !u!4 &532561338
 Transform:
   m_ObjectHideFlags: 0
@@ -8104,6 +8142,8 @@ MonoBehaviour:
   element: 0
   defaultAttack: {fileID: 0}
   characterSkills: []
+  battleEntryWalkStateName: Base Layer.BattleEntryWalk
+  battleEntryAnimationSpeed: 1
   isBoss: 0
   actionsPerTurn: 2
   baseActionPattern:
@@ -9267,6 +9307,10 @@ MonoBehaviour:
   dialogueNpcModelSource: {fileID: 0}
   enemyPrefabs: []
   combatSetupId: default
+  combatArenaScan:
+    scanRadius: 0
+    edgePadding: 4
+    debugScanArea: 1
 --- !u!4 &905127836
 Transform:
   m_ObjectHideFlags: 0
@@ -40882,7 +40926,7 @@ Transform:
   m_GameObject: {fileID: 1197943730}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.4100037, y: 301.3, z: -92.17999}
+  m_LocalPosition: {x: -18.6, y: 280.56, z: -65}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -40996,13 +41040,14 @@ GameObject:
   - component: {fileID: 1266846337}
   - component: {fileID: 1266846339}
   - component: {fileID: 1266846340}
+  - component: {fileID: 1266846341}
   m_Layer: 0
   m_Name: Enemy Encounter
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1266846337
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -41071,6 +41116,10 @@ MonoBehaviour:
   enemyPrefabs:
   - {fileID: 8798339202372134501, guid: 34c9cae981207ec4e9ee2c9c116d9442, type: 3}
   combatSetupId: default
+  combatArenaScan:
+    scanRadius: 0
+    edgePadding: 4
+    debugScanArea: 1
 --- !u!4 &1266846338
 Transform:
   m_ObjectHideFlags: 0
@@ -41159,6 +41208,18 @@ NavMeshAgent:
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
+--- !u!114 &1266846341
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1266846336}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99a2574b9ac8412e8c4defa7e1f1b646, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyCombatOrigin
 --- !u!1 &1303219682
 GameObject:
   m_ObjectHideFlags: 0
@@ -45007,6 +45068,10 @@ MonoBehaviour:
   dialogueNpcModelSource: {fileID: 0}
   enemyPrefabs: []
   combatSetupId: default
+  combatArenaScan:
+    scanRadius: 0
+    edgePadding: 4
+    debugScanArea: 1
 --- !u!4 &1503852099
 Transform:
   m_ObjectHideFlags: 0
@@ -45721,6 +45786,10 @@ MonoBehaviour:
   dialogueNpcModelSource: {fileID: 0}
   enemyPrefabs: []
   combatSetupId: default
+  combatArenaScan:
+    scanRadius: 0
+    edgePadding: 4
+    debugScanArea: 1
 --- !u!4 &1707926951
 Transform:
   m_ObjectHideFlags: 0
@@ -48320,6 +48389,10 @@ MonoBehaviour:
   dialogueNpcModelSource: {fileID: 0}
   enemyPrefabs: []
   combatSetupId: default
+  combatArenaScan:
+    scanRadius: 0
+    edgePadding: 4
+    debugScanArea: 1
 --- !u!4 &1900531684
 Transform:
   m_ObjectHideFlags: 0
@@ -53642,9 +53715,7 @@ MonoBehaviour:
   range: 2.5
   experience: 30
   rewards:
-  - id: herb
-    count: 1
-  - id: herb
+  - id: ore
     count: 1
   pickupModelPrefab: {fileID: 1534066118601383972, guid: 36f0b95c8afb6ca49b8e112cc8fba58d, type: 3}
   pickupModelPosition: {x: 0, y: 0, z: 0}
@@ -53672,6 +53743,10 @@ MonoBehaviour:
   dialogueNpcModelSource: {fileID: 0}
   enemyPrefabs: []
   combatSetupId: default
+  combatArenaScan:
+    scanRadius: 0
+    edgePadding: 4
+    debugScanArea: 1
 --- !u!4 &2059305916
 Transform:
   m_ObjectHideFlags: 0
@@ -55370,22 +55445,6 @@ PrefabInstance:
       propertyPath: m_SizeDelta.y
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 100779, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
-      propertyPath: m_fontSize
-      value: 20
-      objectReference: {fileID: 0}
-    - target: {fileID: 100779, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
-      propertyPath: m_fontColor32.rgba
-      value: 4294967295
-      objectReference: {fileID: 0}
-    - target: {fileID: 100779, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
-      propertyPath: m_TextStyleHashCode
-      value: -1183493901
-      objectReference: {fileID: 0}
-    - target: {fileID: 100779, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
-      propertyPath: 'm_ActiveFontFeatures.Array.data[0]'
-      value: 1801810542
-      objectReference: {fileID: 0}
     - target: {fileID: 100783, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_fontColor32.rgba
       value: 4294967295
@@ -55720,7 +55779,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 101367, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_fontColor32.rgba
-      value: 4286100177
+      value: 4294967295
       objectReference: {fileID: 0}
     - target: {fileID: 101367, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -55901,18 +55960,6 @@ PrefabInstance:
     - target: {fileID: 101498, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_SizeDelta.y
       value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 101518, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
-      propertyPath: m_fontColor32.rgba
-      value: 4286100177
-      objectReference: {fileID: 0}
-    - target: {fileID: 101518, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
-      propertyPath: m_TextStyleHashCode
-      value: -1183493901
-      objectReference: {fileID: 0}
-    - target: {fileID: 101518, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
-      propertyPath: 'm_ActiveFontFeatures.Array.data[0]'
-      value: 1801810542
       objectReference: {fileID: 0}
     - target: {fileID: 101531, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_fontColor32.rgba

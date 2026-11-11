@@ -9,7 +9,7 @@ public class CameraManager : MonoBehaviour
     [Header("Cinematic Combat Camera")]
     [SerializeField] bool useDynamicCombatCamera = true;
     CombatCameraDirector director;
-    public bool UsesDynamicCombatCamera => useDynamicCombatCamera && mainBrain != null &&
+    public bool UsesDynamicCombatCamera => useDynamicCombatCamera && ResolveSceneBrain() != null &&
         (director == null || director.isActiveAndEnabled);
     public float TurnCameraDelay => UsesDynamicCombatCamera && director != null
         ? director.IdleBlendDuration : transitionSpeed;
@@ -55,12 +55,25 @@ public class CameraManager : MonoBehaviour
     void Awake()
     {
         Instance = this;
-
-        if (Camera.main != null)
-        {
-            mainBrain = Camera.main.GetComponent<CinemachineBrain>();
-        }
         director = GetComponent<CombatCameraDirector>();
+        ResolveSceneBrain();
+    }
+
+    CinemachineBrain ResolveSceneBrain()
+    {
+        if (mainBrain != null) return mainBrain;
+        // The additive Loading scene may still have its own Main Camera.
+        if (gameObject.scene.isLoaded)
+            foreach (GameObject root in gameObject.scene.GetRootGameObjects())
+            {
+                var localBrain = root.GetComponentInChildren<CinemachineBrain>();
+                if (localBrain == null || !localBrain.CompareTag("MainCamera")) continue;
+                return mainBrain = localBrain;
+            }
+        Camera candidate = Camera.main;
+        if (candidate != null && candidate.gameObject.scene == gameObject.scene)
+            mainBrain = candidate.GetComponent<CinemachineBrain>();
+        return mainBrain;
     }
 
     bool UseDirector()
@@ -374,6 +387,7 @@ public class CameraManager : MonoBehaviour
     /// --- THÊM MỚI: Hàm cài đặt lia cam nhanh dựa trên biến transitionSpeed ---
     private void SetFastBlend()
     {
+        ResolveSceneBrain();
         if (mainBrain != null)
         {
             // LƯU Ý: Dùng "Styles" (có chữ s) thay vì "Style" đối với Cinemachine 3.x
