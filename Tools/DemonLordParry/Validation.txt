@@ -1,0 +1,10 @@
+PASS: 366 sampled poses; 4758 real primitive contact checks. No Play Mode or campaign/save APIs.
+SK_FireSword: 1 bone-mounted trigger boxes; original stationary box disabled.
+SK_LavaWhip: 12 bone-mounted trigger boxes; original stationary box disabled.
+Idle: 61 poses, maximum baked weapon surface distance outside hitboxes = 0.0000 m; collider movement=17.27 m.
+2HitCombo: 61 poses, maximum baked weapon surface distance outside hitboxes = 0.0058 m; collider movement=5.01 m.
+3HitCombo: 61 poses, maximum baked weapon surface distance outside hitboxes = 0.0062 m; collider movement=17.27 m.
+SwordAttack1: 61 poses, maximum baked weapon surface distance outside hitboxes = 0.0025 m; collider movement=4.86 m.
+SwordAttack2: 61 poses, maximum baked weapon surface distance outside hitboxes = 0.0053 m; collider movement=4.90 m.
+WhipAttack: 61 poses, maximum baked weapon surface distance outside hitboxes = 0.0000 m; collider movement=17.27 m.
+All 13 boxes still contact correctly at a different position, yaw 147 and scale 0.65; disabled guards rejected.

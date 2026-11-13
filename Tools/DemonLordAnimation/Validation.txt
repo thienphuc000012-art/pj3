@@ -1,0 +1,10 @@
+PASS: actual DemonLord prefab/controller sampled in an isolated Editor preview. No Play Mode, campaign or saves.
+BattleStart: entered once and returned to Idle.
+2HitCombo: reached 2 damage markers and one EndAttack before exit; JumpBack returned to Idle.
+3HitCombo: reached 3 damage markers and one EndAttack before exit; JumpBack returned to Idle.
+SwordAttack1: reached 1 damage markers and one EndAttack before exit; JumpBack returned to Idle.
+SwordAttack2: reached 1 damage markers and one EndAttack before exit; JumpBack returned to Idle.
+WhipAttack: reached 1 damage markers and one EndAttack before exit; JumpBack returned to Idle.
+2HitCombo: final pose holds when return is delayed; does not replay.
+Hit reaction returned to Idle. All 10 one-shot clips non-looping; four locomotion/idle clips still looping.
+Event timestamps verified against real Animator playback. Native gameplay callbacks are not dispatched in this Edit Mode test.

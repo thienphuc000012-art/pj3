@@ -123,6 +123,9 @@ public class ParrySystem : MonoBehaviour
 
         EnemyMeleeParryHitbox[] hitboxes = attacker.GetComponentsInChildren<EnemyMeleeParryHitbox>(true);
         PlayerMeleeParryZone[] zones = player.GetComponentsInChildren<PlayerMeleeParryZone>(true);
+        // Animation events can run before the next physics step. Use this frame's bone poses,
+        // including when Physics.autoSyncTransforms is disabled.
+        Physics.SyncTransforms();
         foreach (EnemyMeleeParryHitbox hitbox in hitboxes)
         {
             if (hitbox == null) continue;
