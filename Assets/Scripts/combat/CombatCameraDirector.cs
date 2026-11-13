@@ -17,6 +17,7 @@ public sealed class CombatCameraDirector : MonoBehaviour
     readonly CombatCameraTransitionController transition = new CombatCameraTransitionController();
     CinemachineBrain brain;
     Camera output;
+    CameraOcclusionFade occlusionFade;
     CinemachineCamera cameraRig;
     CombatCameraTargetResolver targets;
     CombatCameraSettings runtimeSettings;
@@ -60,6 +61,7 @@ public sealed class CombatCameraDirector : MonoBehaviour
         brain = outputBrain;
         output = brain.GetComponent<Camera>();
         if (output == null) return false;
+        occlusionFade = CameraOcclusionFade.Ensure(output);
         combat = manager;
         targets = new CombatCameraTargetResolver(combat);
         targets.RegisterParty();
@@ -222,6 +224,13 @@ public sealed class CombatCameraDirector : MonoBehaviour
 
     void LateUpdate()
     {
+        if (hasShot && occlusionFade != null && targets != null)
+        {
+            var main = actor != null ? actor : focus;
+            if (main != null)
+                occlusionFade.SetFocus(main.transform, Aim(main, 1f, false),
+                    focus != null ? focus.transform : null, focus != null ? Aim(focus, 1f, false) : default);
+        }
         if (skill != null && skill.IsPlaying &&
             (combat == null || combat.state != CombatState.Executing || actor == null || actor.IsDead))
             StopSkill();
@@ -440,6 +449,7 @@ public sealed class CombatCameraDirector : MonoBehaviour
 
     Vector3 AvoidObstacle(Vector3 aim, Vector3 position)
     {
+        if (occlusionFade != null && occlusionFade.isActiveAndEnabled && occlusionFade.obstructionLayers.value != 0) return position;
         Vector3 ray = position - aim;
         float distance = ray.magnitude;
         if (Settings.obstructionLayers.value == 0 || distance < .001f) return position;
@@ -461,6 +471,7 @@ public sealed class CombatCameraDirector : MonoBehaviour
 
     void OnDisable()
     {
+        if (occlusionFade != null) { occlusionFade.SetFocus(null, default); occlusionFade.RestoreAll(); }
         if (skill != null) skill.Stopped -= BlendFromTimeline;
         ResetPresentation();
         if (cameraRig != null)

@@ -600,6 +600,15 @@ public class AdvancedUIManager : MonoBehaviour
         {
             if (CombatManager.Instance != null) CombatManager.Instance.OnRunAwayClicked();
         });
+        RefreshRunAwayTutorialLock();
+    }
+
+    public void RefreshRunAwayTutorialLock()
+    {
+        if (runAwayButton == null) return;
+        bool locked = CombatManager.Instance != null && CombatManager.Instance.IsRunAwayLockedByTutorial;
+        if (CampaignSession.Instance != null && CampaignSession.Instance.IsGuidedTutorialEncounter) locked = true;
+        runAwayButton.interactable = !locked;
     }
 
     private static bool IsRunAwayButton(Button button)
@@ -737,7 +746,11 @@ public class AdvancedUIManager : MonoBehaviour
         combatNoticeRoutine = null;
     }
 
-    public void ShowActionMenu(bool isShow) => SetActionMenuVisible(isShow, false);
+    public void ShowActionMenu(bool isShow)
+    {
+        RefreshRunAwayTutorialLock();
+        SetActionMenuVisible(isShow, false);
+    }
 
     public void HideSubMenu()
     {

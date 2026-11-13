@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -32,7 +32,7 @@ public class AdventureUI : MonoBehaviour
     CanvasGroup returnTitleMenuGroup;
     Button returnTitleButton, returnTitleYes, returnTitleNo;
     GameObject questPage, questDialog, dialoguePage;
-    Button languageToggleButton;
+    Button languageToggleButton, questRowTemplate;
     RectTransform questContent, dialoguePanel, dialogueChoices;
     GameObject dialogueOptionsPanel;
     TMPro.TMP_Text questPrompt, dialogueSpeaker, dialogueText;
@@ -50,6 +50,14 @@ public class AdventureUI : MonoBehaviour
     CampaignSession S => CampaignSession.Instance;
     const string Content = "/Viewport/Content";
     void Awake() { stage = gameObject.AddComponent<PartyMenuStage>(); }
+    void OnEnable() => GameLocalization.LanguageChanged += RefreshQuestLanguage;
+    void OnDisable() => GameLocalization.LanguageChanged -= RefreshQuestLanguage;
+    void RefreshQuestLanguage()
+    {
+        if (questPage == null || S == null || S.Data == null) return;
+        if (S.Menu == AdventureMenu.Tasks) RefreshQuestList();
+        if (questDialog != null && questDialog.activeSelf && selectedQuest != null) RefreshQuestDialogText();
+    }
     void Update()
     {
         if (S == null || !S.OnMap || S.Data == null)
@@ -71,6 +79,11 @@ public class AdventureUI : MonoBehaviour
                 view.Text("Toast/Message", S.Message ?? "");
             }
             return;
+        }
+        if (S.Menu == AdventureMenu.Cryptex)
+        {
+            view.Active("HUD", false); view.Active("Menu", false); view.Active("Toast", false);
+            stage.Hide(); return;
         }
         if (previousMenu != S.Menu)
         {
@@ -438,38 +451,80 @@ public class AdventureUI : MonoBehaviour
     {
         var overview = view.Node("Menu/Party/Overview");
         var inventory = view.Component<Button>("Menu/Party/Overview/Inventory");
-        var taskButton = Instantiate(inventory, overview);
-        taskButton.name = "Quests";
-        ((RectTransform)taskButton.transform).anchoredPosition = ((RectTransform)inventory.transform).anchoredPosition + Vector2.down * 88f;
+        var taskButton = overview.Find("Quests")?.GetComponent<Button>();
+        if (taskButton == null)
+        {
+            taskButton = Instantiate(inventory, overview);
+            taskButton.name = "Quests";
+            ((RectTransform)taskButton.transform).anchoredPosition = ((RectTransform)inventory.transform).anchoredPosition + Vector2.down * 88f;
+        }
         taskButton.onClick = new Button.ButtonClickedEvent();
         taskButton.onClick.AddListener(() => S.SetMenu(AdventureMenu.Tasks));
-        GameLocalization.SetText(taskButton.GetComponentInChildren<TMPro.TMP_Text>(true), "NHIỆM VỤ");
+        GameLocalization.SetText(taskButton.GetComponentInChildren<TMPro.TMP_Text>(true), "Nhiệm vụ");
 
-        questPage = new GameObject("Tasks", typeof(RectTransform), typeof(Image));
-        TravelRect(questPage, view.Node("Menu"), Vector2.zero, Vector2.one);
-        questPage.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f);
-        questPage.GetComponent<Image>().raycastTarget = false;
-        questListGroup = questPage.AddComponent<CanvasGroup>();
-        var listPanel = TravelPanel("Quest List", questPage.transform, new Vector2(.09f, .16f), new Vector2(.91f, .84f));
-        listPanel.GetComponent<Image>().color = new Color(.025f, .028f, .034f, 1f);
-        TravelText(listPanel.transform, "Heading", "NHIỆM VỤ ĐANG CÓ", new Vector2(.04f, .87f), new Vector2(.96f, .98f));
-        var scrollObject = new GameObject("Quest Scroll", typeof(RectTransform), typeof(ScrollRect), typeof(Image), typeof(RectMask2D));
-        var viewport = TravelRect(scrollObject, listPanel.transform, new Vector2(.04f, .1f), new Vector2(.96f, .84f));
-        scrollObject.GetComponent<Image>().color = new Color(.14f, .15f, .17f, 1f);
-        var contentObject = new GameObject("Content", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
-        questContent = TravelRect(contentObject, viewport, new Vector2(0f, 1f), Vector2.one);
-        questContent.pivot = new Vector2(.5f, 1f);
-        var listLayout = contentObject.GetComponent<VerticalLayoutGroup>();
-        listLayout.spacing = 12f; listLayout.padding = new RectOffset(12, 12, 12, 12);
-        listLayout.childControlHeight = true; listLayout.childForceExpandHeight = false;
-        contentObject.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-        var scroll = scrollObject.GetComponent<ScrollRect>(); scroll.viewport = viewport; scroll.content = questContent; scroll.horizontal = false;
-        questDialog = TravelPanel("Quest Track Confirmation", view.Node("Menu"), Vector2.zero, Vector2.one);
-        questDialog.GetComponent<Image>().color = new Color(0f, 0f, 0f, .62f);
-        var box = TravelPanel("Panel", questDialog.transform, new Vector2(.27f, .3f), new Vector2(.73f, .7f));
-        questPrompt = TravelText(box.transform, "Prompt", "", new Vector2(.07f, .38f), new Vector2(.93f, .91f));
-        var yes = QuestConfirmationButton(box.transform, "Yes", "Có", new Vector2(.08f, .1f), new Vector2(.46f, .3f), ConfirmTrackQuest);
-        var no = QuestConfirmationButton(box.transform, "No", "Không", new Vector2(.54f, .1f), new Vector2(.92f, .3f), CloseQuestDialog);
+        questPage = view.transform.Find("Menu/Tasks")?.gameObject;
+        if (questPage == null)
+        {
+            questPage = new GameObject("Tasks", typeof(RectTransform), typeof(Image));
+            TravelRect(questPage, view.Node("Menu"), Vector2.zero, Vector2.one);
+            questPage.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f);
+            questPage.GetComponent<Image>().raycastTarget = false;
+            questListGroup = questPage.AddComponent<CanvasGroup>();
+            var listPanel = TravelPanel("Quest List", questPage.transform, new Vector2(.09f, .16f), new Vector2(.91f, .84f));
+            listPanel.GetComponent<Image>().color = new Color(.025f, .028f, .034f, 1f);
+            TravelText(listPanel.transform, "Heading", "NHIỆM VỤ ĐANG CÓ", new Vector2(.04f, .87f), new Vector2(.96f, .98f));
+            var scrollObject = new GameObject("Quest Scroll", typeof(RectTransform), typeof(ScrollRect), typeof(Image), typeof(RectMask2D));
+            var viewport = TravelRect(scrollObject, listPanel.transform, new Vector2(.04f, .1f), new Vector2(.96f, .84f));
+            scrollObject.GetComponent<Image>().color = new Color(.14f, .15f, .17f, 1f);
+            var contentObject = new GameObject("Content", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+            questContent = TravelRect(contentObject, viewport, new Vector2(0f, 1f), Vector2.one);
+            questContent.pivot = new Vector2(.5f, 1f);
+            var listLayout = contentObject.GetComponent<VerticalLayoutGroup>();
+            listLayout.spacing = 12f; listLayout.padding = new RectOffset(12, 12, 12, 12);
+            listLayout.childControlWidth = true; listLayout.childForceExpandWidth = true;
+            listLayout.childControlHeight = true; listLayout.childForceExpandHeight = false;
+            contentObject.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var scroll = scrollObject.GetComponent<ScrollRect>(); scroll.viewport = viewport; scroll.content = questContent; scroll.horizontal = false;
+        }
+        questListGroup = questPage.GetComponent<CanvasGroup>() ?? questPage.AddComponent<CanvasGroup>();
+        questContent = questPage.transform.Find("Quest List/Quest Scroll/Content") as RectTransform;
+        GameLocalization.SetText(questPage.transform.Find("Quest List/Heading").GetComponent<TMP_Text>(), "NHIỆM VỤ ĐANG CÓ");
+        questDialog = view.transform.Find("Menu/Quest Track Confirmation")?.gameObject;
+        if (questDialog == null)
+        {
+            questDialog = TravelPanel("Quest Track Confirmation", view.Node("Menu"), Vector2.zero, Vector2.one);
+            questDialog.GetComponent<Image>().color = new Color(0f, 0f, 0f, .62f);
+            var box = TravelPanel("Panel", questDialog.transform, new Vector2(.27f, .3f), new Vector2(.73f, .7f));
+            TravelText(box.transform, "Prompt", "Theo dõi nhiệm vụ?", new Vector2(.07f, .38f), new Vector2(.93f, .91f));
+            QuestConfirmationButton(box.transform, "Yes", "Có", new Vector2(.08f, .1f), new Vector2(.46f, .3f), null);
+            QuestConfirmationButton(box.transform, "No", "Không", new Vector2(.54f, .1f), new Vector2(.92f, .3f), null);
+        }
+        questPrompt = questDialog.transform.Find("Panel/Prompt").GetComponent<TMP_Text>();
+        var yes = questDialog.transform.Find("Panel/Yes").GetComponent<Button>();
+        var no = questDialog.transform.Find("Panel/No").GetComponent<Button>();
+        yes.onClick = new Button.ButtonClickedEvent(); yes.onClick.AddListener(ConfirmTrackQuest);
+        no.onClick = new Button.ButtonClickedEvent(); no.onClick.AddListener(CloseQuestDialog);
+        GameLocalization.SetText(yes.GetComponentInChildren<TMP_Text>(true), "Có");
+        GameLocalization.SetText(no.GetComponentInChildren<TMP_Text>(true), "Không");
+        (yes.GetComponent<QuestButtonHighlight>() ?? yes.gameObject.AddComponent<QuestButtonHighlight>()).Configure(false, true);
+        (no.GetComponent<QuestButtonHighlight>() ?? no.gameObject.AddComponent<QuestButtonHighlight>()).Configure(false, true);
+        questRowTemplate = questContent.Find("Template")?.GetComponent<Button>();
+        if (questRowTemplate == null)
+        {
+            var row = new GameObject("Template", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
+            row.layer = view.gameObject.layer;
+            TravelRect(row, questContent, Vector2.zero, Vector2.one);
+            questRowTemplate = row.GetComponent<Button>();
+            questRowTemplate.targetGraphic = row.GetComponent<Image>();
+            questRowTemplate.transition = Selectable.Transition.None;
+            row.GetComponent<Image>().color = new Color(0, 0, 0, 100f / 255f);
+            var border = row.AddComponent<Outline>();
+            border.effectColor = new Color(.65f, .67f, .7f, .6f);
+            border.effectDistance = Vector2.one;
+            TravelText(row.transform, "Label", "Tên nhiệm vụ\n0 / 1", new Vector2(.025f, .1f), new Vector2(.975f, .9f));
+            row.GetComponent<LayoutElement>().preferredHeight = row.GetComponent<LayoutElement>().minHeight = 88f;
+        }
+        questRowTemplate.gameObject.SetActive(false);
         yes.navigation = new Navigation { mode = Navigation.Mode.Explicit,
             selectOnUp = no, selectOnDown = no, selectOnLeft = no, selectOnRight = no };
         no.navigation = new Navigation { mode = Navigation.Mode.Explicit,
@@ -489,7 +544,7 @@ public class AdventureUI : MonoBehaviour
         var button = obj.GetComponent<Button>();
         button.targetGraphic = background;
         button.transition = Selectable.Transition.None;
-        button.onClick.AddListener(action);
+        if (action != null) button.onClick.AddListener(action);
         var label = TravelText(obj.transform, "Label", text, new Vector2(.08f, .08f), new Vector2(.92f, .92f));
         label.alignment = TextAlignmentOptions.Center;
         obj.AddComponent<QuestButtonHighlight>().Configure(false, true);
@@ -499,7 +554,12 @@ public class AdventureUI : MonoBehaviour
     void RefreshQuestList()
     {
         if (questContent == null) return;
-        foreach (Transform child in questContent) { child.gameObject.SetActive(false); Destroy(child.gameObject); }
+        foreach (Transform child in questContent.Cast<Transform>().ToArray())
+            if (child != questRowTemplate.transform)
+            {
+                child.gameObject.SetActive(false);
+                if (Application.isPlaying) Destroy(child.gameObject); else DestroyImmediate(child.gameObject);
+            }
         var progressList = S.QuestProgresses;
         var entries = progressList == null ? null : progressList.Where(progress => progress != null)
             .Select(progress => new { progress, quest = S.FindQuestDefinition(progress.questId) })
@@ -521,21 +581,16 @@ public class AdventureUI : MonoBehaviour
             if (S.Data.trackedQuestId == progress.questId) status += GameLocalization.Translate(" • Đang theo dõi");
             // Quest entries own their appearance rather than inheriting the rest
             // button's grunge plate, wipe, outline glow and hover scale.
-            var row = new GameObject("Quest " + quest.Id, typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
-            row.layer = view.gameObject.layer;
-            TravelRect(row, questContent, Vector2.zero, Vector2.one);
-            var button = row.GetComponent<Button>();
-            button.targetGraphic = row.GetComponent<Image>();
-            button.transition = Selectable.Transition.None;
+            var button = Instantiate(questRowTemplate, questContent);
+            var row = button.gameObject;
+            row.name = "Quest " + quest.Id;
+            row.SetActive(true);
+            button.onClick = new Button.ButtonClickedEvent();
             button.onClick.AddListener(() => OpenQuestDialog(quest));
-            var border = row.AddComponent<Outline>();
-            border.effectColor = new Color(.65f, .67f, .7f, .6f);
-            border.effectDistance = new Vector2(1f, -1f);
-            TravelText(row.transform, "Label", quest.displayName + "\n" + status,
-                new Vector2(.025f, .1f), new Vector2(.975f, .9f));
-            var size = row.GetComponent<LayoutElement>(); size.preferredHeight = 88f; size.minHeight = 88f;
+            GameLocalization.SetText(row.transform.Find("Label").GetComponent<TMP_Text>(),
+                GameLocalization.Translate(quest.displayName) + "\n" + status);
             button.interactable = !progress.completed || !progress.rewardsClaimed;
-            row.AddComponent<QuestButtonHighlight>().Configure(true, false, 100f / 255f,
+            (row.GetComponent<QuestButtonHighlight>() ?? row.AddComponent<QuestButtonHighlight>()).Configure(true, false, 100f / 255f,
                 normalBackgroundAlpha: 100f / 255f);
         }
     }
@@ -545,6 +600,17 @@ public class AdventureUI : MonoBehaviour
         if (quest == null || questDialog.activeSelf) return;
         selectedQuest = quest;
         selectedQuestWasTracked = S.Data.trackedQuestId == quest.Id;
+        RefreshQuestDialogText();
+        questListGroup.interactable = questListGroup.blocksRaycasts = false;
+        questDialog.SetActive(true);
+        questDialog.transform.SetAsLastSibling();
+        EventSystem.current?.SetSelectedGameObject(questDialog.transform.Find("Panel/No").gameObject);
+    }
+
+    void RefreshQuestDialogText()
+    {
+        var quest = selectedQuest;
+        if (quest == null || S == null) return;
         var progress = S.QuestProgress(quest.Id);
         string progressText = progress != null && progress.completed
             ? progress.rewardsClaimed ? GameLocalization.Translate("Đã báo cáo và nhận thưởng.") : GameLocalization.Translate("Mục tiêu đã xong. Hãy quay lại NPC để nhận thưởng.")
@@ -554,11 +620,7 @@ public class AdventureUI : MonoBehaviour
             ? GameLocalization.Translate("Theo dõi vị trí NPC để báo cáo nhiệm vụ?")
             : GameLocalization.Translate("Theo dõi nhiệm vụ?");
         GameLocalization.SetText(questPrompt,
-            quest.displayName + "\n\n" + quest.description + "\n\n" + progressText + "\n\n" + prompt);
-        questListGroup.interactable = questListGroup.blocksRaycasts = false;
-        questDialog.SetActive(true);
-        questDialog.transform.SetAsLastSibling();
-        EventSystem.current?.SetSelectedGameObject(questDialog.transform.Find("Panel/No").gameObject);
+            GameLocalization.Translate(quest.displayName) + "\n\n" + GameLocalization.Translate(quest.description) + "\n\n" + progressText + "\n\n" + prompt);
     }
 
     void ConfirmTrackQuest()

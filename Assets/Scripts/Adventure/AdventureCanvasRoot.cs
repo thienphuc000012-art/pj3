@@ -69,7 +69,7 @@ public class AdventureCanvasRoot : MonoBehaviour
         GameLocalization.BindHierarchy(gameObject);
         GameUITheme.Apply(gameObject);
         EnsureInteractLabelBackground();
-        EnsureEventSystem();
+        EnsureEventSystem(gameObject.scene);
         if (kind == AdventureCanvasKind.Adventure && GetComponent<AdventureCompassHUD>() == null)
             gameObject.AddComponent<AdventureCompassHUD>();
     }
@@ -132,15 +132,24 @@ public class AdventureCanvasRoot : MonoBehaviour
     {
         foreach (var root in FindObjectsByType<AdventureCanvasRoot>(FindObjectsInactive.Include, FindObjectsSortMode.None))
             if (root.kind == kind && root.gameObject.scene == SceneManager.GetActiveScene())
-            { root.gameObject.SetActive(true); root.EnsureInteractLabelBackground(); EnsureEventSystem(); return root; }
+            { root.gameObject.SetActive(true); root.EnsureInteractLabelBackground(); EnsureEventSystem(root.gameObject.scene); return root; }
         var prefab = Resources.Load<AdventureCanvasRoot>("Adventure/UI/" + kind + "Canvas");
         if (prefab == null) throw new InvalidOperationException("Missing Canvas prefab: " + kind);
         var instance = Instantiate(prefab); instance.gameObject.SetActive(true); return instance;
     }
-    public static void EnsureEventSystem()
+    public static void EnsureEventSystem() => EnsureEventSystem(SceneManager.GetActiveScene());
+
+    public static void EnsureEventSystem(Scene owner)
     {
-        if (EventSystem.current != null || FindFirstObjectByType<EventSystem>() != null) return;
-        var go = new GameObject("Adventure UI EventSystem", typeof(EventSystem));
+        // A disabled Loading EventSystem must not prevent the destination from
+        // getting input. During additive activation the active scene can still
+        // be Loading, so explicitly assign ownership before adding components.
+        if (EventSystem.current != null && EventSystem.current.isActiveAndEnabled) return;
+        foreach (var system in FindObjectsByType<EventSystem>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            if (system.isActiveAndEnabled) return;
+        var go = new GameObject("Adventure UI EventSystem");
+        if (owner.IsValid() && owner.isLoaded) SceneManager.MoveGameObjectToScene(go, owner);
+        go.AddComponent<EventSystem>();
 #if ENABLE_INPUT_SYSTEM
         go.AddComponent<InputSystemUIInputModule>();
 #else

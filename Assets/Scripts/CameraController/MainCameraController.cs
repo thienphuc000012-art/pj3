@@ -131,6 +131,9 @@ public class MainCameraController : MonoBehaviour
     private float savedDialogueCameraDistance;
     private float savedDialogueFieldOfView;
     private bool dialogueCameraSettingsApplied;
+    private CameraOcclusionFade occlusionFade;
+    private CinemachineThirdPersonFollow occlusionFollow;
+    private bool previousObstacleAvoidance;
 
 
     // ============================================================
@@ -187,6 +190,9 @@ public class MainCameraController : MonoBehaviour
 
     private void Start()
     {
+        occlusionFade = CameraOcclusionFade.EnsureForScene(gameObject.scene);
+        occlusionFollow = vcam != null ? vcam.GetComponent<CinemachineThirdPersonFollow>() : null;
+        if (occlusionFollow != null) previousObstacleAvoidance = occlusionFollow.AvoidObstacles.Enabled;
         // Đặt CameraTarget đúng vị trí ngay frame đầu.
         cameraTarget.position =
             playerTarget.position +
@@ -271,6 +277,7 @@ public class MainCameraController : MonoBehaviour
         if (dialogueSpeakerRoot != null)
         {
             UpdateDialogueCameraTarget();
+            UpdateOcclusionFocus(dialogueSpeakerRoot, cameraTarget.position);
             return;
         }
 
@@ -287,6 +294,22 @@ public class MainCameraController : MonoBehaviour
         // --------------------------------------------------------
 
         UpdateCameraTargetRotation();
+        UpdateOcclusionFocus(playerTarget, playerTarget.position + Vector3.up * targetHeight);
+    }
+
+    private void UpdateOcclusionFocus(Transform subject, Vector3 point)
+    {
+        if (occlusionFade == null) return;
+        if (occlusionFollow != null)
+            occlusionFollow.AvoidObstacles.Enabled = occlusionFade.isActiveAndEnabled && occlusionFade.obstructionLayers.value != 0
+                ? false : previousObstacleAvoidance;
+        occlusionFade.SetFocus(subject, point);
+    }
+
+    private void OnDisable()
+    {
+        if (occlusionFollow != null) occlusionFollow.AvoidObstacles.Enabled = previousObstacleAvoidance;
+        if (occlusionFade != null) { occlusionFade.SetFocus(null, default); occlusionFade.RestoreAll(); }
     }
 
     public void BeginDialogueFocus(Transform speakerRoot, Transform headTarget, float fallbackHeadHeight)

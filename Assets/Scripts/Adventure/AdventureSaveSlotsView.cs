@@ -70,8 +70,8 @@ public sealed class AdventureSaveSlotsView : MonoBehaviour
         titleEntries = entries;
         titleLoad = load;
         titleClosed = closed;
-        slotsPanel = Instantiate(template.slotsPanel, transform, false);
-        confirmationPanel = Instantiate(template.confirmationPanel, transform, false);
+        if (slotsPanel == null) slotsPanel = Instantiate(template.slotsPanel, transform, false);
+        if (confirmationPanel == null) confirmationPanel = Instantiate(template.confirmationPanel, transform, false);
         slotsPanel.name = template.slotsPanel.name;
         confirmationPanel.name = template.confirmationPanel.name;
         rowBackground = template.rowBackground;
@@ -422,7 +422,7 @@ public sealed class AdventureSaveSlotsView : MonoBehaviour
         return row;
     }
 
-    internal static void ConfigureTextHover(Button button)
+    public static void ConfigureTextHover(Button button)
     {
         if (button == null) return;
         var scale = button.GetComponent<SmoothButtonHoverScale>();
@@ -438,7 +438,9 @@ public sealed class AdventureSaveSlotsView : MonoBehaviour
         var hover = button.GetComponent<DialogueChoiceTextHover>();
         if (hover == null) hover = button.gameObject.AddComponent<DialogueChoiceTextHover>();
         foreach (var label in button.GetComponentsInChildren<TMP_Text>(true))
-            hover.Configure(label, new Color(.5f, .5f, .5f, 1f), Color.white);
+            // Selecting No/first row when opening a modal is focus for input,
+            // not a mouse hover. Only actual keyboard/gamepad navigation glows.
+            hover.Configure(label, new Color(.5f, .5f, .5f, 1f), Color.white, true, true);
     }
     void FocusFirstRow()
     {

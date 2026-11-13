@@ -105,7 +105,8 @@ public sealed class AdventureTitleMenu : MonoBehaviour
                 ShowError("Không thể mở danh sách bản lưu.");
                 return;
             }
-            saveSlotsView = gameObject.AddComponent<AdventureSaveSlotsView>();
+            saveSlotsView = GetComponent<AdventureSaveSlotsView>();
+            if (saveSlotsView == null) saveSlotsView = gameObject.AddComponent<AdventureSaveSlotsView>();
             saveSlotsView.BindTitle(template, continueButton, GetTitleSlots, LoadTitleSlot, RestoreMenuFocus);
         }
         ShowError("");
@@ -207,8 +208,8 @@ public sealed class AdventureTitleMenu : MonoBehaviour
     List<CampaignSaveSlotInfo> GetTitleSlots()
     {
         var entries = new List<CampaignSaveSlotInfo>();
-        if (ReadTitleSlot(AdventureSaveSlotsView.AutosaveSlot, out var autosave) != null)
-            entries.Add(autosave);
+        // Title exposes deliberate manual saves only. Autosave is an internal
+        // campaign checkpoint and must not make an unsaved new game resumable here.
         for (int slot = 1; slot <= ManualSlotCount; slot++)
         {
             ReadTitleSlot(slot, out var info);
@@ -219,14 +220,12 @@ public sealed class AdventureTitleMenu : MonoBehaviour
 
     CampaignSave ReadTitleSlot(int slot, out CampaignSaveSlotInfo info)
     {
-        bool autosave = slot == AdventureSaveSlotsView.AutosaveSlot;
-        CampaignSave save;
-        if (autosave)
+        if (slot < 1 || slot > ManualSlotCount)
         {
-            save = CampaignSession.ReadAutosave();
-            info = new CampaignSaveSlotInfo { slot = slot, isEmpty = save == null };
+            info = new CampaignSaveSlotInfo { slot = slot, isEmpty = true };
+            return null;
         }
-        else if (!CampaignSaveSlots.TryLoad(Application.persistentDataPath, slot, ManualSlotCount, out save, out info, out _))
+        if (!CampaignSaveSlots.TryLoad(Application.persistentDataPath, slot, ManualSlotCount, out var save, out info, out _))
             return null;
 
         if (save == null) return null;
@@ -245,13 +244,6 @@ public sealed class AdventureTitleMenu : MonoBehaviour
         }
         save.currentMapScene = map;
         save.unlockedRestPoints ??= new List<UnlockedRestPoint>();
-        if (autosave)
-        {
-            info.savedAtUtc = save.savedAtUtc;
-            info.playTimeSeconds = save.playTimeSeconds;
-            info.mapScene = map;
-            info.locationName = save.saveLocationName;
-        }
         return save;
     }
 

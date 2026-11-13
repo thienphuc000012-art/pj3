@@ -1,0 +1,70 @@
+V5 IMPORTANT: FootTrailController now has Left/Right Foot Bone and Follow Foot Bones. Assign the animated foot bones in Inspector. Particle emission remains in World space. See README_V5_FOOT_BONE_FOLLOW.txt in ZIP root.
+
+CUSTOM FOOT TRAILS V4 - FULL PACKAGE
+=====================================
+16 original Footstep Burst presets for Unity 3D, supporting URP and Built-in Render Pipeline.
+
+Bộ này gồm:
+- 16 preset configurations. Unity Editor generates 16 .prefab files and materials.
+- 6 RGBA PNG particle textures.
+- URP + Built-in particle shaders.
+- FootTrailEffect.cs (particle burst executor).
+- FootTrailController.cs V4 (automatic movement-based footsteps + optional ground checking).
+- FootTrailPresetGenerator.cs V3 (dynamic texture paths + consistent velocity curve modes).
+
+CÀI ĐẶT BẰNG ZIP (KHUYẾN NGHỊ)
+1. Nếu project đã có Assets/CustomFootTrails, SAO LƯU các prefab/material tùy biến trước.
+2. Xóa/bỏ các bản CustomFootTrails cũ bị trùng, đặc biệt các thư mục lồng nhau.
+   Unity project chỉ nên có một bộ Scripts/FootTrailController.cs và Editor/FootTrailPresetGenerator.cs.
+3. Giải nén ZIP; sao chép toàn bộ thư mục Assets/CustomFootTrails vào Assets/ của project.
+   Đường dẫn đúng: <YourProject>/Assets/CustomFootTrails/Textures/FT_SoftCloud.png
+4. Unity biên dịch xong, chọn Tools > Foot Trails > Generate 16 Original Presets.
+5. Kiểm tra Assets/CustomFootTrails/Generated/Prefabs/ (16 prefab) và Generated/Materials/.
+
+CÀI ĐẶT BẰNG UNITYPACKAGE
+- Assets > Import Package > Custom Package, chọn file .unitypackage V4 và Import.
+- Nếu Unity Package Preview bị lỗi, dùng bản ZIP như hướng dẫn trên.
+- Nếu trước đây đã có V3, KHÔNG GIỮ HAI BẢN cùng lúc.
+
+SỬ DỤNG TRONG GAME
+Player (movement transform actually changing position)
+  - FootTrailController [V4]
+  - Skeleton/LeftFootBone/LeftFXAnchor [one prefab instance with FootTrailEffect]
+  - Skeleton/RightFootBone/RightFXAnchor [different prefab instance with FootTrailEffect]
+
+Inspector FootTrailController:
+  Left Effect: kéo component FootTrailEffect ở LeftFXAnchor
+  Right Effect: kéo component FootTrailEffect ở RightFXAnchor
+  Movement Source: Player root hoặc CharacterController Transform thực sự di chuyển
+  Automatic Footsteps: On
+  Meters Per Step: 0.55
+  Minimum Speed: 0.15
+  Require Ground Contact: Off khi test ban đầu
+  Debug Footsteps: On khi test
+
+Cấu hình mặc định của Soft_Trail/Accents:
+  Emission rate = 0, Play on Awake = Off, Looping = Off.
+  Đây là chủ đích của Burst mode, nên KHÔNG cần bật Emission = 25.
+  FootTrailController gọi FootTrailEffect.EmitOnce() khi nhân vật di chuyển.
+
+KIỂM TRA
+- Run Play Mode rồi chạy nhân vật. Nếu Debug Footsteps bật, Console báo LEFT/RIGHT BURST.
+- Có log nhưng không thấy: kiểm tra shader theo pipeline, Particle Renderer material,
+  vị trí effect sát mặt đất, phần alpha, GameObject active, kích thước particle.
+- Không có log: kiểm tra Movement Source, left/right references, speed, bước chân.
+- Chỉ ấn Play của Particle System mà không có Burst sẽ không thể hiện được hệ thống.
+- Có thể test trực tiếp từ context menu của FootTrailController (Play Mode):
+  TEST: Emit Left Burst / TEST: Emit Right Burst.
+- Nếu muốn chính xác theo animation, tắt Automatic Footsteps và gọi
+  OnLeftFootstep / OnRightFootstep bằng Animation Event trên object nhận animation events.
+
+THAY ĐỔI QUAN TRỌNG SO VỚI CÁC BẢN CŨ
+- V2: Generator tự tìm đường dẫn thật của texture.
+- V3: Đã đồng bộ chế độ MinMaxCurve của velocity x/y/z (Two Constants).
+- V4: Tự phát Footstep Burst khi nhân vật di chuyển, có tùy chọn Ground Check.
+
+GHI CHÚ
+Các prefab chưa nằm sẵn trong file ZIP; Unity tạo chúng từ Generator bằng menu Tools.
+Đây là tài nguyên tự tạo, không phải bản copy asset thương mại.
+Đã kiểm tra cấu trúc archive, source, PNG và metadata bằng script bên ngoài Unity;
+chưa thể kiểm thử trực tiếp trong Unity Editor.

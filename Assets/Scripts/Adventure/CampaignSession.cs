@@ -63,6 +63,7 @@ public class CampaignSession : MonoBehaviour
         var oldCulling = animator != null ? animator.cullingMode : AnimatorCullingMode.AlwaysAnimate;
         bool oldApplyRootMotion = animator != null && animator.applyRootMotion;
         bool played = false;
+        bool playerAnimationRestored = false;
         bool collected = false;
         bool chest = point.kind == WorldInteractionKind.Chest;
         bool opening = false;
@@ -71,6 +72,18 @@ public class CampaignSession : MonoBehaviour
         bool useAnimationEvent = chest ? point.chestUseAnimationEvent : point.pickupUseAnimationEvent;
         float interactionMoment = chest ? point.chestOpenMoment : point.pickupMoment;
         PickupAnimationEvents receiver = null;
+        void RestorePlayerAnimation()
+        {
+            if (playerAnimationRestored) return;
+            playerAnimationRestored = true;
+            if (receiver != null) { receiver.OnPickupMoment = null; receiver.OnChestOpenMoment = null; }
+            if (animator == null || !played) return;
+            animator.cullingMode = oldCulling;
+            if (chest) animator.applyRootMotion = oldApplyRootMotion;
+            int locomotion = Animator.StringToHash("Base Layer.Basic Movement");
+            if (animator.HasState(0, locomotion)) animator.CrossFadeInFixedTime(locomotion, 0.1f);
+            else if (oldState != 0 && animator.HasState(0, oldState)) animator.CrossFadeInFixedTime(oldState, 0.1f);
+        }
         Action collect = () =>
         {
             if (collected || !OnMap || MapPlayer != player || point == null || !point.isActiveAndEnabled || point.IsConsumed) return;
@@ -139,6 +152,9 @@ public class CampaignSession : MonoBehaviour
                 else Debug.LogWarning("Pickup/Chest: không tìm thấy state tương tác trong Animator của player. Hãy lưu PlayerController2.", point);
             }
             if (!played) collect(); // Preserve pickups on characters without a pickup animation.
+            // The player owns only their interaction animation. The lid can
+            // keep opening while the player has already blended back to idle.
+            RestorePlayerAnimation();
             if (chest && opening)
             {
                 while (Time.time < chestFinishedAt && OnMap && point != null && point.isActiveAndEnabled && MapPlayer == player)
@@ -160,15 +176,7 @@ public class CampaignSession : MonoBehaviour
         }
         finally
         {
-            if (receiver != null) { receiver.OnPickupMoment = null; receiver.OnChestOpenMoment = null; }
-            if (animator != null && played)
-            {
-                animator.cullingMode = oldCulling;
-                if (chest) animator.applyRootMotion = oldApplyRootMotion;
-                int locomotion = Animator.StringToHash("Base Layer.Basic Movement");
-                if (animator.HasState(0, locomotion)) animator.CrossFadeInFixedTime(locomotion, 0.1f);
-                else if (oldState != 0 && animator.HasState(0, oldState)) animator.CrossFadeInFixedTime(oldState, 0.1f);
-            }
+            RestorePlayerAnimation();
             KeepHudVisibleDuringItemInteraction = false;
             Busy = false;
         }
@@ -203,6 +211,14 @@ public class CampaignSession : MonoBehaviour
     private bool playTimePaused;
     public int SaveSlotCount => Mathf.Clamp(Config != null ? Config.saveSlotCount : 10, 1, 99);
     private float encounterAllowedAt;
+    // Returning from an escape is not a new approach to a campfire. Keep the
+    // battle HP until the player leaves any rest radius covering the arrival.
+    private bool preserveHpOnNextMapArrival;
+    private bool protectArrivalHp;
+    private Vector3 protectedArrivalPosition;
+    private sealed class ArrivalRestArea { public Vector3 position; public float range; }
+    private readonly Dictionary<string, ArrivalRestArea> arrivalRestAreas = new Dictionary<string, ArrivalRestArea>();
+    private readonly HashSet<string> exitedArrivalRests = new HashSet<string>();
     private class EncounterData
     {
         public string id;
@@ -364,6 +380,7 @@ public class CampaignSession : MonoBehaviour
             Data.hasPosition = false;
             CapturePosition();
         }
+        ResetRestHealingOnMapArrival(player.transform.position);
         if (!Data.hasCheckpoint)
         {
             Data.checkpoint = Data.position;
@@ -429,6 +446,12 @@ public class CampaignSession : MonoBehaviour
     bool PrepareWorldPoint(WorldInteraction point)
     {
         if (point == null || !point.isActiveAndEnabled) return false;
+        if (point.kind == WorldInteractionKind.Cryptex)
+        {
+            var puzzle = point.GetComponent<CryptexLock>();
+            if (puzzle != null) puzzle.RestoreSavedState(point.IsConsumed);
+            return !point.IsConsumed;
+        }
         if (point.IsConsumed) { point.gameObject.SetActive(false); return false; }
         if (point.kind == WorldInteractionKind.RestPoint && Data?.unlockedRestPoints != null)
         {
@@ -1084,6 +1107,36 @@ public class CampaignSession : MonoBehaviour
         }
         return restored;
     }
+    private void ResetRestHealingOnMapArrival(Vector3 position)
+    {
+        protectArrivalHp = preserveHpOnNextMapArrival;
+        preserveHpOnNextMapArrival = false;
+        protectedArrivalPosition = position;
+        arrivalRestAreas.Clear();
+        exitedArrivalRests.Clear();
+    }
+    private void UpdateArrivalRestExits(Vector3 playerPosition)
+    {
+        if (!protectArrivalHp) return;
+        // Keep the radius even if its chunk unloads while the player walks away.
+        foreach (var area in arrivalRestAreas)
+            if ((playerPosition - area.Value.position).sqrMagnitude > area.Value.range * area.Value.range)
+                exitedArrivalRests.Add(area.Key);
+    }
+    private bool CanAutoHealAtRestPoint(WorldInteraction point, bool near)
+    {
+        if (!protectArrivalHp || (point.transform.position - protectedArrivalPosition).sqrMagnitude > point.range * point.range)
+            return true;
+        string id = point.Id;
+        if (exitedArrivalRests.Contains(id)) return true;
+        if (!arrivalRestAreas.ContainsKey(id))
+            arrivalRestAreas.Add(id, new ArrivalRestArea { position = point.transform.position, range = point.range });
+        // IsNear is also false for an inactive/unloaded chunk. That is not a
+        // physical exit; UpdateArrivalRestExits checks the cached world radius.
+        if (near || !point.gameObject.activeInHierarchy) return false;
+        exitedArrivalRests.Add(id);
+        return true;
+    }
     public bool IsNear(WorldInteraction point)
     {
         if (MapPlayer == null || point == null || !point.gameObject.activeInHierarchy) return false;
@@ -1097,9 +1150,10 @@ public class CampaignSession : MonoBehaviour
     {
         UpdatePlayTime();
         if (!OnMap || MapPlayer == null || Busy || LoadingScreen.IsLoading || MapChunkStreamer.MovementBlocked) return;
+        UpdateArrivalRestExits(MapPlayer.transform.position);
         // Dialogue owns input until its final node. Esc/P must not consume a
         // one-time conversation or release its camera/player controls early.
-        if (Menu == AdventureMenu.Dialogue) return;
+        if (Menu == AdventureMenu.Dialogue || Menu == AdventureMenu.Cryptex) return;
         if (Input.GetKeyDown(KeyCode.Escape)) { if (!GetComponent<AdventureUI>().HandleBack()) SetMenu(AdventureMenu.None); return; }
         if (Input.GetKeyDown(KeyCode.P))
         {
@@ -1113,8 +1167,11 @@ public class CampaignSession : MonoBehaviour
         bool restoredHealth = false;
         foreach (var point in worldPoints)
         {
-            if (point == null || point.IsConsumed || !IsNear(point)) continue;
-            if (!restoredHealth && point.kind == WorldInteractionKind.RestPoint)
+            if (point == null || point.IsConsumed) continue;
+            bool near = IsNear(point);
+            bool canHeal = point.kind != WorldInteractionKind.RestPoint || CanAutoHealAtRestPoint(point, near);
+            if (!near) continue;
+            if (!restoredHealth && point.kind == WorldInteractionKind.RestPoint && canHeal)
                 restoredHealth = RestorePartyHealth();
             if (point.kind == WorldInteractionKind.Discovery) { point.Interact(); continue; }
             float distance = (point.transform.position - MapPlayer.transform.position).sqrMagnitude;
@@ -1167,6 +1224,16 @@ public class CampaignSession : MonoBehaviour
             RestPoint = null;
         }
         Menu = menu;
+    }
+    // A lock can be disabled while its streamed scene is unloading. Release its
+    // modal input even when the map has already stopped being the active scene.
+    public void CloseCryptexMenu()
+    {
+        if (Menu != AdventureMenu.Cryptex) return;
+        Menu = AdventureMenu.None;
+        Time.timeScale = previousTimeScale;
+        Cursor.lockState = previousCursor;
+        Cursor.visible = previousCursorVisible;
     }
     public void Notify(string message) { Message = message; MessageUntil = Time.unscaledTime + 5; }
     public void CapturePosition()
@@ -1539,9 +1606,6 @@ public class CampaignSession : MonoBehaviour
         Animator enemyAnimator = patrol != null ? patrol.mapAnimator : point != null ? point.GetComponentInChildren<Animator>(true) : null;
         Transform playerTransform = player != null ? player.transform : null;
         Transform enemyTransform = point != null ? point.transform : null;
-        CharacterController playerController = player != null
-            ? player.CC != null ? player.CC : player.GetComponent<CharacterController>()
-            : null;
         Quaternion playerStartRotation = playerTransform != null ? playerTransform.rotation : Quaternion.identity;
         Quaternion enemyStartRotation = enemyTransform != null ? enemyTransform.rotation : Quaternion.identity;
         int playerStartState = playerAnimator != null && playerAnimator.layerCount > 0 ? playerAnimator.GetCurrentAnimatorStateInfo(0).fullPathHash : 0;
@@ -1556,8 +1620,6 @@ public class CampaignSession : MonoBehaviour
         bool loadingStarted = false;
         GameObject blackHole = null;
         float encounterVfxStartedAt = -1f;
-        GameObject encounterContactProbe = null;
-        SphereCollider enemyAttackCollider = null;
         EncounterAnimationProgress playerAction = null;
         EncounterAnimationProgress enemyAction = null;
 
@@ -1598,51 +1660,38 @@ public class CampaignSession : MonoBehaviour
             }
             else
             {
-                if (playerController == null || !playerController.enabled || playerTransform == null || enemyTransform == null)
+                if (playerTransform == null || enemyTransform == null)
                     yield break;
-                float attackRange = patrol != null ? Mathf.Min(patrol.attackRange, point.range) : point.range;
-                encounterContactProbe = CreateEncounterContactProbe(enemyTransform, patrol, attackRange);
-                enemyAttackCollider = encounterContactProbe != null ? encounterContactProbe.GetComponent<SphereCollider>() : null;
-                if (enemyAttackCollider == null) yield break;
 
                 enemyAction = patrol != null
                     ? StartEncounterAnimation(patrol.mapAnimator, "", patrol.EncounterAttackState,
                         .7f, patrol.EncounterMovementLayerIndex)
                     : StartEncounterAnimation(enemyAnimator, Config.mapEnemyHitTrigger, Config.mapEnemyHitState, .7f);
 
-                bool contactConfirmed = false;
+                // BeginEncounter already validated range/visibility and set Busy.
+                // Commit to this attack once: animation timing triggers Hit, not
+                // weapon overlap, so a moving claw or disabled collider cannot
+                // turn the encounter into a miss and restart the patrol attack.
+                bool hitStarted = false;
                 bool playerAnimationFinished = false;
                 bool enemyAnimationFinished = false;
-                float hitCheckStartsAt = Time.unscaledTime + Mathf.Max(0f, patrol != null ? patrol.attackWindup : 0f);
-                float hitCheckEndsAt = hitCheckStartsAt + Mathf.Max(.05f, patrol != null ? patrol.attackContactWindow : .3f);
+                float hitStartsAt = Time.unscaledTime + Mathf.Max(0f, patrol != null ? patrol.attackWindup : 0f);
                 float animationDeadline = Time.unscaledTime + Mathf.Max(3.5f,
-                    hitCheckEndsAt - Time.unscaledTime + 1f);
+                    hitStartsAt - Time.unscaledTime + 3.5f);
                 while (Time.unscaledTime < animationDeadline)
                 {
                     enemyAnimationFinished = UpdateEncounterAnimation(enemyAction);
-                    if (!contactConfirmed && Time.unscaledTime >= hitCheckStartsAt && Time.unscaledTime <= hitCheckEndsAt)
+                    if (!hitStarted && Time.unscaledTime >= hitStartsAt)
                     {
-                        Physics.SyncTransforms();
-                        contactConfirmed = EncounterContactConfirmed(playerTransform, playerController,
-                            enemyAttackCollider);
-                        if (contactConfirmed)
-                        {
-                            playerAction = StartEncounterAnimation(playerAnimator, Config.mapPlayerHitTrigger,
-                                Config.mapPlayerHitState, .7f);
-                            StartHitVfx();
-                        }
+                        hitStarted = true;
+                        playerAction = StartEncounterAnimation(playerAnimator, Config.mapPlayerHitTrigger,
+                            Config.mapPlayerHitState, .7f);
+                        StartHitVfx();
                     }
 
-                    if (contactConfirmed) playerAnimationFinished = UpdateEncounterAnimation(playerAction);
-                    bool contactWindowClosed = Time.unscaledTime > hitCheckEndsAt;
-                    if (enemyAnimationFinished && (contactConfirmed ? playerAnimationFinished : contactWindowClosed)) break;
+                    if (hitStarted) playerAnimationFinished = UpdateEncounterAnimation(playerAction);
+                    if (enemyAnimationFinished && hitStarted && playerAnimationFinished) break;
                     yield return null;
-                }
-
-                if (!contactConfirmed)
-                {
-                    // Enemy attack did not overlap the player, so do not fake a Hit reaction or enter combat.
-                    yield break;
                 }
             }
 
@@ -1683,7 +1732,6 @@ public class CampaignSession : MonoBehaviour
         }
         finally
         {
-            if (encounterContactProbe != null) Destroy(encounterContactProbe);
             if (!loadingStarted)
             {
                 if (blackHole != null) Destroy(blackHole);
@@ -1750,48 +1798,6 @@ public class CampaignSession : MonoBehaviour
         foreach (ParticleSystem particles in effect.GetComponentsInChildren<ParticleSystem>(true))
             if (particles != null && !particles.isPlaying) particles.Play(true);
         return effect;
-    }
-
-    private static GameObject CreateEncounterContactProbe(Transform enemy, EnemyEncounterBehaviour patrol, float attackRange)
-    {
-        if (enemy == null) return null;
-        float bodyHeight = patrol != null ? Mathf.Max(.2f, patrol.bodyHeight) : 1.8f;
-        float radius = patrol != null ? Mathf.Max(.05f, patrol.attackContactRadius) : .35f;
-        Transform attachPoint = patrol != null && patrol.HasValidAttackContactPoint ? patrol.attackContactPoint : enemy;
-        var probe = new GameObject("Encounter Attack Hitbox");
-        probe.layer = enemy.gameObject.layer;
-        probe.transform.SetParent(attachPoint, false);
-        probe.transform.localPosition = attachPoint == enemy
-            ? Vector3.up * (bodyHeight * .5f) + Vector3.forward * Mathf.Min(.65f, Mathf.Max(.05f, attackRange - radius))
-            : Vector3.zero;
-        probe.transform.localRotation = Quaternion.identity;
-        var hitbox = probe.AddComponent<SphereCollider>();
-        hitbox.radius = radius;
-        hitbox.isTrigger = true;
-        return probe;
-    }
-
-    private static bool EncounterContactConfirmed(Transform player, CharacterController playerController,
-        SphereCollider attackHitbox)
-    {
-        if (player == null || playerController == null || !playerController.enabled || attackHitbox == null)
-            return false;
-
-        Physics.SyncTransforms();
-        Vector3 hitboxCenter = attackHitbox.transform.TransformPoint(attackHitbox.center);
-        Vector3 closestPlayerPoint = playerController.ClosestPoint(hitboxCenter);
-        float scale = Mathf.Max(Mathf.Abs(attackHitbox.transform.lossyScale.x),
-            Mathf.Abs(attackHitbox.transform.lossyScale.y), Mathf.Abs(attackHitbox.transform.lossyScale.z));
-        float radius = attackHitbox.radius * scale + .025f;
-        if ((closestPlayerPoint - hitboxCenter).sqrMagnitude <= radius * radius)
-            return true;
-
-        // Physics query fallback covers colliders attached under the player object.
-        Collider[] overlaps = Physics.OverlapSphere(hitboxCenter, radius, ~0, QueryTriggerInteraction.Ignore);
-        foreach (Collider overlap in overlaps)
-            if (overlap != null && (overlap == playerController || overlap.transform == player || overlap.transform.IsChildOf(player)))
-                return true;
-        return false;
     }
 
     private static void PrepareEncounterVfxForUnscaledTime(GameObject effect)
@@ -2168,7 +2174,7 @@ public class CampaignSession : MonoBehaviour
     {
         if (encounter == null || Busy) return;
         Busy = true;
-        for (int i = 0; i < Data.party.Count && i < manager.playerParty.Count; i++) Data.party[i].hp = manager.playerParty[i].currentHP;
+        CaptureBattlePartyHealth(manager);
         if (victory)
         {
             foreach (var defeatedEnemy in encounter.enemies)
@@ -2228,8 +2234,7 @@ public class CampaignSession : MonoBehaviour
 
         int[] previousPartyHp = Data.party.Select(member => member.hp).ToArray();
         bool encounterWasConsumed = Data.collected.Contains(encounter.id);
-        for (int i = 0; i < Data.party.Count && i < manager.playerParty.Count; i++)
-            Data.party[i].hp = manager.playerParty[i] != null ? manager.playerParty[i].currentHP : Data.party[i].hp;
+        CaptureBattlePartyHealth(manager);
         if (!encounterWasConsumed && !string.IsNullOrEmpty(encounter.id))
             Data.collected.Add(encounter.id);
 
@@ -2242,8 +2247,11 @@ public class CampaignSession : MonoBehaviour
             return false;
         }
 
+        bool previousArrivalProtection = preserveHpOnNextMapArrival;
+        preserveHpOnNextMapArrival = true;
         if (!LoadingScreen.Load(returnScene))
         {
+            preserveHpOnNextMapArrival = previousArrivalProtection;
             RestoreEscapeData(previousPartyHp, encounterWasConsumed, encounter.id);
             Busy = false;
             Save(capturePosition: false);
@@ -2258,6 +2266,16 @@ public class CampaignSession : MonoBehaviour
         Message = null;
         MessageUntil = 0f;
         return true;
+    }
+
+    private void CaptureBattlePartyHealth(CombatManager manager)
+    {
+        if (Data?.party == null || manager?.playerParty == null) return;
+        // Gameplay HP is authoritative, including damage not yet finished
+        // animating on the HUD. Keep defeated members at zero.
+        for (int i = 0; i < Data.party.Count && i < manager.playerParty.Count; i++)
+            if (Data.party[i] != null && manager.playerParty[i] != null)
+                Data.party[i].hp = Mathf.Clamp(manager.playerParty[i].currentHP, 0, MaxHP(Data.party[i]));
     }
 
     private void RestoreEscapeData(int[] previousPartyHp, bool encounterWasConsumed, string encounterId)
@@ -2277,4 +2295,4 @@ public class CampaignSession : MonoBehaviour
     }
 }
 
-public enum AdventureMenu { None, Party, Inventory, Rest, Main, Tasks, Dialogue }
+public enum AdventureMenu { None, Party, Inventory, Rest, Main, Tasks, Dialogue, Cryptex }

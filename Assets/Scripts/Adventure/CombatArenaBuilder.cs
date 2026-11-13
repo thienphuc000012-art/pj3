@@ -75,11 +75,15 @@ internal static class CombatArenaBuilder
         var arena = new GameObject("CombatArenaRoot");
         SceneManager.MoveGameObjectToScene(arena, combatScene);
         arena.transform.position = scan.SpawnPose.position;
+        var shadowBudget = CombatShadowBudget.Ensure(combatScene);
+        shadowBudget.SetCenter(scan.SpawnPose.position);
         foreach (GameObject root in roots)
         {
             SceneManager.MoveGameObjectToScene(root, combatScene);
             root.transform.SetParent(arena.transform, true);
+            shadowBudget.RegisterHierarchy(root);
         }
+        shadowBudget.ApplyBudget();
         Physics.SyncTransforms();
         var solver = new CombatArenaSpawnSolver(arena.transform, scan, settings);
         if (!solver.TryPlace(playerCount, enemies, playerSlotCount, enemySlotCount, entryDistance, out layout))

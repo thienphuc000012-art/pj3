@@ -17,23 +17,28 @@ public sealed class GuidedCombatTutorialView : MonoBehaviour, IPointerClickHandl
     static readonly Color Ivory = new Color(.96f, .92f, .84f);
     static readonly Rect Full = new Rect(0f, 0f, 1f, 1f);
 
-    readonly RectTransform[] shade = new RectTransform[4];
+    [SerializeField] RectTransform[] shade = new RectTransform[4];
     readonly Vector3[] corners = new Vector3[4];
     Canvas sourceCanvas;
-    RectTransform overlay;
-    RectTransform spotlight;
-    RectTransform page;
-    TMP_Text counter;
-    TMP_Text heading;
-    TMP_Text content;
-    TMP_Text footer;
+    [SerializeField] RectTransform overlay;
+    [SerializeField] RectTransform spotlight;
+    [SerializeField] RectTransform page;
+    [SerializeField] TMP_Text counter;
+    [SerializeField] TMP_Text heading;
+    [SerializeField] TMP_Text content;
+    [SerializeField] TMP_Text footer;
+    [Header("Lesson placement")]
+    [Tooltip("Tự đặt panel tránh Spotlight. Tắt để giữ vị trí RectTransform bạn chỉnh trên Canvas.")]
+    public bool automaticLessonPlacement = true;
+    [Range(.1f, .5f)] public float minimumLessonWidth = .23f;
+    [Range(.1f, .6f)] public float maximumLessonWidth = .36f;
+    [Min(0f)] public float spotlightPadding = 13f;
     Button requiredButton;
     bool requiresAction;
     bool allowCancel;
     IReadOnlyList<RectTransform> focusTargets;
     Action onDismissed;
     GameObject previousSelection;
-    int currentStep;
     int openedFrame;
 
     public bool IsOpen => isActiveAndEnabled;
@@ -41,6 +46,22 @@ public sealed class GuidedCombatTutorialView : MonoBehaviour, IPointerClickHandl
     public static GuidedCombatTutorialView Create(Canvas canvas, TMP_FontAsset font)
     {
         if (canvas == null) return null;
+        var existing = canvas.rootCanvas.GetComponentInChildren<GuidedCombatTutorialView>(true);
+        if (existing != null)
+        {
+            existing.sourceCanvas = canvas.rootCanvas;
+            existing.Close();
+            return existing;
+        }
+        var template = Resources.Load<GuidedCombatTutorialView>("Combat/GuidedCombatTutorial");
+        if (template != null)
+        {
+            var authored = Instantiate(template, canvas.rootCanvas.transform, false);
+            authored.name = "Guided Combat Tutorial";
+            authored.sourceCanvas = canvas.rootCanvas;
+            authored.Close();
+            return authored;
+        }
         var root = new GameObject("Guided Combat Tutorial", typeof(RectTransform),
             typeof(Canvas), typeof(GraphicRaycaster), typeof(PreserveAuthoredUI));
         root.SetActive(false);
@@ -59,7 +80,18 @@ public sealed class GuidedCombatTutorialView : MonoBehaviour, IPointerClickHandl
         return view;
     }
 
-    public void Show(int step, IReadOnlyList<RectTransform> focus, string title, string body,
+    public void SetAuthoringPreview()
+    {
+        counter.text = "03  /  08";
+        heading.text = "Sát thương khắc hệ";
+        content.text = "Nội dung bài hướng dẫn sẽ được cập nhật khi vào trận.\n\nBạn có thể chỉnh font, màu, ảnh nền và bố cục tại đây.";
+        footer.text = "Bấm bất kỳ đâu để tiếp tục";
+        SetRect(page, Rect.MinMaxRect(.64f, 0f, 1f, 1f));
+        for (int i = 0; i < shade.Length; i++) SetRect(shade[i], i == 0 ? Full : default);
+        spotlight.gameObject.SetActive(false);
+    }
+
+    public void Show(int step, int totalSteps, IReadOnlyList<RectTransform> focus, string title, string body,
         string continueLabel, Action dismissed, Button requiredButton = null, bool allowCancel = false)
     {
         if (!IsOpen && EventSystem.current != null)
@@ -69,11 +101,13 @@ public sealed class GuidedCombatTutorialView : MonoBehaviour, IPointerClickHandl
         this.requiredButton = requiredButton;
         requiresAction = requiredButton != null;
         this.allowCancel = allowCancel;
-        currentStep = step;
-        counter.text = step.ToString("00") + "  /  07";
-        heading.text = title;
-        content.text = body;
-        footer.text = continueLabel;
+        // AdvancedUIManager binds even inactive tutorial labels. Update their
+        // localization source before OnEnable refreshes it; assigning .text alone
+        // lets the previous lesson/authoring preview overwrite the new page.
+        GameLocalization.SetText(counter, step.ToString("00") + "  /  " + totalSteps.ToString("00"));
+        GameLocalization.SetText(heading, title);
+        GameLocalization.SetText(content, body);
+        GameLocalization.SetText(footer, continueLabel);
         onDismissed = dismissed;
         openedFrame = Time.frameCount;
         gameObject.SetActive(true);
@@ -210,6 +244,7 @@ public sealed class GuidedCombatTutorialView : MonoBehaviour, IPointerClickHandl
             for (int i = 1; i < shade.Length; ++i) SetRect(shade[i], default);
         }
 
+        if (!automaticLessonPlacement) return;
         float aspect = overlay.rect.width / overlay.rect.height;
         if (aspect < 1.1f)
         {
@@ -219,8 +254,8 @@ public sealed class GuidedCombatTutorialView : MonoBehaviour, IPointerClickHandl
             return;
         }
 
-        const float minWidth = .23f;
-        const float maxWidth = .36f;
+        float minWidth = Mathf.Min(minimumLessonWidth, maximumLessonWidth);
+        float maxWidth = Mathf.Max(minimumLessonWidth, maximumLessonWidth);
         float leftRoom = hasFocus ? focus.xMin - .012f : maxWidth;
         float rightRoom = hasFocus ? 1f - focus.xMax - .012f : maxWidth;
         // Place the lesson card on the side with more free room, keeping the
@@ -271,7 +306,7 @@ public sealed class GuidedCombatTutorialView : MonoBehaviour, IPointerClickHandl
         }
 
         if (!found) return false;
-        const float padding = 13f;
+        float padding = spotlightPadding;
         area = Rect.MinMaxRect(
             Mathf.Clamp01((minimum.x - padding - overlayRect.xMin) / overlayRect.width),
             Mathf.Clamp01((minimum.y - padding - overlayRect.yMin) / overlayRect.height),

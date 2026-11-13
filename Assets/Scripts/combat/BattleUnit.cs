@@ -191,6 +191,7 @@ public class BattleUnit : MonoBehaviour
             instance.transform.localRotation = Quaternion.Euler(entry.localRotation);
             instance.transform.localScale = Vector3.Scale(entry.prefab.transform.localScale, entry.localScale);
             activeIdleVfx.Add(instance);
+            CombatShadowBudget.Active?.RegisterHierarchy(instance, true);
             instance.SetActive(true);
         }
     }
@@ -922,6 +923,7 @@ public class BattleUnit : MonoBehaviour
     {
         if (settings.turnVfxPrefab == null) return;
         var effect = Instantiate(settings.turnVfxPrefab, transform);
+        CombatShadowBudget.Active?.RegisterHierarchy(effect, true);
         effect.transform.localPosition = settings.turnVfxLocalOffset;
         effect.SetActive(true);
         float lifetime = Mathf.Max(0.1f, settings.turnVfxLifetime);

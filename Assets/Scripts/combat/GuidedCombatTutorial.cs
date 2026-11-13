@@ -10,7 +10,9 @@ internal enum GuidedCombatPractice { None, Attack, Skill }
 /// <summary>One battle's lessons, presented at safe points between combat actions.</summary>
 internal sealed class GuidedCombatTutorial
 {
+    const int LessonCount = 8;
     readonly GuidedCombatTutorialView view;
+    int shownLessons;
     bool openingShown;
     bool attackCompleted;
     bool parryShown;
@@ -41,8 +43,9 @@ internal sealed class GuidedCombatTutorial
     public IEnumerator ShowPlayerLessons(AdvancedUIManager ui, bool canPracticeAttack, bool canPracticeSkill)
     {
         bool teachAttack = canPracticeAttack && !attackCompleted;
-        bool teachSkills = canPracticeSkill && parryShown && !skillCompleted;
-        bool teachPartyHud = skillCompleted && !partyHudLessonShown;
+        // Either side can act next. Skills must not wait for an enemy/parry turn.
+        bool teachSkills = canPracticeSkill && attackCompleted && !skillCompleted;
+        bool teachPartyHud = skillCompleted && parryShown && !partyHudLessonShown;
         if (ui == null || view == null || closed || presentingCommands ||
             PendingPractice != GuidedCombatPractice.None ||
             (!NeedsOpeningLessons && !teachAttack && !teachSkills && !teachPartyHud)) yield break;
@@ -70,24 +73,27 @@ internal sealed class GuidedCombatTutorial
         var buttons = menu != null ? menu.GetComponentsInChildren<Button>(false) : new Button[0];
         if (NeedsOpeningLessons)
         {
-            yield return Show(1, buttons.Select(button => (RectTransform)button.transform).ToArray(),
+            yield return Show(buttons.Select(button => (RectTransform)button.transform).ToArray(),
                 "Lệnh chiến đấu", "Battle commands",
                 "Đến lượt mình, nhân vật có thể tấn công, dùng kỹ năng hoặc dùng vật phẩm. Hãy xem lượng Tinh lực trước khi chọn kỹ năng.",
                 "On their turn, a character can attack, use a skill, or use an item. Check your Stain before selecting a skill.");
             var order = ui.turnOrderContainer;
             var portraits = order == null ? new RectTransform[0] : order.Cast<Transform>()
                 .Where(child => child.gameObject.activeInHierarchy).OfType<RectTransform>().ToArray();
-            yield return Show(2, portraits,
+            yield return Show(portraits,
                 "Thứ tự lượt", "Turn order",
                 "Thanh bên trái hiển thị thứ tự hành động. Ảnh nổi bật cho biết ai đang đến lượt. Hãy nhìn các ảnh tiếp theo để biết lúc nào địch sẽ đánh.",
                 "The portraits on the left show who acts next. The highlighted portrait is the current turn. Watch the next portraits to anticipate the enemy's attack.");
+            yield return Show(GetElementFocus(ui),
+                "Sát thương khắc hệ", "Elemental damage",
+                ElementLessonBody(false), ElementLessonBody(true));
             openingShown = true;
         }
         if (teachAttack)
         {
             var attack = FindCommand(buttons, nameof(CombatManager.OnAttackClicked));
             if (attack != null)
-                yield return Show(3, new[] { (RectTransform)attack.transform },
+                yield return Show(new[] { (RectTransform)attack.transform },
                     "Tấn công thường", "Basic attack",
                     "Bấm nút <b>Tấn công</b> đang sáng, rồi chọn và xác nhận mục tiêu để ra đòn. Bạn cần thực hiện đòn đánh để hoàn thành bài.",
                     "Choose the highlighted <b>Attack</b> button, then select and confirm a target. Perform the attack to finish the lesson.",
@@ -98,7 +104,7 @@ internal sealed class GuidedCombatTutorial
             var skills = FindCommand(buttons, nameof(CombatManager.OnSkillsClicked));
             if (skills != null)
             {
-                yield return Show(5, new[] { (RectTransform)skills.transform },
+                yield return Show(new[] { (RectTransform)skills.transform },
                     "Kỹ năng", "Skills",
                     "Bấm nút <b>Kỹ năng</b> đang sáng để mở danh sách chiêu. Chọn một chiêu có thể dùng và thực hiện để hoàn thành bài.",
                     "Choose the highlighted <b>Skills</b> button to open the skill list. Select an available skill and use it to finish the lesson.",
@@ -107,7 +113,7 @@ internal sealed class GuidedCombatTutorial
                 if (PendingPractice == GuidedCombatPractice.Skill && !stainLessonShown)
                 {
                     var stainFocus = GetStainFocus(ui);
-                    yield return Show(6, stainFocus,
+                    yield return Show(stainFocus,
                         "Tiêu hao Stain", "Stain Cost",
                         "Dùng kỹ năng sẽ tiêu hao <b>Stain</b>. Hãy kiểm tra các biểu tượng Stain trước khi chọn chiêu.",
                         "Skills consume <b>Stain</b>. Check the Stain meter before choosing a skill.");
@@ -118,13 +124,43 @@ internal sealed class GuidedCombatTutorial
 
         if (teachPartyHud && !closed && view != null)
         {
-            yield return Show(7, GetPartyHudFocus(ui),
+            yield return Show(GetPartyHudFocus(ui),
                 "Máu và Tuyệt kỹ", "Health & Ultimate",
                 "HP về 0 thì cả đội thua trận. Khi thanh năng lượng Ultimate đầy, nhân vật có thể dùng Tuyệt kỹ.",
                 "If HP reaches zero, the party loses. When the Ultimate energy bar is full, that character can use an Ultimate.",
                 allowCancel: true);
             partyHudLessonShown = true;
         }
+    }
+
+    static IReadOnlyList<RectTransform> GetElementFocus(AdvancedUIManager ui)
+    {
+        if (ui == null || ui.partyHUDList == null) return new RectTransform[0];
+        return ui.partyHUDList
+            .Where(hud => hud != null && hud.gameObject != null && hud.gameObject.activeInHierarchy &&
+                hud.elementIcon != null && hud.elementIcon.gameObject.activeInHierarchy)
+            .Select(hud => hud.elementIcon.rectTransform)
+            .ToArray();
+    }
+
+    static string ElementLessonBody(bool english)
+    {
+        var combat = CombatManager.Instance;
+        var culture = System.Globalization.CultureInfo.GetCultureInfo(english ? "en-US" : "vi-VN");
+        string advantage = (combat != null ? combat.elementalAdvantageMultiplier : 2f).ToString("0.##", culture);
+        string same = (combat != null ? combat.elementalSameTypeMultiplier : 1.5f).ToString("0.##", culture);
+        string disadvantage = (combat != null ? combat.elementalDisadvantageMultiplier : .5f).ToString("0.##", culture);
+        return english
+            ? "The icons beside party HP show each character's <b>defensive element</b>. Skills have their own element.\n\n" +
+                $"Compare the <b>skill's element</b> with the target's element:\n" +
+                $"<b>Advantage: ×{advantage}</b> damage\n<b>Same element: ×{same}</b> damage\n" +
+                $"<b>Disadvantage: ×{disadvantage}</b> damage\n\nChoose a skill that counters the enemy. " +
+                "Enemies can also exploit your party's elements."
+            : "Icon cạnh HP cho biết <b>hệ phòng thủ</b> của từng thành viên. Mỗi kỹ năng có hệ riêng.\n\n" +
+                $"So sánh <b>hệ của kỹ năng</b> với hệ của mục tiêu:\n" +
+                $"<b>Khắc hệ: ×{advantage}</b> sát thương\n<b>Cùng hệ: ×{same}</b> sát thương\n" +
+                $"<b>Bị khắc hệ: ×{disadvantage}</b> sát thương\n\nChọn kỹ năng khắc hệ địch để tăng sát thương. " +
+                "Địch cũng có thể khắc hệ thành viên trong đội.";
     }
 
     static IReadOnlyList<RectTransform> GetStainFocus(AdvancedUIManager ui)
@@ -170,13 +206,13 @@ internal sealed class GuidedCombatTutorial
         var partyHud = ui != null ? ui.partyHUDList : null;
         RectTransform target = partyHud != null && targetIndex >= 0 && targetIndex < partyHud.Count
             ? partyHud[targetIndex]?.gameObject?.GetComponent<RectTransform>() : null;
-        yield return Show(4, target != null ? new[] { target } : new RectTransform[0],
+        yield return Show(target != null ? new[] { target } : new RectTransform[0],
             "Đỡ đòn", "Parry",
             "Quái chuẩn bị tấn công. Quan sát đòn đánh rồi nhấn <b>Space</b> ngay trước khi đòn chạm để Parry. Bấm quá sớm sẽ dễ hụt nhịp.",
             "The enemy is about to attack. Watch the strike and press <b>Space</b> just before impact to parry. Pressing too early can miss the timing.");
     }
 
-    IEnumerator Show(int step, IReadOnlyList<RectTransform> focus, string title, string englishTitle, string body,
+    IEnumerator Show(IReadOnlyList<RectTransform> focus, string title, string englishTitle, string body,
         string englishBody, Button requiredButton = null, GuidedCombatPractice practice = GuidedCombatPractice.None,
         bool allowCancel = false)
     {
@@ -188,7 +224,8 @@ internal sealed class GuidedCombatTutorial
             : allowCancel
                 ? (english ? "Click to return to commands  •  Esc / Right-click" : "Bấm để về lựa chọn  •  Esc / Chuột phải")
                 : (english ? "Click anywhere to continue" : "Bấm bất kỳ đâu để tiếp tục");
-        view.Show(step, focus, english ? englishTitle : title, english ? englishBody : body,
+        // Number pages in their actual presentation order, even when Skills precedes Parry.
+        view.Show(++shownLessons, LessonCount, focus, english ? englishTitle : title, english ? englishBody : body,
             hint, () =>
             {
                 dismissedFrame = Time.frameCount;

@@ -217,12 +217,17 @@ public static class MapStreamingBuilder
                 foreach (var light in obj.GetComponentsInChildren<Light>(true))
                     if (light.type != LightType.Directional)
                     {
-                        light.shadowCustomResolution = 256;
                         var data = light.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalLightData>();
                         if (data == null) data = light.gameObject.AddComponent<UnityEngine.Rendering.Universal.UniversalAdditionalLightData>();
                         var serialized = new SerializedObject(data);
-                        serialized.FindProperty("m_AdditionalLightsShadowResolutionTier").intValue = -1;
+                        // URP Custom reads Light.shadowResolution (not shadowCustomResolution).
+                        // Leaving that enum at -1 produces a 65535px request in the atlas.
+                        // Use the pipeline Low tier: 256px in the project's URP assets.
+                        serialized.FindProperty("m_AdditionalLightsShadowResolutionTier").intValue =
+                            UnityEngine.Rendering.Universal.UniversalAdditionalLightData.AdditionalLightsShadowResolutionTierLow;
                         serialized.ApplyModifiedPropertiesWithoutUndo();
+                        if (PrefabUtility.IsPartOfPrefabInstance(data))
+                            PrefabUtility.RecordPrefabInstancePropertyModifications(data);
                         lights++;
                     }
                 objects++;
@@ -259,8 +264,9 @@ public static class MapStreamingBuilder
         var vertices = mesh.vertices.Distinct().ToArray();
         if (vertices.Length != 8 || b.size.x <= 0 || b.size.y <= 0 || b.size.z <= 0) return false;
         if (vertices.Any(v => Mathf.Abs(Mathf.Abs(v.x-b.center.x)-b.extents.x) > .0001f || Mathf.Abs(Mathf.Abs(v.y-b.center.y)-b.extents.y) > .0001f || Mathf.Abs(Mathf.Abs(v.z-b.center.z)-b.extents.z) > .0001f)) return false;
-        var box = collider.gameObject.AddComponent<BoxCollider>(); box.center = b.center; box.size = b.size; box.sharedMaterial = collider.sharedMaterial; box.enabled = collider.enabled;
-        box.includeLayers = collider.includeLayers; box.excludeLayers = collider.excludeLayers; box.layerOverridePriority = collider.layerOverridePriority;
+        // Mirrored environment instances must not inherit a negative box scale.
+        // Keep the mesh transform intact and put the symmetric primitive on a positive-scale child.
+        NegativeBoxColliderRepair.CreatePositiveBox(collider, b.center, b.size);
         UnityEngine.Object.DestroyImmediate(collider);
         return true;
     }

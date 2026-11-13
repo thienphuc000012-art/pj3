@@ -246,6 +246,9 @@ public class WorldInteractionEditor : Editor
             (WorldInteractionKind)
             kindProperty.enumValueIndex;
 
+        if (kind == WorldInteractionKind.Cryptex)
+            EditorGUILayout.HelpBox("Đặt mật khẩu và sự kiện mở cửa ở component Cryptex Lock bên dưới. Model đã lắp sẵn dài 0.55 m; chỉnh Scale của root để thay đổi kích thước.", MessageType.Info);
+
         if (kind == WorldInteractionKind.MapTransition)
         {
             EditorGUILayout.Space(6);

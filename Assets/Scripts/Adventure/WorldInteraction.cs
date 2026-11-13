@@ -5,7 +5,7 @@ using UnityEngine.Animations;
 using UnityEngine.Playables;
 using UnityEngine.UI;
 
-public enum WorldInteractionKind { Pickup, Chest, Discovery, RestPoint, Encounter, MapTransition, DialogueNPC }
+public enum WorldInteractionKind { Pickup, Chest, Discovery, RestPoint, Encounter, MapTransition, DialogueNPC, Cryptex }
 
 [Serializable]
 public sealed class NpcQuestRepeatableDialogue
@@ -568,6 +568,7 @@ public class WorldInteraction : MonoBehaviour
         if (kind == WorldInteractionKind.MapTransition) { session.TravelToMap(this); return; }
         if (kind == WorldInteractionKind.DialogueNPC) { if (session.IsNear(this)) session.BeginDialogue(this); return; }
         if (!session.IsNear(this)) return;
+        if (kind == WorldInteractionKind.Cryptex) { GetComponent<CryptexLock>()?.Interact(session); return; }
         if (kind == WorldInteractionKind.Pickup || kind == WorldInteractionKind.Chest) { session.BeginItemPickup(this); return; }
         CompleteCollection();
     }

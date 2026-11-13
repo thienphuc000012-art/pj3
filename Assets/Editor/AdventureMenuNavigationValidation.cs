@@ -87,6 +87,19 @@ public static class AdventureMenuNavigationValidation
                 "ReturnToTitle must open confirmation before ending the session.");
             Check(!menu.Find("Party/Overview").GetComponent<CanvasGroup>().interactable,
                 "Return confirmation must block menu commands underneath.");
+            var noHover = titleModal.Find("Confirmation Panel/No").GetComponent<DialogueChoiceTextHover>();
+            Check(noHover != null, "Return No must have text feedback.");
+            noHover.OnSelect(new BaseEventData(EventSystem.current));
+            Check(noHover.TextColor.r == .5f, "Automatically focusing No must not look like mouse hover.");
+            noHover.OnPointerEnter(new PointerEventData(EventSystem.current));
+            Check(noHover.TextColor == Color.white, "Hovering No must brighten its text.");
+            noHover.OnPointerExit(new PointerEventData(EventSystem.current));
+            Check(noHover.TextColor.r == .5f, "No must dim after pointer exit even if still selected.");
+            noHover.OnSelect(new AxisEventData(EventSystem.current) { moveDir = MoveDirection.Left });
+            Check(noHover.TextColor == Color.white, "Actual keyboard/gamepad navigation must retain visible focus.");
+            noHover.OnPointerEnter(new PointerEventData(EventSystem.current));
+            noHover.OnPointerExit(new PointerEventData(EventSystem.current));
+            Check(noHover.TextColor.r == .5f, "Returning to mouse hover must clear navigation glow on exit.");
             titleModal.Find("Confirmation Panel/No").GetComponent<Button>().onClick.Invoke();
             Check(!titleModal.gameObject.activeSelf && menu.Find("Party/Overview").GetComponent<CanvasGroup>().interactable,
                 "No must restore the menu.");
@@ -171,7 +184,7 @@ public static class AdventureMenuNavigationValidation
                 File.WriteAllBytes("Library/CombatValidation/QuestCompass.png", image.EncodeToPNG());
             }
             finally { RenderTexture.active = previousRender; UnityEngine.Object.DestroyImmediate(image); }
-            File.WriteAllText(Result, "PASS: ReturnToTitle confirmation, No and Back; quest alpha 100 normal/hover; untrack modal and No; stale confirmation; hexagon marker and distance above compass line. No player save files written.");
+            File.WriteAllText(Result, "PASS: ReturnToTitle confirmation, No and Back; No is dim on automatic focus and pointer exit, bright on hover or actual keyboard/gamepad navigation; quest alpha 100 normal/hover; untrack modal and No; stale confirmation; hexagon marker and distance above compass line. No player save files written.");
             Debug.Log(File.ReadAllText(Result));
         }
         catch (Exception exception)

@@ -48,6 +48,7 @@ public class CombatManager : MonoBehaviour
     {
         combatVfxInstances.RemoveWhere(item => item == null);
         if (vfx == null || !combatVfxInstances.Add(vfx)) return;
+        CombatShadowBudget.Active?.RegisterHierarchy(vfx, true);
         // Impacts created by RFX4 can live outside the original effect hierarchy.
         foreach (var motion in vfx.GetComponentsInChildren<RFX4_PhysicsMotion>(true))
             motion.EffectCreated += TrackCombatVFX;
@@ -199,6 +200,8 @@ public class CombatManager : MonoBehaviour
     [HideInInspector] public BattleEncounterSetup activeEncounterSetup;
     private GuidedCombatTutorial guidedTutorial;
     public bool IsGuidedTutorialBlockingInput => guidedTutorial != null && guidedTutorial.BlocksInput;
+    public bool IsRunAwayLockedByTutorial => guidedTutorial != null ||
+        (CampaignSession.Instance != null && CampaignSession.Instance.IsGuidedTutorialEncounter);
     private bool IsGuidedTutorialPracticeLocked =>
         guidedTutorial != null && guidedTutorial.PendingPractice != GuidedCombatPractice.None;
 
@@ -226,7 +229,7 @@ public class CombatManager : MonoBehaviour
                !selectedAction.isHeal;
     }
 
-    void Awake() { Instance = this; }
+    void Awake() { Instance = this; CombatShadowBudget.Ensure(gameObject.scene); }
 
     IEnumerator Start()
     {
@@ -241,6 +244,9 @@ public class CombatManager : MonoBehaviour
         }
         state = CombatState.Start;
         SetupPositions();
+        CombatShadowBudget.Active?.RegisterScene(gameObject.scene);
+        if (playerParty.Count > 0 && playerParty[0] != null)
+            CombatShadowBudget.Active?.SetCenter(playerParty[0].transform.position);
 
         foreach (var unit in playerParty.Concat(enemyParty).Where(unit => unit != null))
         {
@@ -807,6 +813,7 @@ public class CombatManager : MonoBehaviour
 
     public void OnRunAwayClicked()
     {
+        if (IsRunAwayLockedByTutorial) return;
         if (IsGuidedTutorialBlockingInput || IsGuidedTutorialPracticeLocked) return;
         if (AdvancedUIManager.Instance != null && AdvancedUIManager.Instance.SkillTransitionBusy) return;
         if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead ||
@@ -1353,6 +1360,7 @@ public class CombatManager : MonoBehaviour
         foreach (Transform slot in summonSlots)
         {
             BattleUnit summon = Instantiate(action.summonPrefab, slot.position, slot.rotation);
+            CombatShadowBudget.Active?.RegisterHierarchy(summon.gameObject);
             summon.gameObject.SetActive(true);
             summon.isPlayer = summoner.isPlayer;
             summon.isSummonedUnit = true;
@@ -2677,6 +2685,7 @@ public class CombatManager : MonoBehaviour
         }
         instances.Add(aura);
 
+        CombatShadowBudget.Active?.RegisterHierarchy(aura, true);
         aura.SetActive(true);
         Destroy(staging);
     }

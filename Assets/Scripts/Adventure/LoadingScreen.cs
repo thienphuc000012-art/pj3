@@ -19,6 +19,8 @@ public class LoadingScreen : MonoBehaviour
     bool loadingChunks;
     Scene pendingMapScene;
     AdventureCanvasRoot view;
+    readonly List<EventSystem> suspendedEventSystems = new List<EventSystem>();
+    readonly List<BaseInputModule> suspendedInputModules = new List<BaseInputModule>();
     void Awake()
     {
         view = AdventureCanvasRoot.Acquire(AdventureCanvasKind.Loading);
@@ -72,6 +74,10 @@ public class LoadingScreen : MonoBehaviour
 
     private IEnumerator LoadCombatArena(CampaignSession session, CombatAreaScan scan)
     {
+        // Subscribe before the first chunk activates, not after the first render.
+        // The same budget is adopted by CombatManager when its scene loads.
+        var shadowBudget = CombatShadowBudget.Ensure(gameObject.scene);
+        shadowBudget.PrepareArena(scan);
         var chunks = new List<Scene>(scan.ChunkPaths.Count);
         Scene battle = default;
         string error = null;
@@ -98,6 +104,10 @@ public class LoadingScreen : MonoBehaviour
 
         if (error == null)
         {
+            // EventSystem.OnEnable runs before sceneLoaded. Suspend Loading's
+            // input before activation, so the authored combat system never
+            // overlaps it (including the UI Toolkit registration warning).
+            SuspendLoadingEventSystems();
             AsyncOperation operation = BeginAdditiveLoad(target, out error);
             if (operation != null)
             {
@@ -111,6 +121,7 @@ public class LoadingScreen : MonoBehaviour
                     error = "Không thể mở scene chiến đấu.";
                 else
                 {
+                    PreserveMapEventSystem(battle, gameObject.scene);
                     try
                     {
                         if (!session.TryBuildCombatArena(battle, chunks, out error) && string.IsNullOrEmpty(error))
@@ -208,6 +219,7 @@ public class LoadingScreen : MonoBehaviour
             progress = Mathf.Clamp01(operation.progress / .9f) * .72f;
             yield return null;
         }
+        SuspendLoadingEventSystems();
         operation.allowSceneActivation = true;
         while (!operation.isDone) yield return null;
         SceneManager.sceneLoaded -= OnDestinationSceneLoaded;
@@ -313,22 +325,64 @@ public class LoadingScreen : MonoBehaviour
         return null;
     }
 
-    private static void PreserveMapEventSystem(Scene mapScene, Scene loadingScene)
+    private void PreserveMapEventSystem(Scene mapScene, Scene loadingScene)
     {
         EventSystem[] systems = FindObjectsByType<EventSystem>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-        if (systems.Any(system => system != null && system.gameObject.scene == mapScene)) return;
+        if (systems.Any(system => system != null && system.gameObject.scene == mapScene && system.isActiveAndEnabled)) return;
 
-        EventSystem loadingSystem = systems.FirstOrDefault(system => system != null && system.gameObject.scene == loadingScene);
+        EventSystem loadingSystem = systems.FirstOrDefault(system => system != null && system.gameObject.scene == loadingScene && system.gameObject.activeInHierarchy);
         if (loadingSystem != null)
         {
             if (loadingSystem.transform.parent != null)
                 loadingSystem.transform.SetParent(null, true);
             SceneManager.MoveGameObjectToScene(loadingSystem.gameObject, mapScene);
+            RestoreInputModules(loadingSystem);
+            loadingSystem.enabled = true;
             return;
         }
 
-        if (!systems.Any(system => system != null))
-            AdventureCanvasRoot.EnsureEventSystem();
+        AdventureCanvasRoot.EnsureEventSystem(mapScene);
+    }
+
+    private void SuspendLoadingEventSystems()
+    {
+        foreach (var system in FindObjectsByType<EventSystem>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+        {
+            if (!system.isActiveAndEnabled || system.gameObject.scene != gameObject.scene) continue;
+            suspendedEventSystems.Add(system);
+            system.enabled = false;
+            // InputSystemUIInputModule has its own lifecycle. Leaving it enabled
+            // shares its default actions with the incoming module; unloading
+            // Loading then disposes those actions and silently kills map clicks.
+            // Release them BEFORE the destination enables its input module.
+            foreach (var module in system.GetComponents<BaseInputModule>())
+            {
+                if (!module.enabled) continue;
+                suspendedInputModules.Add(module);
+                module.enabled = false;
+            }
+        }
+    }
+
+    private void RestoreInputModules(EventSystem system)
+    {
+        foreach (var module in suspendedInputModules)
+            if (module != null && module.gameObject == system.gameObject) module.enabled = true;
+    }
+
+    private void RestoreLoadingEventSystem()
+    {
+        // A failed map setup can leave a usable destination system loaded.
+        // It can also drive the Retry button; do not enable a second one.
+        bool hasInput = FindObjectsByType<EventSystem>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
+            .Any(system => system.isActiveAndEnabled);
+        if (!hasInput)
+            foreach (var system in suspendedEventSystems)
+                if (system != null && system.gameObject.activeInHierarchy)
+                { RestoreInputModules(system); system.enabled = true; break; }
+        suspendedEventSystems.Clear();
+        suspendedInputModules.Clear();
+        AdventureCanvasRoot.EnsureEventSystem(gameObject.scene);
     }
 
     private void Fail(string message)
@@ -337,6 +391,7 @@ public class LoadingScreen : MonoBehaviour
         Error = message;
         IsLoading = false;
         Cursor.visible = true;
+        RestoreLoadingEventSystem();
     }
     void OnDestroy() { IsLoading = false; }
     void Update()
