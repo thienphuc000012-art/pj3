@@ -1,0 +1,161 @@
+Fence isolated native capsule tests=160; stuck=43; mode=0. Press into wall, move diagonally along it, then reverse out. Floor at authored collision base.
+PASS sm_Fence_02_03_ConvexHulls side=-1 x=0.05 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=-1 x=0.05 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=-1 x=0.15 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=-1 x=0.15 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=-1 x=0.25 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=-1 x=0.25 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=-1 x=0.35 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=-1 x=0.35 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=-1 x=0.5 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=-1 x=0.5 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=-1 x=0.65 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=-1 x=0.65 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=-1 x=0.75 speed=2 escape=2.801 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=-1 x=0.75 speed=4 escape=2.800 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=-1 x=0.85 speed=2 escape=2.967 last=0.400
+BLOCKED sm_Fence_02_03_ConvexHulls side=-1 x=0.85 speed=4 escape=0.215 last=0.000
+BLOCKED sm_Fence_02_03_ConvexHulls side=-1 x=0.95 speed=2 escape=0.106 last=0.000
+BLOCKED sm_Fence_02_03_ConvexHulls side=-1 x=0.95 speed=4 escape=0.735 last=0.000
+PASS sm_Fence_02_03_ConvexHulls side=1 x=0.05 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=1 x=0.05 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=1 x=0.15 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=1 x=0.15 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=1 x=0.25 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=1 x=0.25 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=1 x=0.35 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=1 x=0.35 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=1 x=0.5 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=1 x=0.5 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=1 x=0.65 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=1 x=0.65 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=1 x=0.75 speed=2 escape=2.375 last=0.400
+BLOCKED sm_Fence_02_03_ConvexHulls side=1 x=0.75 speed=4 escape=1.631 last=0.400
+PASS sm_Fence_02_03_ConvexHulls side=1 x=0.85 speed=2 escape=2.967 last=0.400
+BLOCKED sm_Fence_02_03_ConvexHulls side=1 x=0.85 speed=4 escape=0.234 last=0.000
+BLOCKED sm_Fence_02_03_ConvexHulls side=1 x=0.95 speed=2 escape=0.172 last=0.000
+BLOCKED sm_Fence_02_03_ConvexHulls side=1 x=0.95 speed=4 escape=1.977 last=0.400
+GAP PASS sm_Fence_02_03_ConvexHulls side=-1 speed=2 travel=3.000
+GAP PASS sm_Fence_02_03_ConvexHulls side=-1 speed=4 travel=3.000
+GAP PASS sm_Fence_02_03_ConvexHulls side=1 speed=2 travel=3.000
+GAP PASS sm_Fence_02_03_ConvexHulls side=1 speed=4 travel=3.000
+PASS sm_Fence_01_01_ConvexHulls side=-1 x=0.05 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_01_01_ConvexHulls side=-1 x=0.05 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_01_01_ConvexHulls side=-1 x=0.15 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_01_01_ConvexHulls side=-1 x=0.15 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_01_01_ConvexHulls side=-1 x=0.25 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_01_01_ConvexHulls side=-1 x=0.25 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_01_01_ConvexHulls side=-1 x=0.35 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_01_01_ConvexHulls side=-1 x=0.35 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_01_01_ConvexHulls side=-1 x=0.5 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_01_01_ConvexHulls side=-1 x=0.5 speed=4 escape=3.000 last=0.400
+BLOCKED sm_Fence_01_01_ConvexHulls side=-1 x=0.65 speed=2 escape=0.000 last=0.000
+BLOCKED sm_Fence_01_01_ConvexHulls side=-1 x=0.65 speed=4 escape=0.000 last=0.000
+BLOCKED sm_Fence_01_01_ConvexHulls side=-1 x=0.75 speed=2 escape=0.000 last=0.000
+BLOCKED sm_Fence_01_01_ConvexHulls side=-1 x=0.75 speed=4 escape=0.000 last=0.000
+PASS sm_Fence_01_01_ConvexHulls side=-1 x=0.85 speed=2 escape=2.867 last=0.400
+PASS sm_Fence_01_01_ConvexHulls side=-1 x=0.85 speed=4 escape=2.800 last=0.400
+PASS sm_Fence_01_01_ConvexHulls side=-1 x=0.95 speed=2 escape=2.867 last=0.400
+PASS sm_Fence_01_01_ConvexHulls side=-1 x=0.95 speed=4 escape=2.733 last=0.400
+PASS sm_Fence_01_01_ConvexHulls side=1 x=0.05 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_01_01_ConvexHulls side=1 x=0.05 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_01_01_ConvexHulls side=1 x=0.15 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_01_01_ConvexHulls side=1 x=0.15 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_01_01_ConvexHulls side=1 x=0.25 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_01_01_ConvexHulls side=1 x=0.25 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_01_01_ConvexHulls side=1 x=0.35 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_01_01_ConvexHulls side=1 x=0.35 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_01_01_ConvexHulls side=1 x=0.5 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_01_01_ConvexHulls side=1 x=0.5 speed=4 escape=3.000 last=0.400
+BLOCKED sm_Fence_01_01_ConvexHulls side=1 x=0.65 speed=2 escape=0.000 last=0.000
+BLOCKED sm_Fence_01_01_ConvexHulls side=1 x=0.65 speed=4 escape=0.000 last=0.000
+BLOCKED sm_Fence_01_01_ConvexHulls side=1 x=0.75 speed=2 escape=0.000 last=0.000
+BLOCKED sm_Fence_01_01_ConvexHulls side=1 x=0.75 speed=4 escape=0.000 last=0.000
+PASS sm_Fence_01_01_ConvexHulls side=1 x=0.85 speed=2 escape=2.867 last=0.400
+PASS sm_Fence_01_01_ConvexHulls side=1 x=0.85 speed=4 escape=2.800 last=0.400
+PASS sm_Fence_01_01_ConvexHulls side=1 x=0.95 speed=2 escape=2.867 last=0.400
+PASS sm_Fence_01_01_ConvexHulls side=1 x=0.95 speed=4 escape=2.733 last=0.400
+GAP PASS sm_Fence_01_01_ConvexHulls side=-1 speed=2 travel=3.000
+GAP PASS sm_Fence_01_01_ConvexHulls side=-1 speed=4 travel=3.000
+GAP PASS sm_Fence_01_01_ConvexHulls side=1 speed=2 travel=3.000
+GAP PASS sm_Fence_01_01_ConvexHulls side=1 speed=4 travel=3.000
+PASS sm_Fence_02_02_ConvexHulls side=-1 x=0.05 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_02_ConvexHulls side=-1 x=0.05 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_02_ConvexHulls side=-1 x=0.15 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_02_ConvexHulls side=-1 x=0.15 speed=4 escape=3.000 last=0.400
+BLOCKED sm_Fence_02_02_ConvexHulls side=-1 x=0.25 speed=2 escape=0.000 last=0.000
+BLOCKED sm_Fence_02_02_ConvexHulls side=-1 x=0.25 speed=4 escape=0.000 last=0.000
+BLOCKED sm_Fence_02_02_ConvexHulls side=-1 x=0.35 speed=2 escape=0.000 last=0.000
+BLOCKED sm_Fence_02_02_ConvexHulls side=-1 x=0.35 speed=4 escape=0.000 last=0.000
+BLOCKED sm_Fence_02_02_ConvexHulls side=-1 x=0.5 speed=2 escape=0.000 last=0.000
+BLOCKED sm_Fence_02_02_ConvexHulls side=-1 x=0.5 speed=4 escape=0.000 last=0.000
+BLOCKED sm_Fence_02_02_ConvexHulls side=-1 x=0.65 speed=2 escape=0.000 last=0.000
+BLOCKED sm_Fence_02_02_ConvexHulls side=-1 x=0.65 speed=4 escape=0.000 last=0.000
+BLOCKED sm_Fence_02_02_ConvexHulls side=-1 x=0.75 speed=2 escape=0.000 last=0.000
+BLOCKED sm_Fence_02_02_ConvexHulls side=-1 x=0.75 speed=4 escape=0.000 last=0.000
+BLOCKED sm_Fence_02_02_ConvexHulls side=-1 x=0.85 speed=2 escape=0.000 last=0.000
+BLOCKED sm_Fence_02_02_ConvexHulls side=-1 x=0.85 speed=4 escape=0.000 last=0.000
+BLOCKED sm_Fence_02_02_ConvexHulls side=-1 x=0.95 speed=2 escape=0.000 last=0.000
+BLOCKED sm_Fence_02_02_ConvexHulls side=-1 x=0.95 speed=4 escape=0.000 last=0.000
+PASS sm_Fence_02_02_ConvexHulls side=1 x=0.05 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_02_ConvexHulls side=1 x=0.05 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_02_ConvexHulls side=1 x=0.15 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_02_ConvexHulls side=1 x=0.15 speed=4 escape=3.000 last=0.400
+BLOCKED sm_Fence_02_02_ConvexHulls side=1 x=0.25 speed=2 escape=0.000 last=0.000
+BLOCKED sm_Fence_02_02_ConvexHulls side=1 x=0.25 speed=4 escape=0.000 last=0.000
+BLOCKED sm_Fence_02_02_ConvexHulls side=1 x=0.35 speed=2 escape=0.000 last=0.000
+BLOCKED sm_Fence_02_02_ConvexHulls side=1 x=0.35 speed=4 escape=0.000 last=0.000
+BLOCKED sm_Fence_02_02_ConvexHulls side=1 x=0.5 speed=2 escape=0.000 last=0.000
+BLOCKED sm_Fence_02_02_ConvexHulls side=1 x=0.5 speed=4 escape=0.000 last=0.000
+BLOCKED sm_Fence_02_02_ConvexHulls side=1 x=0.65 speed=2 escape=0.000 last=0.000
+BLOCKED sm_Fence_02_02_ConvexHulls side=1 x=0.65 speed=4 escape=0.000 last=0.000
+BLOCKED sm_Fence_02_02_ConvexHulls side=1 x=0.75 speed=2 escape=0.000 last=0.000
+BLOCKED sm_Fence_02_02_ConvexHulls side=1 x=0.75 speed=4 escape=0.000 last=0.000
+BLOCKED sm_Fence_02_02_ConvexHulls side=1 x=0.85 speed=2 escape=0.000 last=0.000
+BLOCKED sm_Fence_02_02_ConvexHulls side=1 x=0.85 speed=4 escape=0.000 last=0.000
+BLOCKED sm_Fence_02_02_ConvexHulls side=1 x=0.95 speed=2 escape=0.000 last=0.000
+BLOCKED sm_Fence_02_02_ConvexHulls side=1 x=0.95 speed=4 escape=0.000 last=0.000
+GAP PASS sm_Fence_02_02_ConvexHulls side=-1 speed=2 travel=3.000
+GAP PASS sm_Fence_02_02_ConvexHulls side=-1 speed=4 travel=3.000
+GAP PASS sm_Fence_02_02_ConvexHulls side=1 speed=2 travel=3.000
+GAP PASS sm_Fence_02_02_ConvexHulls side=1 speed=4 travel=3.000
+PASS sm_Fence_02_01_ConvexHulls side=-1 x=0.05 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=-1 x=0.05 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=-1 x=0.15 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=-1 x=0.15 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=-1 x=0.25 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=-1 x=0.25 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=-1 x=0.35 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=-1 x=0.35 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=-1 x=0.5 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=-1 x=0.5 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=-1 x=0.65 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=-1 x=0.65 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=-1 x=0.75 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=-1 x=0.75 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=-1 x=0.85 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=-1 x=0.85 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=-1 x=0.95 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=-1 x=0.95 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=1 x=0.05 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=1 x=0.05 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=1 x=0.15 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=1 x=0.15 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=1 x=0.25 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=1 x=0.25 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=1 x=0.35 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=1 x=0.35 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=1 x=0.5 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=1 x=0.5 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=1 x=0.65 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=1 x=0.65 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=1 x=0.75 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=1 x=0.75 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=1 x=0.85 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=1 x=0.85 speed=4 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=1 x=0.95 speed=2 escape=3.000 last=0.400
+PASS sm_Fence_02_01_ConvexHulls side=1 x=0.95 speed=4 escape=3.000 last=0.400
+GAP PASS sm_Fence_02_01_ConvexHulls side=-1 speed=2 travel=3.000
+GAP PASS sm_Fence_02_01_ConvexHulls side=-1 speed=4 travel=3.000
+GAP PASS sm_Fence_02_01_ConvexHulls side=1 speed=2 travel=3.000
+GAP PASS sm_Fence_02_01_ConvexHulls side=1 speed=4 travel=3.000

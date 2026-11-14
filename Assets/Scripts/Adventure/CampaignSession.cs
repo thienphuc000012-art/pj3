@@ -1149,6 +1149,8 @@ public class CampaignSession : MonoBehaviour
     void Update()
     {
         UpdatePlayTime();
+        if (OnMap && MapPlayer != null && !InputBlocked)
+            AdventureWorldTime.Advance(Data, Time.deltaTime);
         if (!OnMap || MapPlayer == null || Busy || LoadingScreen.IsLoading || MapChunkStreamer.MovementBlocked) return;
         UpdateArrivalRestExits(MapPlayer.transform.position);
         // Dialogue owns input until its final node. Esc/P must not consume a

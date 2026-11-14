@@ -72,6 +72,8 @@ public class AdventureCanvasRoot : MonoBehaviour
         EnsureEventSystem(gameObject.scene);
         if (kind == AdventureCanvasKind.Adventure && GetComponent<AdventureCompassHUD>() == null)
             gameObject.AddComponent<AdventureCompassHUD>();
+        if (kind == AdventureCanvasKind.Adventure && GetComponent<AdventureTimeHUD>() == null)
+            gameObject.AddComponent<AdventureTimeHUD>();
     }
 
     public void EnsureInteractLabelBackground()

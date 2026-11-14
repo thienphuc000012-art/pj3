@@ -61,7 +61,6 @@ public static class CombatTargetSelectionSetup
         {
             Check(!EditorApplication.isPlayingOrWillChangePlaymode, "Exit Play Mode before changing target selection.");
             scene = SceneManager.GetSceneByPath(ScenePath);
-            if (setup) Check(!scene.isLoaded || !scene.isDirty, "Save the open combattest scene first; unsaved changes will not be overwritten.");
             string sceneHash = Hash(ScenePath);
             string rendererHash = Hash(RendererPath);
             string outlineHash = Hash("Assets/Free Outline Settings.asset");
@@ -72,19 +71,21 @@ public static class CombatTargetSelectionSetup
                 Directory.CreateDirectory(backup);
                 File.Copy(ScenePath, backup + "/combattest.unity");
                 File.Copy(ScenePath + ".meta", backup + "/combattest.unity.meta");
+                if (scene.isLoaded) Check(EditorSceneManager.SaveScene(scene, backup + "/combattest.current.unity", true), "Could not back up current scene edits.");
             }
             if (!scene.isLoaded) { scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive); opened = true; }
             var combat = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<CombatManager>(true)).Single();
             var ui = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<AdvancedUIManager>(true)).Single();
             var canvas = ui.GetComponentInParent<Canvas>();
             Check(canvas != null, "Combat UI must have a Canvas.");
+            var target = combat.GetComponent<CombatTargetSelection>();
             var renderer = AssetDatabase.LoadAssetAtPath<UniversalRendererData>(RendererPath);
             Check(renderer != null, "PC_Renderer is missing.");
-            var feature = renderer.rendererFeatures.OfType<FreeOutline>().SingleOrDefault();
+            // Preserve the feature assigned to this encounter even if the renderer has other outline passes.
+            var feature = target != null && target.outlineFeature != null ? target.outlineFeature : renderer.rendererFeatures.OfType<FreeOutline>().FirstOrDefault(f => f.isActive);
             Check(feature != null && feature.isActive, "Enable the existing Free Outline renderer feature first.");
             var enemySprite = LoadSprite("Assets/asset/Ui/target enemy.png");
             var playerSprite = LoadSprite("Assets/asset/Ui/target player.png");
-            var target = combat.GetComponent<CombatTargetSelection>();
             if (setup)
             {
                 if (target == null) target = combat.gameObject.AddComponent<CombatTargetSelection>();
@@ -94,6 +95,7 @@ public static class CombatTargetSelectionSetup
                 Assign(serialized, "outlineFeature", feature);
                 Assign(serialized, "enemyTargetSprite", enemySprite);
                 Assign(serialized, "playerTargetSprite", playerSprite);
+                serialized.FindProperty("showMarker").boolValue = false;
                 serialized.ApplyModifiedPropertiesWithoutUndo();
             }
             Check(target != null, "Run Setup Target Selection first.");
@@ -107,7 +109,7 @@ public static class CombatTargetSelectionSetup
                 Check(EditorSceneManager.SaveScene(scene), "Could not save target selection in combattest.");
             }
             else Check(sceneHash == Hash(ScenePath), "Validation must not write combattest.");
-            WriteResult("PASS: target selection references; isolated enemy/player selection, simultaneous switch, fade/cleanup and reticle checks; actual URP red/blue silhouette pixels. Preview: " + PreviewPath + ". " +
+            WriteResult("PASS: outline-only selection for enemy/player, no Canvas target icons or reticles, simultaneous switch, fade/cleanup; actual URP red/blue silhouette pixels. Preview: " + PreviewPath + ". " +
                 (setup ? "Scene updated. Backup: " + backup + ". " : "Validation only. ") + "No live battle or saves used; renderer/settings assets preserved.");
         }
         catch (Exception exception) { WriteResult("FAIL: " + exception, true); }
@@ -136,6 +138,7 @@ public static class CombatTargetSelectionSetup
         Check(serialized.FindProperty("outlineFeature").objectReferenceValue == feature, "Wrong Free Outline feature reference.");
         Check(serialized.FindProperty("enemyTargetSprite").objectReferenceValue == enemy, "Wrong enemy target sprite.");
         Check(serialized.FindProperty("playerTargetSprite").objectReferenceValue == player, "Wrong player target sprite.");
+        Check(!target.showMarker, "Enemy and player targeting must use outlines without Canvas markers.");
     }
 
     static void ValidateRuntime(CombatTargetSelection source)
@@ -156,10 +159,7 @@ public static class CombatTargetSelectionSetup
             view.playerStyle = new CombatTargetStyle { outlineColor = Color.blue };
             view.enterDuration = .1f;
             view.exitDuration = .16f;
-            view.markerEnterDuration = .28f;
-            view.enterScalePeak = 1.45f;
-            view.rotationSpeed = 45f;
-            view.showMarker = true;
+            view.showMarker = source.showMarker;
             var uiRoot = new GameObject("Isolated Canvas", typeof(RectTransform), typeof(Canvas));
             uiRoot.transform.SetParent(root.transform, false);
             view.canvas = uiRoot.GetComponent<Canvas>();
@@ -200,20 +200,13 @@ public static class CombatTargetSelectionSetup
 
             view.SelectTarget(enemyA);
             Check(view.CurrentTarget == enemyA && view.ActiveVisualCount == 1, "Selecting an enemy must open one target visual.");
-            Check(view.GetOutline(enemyA) != null && view.GetMarker(enemyA) != null, "Selection requires outline and center marker.");
+            Check(view.GetOutline(enemyA) != null && view.GetMarker(enemyA) == null, "Enemy selection requires an outline without a center marker.");
             Check(rendererA.renderingLayerMask != 1u && rendererB.renderingLayerMask == 2u, "Only the selected character receives an outline layer.");
             Check(effectRenderer.renderingLayerMask == originalEffectMask, "Particle effects must not become part of the character outline.");
             Check(nestedRenderer.renderingLayerMask == nestedMask, "A separate nested BattleUnit must not inherit the parent's selected outline.");
-            var marker = view.GetMarker(enemyA);
-            view.Advance(.10f);
-            float earlyScale = marker.localScale.x;
-            view.Advance(.50f);
-            float settledScale = marker.localScale.x;
-            Check(marker.gameObject.activeSelf && earlyScale > settledScale && Mathf.Abs(settledScale - 1f) < .001f,
-                "Target marker must grow and settle back to its original size.");
-            float rotation = marker.localEulerAngles.z;
-            view.Advance(.1f);
-            Check(Mathf.Abs(Mathf.DeltaAngle(rotation, marker.localEulerAngles.z)) > .01f, "Selected target marker must rotate.");
+            view.Advance(.7f);
+            Check(view.canvas.transform.Find("Target Selection") == null && view.canvas.GetComponentsInChildren<UnityEngine.UI.Graphic>(true).Length == 0,
+                "Outline-only selection must not allocate a Target Selection UI root or graphics.");
             var enemyColor = view.GetOutline(enemyA).color;
             Check(enemyColor.r > enemyColor.b, "Enemy outline must use the red style.");
 
@@ -230,6 +223,7 @@ public static class CombatTargetSelectionSetup
             view.SelectTarget(player);
             view.Advance(.5f);
             Check(view.CurrentTarget == player && view.ActiveVisualCount == 1, "Friendly selection must replace enemy selection.");
+            Check(view.GetMarker(player) == null && view.canvas.transform.Find("Target Selection") == null, "Player selection must not create a target icon.");
             var playerColor = view.GetOutline(player).color;
             Check(playerColor.b > playerColor.r, "Player outline must use the blue style.");
             Check(rendererB.renderingLayerMask == 2u, "Previous enemy layer must be restored when switching to a player.");
@@ -292,6 +286,8 @@ public static class CombatTargetSelectionSetup
             combat.state = CombatState.PlayerTurn;
             combat.currentActiveUnit = player;
             combat.currentTarget = enemy;
+            combat.playerParty.Add(player);
+            combat.enemyParty.Add(enemy);
             Check(!combat.IsChoosingTarget, "Idle player turns must not highlight a remembered target.");
             var selection = typeof(CombatManager).GetField("selectedAction", BindingFlags.Instance | BindingFlags.NonPublic);
             var confirmed = typeof(CombatManager).GetField("targetSelectionConfirmed", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -381,17 +377,6 @@ public static class CombatTargetSelectionSetup
             }
             Check(gray > 1000, "Isolated URP preview is blank: grayscale character meshes were not rendered.");
             Check(red > 20 && blue > 20, "Actual Free Outline pass did not render both target colors (red=" + red + ", blue=" + blue + ").");
-            view.showMarker = true;
-            view.Advance(0f);
-            Canvas.ForceUpdateCanvases();
-            foreach (var graphic in view.canvas.GetComponentsInChildren<UnityEngine.UI.Graphic>(true))
-                graphic.Rebuild(UnityEngine.UI.CanvasUpdate.PreRender);
-            RenderPipeline.SubmitRenderRequest(camera, new UniversalRenderPipeline.SingleCameraRequest { destination = texture });
-            RenderTexture.active = texture;
-            pixels.ReadPixels(new Rect(0, 0, texture.width, texture.height), 0, 0);
-            pixels.Apply();
-            Directory.CreateDirectory(Path.GetDirectoryName(PreviewPath));
-            File.WriteAllBytes(PreviewPath, pixels.EncodeToPNG());
         }
         finally
         {

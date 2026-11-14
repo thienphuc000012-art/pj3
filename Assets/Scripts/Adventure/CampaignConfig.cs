@@ -205,6 +205,9 @@ public class CampaignSave
 {
     public int version = 5;
     public double playTimeSeconds;
+    // Separate from real play time. Optional fields preserve compatibility with older saves.
+    public bool hasWorldTime;
+    public double worldTimeHours;
     public string savedAtUtc;
     public string saveLocationName;
     public string currentMapScene;

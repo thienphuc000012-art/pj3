@@ -1,0 +1,12 @@
+PASS: old-save defaults, JSON round trip, midnight rollover; clock fields travel in existing campaign save.
+PASS: 49 orbit samples over 24 hours; sun/moon stay 180 degrees apart, swap after 12 hours, wrap midnight continuously and reuse the same active Moon instance.
+PASS hour=0 sun=0 moon=0.32 player=0.8 stars=280
+PASS hour=5.5 sun=0 moon=0.09359859 player=0.7451136 stars=280
+PASS hour=6.5 sun=0.1639393 moon=0 player=2.264977E-05 stars=280
+PASS hour=8 sun=1.321632 moon=0 player=0 stars=280
+PASS hour=12 sun=1.35 moon=0 player=0 stars=280
+PASS hour=18 sun=0.006779132 moon=1.264101E-07 player=2.269745E-05 stars=280
+PASS hour=20 sun=0 moon=0.32 player=0.8 stars=280
+PASS: additive destination lighting untouched; m sky and player light disabled when another scene is active.
+PASS: shared AdventureCanvas has an authored top-right clock; raycasts disabled; mapgame has no lighting controller.
+PASS: saved scene reopened in isolation; prefab overrides, all rig references, cloud dimensions and celestial materials persisted.

@@ -1,0 +1,13 @@
+Scene=Assets/Scenes/m.unity active=m dirty=False
+LIGHT Directional Light (32.00, 322.00, 0.00) intensity=1.35
+CAMERA Main Camera (1) pos=(-90.94, -46.16, -212.26) far=500
+PLAYER player pos=(-90.94, -47.39, -208.26)
+PREFAB Assets/asset/Toby Fredson/Rocky Hills Environment - Whitebark Pine/RHEWP_Demo/Particles/Particles_Clouds/Clouds Default Thin.prefab
+PARTICLE Clouds Default Thin_Particles size=5 lifetime=4 speed=2 max=1000 shape=Box radius=0.09288597 scale=(10.58, 5.54, 0.21) rotation=(270.00, 0.00, 0.00) simulation=Local
+RENDERER Clouds Default Thin_Particles bounds=Center: (0.00, 0.00, 0.00), Extents: (0.00, 0.00, 0.00) Clouds Default Thin:Toby Fredson/Custom/3D Clouds:Assets/asset/Toby Fredson/Rocky Hills Environment - Whitebark Pine/RHEWP_Demo/Materials/Materials_Particle FX/Clouds Default Thin.mat
+PREFAB Assets/Altar_Ruins_FREE/Prefabs/Particles/Stars.prefab
+PARTICLE Stars size=1.26 lifetime=15 speed=0 max=1000 shape=Box radius=1 scale=(800.00, 1.00, 800.00) rotation=(0.00, 0.00, 0.00) simulation=Local
+RENDERER Stars bounds=Center: (0.00, 0.00, 0.00), Extents: (0.00, 0.00, 0.00) Default-ParticleSystem:Particles/Standard Unlit:Resources/unity_builtin_extra
+PREFAB Assets/Altar_Ruins_FREE/Prefabs/Moon.prefab
+RENDERER Moon bounds=Center: (0.00, 0.00, 0.00), Extents: (49.99, 50.00, 0.74) Moon:Universal Render Pipeline/Lit:Assets/Altar_Ruins_FREE/Art/Textures/Moon.mat
+MESH Moon Center: (0.00, 0.00, 0.00), Extents: (50.00, 50.00, 0.00)

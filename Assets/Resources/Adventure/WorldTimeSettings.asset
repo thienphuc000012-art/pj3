@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4fb16d070e7ccb4ea0638c8b6675a94, type: 3}
+  m_Name: WorldTimeSettings
+  m_EditorClassIdentifier: Assembly-CSharp::AdventureWorldTimeSettings
+  dayLengthMinutes: 24
+  startingHour: 8
+  advanceTime: 1

@@ -48,7 +48,7 @@ public sealed class CombatTargetSelection : MonoBehaviour
     public int firstRenderingLayer = 24;
 
     [Header("Target Icon (Canvas units)")]
-    public bool showMarker = true;
+    public bool showMarker;
     [Min(1f)] public float markerSize = 150f;
     [Min(1f)] public float enterScalePeak = 1.45f;
     [Min(0f)] public float markerEnterDuration = .28f;
@@ -235,7 +235,7 @@ public sealed class CombatTargetSelection : MonoBehaviour
 
     void EnsureMarker(Channel channel)
     {
-        if (canvas == null || channel.marker != null) return;
+        if (!showMarker || canvas == null || channel.marker != null) return;
         if (markerRoot == null)
         {
             var root = new GameObject("Target Selection", typeof(RectTransform));
@@ -258,6 +258,7 @@ public sealed class CombatTargetSelection : MonoBehaviour
     void PositionMarker(Channel channel)
     {
         if (channel.marker == null || canvas == null) return;
+        if (!showMarker) { channel.marker.gameObject.SetActive(false); return; }
         Camera camera = targetCamera != null ? targetCamera : Camera.main;
         if (camera == null) { channel.marker.gameObject.SetActive(false); return; }
         Vector3 center = channel.unit.transform.position + Vector3.up;
