@@ -583,6 +583,9 @@ AnimatorStateMachine:
   - serializedVersion: 1
     m_State: {fileID: -442511418267836636}
     m_Position: {x: 1030, y: 120, z: 0}
+  - serializedVersion: 1
+    m_State: {fileID: -3735018999477447900}
+    m_Position: {x: 392.1012, y: 232.66193, z: 0}
   m_ChildStateMachines: []
   m_AnyStateTransitions:
   - {fileID: 2531019373599335466}
@@ -594,6 +597,32 @@ AnimatorStateMachine:
   m_ExitPosition: {x: 810, y: -260, z: 0}
   m_ParentStateMachinePosition: {x: 800, y: 20, z: 0}
   m_DefaultState: {fileID: -7237796664592795062}
+--- !u!1102 &-3735018999477447900
+AnimatorState:
+  serializedVersion: 6
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Sword Attack 2
+  m_Speed: 1
+  m_CycleOffset: 0
+  m_Transitions: []
+  m_StateMachineBehaviours: []
+  m_Position: {x: 50, y: 50, z: 0}
+  m_IKOnFeet: 0
+  m_WriteDefaultValues: 1
+  m_Mirror: 0
+  m_SpeedParameterActive: 0
+  m_MirrorParameterActive: 0
+  m_CycleOffsetParameterActive: 0
+  m_TimeParameterActive: 0
+  m_Motion: {fileID: 7400000, guid: 99a1d8de3bb205240b5ab075b9b3b680, type: 2}
+  m_Tag: 
+  m_SpeedParameter: 
+  m_MirrorParameter: 
+  m_CycleOffsetParameter: 
+  m_TimeParameter: 
 --- !u!1102 &-3662269781027770692
 AnimatorState:
   serializedVersion: 6
@@ -1145,7 +1174,7 @@ AnimatorController:
     m_DefaultInt: 0
     m_DefaultBool: 0
     m_Controller: {fileID: 9100000}
-  - m_Name: punch
+  - m_Name: Sword Attack 2
     m_Type: 9
     m_DefaultFloat: 0
     m_DefaultInt: 0
@@ -1645,7 +1674,7 @@ AnimatorState:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: punch
+  m_Name: Sword Attack 2 0
   m_Speed: 0.75
   m_CycleOffset: 0
   m_Transitions:
@@ -1659,7 +1688,7 @@ AnimatorState:
   m_MirrorParameterActive: 0
   m_CycleOffsetParameterActive: 0
   m_TimeParameterActive: 0
-  m_Motion: {fileID: 7400000, guid: 0d14c3f653bbd8845b13ceb36ff37809, type: 2}
+  m_Motion: {fileID: 7400000, guid: 99a1d8de3bb205240b5ab075b9b3b680, type: 2}
   m_Tag: 
   m_SpeedParameter: 
   m_MirrorParameter: 
@@ -2075,7 +2104,7 @@ AnimatorStateTransition:
   m_Name: 
   m_Conditions:
   - m_ConditionMode: 1
-    m_ConditionEvent: punch
+    m_ConditionEvent: Sword Attack 2
     m_EventTreshold: 0
   m_DstStateMachine: {fileID: 0}
   m_DstState: {fileID: 3757345176692447352}

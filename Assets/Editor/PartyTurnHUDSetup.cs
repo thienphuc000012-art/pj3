@@ -481,12 +481,17 @@ public static class PartyTurnHUDSetup
             var frame = portrait.Find("Portrait Frame")?.GetComponent<TurnOrderPortraitFrame>();
             Require(frame != null && frame.color.a > 0 && !frame.raycastTarget && frame.sprite == null,
                 "Turn portraits need a visible default frame that does not capture input.");
-            Require(portrait.GetComponent<Image>().sprite == units[i].unitPortrait, "Frame creation must preserve the unit portrait.");
+            var artwork = portrait.Find("Portrait").GetComponent<Image>();
+            Require(artwork.sprite == units[i].unitPortrait, "Frame creation must preserve the unit portrait.");
+            Require(portrait.GetComponent<Image>().sprite == null && portrait.GetComponent<Image>().color == Color.black,
+                "Turn portraits need an opaque black background behind transparent artwork.");
+            Require(artwork.rectTransform.localScale == new Vector3(-1f, 1f, 1f),
+                "Only the portrait artwork must be mirrored horizontally.");
             Require(portrait.localScale == Vector3.one * (i == 0 ? manager.turnPortraitActiveScale : 1f), "Framing must preserve the active turn scale.");
             manager.showTurnPortraitFrames = false; manager.ApplyTurnPortraitFrame(portrait);
             Require(!frame.gameObject.activeSelf, "The Inspector toggle must hide turn portrait frames.");
             manager.showTurnPortraitFrames = true; manager.ApplyTurnPortraitFrame(portrait);
-            Require(frame.gameObject.activeSelf && portrait.childCount == 1, "Refreshing the frame must reuse it.");
+            Require(frame.gameObject.activeSelf && portrait.childCount == 2, "Refreshing the frame must reuse it.");
         }
         // Frames remain untouched by the shared theme, including after a subsequent refresh.
         GameUITheme.Apply(row);
@@ -504,7 +509,7 @@ public static class PartyTurnHUDSetup
         for (int i = 0; i < container.childCount; i++)
         {
             var portrait = (RectTransform)container.GetChild(i);
-            Require(portrait.GetComponent<Image>().preserveAspect, "Turn portraits must preserve the source artwork aspect ratio.");
+            Require(portrait.Find("Portrait").GetComponent<Image>().preserveAspect, "Turn portraits must preserve the source artwork aspect ratio.");
             Require(portrait.rect.width <= manager.turnPortraitSize.x + .05f && portrait.rect.height <= manager.turnPortraitSize.y + .05f,
                 "Turn portrait dimensions must not exceed the configured maximum size.");
             Require(portrait.localScale == Vector3.one * (i == 0 ? manager.turnPortraitActiveScale : 1f),

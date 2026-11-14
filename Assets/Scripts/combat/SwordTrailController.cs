@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections.Generic;
 
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
@@ -58,53 +58,26 @@ public class SwordBladeTrail : MonoBehaviour
         if (blade.sqrMagnitude > 0.0001f)
             bladeAxis = blade.normalized;
 
-        Vector3 relativeSweep = Vector3.zero;
-        if (isEmitting && snapshots.Count > 1)
+        // Animation events run before LateUpdate. Use the current bone pose,
+        // compared with the latest distinct recent sample, rather than an old
+        // averaged trail that may belong to the previous half of a combo.
+        BladePoseSample previous = default;
+        bool hasPrevious = false;
+        foreach (var sample in motionHistory)
         {
-            FrameSnapshot newestTrailPoint = snapshots[0];
-            FrameSnapshot oldestTrailPoint = snapshots[snapshots.Count - 1];
-            relativeSweep =
-                (newestTrailPoint.tipPos - oldestTrailPoint.tipPos) -
-                (newestTrailPoint.basePos - oldestTrailPoint.basePos);
+            if (Time.time - sample.timeCreated > .12f) continue;
+            if ((tipPosition - sample.tipPos).sqrMagnitude + (basePosition - sample.basePos).sqrMagnitude < .00000001f) continue;
+            previous = sample;
+            hasPrevious = true;
         }
-        else if (motionHistory.Count > 1)
+        if (hasPrevious)
         {
-            BladePoseSample oldest = motionHistory.Peek();
-            BladePoseSample newest = default;
-            foreach (BladePoseSample sample in motionHistory)
-            {
-                newest = sample;
-            }
-
-            relativeSweep =
-                (newest.tipPos - oldest.tipPos) -
-                (newest.basePos - oldest.basePos);
+            Vector3 relativeSweep = (tipPosition - previous.tipPos) - (basePosition - previous.basePos);
+            relativeSweep = Vector3.ProjectOnPlane(relativeSweep, bladeAxis);
+            if (relativeSweep.sqrMagnitude < .00000001f)
+                relativeSweep = Vector3.ProjectOnPlane(midpoint - (previous.basePos + previous.tipPos) * .5f, bladeAxis);
+            if (relativeSweep.sqrMagnitude > .00000001f) swingDirection = relativeSweep.normalized;
         }
-
-        // A translating sword may move both points together; use its midpoint
-        // motion if rotation around the hand was too small to determine a swing.
-        if (relativeSweep.sqrMagnitude < 0.0004f)
-        {
-            if (isEmitting && snapshots.Count > 1)
-            {
-                Vector3 oldestMidpoint = (snapshots[snapshots.Count - 1].basePos + snapshots[snapshots.Count - 1].tipPos) * 0.5f;
-                Vector3 newestMidpoint = (snapshots[0].basePos + snapshots[0].tipPos) * 0.5f;
-                relativeSweep = newestMidpoint - oldestMidpoint;
-            }
-            else if (motionHistory.Count > 1)
-            {
-                BladePoseSample oldest = motionHistory.Peek();
-                BladePoseSample newest = default;
-                foreach (BladePoseSample sample in motionHistory)
-                    newest = sample;
-                Vector3 oldestMidpoint = (oldest.basePos + oldest.tipPos) * 0.5f;
-                Vector3 newestMidpoint = (newest.basePos + newest.tipPos) * 0.5f;
-                relativeSweep = newestMidpoint - oldestMidpoint;
-            }
-        }
-
-        if (relativeSweep.sqrMagnitude >= 0.0004f)
-            swingDirection = relativeSweep.normalized;
 
         return true;
     }
@@ -132,21 +105,30 @@ public class SwordBladeTrail : MonoBehaviour
         isEmitting = false;
     }
 
-    void LateUpdate()
+    void RecordMotion(float sampleTime)
     {
         if (pointBase == null || pointTip == null) return;
-
         motionHistory.Enqueue(new BladePoseSample
         {
             basePos = pointBase.position,
             tipPos = pointTip.position,
-            timeCreated = Time.time
+            timeCreated = sampleTime
         });
         while (motionHistory.Count > 1 &&
-               (Time.time - motionHistory.Peek().timeCreated > 0.18f || motionHistory.Count > 16))
+               (sampleTime - motionHistory.Peek().timeCreated > 0.18f || motionHistory.Count > 16))
         {
             motionHistory.Dequeue();
         }
+
+    }
+
+    void OnDisable() { motionHistory.Clear(); }
+
+    void LateUpdate()
+    {
+        if (pointBase == null || pointTip == null) return;
+
+        RecordMotion(Time.time);
 
         // Xóa các điểm đã quá thời gian tồn tại
         snapshots.RemoveAll(s => Time.time - s.timeCreated > trailTime);

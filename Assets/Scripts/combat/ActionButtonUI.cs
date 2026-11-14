@@ -53,20 +53,9 @@ public class ActionButtonUI : MonoBehaviour
         // Items show their owned quantity in this label; other actions keep Stain cost/gain.
         UpdateResourceText(CombatManager.Instance != null ? CombatManager.Instance.currentActiveUnit : null);
 
-        // 4. Hiển thị Mô tả (Description) thay vì các thông số khô khan
+        // Skill text follows ActionData; items retain their authored description.
         if (infoText != null)
-        {
-            if (!string.IsNullOrEmpty(action.description))
-            {
-                // Nếu có ghi description trong Inspector thì hiển thị description đó
-                GameLocalization.SetText(infoText, VietnameseGameUIText.ActionDescription(action));
-            }
-            else
-            {
-                // Nếu quên ghi description, hiển thị tạm dòng chữ này để nhắc nhở
-                GameLocalization.SetText(infoText, "Chưa có mô tả kỹ năng.");
-            }
-        }
+            GameLocalization.SetActionDescription(infoText, action);
 
         // 5. Gán sự kiện khi bấm nút (Chuyển lệnh về CombatManager)
         if (button != null)

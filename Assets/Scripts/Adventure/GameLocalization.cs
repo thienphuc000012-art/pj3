@@ -29,6 +29,22 @@ public static class GameLocalization
         return table != null ? table.Translate(source, language) : source;
     }
 
+    public static string Translate(string source, GameLanguage targetLanguage)
+    {
+        EnsureInitialized();
+        return table != null ? table.Translate(source, targetLanguage) : source;
+    }
+
+    public static void SetActionDescription(TMP_Text target, ActionData action, string suffix = null)
+    {
+        if (target == null) return;
+        if (action != null && action.type != ActionData.ActionType.Item) ActionDescriptionScroll.Ensure(target);
+        GameUITextColor.Apply(target);
+        var binding = target.GetComponent<LocalizedGameText>();
+        if (binding == null) binding = target.gameObject.AddComponent<LocalizedGameText>();
+        binding.SetActionDescription(action, suffix);
+    }
+
     public static void ToggleLanguage() => SetLanguage(IsEnglish ? GameLanguage.Vietnamese : GameLanguage.English);
 
     public static void SetLanguage(GameLanguage value)

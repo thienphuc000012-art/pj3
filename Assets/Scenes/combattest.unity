@@ -787,6 +787,8 @@ MonoBehaviour:
   turnPortraitFrameColor: {r: 0.92, g: 0.92, b: 0.92, a: 1}
   turnPortraitFramePadding: {x: 3, y: 3}
   turnPortraitFrameThickness: 2
+  turnPortraitBackgroundColor: {r: 0, g: 0, b: 0, a: 1}
+  turnPortraitMirrorFlip: 1
   enemyHudPanel: {fileID: 1019893777}
   enemyHpFill: {fileID: 1563397434}
   enemyElementIcon: {fileID: 0}
@@ -18515,7 +18517,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BattleEncounterSetup
   setupId: dra
   arenaSpawn:
-    playerDistance: 4.5
+    playerDistance: 8.5
     enemyDistance: 0
     slotSpacing: 1.75
     floorSearchHeight: 2.5
@@ -21522,10 +21524,6 @@ PrefabInstance:
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 3750319964840296008, guid: 6420f2b6c7cb7f141a78467b70d2f49a, type: 3}
-      propertyPath: unitPortrait
-      value: 
-      objectReference: {fileID: -1793391239, guid: f0250ca3f8df6ae4a83e964db3ca6816, type: 3}
-    - target: {fileID: 3750319964840296008, guid: 6420f2b6c7cb7f141a78467b70d2f49a, type: 3}
       propertyPath: 'characterSkills.Array.data[3]'
       value: 
       objectReference: {fileID: 11400000, guid: bc8d3073739ad30429f0a6a1a7cdd84c, type: 2}
@@ -21535,7 +21533,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8631952338195859945, guid: 6420f2b6c7cb7f141a78467b70d2f49a, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8745593935360855639, guid: 6420f2b6c7cb7f141a78467b70d2f49a, type: 3}
+      propertyPath: m_BlendShapeWeights.Array.size
+      value: 54
       objectReference: {fileID: 0}
     - target: {fileID: 8971463230592652115, guid: 6420f2b6c7cb7f141a78467b70d2f49a, type: 3}
       propertyPath: m_LocalPosition.x
@@ -22902,10 +22904,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 1362281321940109808, guid: a5b3fe05ee26e4b419eaeab72c77c4b0, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 3572819851402772413, guid: a5b3fe05ee26e4b419eaeab72c77c4b0, type: 3}
       propertyPath: m_LocalPosition.x
       value: -5.015
@@ -22951,13 +22949,21 @@ PrefabInstance:
       value: player (3)
       objectReference: {fileID: 0}
     - target: {fileID: 7229521429613955948, guid: a5b3fe05ee26e4b419eaeab72c77c4b0, type: 3}
-      propertyPath: baseAtk
-      value: 15
+      propertyPath: maxHP
+      value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 7229521429613955948, guid: a5b3fe05ee26e4b419eaeab72c77c4b0, type: 3}
+      propertyPath: baseAtk
+      value: 150
+      objectReference: {fileID: 0}
+    - target: {fileID: 7229521429613955948, guid: a5b3fe05ee26e4b419eaeab72c77c4b0, type: 3}
+      propertyPath: 'characterSkills.Array.data[1]'
+      value: 
+      objectReference: {fileID: 11400000, guid: 6de9ab5777c744e44b2765fd39d350a3, type: 2}
     - target: {fileID: 7229521429613955948, guid: a5b3fe05ee26e4b419eaeab72c77c4b0, type: 3}
       propertyPath: 'characterSkills.Array.data[2]'
       value: 
-      objectReference: {fileID: 11400000, guid: 9c2d4533a27c9f542afeed2d9c8c4450, type: 2}
+      objectReference: {fileID: 11400000, guid: 2f2152f98c14c3d46a4e74b095d13736, type: 2}
     - target: {fileID: 7229521429613955948, guid: a5b3fe05ee26e4b419eaeab72c77c4b0, type: 3}
       propertyPath: 'characterSkills.Array.data[3]'
       value: 

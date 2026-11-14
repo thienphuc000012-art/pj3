@@ -48,7 +48,7 @@ public sealed class CombatSkillListUI : MonoBehaviour
         if (descriptionText == null)
         {
             var existing = descriptionBackground.transform.Find("Description");
-            descriptionText = existing != null ? existing.GetComponent<TMP_Text>() : null;
+            descriptionText = existing != null ? existing.GetComponentInChildren<TMP_Text>(true) : null;
             if (descriptionText == null)
             {
                 var textRect = CreateRect("Description", descriptionBackground.transform,
@@ -174,8 +174,7 @@ public sealed class CombatSkillListUI : MonoBehaviour
         if (descriptionText != null)
         {
             var action = row.Source.CurrentAction;
-            GameLocalization.SetText(descriptionText, !string.IsNullOrWhiteSpace(action.description)
-                ? VietnameseGameUIText.ActionDescription(action) : "Chưa có mô tả kỹ năng.");
+            GameLocalization.SetActionDescription(descriptionText, action);
         }
     }
 

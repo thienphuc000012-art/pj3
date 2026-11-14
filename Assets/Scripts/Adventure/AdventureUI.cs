@@ -964,7 +964,7 @@ public class AdventureUI : MonoBehaviour
             var labelStyle = label.GetComponent<GameUITextColor>();
             if (labelStyle != null) labelStyle.SetColorOverride(textColor);
             else label.color = textColor;
-            AdventureCanvasRoot.RowText(rows[i], "Description", VietnameseGameUIText.ActionDescription(learned[i]));
+            GameLocalization.SetActionDescription(rows[i].transform.Find("Description").GetComponentInChildren<TMP_Text>(true), learned[i]);
         }
         view.Text(prefix + "/SkillDialog/Title", "Đổi kỹ năng ô " + (selectedSlot + 1));
         view.Active(prefix + "/SkillDialog/Empty", learned.Length == 0);
@@ -1380,7 +1380,8 @@ public class AdventureUI : MonoBehaviour
         var skill = skills[selectedSkill];
         view.Text("Menu/Skills/Detail/Name", VietnameseGameUIText.ActionName(skill));
         var required = S.Prerequisites(p, skill).Where(x => !S.IsSkillUnlocked(p, x)).ToArray();
-        view.Text("Menu/Skills/Detail/Description", VietnameseGameUIText.ActionDescription(skill) + (required.Length > 0 ? "\nCần mở: " + string.Join(", ", required.Select(VietnameseGameUIText.ActionName)) : ""));
+        GameLocalization.SetActionDescription(view.Node("Menu/Skills/Detail/Description").GetComponentInChildren<TMP_Text>(true), skill,
+            required.Length > 0 ? "\nCần mở: " + string.Join(", ", required.Select(VietnameseGameUIText.ActionName)) : null);
         view.Text("Menu/Skills/Reason", S.UnlockBlockedReason(p, skill));
     }
     void Craft()

@@ -1742,6 +1742,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: -9055291471984854289, guid: 8b4e74c0b24cc3d4aae11ba18270b15e, type: 3}
+      propertyPath: m_BlendShapeWeights.Array.size
+      value: 54
+      objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 8b4e74c0b24cc3d4aae11ba18270b15e, type: 3}
       propertyPath: m_RootOrder
       value: 0
@@ -1756,7 +1760,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 8b4e74c0b24cc3d4aae11ba18270b15e, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -0.02658
+      value: -1.933
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 8b4e74c0b24cc3d4aae11ba18270b15e, type: 3}
       propertyPath: m_LocalRotation.w
@@ -1909,6 +1913,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 8b4e74c0b24cc3d4aae11ba18270b15e, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6660564619375976384}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 8b4e74c0b24cc3d4aae11ba18270b15e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4098656463298922759}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 8b4e74c0b24cc3d4aae11ba18270b15e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6024260930882797057}
   m_SourcePrefab: {fileID: 100100000, guid: 8b4e74c0b24cc3d4aae11ba18270b15e, type: 3}
 --- !u!4 &587184619866251812 stripped
 Transform:
@@ -2143,13 +2153,13 @@ MonoBehaviour:
   baseDef: 5
   baseCrit: 10
   baseCritDamage: 150
-  element: 0
+  element: 2
   defaultAttack: {fileID: 11400000, guid: 39755a63f54e7974396bbbf389df346c, type: 2}
   characterSkills:
   - {fileID: 11400000, guid: 7caca4445e732f448bfb7b0130e732f0, type: 2}
   - {fileID: 11400000, guid: cfff066c7c479f147bfc4367cc34a26b, type: 2}
   - {fileID: 11400000, guid: 13a4bf5805814754a886519a71ab305a, type: 2}
-  - {fileID: 11400000, guid: 240a5ba6b16727542a312bbfd7b8bae7, type: 2}
+  - {fileID: 11400000, guid: bc8d3073739ad30429f0a6a1a7cdd84c, type: 2}
   - {fileID: 11400000, guid: 6466aedd6465cd34aa83297bb5bb802f, type: 2}
   battleEntryWalkStateName: Base Layer.BattleEntryWalk
   battleEntryAnimationSpeed: 1
@@ -2172,7 +2182,7 @@ MonoBehaviour:
   phase2HitClip: {fileID: 0}
   phase2CriticalHitClip: {fileID: 0}
   lastTarget: {fileID: 0}
-  speed: 1000
+  speed: 50
   unitPortrait: {fileID: -1793391239, guid: f0250ca3f8df6ae4a83e964db3ca6816, type: 3}
   deathStateName: death
   deathAnimationTimeout: 30
@@ -2235,6 +2245,64 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a95e22257e15e3448b035fce710e4195, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClickableUnit
+--- !u!114 &4098656463298922759
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8631952338195859945}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 379b699e49a18514bb5d4160b4415579, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AutoBlink
+  skinnedMeshRenderer: {fileID: 8745593935360855639}
+  blinkLeftName: Head.eyeBlinkLeft
+  blinkRightName: Head.eyeBlinkRight
+  minBlinkInterval: 2
+  maxBlinkInterval: 6
+  blinkDuration: 0.1
+--- !u!114 &6024260930882797057
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8631952338195859945}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54ab5e0f2f11518b8ee8994d343f1f38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CustomFootTrails.FootTrailController
+  leftEffect: {fileID: 4309755641367696656, guid: 638be78b7eebebe4984516491a9722af, type: 3}
+  rightEffect: {fileID: 4309755641367696656, guid: 638be78b7eebebe4984516491a9722af, type: 3}
+  leftFootBone: {fileID: 3485314263455966876}
+  rightFootBone: {fileID: 8777212981512368239}
+  autoFindHumanoidBones: 1
+  followFootBones: 1
+  leftFootWorldOffset: {x: 0, y: -0.05, z: 0}
+  rightFootWorldOffset: {x: 0, y: -0.05, z: 0}
+  keepEmittersUpright: 1
+  movementSource: {fileID: 8971463230592652115}
+  automaticFootsteps: 1
+  metersPerStep: 0.55
+  minimumSpeed: 0.15
+  maximumStepsPerFrame: 2
+  teleportThreshold: 2
+  requireGroundContact: 0
+  groundLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  probeStartAboveFoot: 0.35
+  probeDistanceBelowFoot: 0.65
+  debugFootsteps: 0
+  drawFootGizmos: 1
+--- !u!137 &8745593935360855639 stripped
+SkinnedMeshRenderer:
+  m_CorrespondingSourceObject: {fileID: -9055291471984854289, guid: 8b4e74c0b24cc3d4aae11ba18270b15e, type: 3}
+  m_PrefabInstance: {fileID: 8866377357398209720}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &8777212981512368239 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -9023701236474149673, guid: 8b4e74c0b24cc3d4aae11ba18270b15e, type: 3}

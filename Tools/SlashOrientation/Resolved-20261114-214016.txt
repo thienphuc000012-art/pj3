@@ -1,0 +1,4 @@
+System.InvalidOperationException: Slash emitted no bakeable mesh: Assets/Vefects/Stylized VFX/Stylized VFX Shuriken/Skills/Slashes Piercing/Earth/VFX_Slash_Circle_Earth.prefab
+  at SwordSlashOrientationValidation.Check (System.Boolean value, System.String message) [0x00009] in D:\New folder (4)\pj3\Assets\Editor\SwordSlashOrientationValidation.cs:156 
+  at SwordSlashOrientationValidation.Validate () [0x004f0] in D:\New folder (4)\pj3\Assets\Editor\SwordSlashOrientationValidation.cs:81 
+  at SwordSlashOrientationValidation.Poll () [0x00076] in D:\New folder (4)\pj3\Assets\Editor\SwordSlashOrientationValidation.cs:25 

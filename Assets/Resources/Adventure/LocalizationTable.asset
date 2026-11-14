@@ -36,7 +36,7 @@ MonoBehaviour:
     vietnamese: "NHI\u1EC6M V\u1EE4"
     english: QUESTS
   - key: menu.quests.button
-    vietnamese: "Nhiệm vụ"
+    vietnamese: "Nhi\u1EC7m v\u1EE5"
     english: Quests
   - key: menu.rest
     vietnamese: "\u0110I\u1EC2M NGH\u1EC8"
@@ -249,8 +249,8 @@ MonoBehaviour:
     vietnamese: "{0} \u2022 C\u1EA5p {1}"
     english: "{0} \u2022 Level {1}"
   - key: hud.leader.xp
-    vietnamese: "{0} / {1} KN"
-    english: "{0} / {1} XP"
+    vietnamese: '{0} / {1} KN'
+    english: '{0} / {1} XP'
   - key: hud.level
     vietnamese: "C\u1EA5p"
     english: Level
@@ -297,7 +297,7 @@ MonoBehaviour:
     vietnamese: "0 Tinh l\u1EF1c"
     english: 0 Stain
   - key: battle.stain.label
-    vietnamese: "Tinh lực"
+    vietnamese: "Tinh l\u1EF1c"
     english: Stain
   - key: action.attack
     vietnamese: "T\u1EA5n c\xF4ng"
@@ -590,7 +590,7 @@ MonoBehaviour:
     vietnamese: "\u0110\xE3 \xE1p d\u1EE5ng \u0111i\u1EC3m thu\u1ED9c t\xEDnh."
     english: Attribute points applied.
   - key: toast.rest.saved
-    vietnamese: "Đã lưu game."
+    vietnamese: "\u0110\xE3 l\u01B0u game."
     english: Game saved.
   - key: toast.runaway.blocked
     vietnamese: "B\u1EA1n kh\xF4ng th\u1EC3 tho\xE1t v\xE0o l\xFAc n\xE0y"
@@ -832,8 +832,10 @@ MonoBehaviour:
       n\u0103ng mang theo trong \u0110\u1ED9i h\xECnh."
     english: This skill is already learned. Change equipped skills in Party.
   - key: skill.reason.ultimate
-    vietnamese: "Tuy\u1EC7t k\u1EF9 c\xF3 s\u1EB5n. C\u1EA7n \u0111\u1EA7y n\u0103ng l\u01B0\u1EE3ng \u0111\u1EC3 d\xF9ng trong tr\u1EADn."
-    english: Ultimate is available from the start. Fully charge its energy to use it in battle.
+    vietnamese: "Tuy\u1EC7t k\u1EF9 c\xF3 s\u1EB5n. C\u1EA7n \u0111\u1EA7y n\u0103ng
+      l\u01B0\u1EE3ng \u0111\u1EC3 d\xF9ng trong tr\u1EADn."
+    english: Ultimate is available from the start. Fully charge its energy to use
+      it in battle.
   - key: skill.reason.rest
     vietnamese: "C\u1EA7n \u0111\u1EE9ng t\u1EA1i \u0111i\u1EC3m ngh\u1EC9 \u0111\u1EC3
       h\u1ECDc k\u1EF9 n\u0103ng."
@@ -955,74 +957,88 @@ MonoBehaviour:
       g\u1EA7n nh\u1EA5t v\xE0 \u0111\u01B0\u1EE3c h\u1ED3i \u0111\u1EA7y m\xE1u."
     english: The party will return to the nearest save point and be fully healed.
   - key: menu.load.game
-    vietnamese: Tải game
+    vietnamese: "T\u1EA3i game"
     english: Load Game
   - key: save.slot.success
-    vietnamese: "Đã lưu vào ô {0}."
-    english: "Game saved to slot {0}."
+    vietnamese: "\u0110\xE3 l\u01B0u v\xE0o \xF4 {0}."
+    english: Game saved to slot {0}.
   - key: save.slot.autosave.failure
-    vietnamese: "Đã lưu vào ô {0}, nhưng chưa cập nhật được bản tự lưu."
-    english: "Saved to slot {0}, but the autosave could not be updated."
+    vietnamese: "\u0110\xE3 l\u01B0u v\xE0o \xF4 {0}, nh\u01B0ng ch\u01B0a c\u1EADp
+      nh\u1EADt \u0111\u01B0\u1EE3c b\u1EA3n t\u1EF1 l\u01B0u."
+    english: Saved to slot {0}, but the autosave could not be updated.
   - key: save.slot.rest.only
-    vietnamese: Chỉ có thể lưu tại điểm nghỉ.
+    vietnamese: "Ch\u1EC9 c\xF3 th\u1EC3 l\u01B0u t\u1EA1i \u0111i\u1EC3m ngh\u1EC9."
     english: You can only save at a rest point.
   - key: save.slot.load.busy
-    vietnamese: Không thể tải game lúc này.
+    vietnamese: "Kh\xF4ng th\u1EC3 t\u1EA3i game l\xFAc n\xE0y."
     english: You cannot load a game right now.
   - key: fasttravel.empty
-    vietnamese: Chưa có điểm nghỉ nào được mở khóa.
+    vietnamese: "Ch\u01B0a c\xF3 \u0111i\u1EC3m ngh\u1EC9 n\xE0o \u0111\u01B0\u1EE3c
+      m\u1EDF kh\xF3a."
     english: No rest points have been unlocked yet.
   - key: title.subtitle
-    vietnamese: TÀN TÍCH THỨC TỈNH
+    vietnamese: "T\xC0N T\xCDCH TH\u1EE8C T\u1EC8NH"
     english: THE RUINS AWAKEN
   - key: title.press
-    vietnamese: NHẤN PHÍM BẤT KỲ
+    vietnamese: "NH\u1EA4N PH\xCDM B\u1EA4T K\u1EF2"
     english: PRESS ANY BUTTON
   - key: title.continue
-    vietnamese: Tiếp tục
+    vietnamese: "Ti\u1EBFp t\u1EE5c"
     english: Continue
   - key: title.new
-    vietnamese: Chơi mới
+    vietnamese: "Ch\u01A1i m\u1EDBi"
     english: New Game
   - key: title.settings
-    vietnamese: Cài đặt
+    vietnamese: "C\xE0i \u0111\u1EB7t"
     english: Settings
   - key: title.quit
-    vietnamese: Thoát
+    vietnamese: "Tho\xE1t"
     english: Quit
   - key: title.error.no_save
-    vietnamese: Không tìm thấy bản lưu hợp lệ.
+    vietnamese: "Kh\xF4ng t\xECm th\u1EA5y b\u1EA3n l\u01B0u h\u1EE3p l\u1EC7."
     english: No valid save was found.
   - key: title.error.save_list
-    vietnamese: Không thể mở danh sách bản lưu.
+    vietnamese: "Kh\xF4ng th\u1EC3 m\u1EDF danh s\xE1ch b\u1EA3n l\u01B0u."
     english: Could not open the save list.
   - key: title.error.map
-    vietnamese: Không thể tải bản đồ.
+    vietnamese: "Kh\xF4ng th\u1EC3 t\u1EA3i b\u1EA3n \u0111\u1ED3."
     english: Could not load the map.
   - key: title.error.setup
-    vietnamese: Kiểm tra scene intro, bản đồ và điểm xuất phát.
+    vietnamese: "Ki\u1EC3m tra scene intro, b\u1EA3n \u0111\u1ED3 v\xE0 \u0111i\u1EC3m
+      xu\u1EA5t ph\xE1t."
     english: Check the intro scene, starting map, and spawn point.
   - key: title.error.intro
-    vietnamese: Không thể tải intro.
+    vietnamese: "Kh\xF4ng th\u1EC3 t\u1EA3i intro."
     english: Could not load the intro.
   - key: title.error.timeline
-    vietnamese: Không tìm thấy Timeline chính của intro.
+    vietnamese: "Kh\xF4ng t\xECm th\u1EA5y Timeline ch\xEDnh c\u1EE7a intro."
     english: The intro master Timeline was not found.
   - key: title.error.new
-    vietnamese: Không thể bắt đầu game mới.
+    vietnamese: "Kh\xF4ng th\u1EC3 b\u1EAFt \u0111\u1EA7u game m\u1EDBi."
     english: Could not start a new game.
   - key: menu.return.title
-    vietnamese: Về Title
+    vietnamese: "V\u1EC1 Title"
     english: Return to Title
   - key: menu.return.title.error
-    vietnamese: Không thể quay về Title.
+    vietnamese: "Kh\xF4ng th\u1EC3 quay v\u1EC1 Title."
     english: Could not return to the title screen.
   - key: menu.return.title.confirm
-    vietnamese: Bạn có chắc muốn về Title?
+    vietnamese: "B\u1EA1n c\xF3 ch\u1EAFc mu\u1ED1n v\u1EC1 Title?"
     english: Are you sure you want to return to the title screen?
   - key: quest.untrack.prompt
-    vietnamese: Hủy theo dõi nhiệm vụ?
+    vietnamese: "H\u1EE7y theo d\xF5i nhi\u1EC7m v\u1EE5?"
     english: Stop tracking this quest?
   - key: cryptex.interact
-    vietnamese: Ổ khóa mật mã
+    vietnamese: "\u1ED4 kh\xF3a m\u1EADt m\xE3"
     english: Cryptex lock
+  - key: battle.defeat
+    vietnamese: "H\xC0NH TR\xCCNH\nTH\u1EA4T B\u1EA0I"
+    english: 'EXPEDITION
+
+      FAILED'
+  - key: battle.return
+    vietnamese: "Quay v\u1EC1"
+    english: Return
+  - key: battle.levelup
+    vietnamese: "L\xCAN C\u1EA4P!"
+    english: LEVEL UP!

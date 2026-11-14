@@ -38,6 +38,8 @@ public class CampaignSession : MonoBehaviour
     public bool IsGuidedTutorialEncounter => encounter != null && encounter.guidedTutorial;
     public bool EncounterHasBoss => encounter != null && encounter.enemies != null && encounter.enemies.Any(enemy => enemy != null && enemy.isBoss);
     public int ResultExperience => encounter?.xp ?? 0;
+    public IReadOnlyList<BattleExperienceChange> ResultExperienceChanges => resultExperienceChanges;
+    readonly List<BattleExperienceChange> resultExperienceChanges = new List<BattleExperienceChange>();
     public List<ItemStack> ResultRewards => encounter?.rewards ?? new List<ItemStack>();
     public string CurrentMapScene => Data != null && !string.IsNullOrEmpty(Data.currentMapScene)
         ? Data.currentMapScene
@@ -1584,6 +1586,7 @@ public class CampaignSession : MonoBehaviour
         if (!Application.CanStreamedLevelBeLoaded(Config.battleScene)) { Notify("Chưa thêm combattest vào Build Settings."); return; }
         if (!Application.CanStreamedLevelBeLoaded(LoadingScreen.SceneName)) { Notify("Chưa thêm scene Loading vào Build Settings."); return; }
         CapturePosition();
+        resultExperienceChanges.Clear();
         encounter = new EncounterData
         {
             id = point.Id,
@@ -2176,6 +2179,9 @@ public class CampaignSession : MonoBehaviour
     {
         if (encounter == null || Busy) return;
         Busy = true;
+        // Capture before quest and encounter rewards; the result animation only reads these snapshots.
+        var previousXP = Data.party.Select(member => new Vector2Int(member.level, member.xp)).ToArray();
+        resultExperienceChanges.Clear();
         CaptureBattlePartyHealth(manager);
         if (victory)
         {
@@ -2202,6 +2208,12 @@ public class CampaignSession : MonoBehaviour
             }
             foreach (var member in Data.party) member.hp = Config.defeatReturnsToCheckpoint ? MaxHP(member) : Mathf.Max(1, Mathf.RoundToInt(MaxHP(member) * .3f));
             Notify("Thất bại • Đã trở về map. Quái vẫn còn để thử lại.");
+        }
+        for (int i = 0; i < Data.party.Count; i++)
+        {
+            var member = Data.party[i];
+            var before = i < previousXP.Length ? previousXP[i] : new Vector2Int(member.level, member.xp);
+            resultExperienceChanges.Add(new BattleExperienceChange(before.x, before.y, member.level, member.xp));
         }
         Save();
         // The result panel waits for Continue before leaving combat.

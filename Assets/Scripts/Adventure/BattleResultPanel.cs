@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
@@ -6,6 +7,7 @@ public class BattleResultPanel : MonoBehaviour
 {
     CombatManager manager;
     AdventureCanvasRoot view;
+    BattleResultPresentation presentation;
     bool visible, victory, leaving;
     float started, duration, oldTimeScale;
     int dealt, received, highest, parries;
@@ -13,7 +15,10 @@ public class BattleResultPanel : MonoBehaviour
     {
         manager = GetComponent<CombatManager>(); started = Time.unscaledTime;
         view = AdventureCanvasRoot.Acquire(AdventureCanvasKind.BattleResult);
-        view.Click("Continue", Continue); view.gameObject.SetActive(false);
+        presentation = view.GetComponent<BattleResultPresentation>();
+        view.Click("Continue", Continue);
+        if (presentation != null && presentation.returnButton != null) presentation.returnButton.onClick.AddListener(Continue);
+        view.gameObject.SetActive(false);
     }
     public void RecordDamage(bool fromPlayer, int damage)
     {
@@ -29,26 +34,37 @@ public class BattleResultPanel : MonoBehaviour
         oldTimeScale = Time.timeScale; Time.timeScale = 0;
         Cursor.lockState = CursorLockMode.None; Cursor.visible = true;
         view.gameObject.SetActive(true); AdventureCanvasRoot.EnsureEventSystem();
+        if (presentation != null) presentation.Configure(victory);
         Populate();
     }
     void Update() { if (visible && !leaving && Input.GetKeyDown(KeyCode.Return)) Continue(); }
     void Continue()
     {
         if (!visible || leaving) return;
+        if (presentation != null && presentation.IsAnimating) { presentation.Complete(); return; }
         var session = CampaignSession.Instance;
         bool accepted = session != null && session.InEncounter ? session.ContinueAfterBattle() : LoadingScreen.Load(Resources.Load<CampaignConfig>("Adventure/CampaignConfig")?.mapScene ?? "mapgame");
         if (accepted)
         {
             leaving = true; Time.timeScale = oldTimeScale > 0 ? oldTimeScale : 1;
             view.Enabled("Continue", false); view.Text("Continue/Label", "Đang chuyển cảnh…");
+            if (presentation != null && presentation.returnButton != null) presentation.returnButton.interactable = false;
         }
         else view.Text("Error", LoadingScreen.Error ?? "Chưa thể chuyển cảnh. Hãy thử lại.");
     }
-    void OnDestroy() { if (visible && !leaving) Time.timeScale = oldTimeScale; }
+    void OnDestroy()
+    {
+        if (view != null)
+        {
+            var button = view.transform.Find("Continue")?.GetComponent<UnityEngine.UI.Button>();
+            if (button != null) button.onClick.RemoveListener(Continue);
+        }
+        if (presentation != null && presentation.returnButton != null) presentation.returnButton.onClick.RemoveListener(Continue);
+        if (visible && !leaving) Time.timeScale = oldTimeScale;
+    }
     void Populate()
     {
         view.Text("Title", victory ? "CHIẾN THẮNG" : "THẤT BẠI");
-        if (!victory) view.Component<TMP_Text>("Title").color = view.defeatAccent;
         view.Text("Subtitle", victory ? "CHIẾN THẮNG • HÀNH TRÌNH TIẾP DIỄN" : "THẤT BẠI • MỘT CƠ HỘI KHÁC");
         var session = CampaignSession.Instance;
         bool campaign = session != null && session.InEncounter;
@@ -87,5 +103,13 @@ public class BattleResultPanel : MonoBehaviour
         view.Text("Stats/Kills", manager.enemyParty.Count(x => x != null && x.IsDead).ToString());
         view.Text("Stats/Time", ((int)duration / 60) + ":" + ((int)duration % 60).ToString("00"));
         view.Text("Error", "");
+        if (victory && presentation != null)
+        {
+            var progress = campaign ? session.ResultExperienceChanges : null;
+            presentation.Begin(view, new[] { dealt, highest, received, parries,
+                manager.enemyParty.Count(x => x != null && x.IsDead), Mathf.Max(0, (int)duration) },
+                campaign ? session.ResultExperience : 0, members, progress, lootRows,
+                campaign ? session.ResultRewards : new List<ItemStack>());
+        }
     }
 }

@@ -57,7 +57,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1362281321940109808}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 1, w: 0}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -0.019, y: 0.032, z: 0.301}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -66,7 +66,7 @@ Transform:
   - {fileID: 6936285084087838878}
   - {fileID: 2850218978166779640}
   m_Father: {fileID: 4063974709570264417}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 180}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &1569440056600670827
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -1624,7 +1624,7 @@ MonoBehaviour:
   partyHudTurnPortrait: {fileID: 503092623, guid: 8241ed81923d19947aa8a4425643688a, type: 3}
   parryUltimateGain: 15
   damageUltimateGain: 50
-  baseAtk: 15
+  baseAtk: 150
   baseDef: 5
   baseCrit: 10
   baseCritDamage: 150
@@ -1632,9 +1632,9 @@ MonoBehaviour:
   defaultAttack: {fileID: 11400000, guid: fcb0cc7c27be4104a89d579861c52117, type: 2}
   characterSkills:
   - {fileID: 11400000, guid: 1eb254b917932f24ab84165e603ea5ef, type: 2}
-  - {fileID: 11400000, guid: 865de14f15018634e8aca8aa0f8cb3a6, type: 2}
-  - {fileID: 11400000, guid: 8041ddf7f5ced7248977ebb746a1a1f5, type: 2}
-  - {fileID: 11400000, guid: 48e3c62249d02184a81587ede334f145, type: 2}
+  - {fileID: 11400000, guid: 6de9ab5777c744e44b2765fd39d350a3, type: 2}
+  - {fileID: 11400000, guid: 2f2152f98c14c3d46a4e74b095d13736, type: 2}
+  - {fileID: 11400000, guid: 1eb254b917932f24ab84165e603ea5ef, type: 2}
   - {fileID: 11400000, guid: 0d35c71ebbc4e1444a787ed6badd0fdd, type: 2}
   battleEntryWalkStateName: Base Layer.BattleEntryWalk
   battleEntryAnimationSpeed: 1

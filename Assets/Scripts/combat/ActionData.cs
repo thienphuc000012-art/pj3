@@ -5,7 +5,8 @@ public class ActionData : ScriptableObject
 {
     public string actionName;
 
-    // --- THÊM MỚI: Biến lưu mô tả của kỹ năng/Vật phẩm ---
+    // Kept for item copy and compatibility with existing assets. Skills generate their own text.
+    [Tooltip("Manual description for Items. Attack/Skill descriptions are generated from the combat settings below.")]
     [TextArea(2, 4)]
     public string description;
 

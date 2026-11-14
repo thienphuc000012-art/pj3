@@ -36,6 +36,9 @@ public static class VietnameseGameUIText
     }
 
     public static string ActionDescription(ActionData action)
+        => CombatActionDescription.Build(action, GameLocalization.CurrentLanguage);
+
+    public static string ManualActionDescription(ActionData action)
     {
         if (action == null || string.IsNullOrWhiteSpace(action.description)) return "Chưa có mô tả kỹ năng.";
         string value = action.description.Trim();

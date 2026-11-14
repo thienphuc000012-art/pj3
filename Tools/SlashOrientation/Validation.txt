@@ -1,0 +1,4 @@
+PASS: 104 native particle mesh bakes across 26 slash prefabs in both requested packages, with horizontal/vertical/diagonal/yawed sword frames; visible slash chosen over distortion, authored 90/45-degree particle rotations compensated.
+PASS: current animation-event blade pose and latest distinct motion sample; translated/rotated blades; inactive/stowed trail rejected.
+PASS: actual CombatManager spawns and local Euler corrections; in-flight non-projectile slash keeps the release sword plane rather than world-up.
+Edit Mode only. No live scene, package prefab, ActionData or player save writes.

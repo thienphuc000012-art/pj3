@@ -17,7 +17,7 @@ public static class CombatSkillUISetup
 {
     const string ScenePath = "Assets/Scenes/combattest.unity";
     const string ResultPath = "Library/CombatValidation/CombatSkillUISetup.result.txt";
-    const string PreviewPath = "Tools/CanvasUI/SkillListPreview.png";
+    static string PreviewPath = "Tools/CanvasUI/SkillListPreview.png";
     const string RequestPath = "Library/CombatValidation/CombatSkillUISetup.request";
     const string ValidationRequestPath = "Library/CombatValidation/CombatSkillUIValidate.request";
     const string MigrationRequestPath = "Library/CombatValidation/CombatSkillUIPulseMigration.request";
@@ -187,8 +187,19 @@ public static class CombatSkillUISetup
         }
     }
 
+    static void FinishOpeningPreview(AdvancedUIManager manager)
+    {
+        // Edit Mode does not advance the normal skill-panel entrance coroutine.
+        var transition = manager.skillPanelTransition;
+        if (transition == null || !transition.IsTransitioning) return;
+        typeof(SkillPanelTransitionController).GetMethod("SampleOpen", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(transition, new object[] { 100f });
+        typeof(SkillPanelTransitionController).GetMethod("FinishOpen", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(transition, null);
+    }
+
     static void ValidateAndRender(AdvancedUIManager source)
     {
+        // Keep previews openable while a later validation renders a new image.
+        PreviewPath = "Tools/SkillDescriptions/CombatSkillList-" + DateTime.Now.ToString("yyyyMMdd-HHmmss-fff") + ".png";
         Scene preview = EditorSceneManager.NewPreviewScene();
         var actions = new List<ActionData>();
         var oldEventSystem = EventSystem.current;
@@ -264,6 +275,7 @@ public static class CombatSkillUISetup
                 actions.Add(action);
             }
             manager.PopulateSkillSubMenu(new List<ActionData> { actions[0], actions[4], actions[1], null, actions[2], actions[3], actions[5] });
+            FinishOpeningPreview(manager);
             var rows = ActiveRows(view);
             Check(rows.Length == 5, "Skills must remain fixed at four normal slots and one ultimate.");
             var expected = new[] { actions[0], actions[1], actions[2], actions[3], actions[4] };
@@ -274,13 +286,13 @@ public static class CombatSkillUISetup
             var pointer = new PointerEventData(events);
             ExecuteEvents.Execute(rows[1].gameObject, pointer, ExecuteEvents.pointerEnterHandler);
             Check(rows[1].IsFocused && !rows[0].IsFocused, "Pointer hover must focus exactly one row.");
-            Check(view.descriptionText.text == actions[1].description, "Pointer hover must update the shared description.");
+            Check(view.descriptionText.text == VietnameseGameUIText.ActionDescription(actions[1]), "Pointer hover must update the generated shared description.");
             ExecuteEvents.Execute(rows[1].gameObject, pointer, ExecuteEvents.pointerExitHandler);
             Check(!rows[1].IsFocused, "Pointer exit must clear mouse-only focus.");
             var nav = new AxisEventData(events) { moveDir = MoveDirection.Down };
             events.SetSelectedGameObject(rows[0].gameObject, nav);
             ExecuteEvents.Execute(rows[0].gameObject, nav, ExecuteEvents.selectHandler);
-            Check(rows[0].IsFocused && view.descriptionText.text == actions[0].description, "Navigation selection must update the shared description.");
+            Check(rows[0].IsFocused && view.descriptionText.text == VietnameseGameUIText.ActionDescription(actions[0]), "Navigation selection must update the generated shared description.");
             for (int i = 0; i < 20; i++) view.Focus(rows[i % rows.Length]);
             Check(rows.Count(row => row.IsFocused) == 1, "Rapid focus changes must not leave multiple backgrounds active.");
             view.Focus(rows[0]);
@@ -320,6 +332,7 @@ public static class CombatSkillUISetup
                 "Closing and externally reopening the submenu must not revive the old description.");
             manager.PopulateSkillSubMenu(actions);
             rows = ActiveRows(view);
+            FinishOpeningPreview(manager);
             view.Focus(rows[0]);
             rows[0].ApplyMotion(.25f);
             var cameraObject = new GameObject("Skill UI Preview Camera", typeof(Camera));

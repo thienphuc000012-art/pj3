@@ -183,6 +183,10 @@ public class AdvancedUIManager : MonoBehaviour
     public Color turnPortraitFrameColor = new Color(.92f, .92f, .92f, 1f);
     public Vector2 turnPortraitFramePadding = new Vector2(3f, 3f);
     [Min(.5f)] public float turnPortraitFrameThickness = 2f;
+    [Tooltip("Màu nền phía sau ảnh chân dung trong TurnOrderBar.")]
+    public Color turnPortraitBackgroundColor = Color.black;
+    [Tooltip("Lật ngang ảnh nhân vật, giữ nguyên khung và bố cục thanh lượt.")]
+    public bool turnPortraitMirrorFlip = true;
     private List<GameObject> activePortraits = new List<GameObject>();
 
     [Header("Boss / Enemy HP Bar (Top Screen)")]
@@ -383,23 +387,8 @@ public class AdvancedUIManager : MonoBehaviour
     {
         if (activeDebuff == null || activeDebuff.settings == null) return;
         var settings = activeDebuff.settings;
-        string name;
-        string detail;
-        switch (settings.type)
-        {
-            case ActionData.DebuffType.Burn:
-                name = "Thiêu đốt";
-                detail = $"Trừ {settings.burnDamage} máu cuối lượt và giảm sức tấn công {settings.burnAttackReductionPercent:0.#}%. Còn {activeDebuff.remainingTurns} lượt.";
-                break;
-            case ActionData.DebuffType.Paralysis:
-                name = "Tê liệt";
-                detail = $"Có {settings.paralysisSkipChance:0.#}% khả năng mất lượt. Còn {activeDebuff.remainingTurns} lượt.";
-                break;
-            default:
-                name = "Nhiễm độc";
-                detail = $"Mất {settings.poisonMaxHpPercent:0.#}% máu tối đa cuối lượt. Còn {activeDebuff.remainingTurns} lượt.";
-                break;
-        }
+        string name = VietnameseGameUIText.StatusName(settings.type);
+        string detail = CombatActionDescription.DebuffBody(settings, GameLanguage.Vietnamese) + $" Còn {activeDebuff.remainingTurns} lượt.";
         BindStatusTooltip(icon, name, detail);
     }
 
@@ -864,20 +853,45 @@ public class AdvancedUIManager : MonoBehaviour
             GameObject portrait = Instantiate(portraitPrefab, turnOrderContainer);
             activePortraits.Add(portrait);
 
-            Image imgComponent = portrait.GetComponent<Image>();
-            if (imgComponent != null && unit.unitPortrait != null)
-            {
-                imgComponent.sprite = unit.unitPortrait;
-                imgComponent.preserveAspect = true;
-            }
-
-            if (!unit.isPlayer && imgComponent != null) imgComponent.color = Color.red;
+            ConfigureTurnPortrait(portrait.transform as RectTransform, unit);
             ApplyTurnPortraitFrame(portrait.transform as RectTransform);
 
             if (i == 0) portrait.transform.localScale = Vector3.one * turnPortraitActiveScale;
             else portrait.transform.localScale = Vector3.one;
         }
         RefreshTurnOrderLayout();
+    }
+
+    private void ConfigureTurnPortrait(RectTransform portrait, BattleUnit unit)
+    {
+        if (portrait == null) return;
+        var background = portrait.GetComponent<Image>();
+        Sprite sourceSprite = unit.unitPortrait != null ? unit.unitPortrait : background != null ? background.sprite : null;
+        Color sourceColor = !unit.isPlayer ? Color.red : background != null ? background.color : Color.white;
+        Material sourceMaterial = background != null ? background.material : null;
+        if (background == null) background = portrait.gameObject.AddComponent<Image>();
+        background.sprite = null;
+        background.type = Image.Type.Simple;
+        background.material = null;
+        background.color = turnPortraitBackgroundColor;
+        background.raycastTarget = false;
+        background.preserveAspect = false;
+        if (portrait.GetComponent<PreserveAuthoredUI>() == null) portrait.gameObject.AddComponent<PreserveAuthoredUI>();
+
+        // Mirror only the artwork. Mirroring the layout root also flips its frame and active-turn scale.
+        var artwork = new GameObject("Portrait", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        artwork.layer = portrait.gameObject.layer;
+        artwork.transform.SetParent(portrait, false);
+        var image = artwork.GetComponent<Image>();
+        image.sprite = sourceSprite;
+        image.color = sourceColor;
+        image.material = sourceMaterial;
+        image.preserveAspect = true;
+        image.raycastTarget = false;
+        var rect = image.rectTransform;
+        rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
+        rect.offsetMin = rect.offsetMax = Vector2.zero;
+        rect.localScale = new Vector3(turnPortraitMirrorFlip ? -1f : 1f, 1f, 1f);
     }
 
     public void RefreshTurnOrderLayout()

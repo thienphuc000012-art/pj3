@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -2996,18 +2996,6 @@ public class CombatManager : MonoBehaviour
             slashNormal = -slashNormal;
 
         Vector3 releaseBladeAxis = bladeAxis;
-        if (travelingSlash && !packageProjectile)
-        {
-            // Keep the slash visible as it travels forward: its long local
-            // mesh axis follows the flight path and its second axis stays upright.
-            swingDirection = towardTarget;
-            bladeAxis = Vector3.ProjectOnPlane(Vector3.up, swingDirection);
-            if (bladeAxis.sqrMagnitude < 0.0004f)
-                bladeAxis = Vector3.ProjectOnPlane(attacker.transform.right, swingDirection);
-            bladeAxis.Normalize();
-            slashNormal = Vector3.Cross(swingDirection, bladeAxis).normalized;
-        }
-
         Quaternion rotation = packageProjectile
             ? CombatSwordSlashProjectile.FlightRotation(towardTarget, releaseBladeAxis, action.swordSlashVfxLocalEuler)
             : GetSwordSlashRotation(
@@ -3070,8 +3058,7 @@ public class CombatManager : MonoBehaviour
                 targetPosition,
                 Mathf.Max(0.1f, action.swordSlashTravelSpeed),
                 action.projectileTargetOffset,
-                action.swordSlashVfxLifetime,
-                action.swordSlashVfxLocalEuler));
+                action.swordSlashVfxLifetime));
         }
         else
         {
@@ -3085,101 +3072,7 @@ public class CombatManager : MonoBehaviour
         Vector3 worldShortAxis,
         Vector3 worldNormal)
     {
-        worldLongAxis.Normalize();
-        worldShortAxis = Vector3.ProjectOnPlane(worldShortAxis, worldLongAxis).normalized;
-        if (worldShortAxis.sqrMagnitude < 0.0004f)
-            worldShortAxis = Vector3.ProjectOnPlane(Vector3.up, worldLongAxis).normalized;
-        Vector3 calculatedNormal = Vector3.Cross(worldLongAxis, worldShortAxis).normalized;
-        if (worldNormal.sqrMagnitude > 0.0004f && Vector3.Dot(calculatedNormal, worldNormal) < 0f)
-            worldShortAxis = -worldShortAxis;
-        worldNormal = Vector3.Cross(worldLongAxis, worldShortAxis).normalized;
-        if (worldNormal.sqrMagnitude < 0.0004f)
-            return Quaternion.LookRotation(worldLongAxis, Vector3.up);
-
-        Quaternion worldFrame = Quaternion.LookRotation(worldNormal, worldShortAxis);
-        if (slashPrefab == null)
-            return worldFrame;
-
-        Mesh bestMesh = null;
-        Transform bestMeshTransform = null;
-        float bestPlanarArea = 0f;
-        foreach (ParticleSystemRenderer renderer in slashPrefab.GetComponentsInChildren<ParticleSystemRenderer>(true))
-        {
-            if (renderer.renderMode != ParticleSystemRenderMode.Mesh || renderer.mesh == null)
-                continue;
-
-            Vector3 extents = renderer.mesh.bounds.extents;
-            float[] dimensions = { extents.x, extents.y, extents.z };
-            System.Array.Sort(dimensions);
-            float area = dimensions[1] * dimensions[2];
-            if (area > bestPlanarArea)
-            {
-                bestPlanarArea = area;
-                bestMesh = renderer.mesh;
-                bestMeshTransform = renderer.transform;
-            }
-        }
-
-        // The projectile slash is supplied as an FBX mesh rather than a
-        // ParticleSystem prefab, so inspect MeshFilters too.
-        foreach (MeshFilter filter in slashPrefab.GetComponentsInChildren<MeshFilter>(true))
-        {
-            if (filter.sharedMesh == null) continue;
-
-            Vector3 extents = filter.sharedMesh.bounds.extents;
-            float[] dimensions = { extents.x, extents.y, extents.z };
-            System.Array.Sort(dimensions);
-            float area = dimensions[1] * dimensions[2];
-            if (area > bestPlanarArea)
-            {
-                bestPlanarArea = area;
-                bestMesh = filter.sharedMesh;
-                bestMeshTransform = filter.transform;
-            }
-        }
-
-        if (bestMesh == null || bestMeshTransform == null || bestPlanarArea < 0.0001f)
-            return worldFrame;
-
-        // The package contains slash meshes whose flat plane is not always XY.
-        // Read the actual mesh bounds, then rotate its longest axis along the
-        // sword sweep (or projectile path) and its plane normal into the hit plane.
-        Vector3 meshExtents = bestMesh.bounds.extents;
-        int normalAxis = meshExtents.x <= meshExtents.y && meshExtents.x <= meshExtents.z ? 0 :
-            meshExtents.y <= meshExtents.z ? 1 : 2;
-        int longAxis = -1;
-        float longestExtent = -1f;
-        for (int axis = 0; axis < 3; axis++)
-        {
-            if (axis == normalAxis) continue;
-            float extent = axis == 0 ? meshExtents.x : axis == 1 ? meshExtents.y : meshExtents.z;
-            if (extent > longestExtent)
-            {
-                longestExtent = extent;
-                longAxis = axis;
-            }
-        }
-
-        Vector3 meshNormal = AxisVector(normalAxis);
-        Vector3 meshLongAxis = AxisVector(longAxis);
-        Vector3 meshShortAxis = Vector3.Cross(meshNormal, meshLongAxis).normalized;
-        if (meshShortAxis.sqrMagnitude < 0.0004f)
-            return worldFrame;
-
-        Quaternion meshFrame = Quaternion.LookRotation(meshNormal, meshShortAxis);
-        Quaternion rendererRelativeRotation =
-            Quaternion.Inverse(slashPrefab.transform.rotation) * bestMeshTransform.rotation;
-        return worldFrame * Quaternion.Inverse(meshFrame) * Quaternion.Inverse(rendererRelativeRotation);
-    }
-
-    private static Vector3 AxisVector(int axis)
-    {
-        switch (axis)
-        {
-            case 0: return Vector3.right;
-            case 1: return Vector3.up;
-            default: return Vector3.forward;
-        }
+        return CombatSlashOrientation.Rotation(slashPrefab, worldLongAxis, worldShortAxis, worldNormal);
     }
 
     private IEnumerator MoveSwordSlashVFXRoutine(
@@ -3188,8 +3081,7 @@ public class CombatManager : MonoBehaviour
         Vector3 targetPosition,
         float speed,
         Vector3 targetOffset,
-        float lifetime,
-        Vector3 localEulerCorrection)
+        float lifetime)
     {
         if (slashVfx == null) yield break;
 
@@ -3208,21 +3100,8 @@ public class CombatManager : MonoBehaviour
                 targetPosition,
                 speed * Time.deltaTime);
             slashVfx.transform.position = nextPosition;
-            direction = nextPosition - currentPosition;
-
-            if (direction.sqrMagnitude > 0.0001f)
-            {
-                Vector3 longAxis = direction.normalized;
-                Vector3 shortAxis = Vector3.ProjectOnPlane(Vector3.up, longAxis);
-                if (shortAxis.sqrMagnitude < 0.0004f)
-                    shortAxis = Vector3.ProjectOnPlane(Vector3.right, longAxis);
-                Vector3 normal = Vector3.Cross(longAxis, shortAxis).normalized;
-                slashVfx.transform.rotation = GetSwordSlashRotation(
-                    slashVfx,
-                    longAxis,
-                    shortAxis,
-                    normal) * Quaternion.Euler(localEulerCorrection);
-            }
+            // Preserve the release sword plane and artist correction while translating.
+            // Rebuilding a world-up frame here would erase diagonal/horizontal sword cuts.
 
             if ((targetPosition - nextPosition).sqrMagnitude <= 0.01f) break;
             yield return null;

@@ -159,7 +159,8 @@ public class PartyMemberProgress
         if (previous >= 0 && previous != slot) equippedSkills[previous] = equippedSkills[slot];
         equippedSkills[slot] = id ?? ""; loadoutInitialized = true; return true;
     }
-    public int RequiredXP => 100 + (level - 1) * 50;
+    public static int RequiredXPForLevel(int value) => 100 + (Mathf.Clamp(value, 1, 100) - 1) * 50;
+    public int RequiredXP => RequiredXPForLevel(level);
     public void GainXP(int amount)
     {
         xp += Mathf.Max(0, amount);
