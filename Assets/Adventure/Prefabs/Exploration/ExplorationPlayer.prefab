@@ -3845,6 +3845,7 @@ MonoBehaviour:
   isClimbing: 0
   isHopping: 0
   canGrabLedge: 0
+  climbKey: 32
   rayAmount: 10
   rayLength: 0.5
   rayOffset: 0.15
@@ -3856,10 +3857,12 @@ MonoBehaviour:
   rayZHandCorrection: 0
   yDropToHangPos: -0.1
   zDropToHangPos: 0.347
-  upHopUpPos: 0.198
+  upHopUpPos: -0.0434
   forwardHopUpPos: -0.05
-  upHopDownPos: 0.198
+  upHopDownPos: -0.0404
   forwardHopDownPos: -0.05
+  hopDownMaxDrop: 2.5
+  hopDownProbeStep: 0.1
   rayHopOffset: 0.1
   rayHopLength: 1
   hopRayAmount: 7
@@ -3904,6 +3907,13 @@ MonoBehaviour:
   leftBtn: 0
   rightBtn: 0
   ledgeMoveSpeed: 0.5
+  keepFeetOutsideWall: 1
+  footWallPadding: 0.06
+  maxFootWallCorrection: 0.45
+  keepHandsOutsideWall: 1
+  handWallPadding: 0.025
+  maxHandWallCorrection: 0.3
+  poseCorrectionSmoothTime: 0.08
 --- !u!114 &5279769184190703737
 MonoBehaviour:
   m_ObjectHideFlags: 0

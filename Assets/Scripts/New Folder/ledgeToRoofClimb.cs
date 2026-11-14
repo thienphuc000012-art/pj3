@@ -1,10 +1,9 @@
-﻿using System.Collections;
+using System.Collections;
 using UnityEngine;
 
 public class LedgeToRoofClimb : MonoBehaviour
 {
     PlayerClimb playerClimb;
-    RoofLedgeDetection roofLedgeDetection;
 
     public LayerMask ledgeGroundLayer;
 
@@ -13,6 +12,11 @@ public class LedgeToRoofClimb : MonoBehaviour
     public float roofInset = 0.45f;         // Đưa ray vào BÊN TRONG mái, tránh bắn đúng mép collider.
     public float roofProbeHeight = 0.8f;
     public float roofProbeDistance = 1.5f;
+    [Min(0.1f)] public float maximumRoofRise = 1.5f;
+    [Min(0f)] public float roofLandingSearchDistance = 0.6f;
+    [Range(1, 8)] public int roofLandingSamples = 4;
+    [Tooltip("Include surfaces the PlayerScript can walk on (for example Obstacle platforms), in addition to Ledge Ground Layer.")]
+    public bool includePlayerGroundLayers = true;
 
     [Header("Roof Climb Match Target")]
     [Range(0f, 1f)] public float matchStartTime = 0.15f;
@@ -34,121 +38,18 @@ public class LedgeToRoofClimb : MonoBehaviour
     Quaternion roofTargetRotation;
     bool hasRoofRootTarget;
 
-    private void Start()
+    private void Awake()
     {
         playerClimb = GetComponent<PlayerClimb>();
-        roofLedgeDetection = GetComponent<RoofLedgeDetection>();
     }
 
     private void Update()
     {
         if (CampaignSession.InputBlocked) return;
-        if (playerClimb.isClimbing &&
-            !playerClimb.isHopping &&
-            !playerClimb.IsEnteringLedge &&
-            !roofLedgeDetection.isDropingFromRoof &&
-            !isClimbingToRoof)
+        if (!isClimbingToRoof)
         {
-            // FIX QUAN TRỌNG:
-            // Không dùng shimmyController.ledgeHit hoặc transform.forward làm nguồn chuẩn.
-            // droptofreehang có Root Motion nên cả hai có thể chưa cập nhật đồng bộ trong cùng frame.
-            if (!playerClimb.HasStableLedge)
-            {
-                foundLedgeToRoofClimb = false;
-                hasRoofRootTarget = false;
-            }
-            else
-            {
-                Vector3 ledgeForward = playerClimb.StableLedgeForward;
-                ledgeForward.y = 0f;
-
-                if (ledgeForward.sqrMagnitude < 0.0001f)
-                {
-                    foundLedgeToRoofClimb = false;
-                    hasRoofRootTarget = false;
-                    return;
-                }
-
-                ledgeForward.Normalize();
-                Vector3 stableTop = playerClimb.StableLedgeTopPoint;
-
-                // Origin XZ khóa theo mép gờ; Y vẫn theo chiều cao nhân vật đang treo.
-                // Nhờ vậy Root Motion của droptofreehang không làm tia đỏ trượt ngang khỏi gờ.
-                Vector3 rayStartForward = new Vector3(
-                    stableTop.x,
-                    transform.position.y + rayHeight,
-                    stableTop.z
-                ) - ledgeForward * 0.15f;
-
-                Debug.DrawRay(rayStartForward, ledgeForward, Color.red);
-
-                // Có vật cản phía trong mái/ở trước đầu thì không cho leo.
-                if (Physics.Raycast(
-                    rayStartForward,
-                    ledgeForward,
-                    1f,
-                    ledgeGroundLayer,
-                    QueryTriggerInteraction.Ignore))
-                {
-                    foundLedgeToRoofClimb = false;
-                    hasRoofRootTarget = false;
-                }
-                else
-                {
-                    // Tia xanh xuất phát từ STABLE TOP POINT và hướng vào mái bằng STABLE NORMAL.
-                    // Không còn phụ thuộc model bị lệch sau droptofreehang.
-                    Vector3 rayStartDown =
-                        stableTop +
-                        ledgeForward * roofInset +
-                        Vector3.up * roofProbeHeight;
-
-                    Debug.DrawRay(rayStartDown, Vector3.down * roofProbeDistance, Color.blue);
-
-                    if (Physics.Raycast(
-                        rayStartDown,
-                        Vector3.down,
-                        out ledgeToClimbHit,
-                        roofProbeDistance,
-                        ledgeGroundLayer,
-                        QueryTriggerInteraction.Ignore))
-                    {
-                        foundLedgeToRoofClimb = true;
-
-                        roofRootTarget = GetStandingRootPosition(ledgeToClimbHit.point);
-                        roofTargetRotation = Quaternion.LookRotation(ledgeForward);
-                        hasRoofRootTarget = true;
-
-                        if (Input.GetKeyDown(KeyCode.C) && !Input.GetKey(KeyCode.S))
-                        {
-                            isClimbingToRoof = true;
-
-                            playerClimb.BeginRoofClimbInputLock();
-                            playerClimb.animator.SetFloat("movementvalue", 0f);
-
-                            if (climbPointObjPrefab != null)
-                            {
-                                climbPointObj = Instantiate(
-                                    climbPointObjPrefab,
-                                    roofRootTarget,
-                                    roofTargetRotation
-                                );
-                            }
-
-                            StartCoroutine(LedgeToClimb());
-                        }
-                    }
-                    else
-                    {
-                        foundLedgeToRoofClimb = false;
-                        hasRoofRootTarget = false;
-                    }
-                }
-            }
-        }
-        else if (!playerClimb.isClimbing || playerClimb.IsEnteringLedge || roofLedgeDetection.isDropingFromRoof)
-        {
-            foundLedgeToRoofClimb = false;
-            hasRoofRootTarget = false;
+            if (playerClimb.CanStartLedgeAction) RefreshRoofTarget();
+            else { foundLedgeToRoofClimb = false; hasRoofRootTarget = false; }
         }
 
         // FIX CHÍNH:
@@ -159,6 +60,7 @@ public class LedgeToRoofClimb : MonoBehaviour
         if (hasRoofRootTarget &&
             state.IsName("climbuproof") &&
             state.normalizedTime < matchEndTime &&
+            !playerClimb.animator.isMatchingTarget &&
             !playerClimb.animator.IsInTransition(0))
         {
             playerClimb.animator.MatchTarget(
@@ -170,6 +72,59 @@ public class LedgeToRoofClimb : MonoBehaviour
                 matchEndTime
             );
         }
+    }
+
+    /// <summary>Uses the committed ledge and walkable layers; does not depend on root-motion height or input order.</summary>
+    public bool RefreshRoofTarget()
+    {
+        foundLedgeToRoofClimb = false; hasRoofRootTarget = false;
+        if (playerClimb == null) playerClimb = GetComponent<PlayerClimb>();
+        if (playerClimb == null || !playerClimb.HasStableLedge) return false;
+        Vector3 forward = playerClimb.StableLedgeForward.normalized;
+        Vector3 top = playerClimb.StableLedgeTopPoint;
+        int mask = ledgeGroundLayer;
+        var movement = GetComponent<PlayerScript>();
+        if (includePlayerGroundLayers && movement != null) mask |= movement.surfaceLayer;
+        var cc = GetComponent<CharacterController>();
+        float height = Mathf.Max(roofProbeHeight, maximumRoofRise + .05f);
+        int count = Mathf.Max(1, roofLandingSamples);
+        for (int i = 0; i < count; i++)
+        {
+            float inset = roofInset + (count <= 1 ? 0 : roofLandingSearchDistance * i / (count - 1));
+            Vector3 origin = top + forward * inset + Vector3.up * height;
+            Debug.DrawRay(origin, Vector3.down * (height + Mathf.Max(.1f, roofProbeDistance - roofProbeHeight)), Color.blue);
+            if (!Physics.Raycast(origin, Vector3.down, out var ground, height + Mathf.Max(.1f, roofProbeDistance - roofProbeHeight), mask, QueryTriggerInteraction.Ignore)) continue;
+            float rise = ground.point.y - top.y;
+            if (ground.normal.y < .6f || rise < -.15f || rise > maximumRoofRise) continue;
+            Vector3 target = GetStandingRootPosition(ground.point);
+            // Check above the proposed landing surface, never from transform.position.y during a hop.
+            Vector3 clearanceOrigin = new Vector3(top.x, ground.point.y + Mathf.Max(.1f, rayHeight - playerClimb.rayHeight), top.z) - forward * .15f;
+            if (Physics.Raycast(clearanceOrigin, forward, inset + .15f, mask, QueryTriggerInteraction.Ignore)) continue;
+            if (cc != null)
+            {
+                float radius = cc.radius * Mathf.Max(Mathf.Abs(transform.lossyScale.x), Mathf.Abs(transform.lossyScale.z)) * .9f;
+                float bodyHeight = Mathf.Max(radius * 2, cc.height * Mathf.Abs(transform.lossyScale.y));
+                Vector3 center = target + transform.rotation * Vector3.Scale(cc.center, transform.lossyScale);
+                Vector3 bottom = center - Vector3.up * (bodyHeight * .5f - radius);
+                Vector3 upper = center + Vector3.up * (bodyHeight * .5f - radius);
+                if (Physics.CheckCapsule(bottom, upper, radius, mask, QueryTriggerInteraction.Ignore)) continue;
+            }
+            ledgeToClimbHit = ground; roofRootTarget = target; roofTargetRotation = Quaternion.LookRotation(forward);
+            foundLedgeToRoofClimb = true; hasRoofRootTarget = true;
+            return true;
+        }
+        return false;
+    }
+
+    public bool TryBeginRoofClimb()
+    {
+        if (playerClimb == null || !playerClimb.CanStartLedgeAction || !RefreshRoofTarget()) return false;
+        isClimbingToRoof = true;
+        playerClimb.BeginRoofClimbInputLock();
+        playerClimb.animator.SetFloat("movementvalue", 0f);
+        if (climbPointObjPrefab != null) climbPointObj = Instantiate(climbPointObjPrefab, roofRootTarget, roofTargetRotation);
+        StartCoroutine(LedgeToClimb());
+        return true;
     }
 
     IEnumerator LedgeToClimb()
@@ -188,10 +143,9 @@ public class LedgeToRoofClimb : MonoBehaviour
         while (playerClimb.animator.IsInTransition(0))
             yield return null;
 
-        while (
-            playerClimb.animator.GetCurrentAnimatorStateInfo(0).IsName("climbuproof") &&
-            playerClimb.animator.GetCurrentAnimatorStateInfo(0).normalizedTime < 0.98f)
+        while (playerClimb.animator.GetCurrentAnimatorStateInfo(0).IsName("climbuproof") || playerClimb.animator.IsInTransition(0))
         {
+            if (!playerClimb.animator.IsInTransition(0) && playerClimb.animator.GetCurrentAnimatorStateInfo(0).normalizedTime >= 1f) break;
             yield return null;
         }
 

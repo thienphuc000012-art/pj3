@@ -27,6 +27,7 @@ public class PlayerScript : MonoBehaviour
     // Root Motion được xử lý thủ công trong OnAnimatorMove.
     // Điều này tránh việc bật/tắt Animator.applyRootMotion ở runtime làm Animator bị re-initialize.
     private bool useClimbTopRootMotion;
+    private PlayerClimb ledgeClimb;
 
     [Header("Ladder Settings")]
     [SerializeField] private float ladderGrabDistance = 0.6f;
@@ -142,6 +143,7 @@ public class PlayerScript : MonoBehaviour
 
     private void Awake()
     {
+        ledgeClimb = GetComponent<PlayerClimb>();
         // MatchTarget yêu cầu Apply Root Motion phải được bật.
         // Giữ nó luôn ON và tự quyết định lúc nào áp delta trong OnAnimatorMove
         // để Animator không bị re-initialize giữa chừng.
@@ -163,6 +165,9 @@ public class PlayerScript : MonoBehaviour
         if (CampaignSession.InputBlocked) return;
         if (MapChunkStreamer.MovementBlocked) return;
         if (animator == null)
+            return;
+
+        if (ledgeClimb != null && ledgeClimb.UsesManualHangingMovement)
             return;
 
         // Bình thường movement do CharacterController xử lý nên bỏ root motion.

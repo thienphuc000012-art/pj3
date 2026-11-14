@@ -1,0 +1,153 @@
+PASS: continuous Grab/Hop recovery without completion teleport, hand/finger clearance during shimmy, continuous leg correction across Hop blends, Space input, full ledge route and roof exit. No Play Mode/campaign/saves.
+Hop Up hand offset = -0.0434 m: lowered by 0.2414 m from the previous 0.198 m setting.
+probe x=-0.08 1 rootHeight=1.15 stale=False -> HopUp climb2
+probe x=-0.08 1 rootHeight=1.15 stale=True -> HopUp climb2
+probe x=-0.08 1 rootHeight=1.45 stale=False -> HopUp climb2
+probe x=-0.08 1 rootHeight=1.45 stale=True -> HopUp climb2
+probe x=-0.08 1 rootHeight=1.8 stale=False -> HopUp climb2
+probe x=-0.08 1 rootHeight=1.8 stale=True -> HopUp climb2
+probe x=-0.08 2 rootHeight=1.15 stale=False -> HopUp climb3
+probe x=-0.08 2 rootHeight=1.15 stale=True -> HopUp climb3
+probe x=-0.08 2 rootHeight=1.45 stale=False -> HopUp climb3
+probe x=-0.08 2 rootHeight=1.45 stale=True -> HopUp climb3
+probe x=-0.08 2 rootHeight=1.8 stale=False -> HopUp climb3
+probe x=-0.08 2 rootHeight=1.8 stale=True -> HopUp climb3
+probe x=-0.08 3 rootHeight=1.15 stale=False -> HopUp climb4
+probe x=-0.08 3 rootHeight=1.15 stale=True -> HopUp climb4
+probe x=-0.08 3 rootHeight=1.45 stale=False -> HopUp climb4
+probe x=-0.08 3 rootHeight=1.45 stale=True -> HopUp climb4
+probe x=-0.08 3 rootHeight=1.8 stale=False -> HopUp climb4
+probe x=-0.08 3 rootHeight=1.8 stale=True -> HopUp climb4
+probe x=-0.08 4 rootHeight=1.15 stale=False -> HopUp climb5
+probe x=-0.08 4 rootHeight=1.15 stale=True -> HopUp climb5
+probe x=-0.08 4 rootHeight=1.45 stale=False -> HopUp climb5
+probe x=-0.08 4 rootHeight=1.45 stale=True -> HopUp climb5
+probe x=-0.08 4 rootHeight=1.8 stale=False -> HopUp climb5
+probe x=-0.08 4 rootHeight=1.8 stale=True -> HopUp climb5
+probe x=-0.08 5 rootHeight=1.15 stale=False -> HopUp climb6
+probe x=-0.08 5 rootHeight=1.15 stale=True -> HopUp climb6
+probe x=-0.08 5 rootHeight=1.45 stale=False -> HopUp climb6
+probe x=-0.08 5 rootHeight=1.45 stale=True -> HopUp climb6
+probe x=-0.08 5 rootHeight=1.8 stale=False -> HopUp climb6
+probe x=-0.08 5 rootHeight=1.8 stale=True -> HopUp climb6
+probe x=-0.08 6 rootHeight=1.15 stale=False -> ClimbToRoof 
+probe x=-0.08 6 rootHeight=1.15 stale=True -> ClimbToRoof 
+probe x=-0.08 6 rootHeight=1.45 stale=False -> ClimbToRoof 
+probe x=-0.08 6 rootHeight=1.45 stale=True -> ClimbToRoof 
+probe x=-0.08 6 rootHeight=1.8 stale=False -> ClimbToRoof 
+probe x=-0.08 6 rootHeight=1.8 stale=True -> ClimbToRoof 
+probe x=0 1 rootHeight=1.15 stale=False -> HopUp climb2
+probe x=0 1 rootHeight=1.15 stale=True -> HopUp climb2
+probe x=0 1 rootHeight=1.45 stale=False -> HopUp climb2
+probe x=0 1 rootHeight=1.45 stale=True -> HopUp climb2
+probe x=0 1 rootHeight=1.8 stale=False -> HopUp climb2
+probe x=0 1 rootHeight=1.8 stale=True -> HopUp climb2
+probe x=0 2 rootHeight=1.15 stale=False -> HopUp climb3
+probe x=0 2 rootHeight=1.15 stale=True -> HopUp climb3
+probe x=0 2 rootHeight=1.45 stale=False -> HopUp climb3
+probe x=0 2 rootHeight=1.45 stale=True -> HopUp climb3
+probe x=0 2 rootHeight=1.8 stale=False -> HopUp climb3
+probe x=0 2 rootHeight=1.8 stale=True -> HopUp climb3
+probe x=0 3 rootHeight=1.15 stale=False -> HopUp climb4
+probe x=0 3 rootHeight=1.15 stale=True -> HopUp climb4
+probe x=0 3 rootHeight=1.45 stale=False -> HopUp climb4
+probe x=0 3 rootHeight=1.45 stale=True -> HopUp climb4
+probe x=0 3 rootHeight=1.8 stale=False -> HopUp climb4
+probe x=0 3 rootHeight=1.8 stale=True -> HopUp climb4
+probe x=0 4 rootHeight=1.15 stale=False -> HopUp climb5
+probe x=0 4 rootHeight=1.15 stale=True -> HopUp climb5
+probe x=0 4 rootHeight=1.45 stale=False -> HopUp climb5
+probe x=0 4 rootHeight=1.45 stale=True -> HopUp climb5
+probe x=0 4 rootHeight=1.8 stale=False -> HopUp climb5
+probe x=0 4 rootHeight=1.8 stale=True -> HopUp climb5
+probe x=0 5 rootHeight=1.15 stale=False -> HopUp climb6
+probe x=0 5 rootHeight=1.15 stale=True -> HopUp climb6
+probe x=0 5 rootHeight=1.45 stale=False -> HopUp climb6
+probe x=0 5 rootHeight=1.45 stale=True -> HopUp climb6
+probe x=0 5 rootHeight=1.8 stale=False -> HopUp climb6
+probe x=0 5 rootHeight=1.8 stale=True -> HopUp climb6
+probe x=0 6 rootHeight=1.15 stale=False -> ClimbToRoof 
+probe x=0 6 rootHeight=1.15 stale=True -> ClimbToRoof 
+probe x=0 6 rootHeight=1.45 stale=False -> ClimbToRoof 
+probe x=0 6 rootHeight=1.45 stale=True -> ClimbToRoof 
+probe x=0 6 rootHeight=1.8 stale=False -> ClimbToRoof 
+probe x=0 6 rootHeight=1.8 stale=True -> ClimbToRoof 
+probe x=0.08 1 rootHeight=1.15 stale=False -> HopUp climb2
+probe x=0.08 1 rootHeight=1.15 stale=True -> HopUp climb2
+probe x=0.08 1 rootHeight=1.45 stale=False -> HopUp climb2
+probe x=0.08 1 rootHeight=1.45 stale=True -> HopUp climb2
+probe x=0.08 1 rootHeight=1.8 stale=False -> HopUp climb2
+probe x=0.08 1 rootHeight=1.8 stale=True -> HopUp climb2
+probe x=0.08 2 rootHeight=1.15 stale=False -> HopUp climb3
+probe x=0.08 2 rootHeight=1.15 stale=True -> HopUp climb3
+probe x=0.08 2 rootHeight=1.45 stale=False -> HopUp climb3
+probe x=0.08 2 rootHeight=1.45 stale=True -> HopUp climb3
+probe x=0.08 2 rootHeight=1.8 stale=False -> HopUp climb3
+probe x=0.08 2 rootHeight=1.8 stale=True -> HopUp climb3
+probe x=0.08 3 rootHeight=1.15 stale=False -> HopUp climb4
+probe x=0.08 3 rootHeight=1.15 stale=True -> HopUp climb4
+probe x=0.08 3 rootHeight=1.45 stale=False -> HopUp climb4
+probe x=0.08 3 rootHeight=1.45 stale=True -> HopUp climb4
+probe x=0.08 3 rootHeight=1.8 stale=False -> HopUp climb4
+probe x=0.08 3 rootHeight=1.8 stale=True -> HopUp climb4
+probe x=0.08 4 rootHeight=1.15 stale=False -> HopUp climb5
+probe x=0.08 4 rootHeight=1.15 stale=True -> HopUp climb5
+probe x=0.08 4 rootHeight=1.45 stale=False -> HopUp climb5
+probe x=0.08 4 rootHeight=1.45 stale=True -> HopUp climb5
+probe x=0.08 4 rootHeight=1.8 stale=False -> HopUp climb5
+probe x=0.08 4 rootHeight=1.8 stale=True -> HopUp climb5
+probe x=0.08 5 rootHeight=1.15 stale=False -> HopUp climb6
+probe x=0.08 5 rootHeight=1.15 stale=True -> HopUp climb6
+probe x=0.08 5 rootHeight=1.45 stale=False -> HopUp climb6
+probe x=0.08 5 rootHeight=1.45 stale=True -> HopUp climb6
+probe x=0.08 5 rootHeight=1.8 stale=False -> HopUp climb6
+probe x=0.08 5 rootHeight=1.8 stale=True -> HopUp climb6
+probe x=0.08 6 rootHeight=1.15 stale=False -> ClimbToRoof 
+probe x=0.08 6 rootHeight=1.15 stale=True -> ClimbToRoof 
+probe x=0.08 6 rootHeight=1.45 stale=False -> ClimbToRoof 
+probe x=0.08 6 rootHeight=1.45 stale=True -> ClimbToRoof 
+probe x=0.08 6 rootHeight=1.8 stale=False -> ClimbToRoof 
+probe x=0.08 6 rootHeight=1.8 stale=True -> ClimbToRoof 
+idle to hang: no completion teleport; peak recovery=0.0103; peak additional leg step=0.0297 m/frame.
+climb1: left/right travel, synchronized ledge anchor, root-height independence, edge stop/reverse and action locks passed.
+Animated hop 1 -> climb2: no completion snap; peak recovery correction=0.0096 m/frame.
+  Peak additional leg-pose step=0.0296 m/frame (120 FPS).
+  Additional leg travel over source animation during recovery=0.0136 m/frame.
+climb2: left/right travel, synchronized ledge anchor, root-height independence, edge stop/reverse and action locks passed.
+Animated hop 2 -> climb3: no completion snap; peak recovery correction=0.0096 m/frame.
+  Peak additional leg-pose step=0.0327 m/frame (120 FPS).
+  Additional leg travel over source animation during recovery=0.0136 m/frame.
+climb3: left/right travel, synchronized ledge anchor, root-height independence, edge stop/reverse and action locks passed.
+Animated hop 3 -> climb4: no completion snap; peak recovery correction=0.0096 m/frame.
+  Peak additional leg-pose step=0.0315 m/frame (120 FPS).
+  Additional leg travel over source animation during recovery=0.0136 m/frame.
+climb4: left/right travel, synchronized ledge anchor, root-height independence, edge stop/reverse and action locks passed.
+Animated hop 4 -> climb5: no completion snap; peak recovery correction=0.0096 m/frame.
+  Peak additional leg-pose step=0.0326 m/frame (120 FPS).
+  Additional leg travel over source animation during recovery=0.0084 m/frame.
+climb5: left/right travel, synchronized ledge anchor, root-height independence, edge stop/reverse and action locks passed.
+Animated hop 5 -> climb6: no completion snap; peak recovery correction=0.0096 m/frame.
+  Peak additional leg-pose step=0.0322 m/frame (120 FPS).
+  Additional leg travel over source animation during recovery=0.0135 m/frame.
+climb6: left/right travel, synchronized ledge anchor, root-height independence, edge stop/reverse and action locks passed.
+Hop Up at 30 FPS: no completion snap, accurate final grip, peak recovery=0.0352 m/frame.
+Hop Up at 60 FPS: no completion snap, accurate final grip, peak recovery=0.0186 m/frame.
+Animated Hop Down climb6 -> climb5: grip and controls passed.
+  Peak additional leg-pose step=0.0263 m/frame (120 FPS).
+  Additional leg travel over source animation during recovery=0.0062 m/frame.
+Animated Hop Down climb5 -> climb4: grip and controls passed.
+  Peak additional leg-pose step=0.0246 m/frame (120 FPS).
+  Additional leg travel over source animation during recovery=0.0108 m/frame.
+Animated Hop Down climb4 -> climb3: grip and controls passed.
+  Peak additional leg-pose step=0.0255 m/frame (120 FPS).
+  Additional leg travel over source animation during recovery=0.0159 m/frame.
+Animated Hop Down climb3 -> climb2: grip and controls passed.
+  Peak additional leg-pose step=0.0379 m/frame (120 FPS).
+  Additional leg travel over source animation during recovery=0.0289 m/frame.
+Animated Hop Down climb2 -> climb1: grip and controls passed.
+  Peak additional leg-pose step=0.0247 m/frame (120 FPS).
+  Additional leg travel over source animation during recovery=0.0152 m/frame.
+Hop Down: found 2.4 m drop with Max Drop=2.5; rejected it at 2.3; Hop Up unchanged.
+climb6 -> roof: real Animator/coroutine completed, landed safely and restored movement/controller.
+Feet/toes minimum wall distance: before=-0.3209; after=0.0595 m.
+Hands/fingers minimum wall distance during hanging/shimmy=0.0245 m.

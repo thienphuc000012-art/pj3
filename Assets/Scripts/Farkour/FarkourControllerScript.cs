@@ -5,6 +5,8 @@ using UnityEngine;
 
 public class FarkourControllerScript : MonoBehaviour
 {
+    PlayerClimb ledgeClimb;
+    private void Awake() { ledgeClimb = GetComponent<PlayerClimb>(); }
     [Header("References")]
 
     public EnviromentChecker enviromentChecker;
@@ -26,6 +28,9 @@ public class FarkourControllerScript : MonoBehaviour
     void Update()
     {
         if (CampaignSession.InputBlocked)
+            return;
+
+        if (ledgeClimb != null && ledgeClimb.ConsumedClimbInputThisFrame)
             return;
 
 

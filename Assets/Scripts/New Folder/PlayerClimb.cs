@@ -1,9 +1,11 @@
-﻿using System;
+using System;
 using System.Collections;
 using UnityEngine;
 
 public enum PlayerState { NormalState, ClimbingState }
+public enum HangingLedgeAction { None, HopUp, HopDown, ClimbToRoof }
 
+[DefaultExecutionOrder(-100)]
 public class PlayerClimb : MonoBehaviour
 {
     PlayerScript playerScript;
@@ -16,9 +18,14 @@ public class PlayerClimb : MonoBehaviour
     public bool isClimbing;
     public bool isHopping; // Khóa trạng thái khi đang thực hiện Hop
     public bool canGrabLedge;
+    [Header("Climb Input")]
+    public KeyCode climbKey = KeyCode.Space;
+    int consumedClimbInputFrame = -1;
+    public bool ConsumedClimbInputThisFrame => consumedClimbInputFrame == Time.frameCount;
+    public void ConsumeClimbInput() { consumedClimbInputFrame = Time.frameCount; }
 
     // Khóa lúc vừa bám gờ từ dưới đất.
-    // Ngăn cùng một lần nhấn C bị dùng tiếp cho Hop Up / Roof Climb trong cùng frame.
+    // Ngăn cùng một lần nhấn Space bị dùng tiếp cho Hop Up / Roof Climb trong cùng frame.
     bool isEnteringLedge;
     public bool IsEnteringLedge => isEnteringLedge;
 
@@ -62,12 +69,19 @@ public class PlayerClimb : MonoBehaviour
     public float zDropToHangPos = -0.05f;
 
     [Header("Hop Up Offset")]
-    public float upHopUpPos = -0.1f;
+    [Tooltip("Hand height relative to the destination ledge in metres. Lower values lower the hanging player.")]
+    public float upHopUpPos = -0.0434f;
     public float forwardHopUpPos = -0.05f;
 
     [Header("Hop Down Offset")]
-    public float upHopDownPos = -0.1f;
+    public float upHopDownPos = -0.0404f;
     public float forwardHopDownPos = -0.05f;
+
+    [Header("Hop Down Detection")]
+    [Tooltip("Maximum vertical distance to a lower ledge, in metres. Independent of Hop Up's ray count.")]
+    [Min(0.1f)] public float hopDownMaxDrop = 2.5f;
+    [Tooltip("Vertical spacing between the downward search's horizontal wall probes.")]
+    [Min(0.025f)] public float hopDownProbeStep = 0.1f;
 
     [Space(5)]
     float verticalInp;
@@ -75,22 +89,43 @@ public class PlayerClimb : MonoBehaviour
     public float rayHopLength = 1f;
     public int hopRayAmount = 7;
     public float rayVerticalGap = 0.3f; // Khoảng cách bắt đầu kiểm tra gờ trên/dưới
+    [Tooltip("Start hop probes outside protruding upper ledges. The forward reach from the current ledge remains Ray Hop Length.")]
+    [Min(0.05f)] public float hopProbeOutset = 0.8f;
+
+    [Tooltip("Buffers a climbing-key press briefly while the previous hop blends into the hanging pose.")]
+    [Min(0f)] public float climbInputBufferSeconds = 0.2f;
+    bool hasClimbRequest;
+    float climbRequestExpires;
+    float climbRequestDirection;
 
     RaycastHit hopLedgeForwardHit;
     RaycastHit hopLedgeDownHit;
+    bool hopGripActive;
+    bool hopGripFinishing;
+    string hopGripState;
+    float hopGripMatchEnd;
+    float hopGripWeight;
+    Vector3 hopGripTarget;
+    Vector3 gripWallPoint;
+    float gripTopHeight;
+    HumanBodyBones gripHand = HumanBodyBones.LeftHand;
+    public Vector3 LastGripCorrection { get; private set; }
+    // Prepare limb clearance against a protruding destination during the hop, before the anchor commits.
+    public Vector3 HangingPoseWallPoint => hopGripActive && isHopping &&
+        Vector3.Dot(gripWallPoint - StableLedgeWallPoint, StableLedgeWallNormal) > 0 ? gripWallPoint : StableLedgeWallPoint;
+    public float HangingPoseTopHeight => hopGripActive && isHopping ? gripTopHeight : StableLedgeTopPoint.y;
 
-    private void Start()
+    private void Awake()
     {
-        playerState = PlayerState.NormalState;
         playerScript = GetComponent<PlayerScript>();
-        animator = GetComponent<Animator>();
+        if (animator == null) animator = GetComponent<Animator>();
         roofLedgeDetection = GetComponent<RoofLedgeDetection>();
         ledgeToRoofClimb = GetComponent<LedgeToRoofClimb>();
     }
 
     private void Update()
     {
-        if (CampaignSession.InputBlocked) return;
+        if (CampaignSession.InputBlocked) { hasClimbRequest = false; return; }
         // Khi đang LedgeToClimb: KHÔNG đọc bất kỳ input climb nào.
         // Đồng thời giữ CharacterController và player control bị khóa trong toàn bộ animation.
         if (roofClimbInputLocked)
@@ -113,40 +148,55 @@ public class PlayerClimb : MonoBehaviour
 
         // QUAN TRỌNG: đọc input TRƯỚC Inputs() để tránh dùng verticalInp của frame trước.
         verticalInp = Input.GetAxisRaw("Vertical");
+        bool wasClimbing = isClimbing;
+        if (wasClimbing && Input.GetKeyDown(climbKey)) ConsumeClimbInput();
 
         CheckingMainRay();
         Inputs();
         StateConditionsCheck();
         MatchTargetToLedge();
 
-        // Hop Down vẫn phải được kiểm tra ngay cả khi phía trên có thể LedgeToRoofClimb.
-        // Chỉ Hop Up mới nhường ưu tiên cho Roof Climb (được chặn bên trong HopUpRayCheck).
-        // Khóa trong lúc vừa GrabLedge hoặc đang DropToLedgeHang để không dùng lại cùng input C.
-        if (isClimbing && !isHopping && !isEnteringLedge &&
-            !roofLedgeDetection.isDropingFromRoof &&
-            !ledgeToRoofClimb.IsClimbingToRoof)
+        // One owner consumes the climbing key before the ordinary jump/parkour Update.
+        // The press used to grab the first ledge cannot also request a hop.
+        if (wasClimbing && Input.GetKeyDown(climbKey) && !isEnteringLedge && !roofClimbInputLocked)
         {
-            HopUpDown();
+            hasClimbRequest = true;
+            climbRequestDirection = verticalInp;
+            climbRequestExpires = Time.time + climbInputBufferSeconds;
+        }
+        if (hasClimbRequest && Time.time > climbRequestExpires) hasClimbRequest = false;
+        if (hasClimbRequest && CanStartLedgeAction)
+        {
+            hasClimbRequest = false;
+            HangingLedgeAction action = FindClimbAction(climbRequestDirection, out var wall, out var top);
+            if (action == HangingLedgeAction.ClimbToRoof) ledgeToRoofClimb.TryBeginRoofClimb();
+            else if (action == HangingLedgeAction.HopUp || action == HangingLedgeAction.HopDown)
+            {
+                hopLedgeForwardHit = wall; hopLedgeDownHit = top;
+                StartCoroutine(action == HangingLedgeAction.HopUp ? HopUp() : HopDown());
+            }
         }
     }
 
+    public bool CanStartLedgeAction => isClimbing && HasStableLedge && !isHopping && !isEnteringLedge &&
+        !roofClimbInputLocked && roofLedgeDetection != null && !roofLedgeDetection.isDropingFromRoof &&
+        ledgeToRoofClimb != null && !ledgeToRoofClimb.IsClimbingToRoof && animator != null && !animator.IsInTransition(0);
+
+    // ShimmyController moves the root and ledge anchor together. Blend-tree root motion must not add a second displacement.
+    public bool UsesManualHangingMovement => CanStartLedgeAction && animator.GetCurrentAnimatorStateInfo(0).IsName("ledgeMovement");
+
     private void Inputs()
     {
-        // C = Bám gờ
-        if (Input.GetKeyDown(KeyCode.C) && !roofLedgeDetection.isRoofLedgeDetected)
+        if (Input.GetKeyDown(climbKey) && !isClimbing)
         {
-            if (!isClimbing)
+            // Refresh roof detection now, rather than sharing last frame's flag with another script.
+            if (roofLedgeDetection.TryStartRoofDrop()) return;
+            if (canGrabLedge && rayLedgeDownHit.collider != null)
             {
-                if (canGrabLedge && rayLedgeDownHit.point != Vector3.zero)
-                {
-                    // Chụp anchor trước khi rotation/root motion làm transform thay đổi.
-                    SetStableLedge(rayLedgeForwardHit, rayLedgeDownHit);
-
-                    Quaternion lookRot = Quaternion.LookRotation(StableLedgeForward);
-                    transform.rotation = lookRot;
-
-                    StartCoroutine(GrabLedge());
-                }
+                ConsumeClimbInput();
+                SetStableLedge(rayLedgeForwardHit, rayLedgeDownHit);
+                transform.rotation = Quaternion.LookRotation(StableLedgeForward);
+                StartCoroutine(GrabLedge());
             }
         }
 
@@ -193,7 +243,9 @@ public class PlayerClimb : MonoBehaviour
     {
         if (playerState == PlayerState.NormalState)
         {
-            animator.applyRootMotion = false;
+            // PlayerScript.OnAnimatorMove already ignores root motion while normal movement owns control.
+            // Toggling applyRootMotion here reinitializes the Animator when grabbing a ledge.
+            animator.applyRootMotion = true;
             playerScript.EnableCC(true);
             playerScript.HasPlayerControl = true;
             playerScript.playerHanging = false;
@@ -233,86 +285,124 @@ public class PlayerClimb : MonoBehaviour
         }
 
         // 2. Hop Up Target Match
-        if (animator.GetCurrentAnimatorStateInfo(0).IsName("braced hang hop up") && !animator.IsInTransition(0))
+        if (isHopping && animator.GetCurrentAnimatorStateInfo(0).IsName("braced hang hop up") && !animator.IsInTransition(0) &&
+            !animator.isMatchingTarget && animator.GetCurrentAnimatorStateInfo(0).normalizedTime < 0.59f)
         {
-            Vector3 handHopUpPos = transform.forward * forwardHopUpPos + transform.up * upHopUpPos;
-            animator.MatchTarget(hopLedgeDownHit.point + handHopUpPos, transform.rotation, AvatarTarget.LeftHand, new MatchTargetWeightMask(new Vector3(0, 1, 1), 0), 0.39f, 0.59f);
+            Vector3 handHopUpPos = StableLedgeForward * forwardHopUpPos + Vector3.up * upHopUpPos;
+            animator.MatchTarget(hopLedgeDownHit.point + handHopUpPos, transform.rotation, AvatarTarget.LeftHand, new MatchTargetWeightMask(Vector3.one, 0), 0.39f, 0.59f);
         }
 
         // 3. Hop Down Target Match
-        if (animator.GetCurrentAnimatorStateInfo(0).IsName("brace hang drop") && !animator.IsInTransition(0))
+        if (isHopping && animator.GetCurrentAnimatorStateInfo(0).IsName("brace hang drop") && !animator.IsInTransition(0) &&
+            !animator.isMatchingTarget && animator.GetCurrentAnimatorStateInfo(0).normalizedTime < 0.56f)
         {
-            Vector3 handHopDownPos = transform.forward * forwardHopDownPos + transform.up * upHopDownPos;
-            animator.MatchTarget(hopLedgeDownHit.point + handHopDownPos, transform.rotation, AvatarTarget.LeftHand, new MatchTargetWeightMask(new Vector3(0, 1, 1), 0), 0.31f, 0.56f);
+            Vector3 handHopDownPos = StableLedgeForward * forwardHopDownPos + Vector3.up * upHopDownPos;
+            animator.MatchTarget(hopLedgeDownHit.point + handHopDownPos, transform.rotation, AvatarTarget.LeftHand, new MatchTargetWeightMask(Vector3.one, 0), 0.31f, 0.56f);
         }
     }
 
-    private void HopUpDown()
+    /// <summary>Resolve fresh geometry, independently of W being held or newly pressed.</summary>
+    public HangingLedgeAction FindClimbAction(float direction, out RaycastHit wall, out RaycastHit top)
     {
-        if (verticalInp < -0.1f)
+        wall = default; top = default;
+        if (!HasStableLedge) return HangingLedgeAction.None;
+        if (direction < -0.1f)
+            return TryFindHopTarget(-1, out wall, out top) ? HangingLedgeAction.HopDown : HangingLedgeAction.None;
+
+        // Reach the next handhold before attempting to stand on a narrow intermediate climbing strip.
+        if (TryFindHopTarget(1, out wall, out top))
+            return direction > 0.1f ? HangingLedgeAction.HopUp : HangingLedgeAction.None;
+        return ledgeToRoofClimb != null && ledgeToRoofClimb.RefreshRoofTarget()
+            ? HangingLedgeAction.ClimbToRoof : HangingLedgeAction.None;
+    }
+
+    public bool TryFindHopTarget(int direction, out RaycastHit wall, out RaycastHit top)
+    {
+        wall = default; top = default;
+        if (!HasStableLedge) return false;
+        Vector3 forward = StableLedgeForward.normalized;
+        // Both XZ and Y come from the committed ledge, not an in-flight root-motion pose.
+        Vector3 origin = StableLedgeTopPoint - forward * hopProbeOutset;
+        int sign = direction < 0 ? -1 : 1;
+        float downStart = Mathf.Min(Mathf.Max(0.05f, rayVerticalGap), Mathf.Max(0.1f, hopDownMaxDrop));
+        float downStep = Mathf.Max(0.025f, hopDownProbeStep);
+        // Search a little below the maximum ledge height so the ray meets its vertical face,
+        // then reject any top surface beyond Max Drop. This also covers thin ledges at the limit.
+        float downEnd = Mathf.Max(0.1f, hopDownMaxDrop) + 0.5f;
+        int count = sign < 0 ? Mathf.CeilToInt((downEnd - downStart) / downStep) + 1 : hopRayAmount;
+        for (int i = 0; i < count; i++)
         {
-            HopDownRayCheck();
+            float height = sign < 0 ? Mathf.Min(downStart + downStep * i, downEnd) : rayVerticalGap + rayHopOffset * i;
+            Vector3 rayPosition = origin + Vector3.up * sign * height;
+            float probeLength = hopProbeOutset + rayHopLength;
+            Debug.DrawRay(rayPosition, forward * probeLength, sign < 0 ? Color.cyan : Color.green);
+            if (!Physics.Raycast(rayPosition, forward, out var candidateWall, probeLength, ledgeLayer, QueryTriggerInteraction.Ignore)) continue;
+            if (Mathf.Abs(candidateWall.normal.y) > 0.5f) continue;
+            // Move just inside the edge so an exact-on-the-face ray cannot miss the top.
+            Vector3 downOrigin = candidateWall.point + forward * 0.025f + Vector3.up * 0.5f;
+            if (!Physics.Raycast(downOrigin, Vector3.down, out var candidateTop, 0.7f, ledgeLayer, QueryTriggerInteraction.Ignore)) continue;
+            if (candidateTop.normal.y < 0.6f || sign * (candidateTop.point.y - StableLedgeTopPoint.y) < 0.1f) continue;
+            if (sign < 0 && StableLedgeTopPoint.y - candidateTop.point.y > Mathf.Max(0.1f, hopDownMaxDrop) + 0.001f) continue;
+            wall = candidateWall; top = candidateTop;
+            return true;
         }
-        else if (verticalInp > 0.1f)
+        return false;
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        if (!HasStableLedge) return;
+        Vector3 origin = StableLedgeTopPoint - StableLedgeForward * hopProbeOutset;
+        Vector3 lowestLedge = origin - Vector3.up * Mathf.Max(0.1f, hopDownMaxDrop);
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawLine(origin, lowestLedge);
+        Gizmos.DrawLine(lowestLedge, lowestLedge + StableLedgeForward * (hopProbeOutset + rayHopLength));
+    }
+
+    IEnumerator WaitForLedgePose(string actionState)
+    {
+        // Wait through the entire outgoing blend, not just to 95% of the source clip.
+        // Previously a new climb press could be accepted while the old hop was still blending/root-moving.
+        float deadline = Time.time + 1f;
+        while (!animator.GetCurrentAnimatorStateInfo(0).IsName(actionState))
         {
-            HopUpRayCheck();
+            if (Time.time >= deadline) yield break;
+            yield return null;
+        }
+        while (animator.GetCurrentAnimatorStateInfo(0).IsName(actionState) || animator.IsInTransition(0))
+        {
+            if (!animator.IsInTransition(0) && animator.GetCurrentAnimatorStateInfo(0).normalizedTime >= 1f) break;
+            yield return null;
         }
     }
 
-    private void HopUpRayCheck()
+    void BeginLedgeGrip(string state, float matchEnd, Vector3 target, HumanBodyBones hand, Vector3 wallPoint)
     {
-        // FIX: Lấy gốc Y theo chuẩn điểm bám gờ hiện tại (rayLedgeDownHit.point.y) để không bị biến động bởi Root Motion
-        Vector3 baseHangPosition = new Vector3(transform.position.x, rayLedgeDownHit.point.y, transform.position.z);
+        hopGripState = state; hopGripMatchEnd = matchEnd; hopGripTarget = target;
+        gripHand = hand;
+        gripWallPoint = wallPoint;
+        gripTopHeight = isHopping ? hopLedgeDownHit.point.y : StableLedgeTopPoint.y;
+        hopGripWeight = 0; hopGripActive = true; hopGripFinishing = false;
+    }
 
-        for (int i = 0; i < hopRayAmount; i++)
+    private void LateUpdate()
+    {
+        LastGripCorrection = Vector3.zero;
+        if (!hopGripActive || animator == null || !animator.isHuman || CampaignSession.InputBlocked) return;
+        var state = animator.GetCurrentAnimatorStateInfo(0);
+        if (state.IsName(hopGripState))
+            hopGripWeight = Mathf.Max(hopGripWeight, Mathf.SmoothStep(0, 1, Mathf.Clamp01((state.normalizedTime - hopGripMatchEnd) / .15f)));
+        if (hopGripFinishing) hopGripWeight = 1;
+        if (hopGripWeight > 0)
         {
-            Vector3 rayPosition = baseHangPosition + Vector3.up * rayVerticalGap + Vector3.up * rayHopOffset * i;
-            Debug.DrawRay(rayPosition, transform.forward * rayHopLength, Color.green);
-
-            // FIX: Sử dụng hopLedgeForwardHit riêng biệt, không đè lên rayLedgeForwardHit
-            if (Physics.Raycast(rayPosition, transform.forward, out hopLedgeForwardHit, rayHopLength, ledgeLayer, QueryTriggerInteraction.Ignore))
+            var hand = animator.GetBoneTransform(gripHand);
+            if (hand != null)
             {
-                Debug.DrawRay(hopLedgeForwardHit.point + Vector3.up * 0.5f, Vector3.down * 0.7f, Color.green);
-
-                if (Physics.Raycast(hopLedgeForwardHit.point + Vector3.up * 0.5f, Vector3.down, out hopLedgeDownHit, 0.7f, ledgeLayer))
-                {
-                    if (Input.GetKeyDown(KeyCode.C) && !isHopping &&
-                        !ledgeToRoofClimb.foundLedgeToRoofClimb &&
-                        !ledgeToRoofClimb.IsClimbingToRoof)
-                    {
-                        StartCoroutine(HopUp());
-                    }
-                }
-                break;
+                LastGripCorrection = (hopGripTarget - hand.position) * hopGripWeight;
+                transform.position += LastGripCorrection;
             }
         }
-    }
-
-    private void HopDownRayCheck()
-    {
-        // FIX: Lấy gốc Y theo chuẩn điểm bám gờ hiện tại (rayLedgeDownHit.point.y)
-        Vector3 baseHangPosition = new Vector3(transform.position.x, rayLedgeDownHit.point.y, transform.position.z);
-
-        for (int i = 0; i < hopRayAmount; i++)
-        {
-            Vector3 rayPosition = baseHangPosition - Vector3.up * rayVerticalGap - Vector3.up * rayHopOffset * i;
-            Debug.DrawRay(rayPosition, transform.forward * rayHopLength, Color.green);
-
-            if (Physics.Raycast(rayPosition, transform.forward, out hopLedgeForwardHit, rayHopLength, ledgeLayer, QueryTriggerInteraction.Ignore))
-            {
-                Debug.DrawRay(hopLedgeForwardHit.point + Vector3.up * 0.5f, Vector3.down * 0.7f, Color.green);
-
-                if (Physics.Raycast(hopLedgeForwardHit.point + Vector3.up * 0.5f, Vector3.down, out hopLedgeDownHit, 0.7f, ledgeLayer))
-                {
-                    if (Input.GetKeyDown(KeyCode.C) && !isHopping &&
-                        !ledgeToRoofClimb.IsClimbingToRoof)
-                    {
-                        StartCoroutine(HopDown());
-                    }
-                }
-                break;
-            }
-        }
+        if (hopGripFinishing) { hopGripActive = false; hopGripFinishing = false; }
     }
 
     IEnumerator GrabLedge()
@@ -326,17 +416,12 @@ public class PlayerClimb : MonoBehaviour
         playerState = PlayerState.ClimbingState;
         isClimbing = true;
         animator.CrossFade("idle to hang", 0.2f);
+        BeginLedgeGrip("idle to hang", .57f, StableLedgeTopPoint + Vector3.up * rayYHandCorrection +
+            StableLedgeForward * rayZHandCorrection, HumanBodyBones.RightHand, StableLedgeWallPoint);
 
-        // Không mở khóa theo timer cứng. Đợi Animator thật sự hoàn tất phần vào trạng thái treo.
-        yield return null;
-        while (animator.IsInTransition(0))
-            yield return null;
-
-        while (animator.GetCurrentAnimatorStateInfo(0).IsName("idle to hang") &&
-               animator.GetCurrentAnimatorStateInfo(0).normalizedTime < 0.90f)
-        {
-            yield return null;
-        }
+        yield return WaitForLedgePose("idle to hang");
+        hopGripFinishing = true;
+        while (hopGripFinishing) yield return null;
 
         isEnteringLedge = false;
     }
@@ -368,20 +453,13 @@ public class PlayerClimb : MonoBehaviour
         RaycastHit targetForwardHit = hopLedgeForwardHit;
 
         animator.CrossFade("braced hang hop up", 0.2f);
+        BeginLedgeGrip("braced hang hop up", .59f, targetDownHit.point + Vector3.up * upHopUpPos + StableLedgeForward * forwardHopUpPos, HumanBodyBones.LeftHand, targetForwardHit.point);
 
-        // Đợi animation đi vào state Hop Up.
-        yield return null;
-        while (animator.IsInTransition(0))
-            yield return null;
-
-        // Đợi gần hết animation thay vì phụ thuộc hoàn toàn vào WaitForSeconds cố định.
-        while (animator.GetCurrentAnimatorStateInfo(0).IsName("braced hang hop up") &&
-               animator.GetCurrentAnimatorStateInfo(0).normalizedTime < 0.95f)
-        {
-            yield return null;
-        }
-
+        yield return WaitForLedgePose("braced hang hop up");
         SetStableLedge(targetForwardHit, targetDownHit);
+        // Finish in LateUpdate after the final pose is evaluated. No post-animation root teleport.
+        hopGripFinishing = true;
+        while (hopGripFinishing) yield return null;
 
         isHopping = false;
     }
@@ -398,18 +476,12 @@ public class PlayerClimb : MonoBehaviour
         RaycastHit targetForwardHit = hopLedgeForwardHit;
 
         animator.CrossFade("brace hang drop", 0.2f);
+        BeginLedgeGrip("brace hang drop", .56f, targetDownHit.point + Vector3.up * upHopDownPos + StableLedgeForward * forwardHopDownPos, HumanBodyBones.LeftHand, targetForwardHit.point);
 
-        yield return null;
-        while (animator.IsInTransition(0))
-            yield return null;
-
-        while (animator.GetCurrentAnimatorStateInfo(0).IsName("brace hang drop") &&
-               animator.GetCurrentAnimatorStateInfo(0).normalizedTime < 0.95f)
-        {
-            yield return null;
-        }
-
+        yield return WaitForLedgePose("brace hang drop");
         SetStableLedge(targetForwardHit, targetDownHit);
+        hopGripFinishing = true;
+        while (hopGripFinishing) yield return null;
 
         isHopping = false;
     }
@@ -511,6 +583,8 @@ public class PlayerClimb : MonoBehaviour
 
     public void ClearStableLedge()
     {
+        hopGripActive = false; hopGripFinishing = false;
+        hasClimbRequest = false;
         HasStableLedge = false;
         StableLedgeTopPoint = Vector3.zero;
         StableLedgeWallPoint = Vector3.zero;
@@ -554,6 +628,8 @@ public class PlayerClimb : MonoBehaviour
             return;
 
         roofClimbInputLocked = true;
+        hopGripActive = false; hopGripFinishing = false;
+        hasClimbRequest = false;
 
         StopAllCoroutines();
 

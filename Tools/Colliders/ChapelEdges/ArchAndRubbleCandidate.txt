@@ -1,0 +1,205 @@
+Edge escape tests: 108; blocked=28; candidate=True. Actual captured point plus both wall strips; inward and diagonal escape, walk/run.
+Wall approach and escape: 20; blocked=18. Started in the room, pressed against each wall, then reversed inward.
+Fitted Environment/Chapel/sm_Chapel_08_01_OneSide33 -> sm_CryptArch_01_02_LOD2
+Fitted Environment/Chapel/sm_Chapel_08_01_OneSide32 -> sm_CryptArch_01_02_LOD2
+Fitted Environment/Chapel/sm_Chapel_08_01_OneSide26 -> sm_CryptArch_01_01_LOD2
+Disabled decorative rubble Environment/sm_Rubble_02_02
+PASS start=(9.160, -2.292, -8.055) direction=(-1.00, 0.00, 0.00) speed=2 end=(7.960, -2.320, -8.055) travel=1.200
+PASS start=(9.160, -2.292, -8.055) direction=(-0.71, 0.00, 0.71) speed=2 end=(8.312, -2.320, -7.207) travel=1.200
+PASS start=(9.160, -2.292, -8.055) direction=(-0.71, 0.00, -0.71) speed=2 end=(8.312, -2.320, -8.904) travel=1.200
+PASS start=(9.160, -2.292, -8.055) direction=(-1.00, 0.00, 0.00) speed=4 end=(7.960, -2.320, -8.055) travel=1.200
+PASS start=(9.160, -2.292, -8.055) direction=(-0.71, 0.00, 0.71) speed=4 end=(8.312, -2.320, -7.207) travel=1.200
+PASS start=(9.160, -2.292, -8.055) direction=(-0.71, 0.00, -0.71) speed=4 end=(8.312, -2.320, -8.904) travel=1.200
+PASS start=(3.440, -2.292, -8.055) direction=(1.00, 0.00, 0.00) speed=2 end=(4.734, -2.320, -8.033) travel=1.294
+PASS start=(3.440, -2.292, -8.055) direction=(0.71, 0.00, 0.71) speed=2 end=(4.383, -2.320, -7.185) travel=1.282
+PASS start=(3.440, -2.292, -8.055) direction=(0.71, 0.00, -0.71) speed=2 end=(4.377, -2.288, -8.884) travel=1.249
+PASS start=(3.440, -2.292, -8.055) direction=(1.00, 0.00, 0.00) speed=4 end=(4.734, -2.320, -8.033) travel=1.294
+PASS start=(3.440, -2.292, -8.055) direction=(0.71, 0.00, 0.71) speed=4 end=(4.383, -2.320, -7.185) travel=1.282
+PASS start=(3.440, -2.292, -8.055) direction=(0.71, 0.00, -0.71) speed=4 end=(4.374, -2.287, -8.885) travel=1.247
+BLOCKED start=(3.500, -2.320, -5.000) direction=(1.00, 0.00, 0.00) speed=2 end=(3.233, -1.442, -4.510) travel=-0.267
+  CONTACT Environment/GroundRocks/sm_GroundRocks_01_2
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide5
+BLOCKED start=(3.500, -2.320, -5.000) direction=(0.71, 0.00, 0.71) speed=2 end=(3.233, -1.442, -4.510) travel=0.158
+  CONTACT Environment/GroundRocks/sm_GroundRocks_01_2
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide5
+BLOCKED start=(3.500, -2.320, -5.000) direction=(0.71, 0.00, -0.71) speed=2 end=(3.233, -1.442, -4.510) travel=-0.536
+  CONTACT Environment/GroundRocks/sm_GroundRocks_01_2
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide5
+BLOCKED start=(3.500, -2.320, -5.000) direction=(1.00, 0.00, 0.00) speed=4 end=(3.233, -1.442, -4.510) travel=-0.267
+  CONTACT Environment/GroundRocks/sm_GroundRocks_01_2
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide5
+BLOCKED start=(3.500, -2.320, -5.000) direction=(0.71, 0.00, 0.71) speed=4 end=(3.233, -1.442, -4.510) travel=0.158
+  CONTACT Environment/GroundRocks/sm_GroundRocks_01_2
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide5
+BLOCKED start=(3.500, -2.320, -5.000) direction=(0.71, 0.00, -0.71) speed=4 end=(3.233, -1.442, -4.510) travel=-0.536
+  CONTACT Environment/GroundRocks/sm_GroundRocks_01_2
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide5
+PASS start=(3.500, -2.320, -6.600) direction=(1.00, 0.00, 0.00) speed=2 end=(4.700, -2.320, -6.600) travel=1.200
+PASS start=(3.500, -2.320, -6.600) direction=(0.71, 0.00, 0.71) speed=2 end=(4.349, -2.320, -5.751) travel=1.200
+PASS start=(3.500, -2.320, -6.600) direction=(0.71, 0.00, -0.71) speed=2 end=(4.348, -2.320, -7.449) travel=1.200
+PASS start=(3.500, -2.320, -6.600) direction=(1.00, 0.00, 0.00) speed=4 end=(4.700, -2.320, -6.600) travel=1.200
+PASS start=(3.500, -2.320, -6.600) direction=(0.71, 0.00, 0.71) speed=4 end=(4.349, -2.320, -5.751) travel=1.200
+PASS start=(3.500, -2.320, -6.600) direction=(0.71, 0.00, -0.71) speed=4 end=(4.348, -2.320, -7.449) travel=1.200
+PASS start=(3.500, -2.320, -8.050) direction=(1.00, 0.00, 0.00) speed=2 end=(4.752, -2.320, -8.034) travel=1.252
+PASS start=(3.500, -2.320, -8.050) direction=(0.71, 0.00, 0.71) speed=2 end=(4.400, -2.320, -7.185) travel=1.248
+PASS start=(3.500, -2.320, -8.050) direction=(0.71, 0.00, -0.71) speed=2 end=(4.397, -2.293, -8.879) travel=1.221
+PASS start=(3.500, -2.320, -8.050) direction=(1.00, 0.00, 0.00) speed=4 end=(4.752, -2.320, -8.034) travel=1.252
+PASS start=(3.500, -2.320, -8.050) direction=(0.71, 0.00, 0.71) speed=4 end=(4.400, -2.320, -7.185) travel=1.248
+PASS start=(3.500, -2.320, -8.050) direction=(0.71, 0.00, -0.71) speed=4 end=(4.379, -2.288, -8.889) travel=1.215
+PASS start=(3.500, -2.320, -9.000) direction=(1.00, 0.00, 0.00) speed=2 end=(4.700, -2.320, -9.000) travel=1.200
+PASS start=(3.500, -2.320, -9.000) direction=(0.71, 0.00, 0.71) speed=2 end=(4.372, -2.320, -8.239) travel=1.155
+PASS start=(3.500, -2.320, -9.000) direction=(0.71, 0.00, -0.71) speed=2 end=(4.326, -2.036, -9.677) travel=1.063
+PASS start=(3.500, -2.320, -9.000) direction=(1.00, 0.00, 0.00) speed=4 end=(4.700, -2.320, -9.000) travel=1.200
+PASS start=(3.500, -2.320, -9.000) direction=(0.71, 0.00, 0.71) speed=4 end=(4.376, -2.320, -8.250) travel=1.149
+PASS start=(3.500, -2.320, -9.000) direction=(0.71, 0.00, -0.71) speed=4 end=(4.325, -2.039, -9.683) travel=1.066
+BLOCKED start=(3.800, -2.320, -5.000) direction=(1.00, 0.00, 0.00) speed=2 end=(3.913, -2.223, -5.133) travel=0.113
+  CONTACT Environment/GroundRocks/sm_GroundRocks_01_4
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide12
+  CONTACT Environment/GroundRocks/sm_GroundRocks_01_2
+BLOCKED start=(3.800, -2.320, -5.000) direction=(0.71, 0.00, 0.71) speed=2 end=(3.913, -2.223, -5.133) travel=-0.015
+  CONTACT Environment/GroundRocks/sm_GroundRocks_01_4
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide12
+  CONTACT Environment/GroundRocks/sm_GroundRocks_01_2
+BLOCKED start=(3.800, -2.320, -5.000) direction=(0.71, 0.00, -0.71) speed=2 end=(3.913, -2.223, -5.133) travel=0.174
+  CONTACT Environment/GroundRocks/sm_GroundRocks_01_4
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide12
+  CONTACT Environment/GroundRocks/sm_GroundRocks_01_2
+BLOCKED start=(3.800, -2.320, -5.000) direction=(1.00, 0.00, 0.00) speed=4 end=(3.913, -2.223, -5.133) travel=0.113
+  CONTACT Environment/GroundRocks/sm_GroundRocks_01_4
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide12
+  CONTACT Environment/GroundRocks/sm_GroundRocks_01_2
+BLOCKED start=(3.800, -2.320, -5.000) direction=(0.71, 0.00, 0.71) speed=4 end=(3.913, -2.223, -5.133) travel=-0.015
+  CONTACT Environment/GroundRocks/sm_GroundRocks_01_4
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide12
+  CONTACT Environment/GroundRocks/sm_GroundRocks_01_2
+BLOCKED start=(3.800, -2.320, -5.000) direction=(0.71, 0.00, -0.71) speed=4 end=(3.913, -2.223, -5.133) travel=0.174
+  CONTACT Environment/GroundRocks/sm_GroundRocks_01_4
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide12
+  CONTACT Environment/GroundRocks/sm_GroundRocks_01_2
+PASS start=(3.800, -2.320, -6.600) direction=(1.00, 0.00, 0.00) speed=2 end=(5.000, -2.320, -6.600) travel=1.200
+PASS start=(3.800, -2.320, -6.600) direction=(0.71, 0.00, 0.71) speed=2 end=(4.649, -2.320, -5.751) travel=1.200
+PASS start=(3.800, -2.320, -6.600) direction=(0.71, 0.00, -0.71) speed=2 end=(4.648, -2.320, -7.449) travel=1.200
+PASS start=(3.800, -2.320, -6.600) direction=(1.00, 0.00, 0.00) speed=4 end=(5.000, -2.320, -6.600) travel=1.200
+PASS start=(3.800, -2.320, -6.600) direction=(0.71, 0.00, 0.71) speed=4 end=(4.649, -2.320, -5.751) travel=1.200
+PASS start=(3.800, -2.320, -6.600) direction=(0.71, 0.00, -0.71) speed=4 end=(4.648, -2.320, -7.449) travel=1.200
+PASS start=(3.800, -2.320, -8.050) direction=(1.00, 0.00, 0.00) speed=2 end=(5.000, -2.320, -8.050) travel=1.200
+PASS start=(3.800, -2.320, -8.050) direction=(0.71, 0.00, 0.71) speed=2 end=(4.649, -2.320, -7.201) travel=1.200
+PASS start=(3.800, -2.320, -8.050) direction=(0.71, 0.00, -0.71) speed=2 end=(4.649, -2.320, -8.899) travel=1.200
+PASS start=(3.800, -2.320, -8.050) direction=(1.00, 0.00, 0.00) speed=4 end=(5.000, -2.320, -8.050) travel=1.200
+PASS start=(3.800, -2.320, -8.050) direction=(0.71, 0.00, 0.71) speed=4 end=(4.649, -2.320, -7.201) travel=1.200
+PASS start=(3.800, -2.320, -8.050) direction=(0.71, 0.00, -0.71) speed=4 end=(4.649, -2.320, -8.899) travel=1.200
+PASS start=(3.800, -2.320, -9.000) direction=(1.00, 0.00, 0.00) speed=2 end=(5.000, -2.256, -9.000) travel=1.200
+PASS start=(3.800, -2.320, -9.000) direction=(0.71, 0.00, 0.71) speed=2 end=(4.649, -2.320, -8.151) travel=1.200
+BLOCKED start=(3.800, -2.320, -9.000) direction=(0.71, 0.00, -0.71) speed=2 end=(4.238, -1.856, -9.366) travel=0.569
+  CONTACT Environment/Fence/sm_Fence_02_6
+  CONTACT Environment/Crypt/sm_Crypt_04_5
+PASS start=(3.800, -2.320, -9.000) direction=(1.00, 0.00, 0.00) speed=4 end=(5.000, -2.256, -9.000) travel=1.200
+PASS start=(3.800, -2.320, -9.000) direction=(0.71, 0.00, 0.71) speed=4 end=(4.649, -2.320, -8.151) travel=1.200
+BLOCKED start=(3.800, -2.320, -9.000) direction=(0.71, 0.00, -0.71) speed=4 end=(4.236, -1.868, -9.380) travel=0.577
+  CONTACT Environment/Fence/sm_Fence_02_6
+BLOCKED start=(8.800, -2.320, -5.000) direction=(-1.00, 0.00, 0.00) speed=2 end=(8.827, -2.320, -4.973) travel=-0.027
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide2
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide7
+BLOCKED start=(8.800, -2.320, -5.000) direction=(-0.71, 0.00, 0.71) speed=2 end=(8.827, -2.320, -4.973) travel=0.000
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide2
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide7
+BLOCKED start=(8.800, -2.320, -5.000) direction=(-0.71, 0.00, -0.71) speed=2 end=(8.827, -2.320, -4.973) travel=-0.038
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide2
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide7
+BLOCKED start=(8.800, -2.320, -5.000) direction=(-1.00, 0.00, 0.00) speed=4 end=(8.827, -2.320, -4.973) travel=-0.027
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide2
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide7
+BLOCKED start=(8.800, -2.320, -5.000) direction=(-0.71, 0.00, 0.71) speed=4 end=(8.827, -2.320, -4.973) travel=0.000
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide2
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide7
+BLOCKED start=(8.800, -2.320, -5.000) direction=(-0.71, 0.00, -0.71) speed=4 end=(8.827, -2.320, -4.973) travel=-0.038
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide2
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide7
+PASS start=(8.800, -2.320, -6.600) direction=(-1.00, 0.00, 0.00) speed=2 end=(7.600, -2.320, -6.600) travel=1.200
+PASS start=(8.800, -2.320, -6.600) direction=(-0.71, 0.00, 0.71) speed=2 end=(7.952, -2.320, -5.751) travel=1.200
+PASS start=(8.800, -2.320, -6.600) direction=(-0.71, 0.00, -0.71) speed=2 end=(7.951, -2.320, -7.448) travel=1.200
+PASS start=(8.800, -2.320, -6.600) direction=(-1.00, 0.00, 0.00) speed=4 end=(7.600, -2.320, -6.600) travel=1.200
+PASS start=(8.800, -2.320, -6.600) direction=(-0.71, 0.00, 0.71) speed=4 end=(7.952, -2.320, -5.751) travel=1.200
+PASS start=(8.800, -2.320, -6.600) direction=(-0.71, 0.00, -0.71) speed=4 end=(7.951, -2.320, -7.448) travel=1.200
+PASS start=(8.800, -2.320, -8.050) direction=(-1.00, 0.00, 0.00) speed=2 end=(7.600, -2.320, -8.050) travel=1.200
+PASS start=(8.800, -2.320, -8.050) direction=(-0.71, 0.00, 0.71) speed=2 end=(7.952, -2.320, -7.201) travel=1.200
+PASS start=(8.800, -2.320, -8.050) direction=(-0.71, 0.00, -0.71) speed=2 end=(7.951, -2.320, -8.899) travel=1.200
+PASS start=(8.800, -2.320, -8.050) direction=(-1.00, 0.00, 0.00) speed=4 end=(7.600, -2.320, -8.050) travel=1.200
+PASS start=(8.800, -2.320, -8.050) direction=(-0.71, 0.00, 0.71) speed=4 end=(7.952, -2.320, -7.201) travel=1.200
+PASS start=(8.800, -2.320, -8.050) direction=(-0.71, 0.00, -0.71) speed=4 end=(7.951, -2.320, -8.899) travel=1.200
+PASS start=(8.800, -2.320, -9.000) direction=(-1.00, 0.00, 0.00) speed=2 end=(7.600, -2.283, -9.000) travel=1.200
+PASS start=(8.800, -2.320, -9.000) direction=(-0.71, 0.00, 0.71) speed=2 end=(7.951, -2.320, -8.151) travel=1.200
+BLOCKED start=(8.800, -2.320, -9.000) direction=(-0.71, 0.00, -0.71) speed=2 end=(8.113, -2.320, -9.108) travel=0.562
+  CONTACT Environment/Fence/sm_Fence_02_05
+PASS start=(8.800, -2.320, -9.000) direction=(-1.00, 0.00, 0.00) speed=4 end=(7.600, -2.283, -9.000) travel=1.200
+PASS start=(8.800, -2.320, -9.000) direction=(-0.71, 0.00, 0.71) speed=4 end=(7.951, -2.320, -8.151) travel=1.200
+BLOCKED start=(8.800, -2.320, -9.000) direction=(-0.71, 0.00, -0.71) speed=4 end=(8.128, -2.320, -9.108) travel=0.552
+  CONTACT Environment/Fence/sm_Fence_02_05
+BLOCKED start=(9.150, -2.320, -5.000) direction=(-1.00, 0.00, 0.00) speed=2 end=(9.265, -2.030, -4.885) travel=-0.115
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide2
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide7
+  CONTACT Environment/GroundRocks/sm_GroundRocks_01_21
+  CONTACT Environment/PathRocky/sm_PathRocky_01_12
+BLOCKED start=(9.150, -2.320, -5.000) direction=(-0.71, 0.00, 0.71) speed=2 end=(9.265, -2.030, -4.885) travel=0.000
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide2
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide7
+  CONTACT Environment/GroundRocks/sm_GroundRocks_01_21
+  CONTACT Environment/PathRocky/sm_PathRocky_01_12
+BLOCKED start=(9.150, -2.320, -5.000) direction=(-0.71, 0.00, -0.71) speed=2 end=(9.265, -2.030, -4.885) travel=-0.163
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide2
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide7
+  CONTACT Environment/GroundRocks/sm_GroundRocks_01_21
+  CONTACT Environment/PathRocky/sm_PathRocky_01_12
+BLOCKED start=(9.150, -2.320, -5.000) direction=(-1.00, 0.00, 0.00) speed=4 end=(9.265, -2.030, -4.885) travel=-0.115
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide2
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide7
+  CONTACT Environment/GroundRocks/sm_GroundRocks_01_21
+  CONTACT Environment/PathRocky/sm_PathRocky_01_12
+BLOCKED start=(9.150, -2.320, -5.000) direction=(-0.71, 0.00, 0.71) speed=4 end=(9.265, -2.030, -4.885) travel=0.000
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide2
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide7
+  CONTACT Environment/GroundRocks/sm_GroundRocks_01_21
+  CONTACT Environment/PathRocky/sm_PathRocky_01_12
+BLOCKED start=(9.150, -2.320, -5.000) direction=(-0.71, 0.00, -0.71) speed=4 end=(9.265, -2.030, -4.885) travel=-0.163
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide2
+  CONTACT Environment/Chapel/sm_Chapel_08_01_OneSide7
+  CONTACT Environment/GroundRocks/sm_GroundRocks_01_21
+  CONTACT Environment/PathRocky/sm_PathRocky_01_12
+PASS start=(9.150, -2.320, -6.600) direction=(-1.00, 0.00, 0.00) speed=2 end=(7.950, -2.320, -6.600) travel=1.200
+PASS start=(9.150, -2.320, -6.600) direction=(-0.71, 0.00, 0.71) speed=2 end=(8.302, -2.320, -5.751) travel=1.200
+PASS start=(9.150, -2.320, -6.600) direction=(-0.71, 0.00, -0.71) speed=2 end=(8.301, -2.320, -7.448) travel=1.200
+PASS start=(9.150, -2.320, -6.600) direction=(-1.00, 0.00, 0.00) speed=4 end=(7.950, -2.320, -6.600) travel=1.200
+PASS start=(9.150, -2.320, -6.600) direction=(-0.71, 0.00, 0.71) speed=4 end=(8.302, -2.320, -5.751) travel=1.200
+PASS start=(9.150, -2.320, -6.600) direction=(-0.71, 0.00, -0.71) speed=4 end=(8.301, -2.320, -7.448) travel=1.200
+PASS start=(9.150, -2.320, -8.050) direction=(-1.00, 0.00, 0.00) speed=2 end=(7.950, -2.320, -8.050) travel=1.200
+PASS start=(9.150, -2.320, -8.050) direction=(-0.71, 0.00, 0.71) speed=2 end=(8.301, -2.320, -7.201) travel=1.200
+PASS start=(9.150, -2.320, -8.050) direction=(-0.71, 0.00, -0.71) speed=2 end=(8.301, -2.320, -8.898) travel=1.200
+PASS start=(9.150, -2.320, -8.050) direction=(-1.00, 0.00, 0.00) speed=4 end=(7.950, -2.320, -8.050) travel=1.200
+PASS start=(9.150, -2.320, -8.050) direction=(-0.71, 0.00, 0.71) speed=4 end=(8.301, -2.320, -7.201) travel=1.200
+PASS start=(9.150, -2.320, -8.050) direction=(-0.71, 0.00, -0.71) speed=4 end=(8.301, -2.320, -8.898) travel=1.200
+PASS start=(9.150, -2.320, -9.000) direction=(-1.00, 0.00, 0.00) speed=2 end=(7.950, -2.320, -9.000) travel=1.200
+PASS start=(9.150, -2.320, -9.000) direction=(-0.71, 0.00, 0.71) speed=2 end=(8.302, -2.320, -8.151) travel=1.200
+PASS start=(9.150, -2.320, -9.000) direction=(-0.71, 0.00, -0.71) speed=2 end=(8.771, -2.320, -9.846) travel=0.866
+PASS start=(9.150, -2.320, -9.000) direction=(-1.00, 0.00, 0.00) speed=4 end=(7.950, -2.320, -9.000) travel=1.200
+PASS start=(9.150, -2.320, -9.000) direction=(-0.71, 0.00, 0.71) speed=4 end=(8.300, -2.320, -8.154) travel=1.200
+PASS start=(9.150, -2.320, -9.000) direction=(-0.71, 0.00, -0.71) speed=4 end=(8.771, -2.320, -9.832) travel=0.856
+WALL BLOCKED side=-1 z=-5.8 speed=2 contact=(3.471, -2.062, -5.575) end=(3.475, -2.062, -5.570) escaped=0.004
+WALL BLOCKED side=-1 z=-5.8 speed=4 contact=(3.471, -2.066, -5.575) end=(3.475, -2.066, -5.570) escaped=0.004
+WALL BLOCKED side=-1 z=-6.6 speed=2 contact=(3.112, -2.320, -6.695) end=(3.112, -2.320, -6.695) escaped=0.000
+WALL BLOCKED side=-1 z=-6.6 speed=4 contact=(3.112, -2.320, -6.696) end=(3.112, -2.320, -6.696) escaped=0.000
+WALL BLOCKED side=-1 z=-7.3 speed=2 contact=(3.112, -2.320, -7.300) end=(3.112, -2.320, -7.300) escaped=0.000
+WALL BLOCKED side=-1 z=-7.3 speed=4 contact=(3.112, -2.320, -7.300) end=(3.112, -2.320, -7.300) escaped=0.000
+WALL PASS side=-1 z=-8.05 speed=2 contact=(3.531, -2.341, -8.024) end=(4.731, -2.320, -8.024) escaped=1.200
+WALL PASS side=-1 z=-8.05 speed=4 contact=(3.527, -2.341, -8.009) end=(4.727, -2.320, -8.009) escaped=1.200
+WALL BLOCKED side=-1 z=-8.8 speed=2 contact=(6.300, -2.320, -8.800) end=(6.300, -2.320, -8.800) escaped=0.000
+WALL BLOCKED side=-1 z=-8.8 speed=4 contact=(6.300, -2.320, -8.800) end=(6.300, -2.320, -8.800) escaped=0.000
+WALL BLOCKED side=1 z=-5.8 speed=2 contact=(9.217, -2.070, -5.759) end=(9.217, -2.070, -5.759) escaped=0.000
+WALL BLOCKED side=1 z=-5.8 speed=4 contact=(9.217, -2.070, -5.759) end=(9.217, -2.070, -5.759) escaped=0.000
+WALL BLOCKED side=1 z=-6.6 speed=2 contact=(9.643, -2.070, -6.909) end=(9.643, -2.070, -6.909) escaped=0.000
+WALL BLOCKED side=1 z=-6.6 speed=4 contact=(9.639, -2.070, -6.907) end=(9.639, -2.070, -6.907) escaped=0.000
+WALL BLOCKED side=1 z=-7.3 speed=2 contact=(9.652, -2.320, -7.300) end=(9.652, -2.320, -7.300) escaped=0.000
+WALL BLOCKED side=1 z=-7.3 speed=4 contact=(9.652, -2.320, -7.300) end=(9.652, -2.320, -7.300) escaped=0.000
+WALL BLOCKED side=1 z=-8.05 speed=2 contact=(9.652, -2.320, -7.843) end=(9.652, -2.320, -7.843) escaped=0.000
+WALL BLOCKED side=1 z=-8.05 speed=4 contact=(9.652, -2.320, -7.843) end=(9.652, -2.320, -7.843) escaped=0.000
+WALL BLOCKED side=1 z=-8.8 speed=2 contact=(6.300, -2.320, -8.800) end=(6.300, -2.320, -8.800) escaped=0.000
+WALL BLOCKED side=1 z=-8.8 speed=4 contact=(6.300, -2.320, -8.800) end=(6.300, -2.320, -8.800) escaped=0.000

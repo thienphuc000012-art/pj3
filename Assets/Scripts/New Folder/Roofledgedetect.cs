@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using UnityEngine;
 
 public class RoofLedgeDetection : MonoBehaviour
@@ -14,7 +14,7 @@ public class RoofLedgeDetection : MonoBehaviour
     public RaycastHit rayLedgeFwdHit;
     public RaycastHit rayLedgeDwnHit;
 
-    private void Start()
+    private void Awake()
     {
         playerClimbScript = GetComponent<PlayerClimb>();
     }
@@ -22,36 +22,32 @@ public class RoofLedgeDetection : MonoBehaviour
     private void Update()
     {
         if (CampaignSession.InputBlocked) return;
-        if (!playerClimbScript.isClimbing)
-        {
-            for (int i = 0; i < rayAmount; i++)
-            {
-                Vector3 rayPos = transform.position + Vector3.up * 0.5f + transform.forward * rayOffset * i;
+        RefreshRoofLedge();
+    }
 
-                if (Physics.Raycast(rayPos, Vector3.down, out rayLedgeDwnHit, rayLength, playerClimbScript.ledgeLayer))
-                {
-                    isRoofLedgeDetected = true;
-
-                    // Dùng transform.forward của Player để bắn ray chuẩn xác hơn
-                    if (Physics.Raycast(rayLedgeDwnHit.point + transform.forward * 0.5f, -transform.forward, out rayLedgeFwdHit, 1f, playerClimbScript.ledgeLayer))
-                    {
-                        if (Input.GetKeyDown(KeyCode.C) && rayLedgeFwdHit.point != Vector3.zero)
-                        {
-                            StartCoroutine(DropToLedgeHang());
-                        }
-                    }
-                    break;
-                }
-                else
-                {
-                    isRoofLedgeDetected = false;
-                }
-            }
-        }
-        else
+    public bool RefreshRoofLedge()
+    {
+        if (playerClimbScript == null) playerClimbScript = GetComponent<PlayerClimb>();
+        isRoofLedgeDetected = false;
+        if (playerClimbScript == null || playerClimbScript.isClimbing || isDropingFromRoof) return false;
+        for (int i = 0; i < rayAmount; i++)
         {
-            isRoofLedgeDetected = false;
+            Vector3 origin = transform.position + Vector3.up * .5f + transform.forward * rayOffset * i;
+            if (!Physics.Raycast(origin, Vector3.down, out var down, rayLength, playerClimbScript.ledgeLayer, QueryTriggerInteraction.Ignore)) continue;
+            if (!Physics.Raycast(down.point + transform.forward * .5f, -transform.forward, out var wall, 1f,
+                playerClimbScript.ledgeLayer, QueryTriggerInteraction.Ignore)) continue;
+            rayLedgeDwnHit = down; rayLedgeFwdHit = wall; isRoofLedgeDetected = true;
+            return true;
         }
+        return false;
+    }
+
+    public bool TryStartRoofDrop()
+    {
+        if (isDropingFromRoof || !RefreshRoofLedge()) return false;
+        playerClimbScript.ConsumeClimbInput();
+        StartCoroutine(DropToLedgeHang());
+        return true;
     }
 
     public bool isDropingFromRoof;
