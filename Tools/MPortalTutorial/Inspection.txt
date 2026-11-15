@@ -1,0 +1,67 @@
+Scene dirty=True; player=(-87.28557, -91.17000, -7.56378) yaw=(0.00, 124.34, 0.00)
+Walk -2m floor=(-88.937, -91.156, -6.436) normal=(0.000, 1.000, 0.000) m1/Terrain Main
+Walk -1m floor=(-88.111, -91.156, -7.000) normal=(0.000, 1.000, 0.000) m1/Terrain Main
+Walk 0m floor=(-87.286, -91.156, -7.564) normal=(0.000, 1.000, 0.000) m1/Terrain Main
+Walk 1m floor=(-86.460, -91.156, -8.128) normal=(0.000, 1.000, 0.000) m1/Terrain Main
+Walk 2m floor=(-85.634, -91.156, -8.692) normal=(0.000, 1.000, 0.000) m1/Terrain Main
+Walk 3m floor=(-84.808, -91.156, -9.256) normal=(0.000, 1.000, 0.000) m1/Terrain Main
+Walk 4m floor=(-83.983, -91.156, -9.820) normal=(0.000, 1.000, 0.000) m1/Terrain Main
+Walk 5m floor=(-83.157, -91.156, -10.384) normal=(0.000, 1.000, 0.000) m1/Terrain Main
+Walk 6m floor=(-82.331, -91.156, -10.948) normal=(0.000, 1.000, 0.000) m1/Terrain Main
+Walk 7m floor=(-81.506, -91.156, -11.513) normal=(0.000, 1.000, 0.000) m1/Terrain Main
+Walk 8m floor=(-80.680, -91.156, -12.077) normal=(0.000, 1.000, 0.000) m1/Terrain Main
+Walk 9m floor=(-79.854, -91.156, -12.641) normal=(0.000, 1.000, 0.000) m1/Terrain Main
+Walk 10m floor=(-79.029, -91.141, -13.205) normal=(-0.026, 1.000, 0.008) m1/Terrain Main
+Interaction RestPoint Save Point at=(-60.890, -85.881, -30.710) range=2.5 id=world:ea37e73ca9f94a559c30ef94aa604ad8
+Interaction Encounter Enemy Encounter at=(77.199, -94.558, 15.631) range=2.5 id=world:4783e6d66a1c4b2b93bc32d18fbc5387
+Parkour obstacle/climb bounds=Center: (-50.13, -65.05, -134.70), Extents: (2.63, 0.22, 1.24)
+Parkour obstacle/climb (1) bounds=Center: (-50.13, -66.49, -134.96), Extents: (2.63, 0.22, 1.24)
+Parkour obstacle/climb bounds=Center: (-51.55, -61.52, -133.56), Extents: (0.43, 0.26, 2.49)
+Parkour obstacle/climb1 bounds=Center: (-53.34, -58.99, -133.06), Extents: (2.47, 0.23, 2.34)
+Parkour obstacle/climb2 bounds=Center: (-53.86, -57.26, -132.86), Extents: (2.47, 0.23, 2.34)
+Parkour obstacle/climb3 bounds=Center: (-54.14, -55.68, -133.04), Extents: (2.47, 0.23, 2.34)
+Parkour obstacle/climb4 bounds=Center: (-54.51, -53.98, -133.08), Extents: (2.47, 0.23, 2.34)
+Parkour obstacle/climb5 bounds=Center: (-54.44, -52.66, -133.00), Extents: (2.47, 0.23, 2.34)
+Parkour obstacle/climb6 bounds=Center: (-54.97, -51.20, -133.15), Extents: (2.97, 0.23, 2.82)
+Nearby obstacle Cube (3) tag=Untagged bounds=Center: (-70.87, -89.24, -17.93), Extents: (0.96, 1.40, 1.02)
+Nearby obstacle Cube (1) tag=Untagged bounds=Center: (-67.98, -87.37, -17.82), Extents: (0.19, 1.14, 2.48)
+Existing portal low at=(-88.63, -91.89, -7.45) rot=(0.00, 0.00, 0.00) scale=(1.00, 1.00, 1.00)
+Mesh low(Clone)/Plane001 bounds=Center: (-0.35, 2.06, -0.18), Extents: (0.00, 0.50, 0.55) local=Center: (0.00, 0.00, 0.00), Extents: (0.55, 0.50, 0.00) vertices=25 submeshes=1
+  Material=shi_aiStandardSurface1SG; shader=Universal Render Pipeline/Lit; texture=
+Mesh low(Clone)/Sphere001 bounds=Center: (-0.31, 0.66, -0.13), Extents: (0.17, 0.17, 0.17) local=Center: (0.00, 0.00, 0.00), Extents: (0.17, 0.17, 0.17) vertices=13 submeshes=1
+  Material=Lit; shader=Universal Render Pipeline/Lit; texture=
+Mesh low(Clone)/Sphere001/polySurface1 bounds=Center: (-0.32, 2.35, 0.49), Extents: (0.14, 0.60, 0.50) local=Center: (-0.32, -0.49, 2.35), Extents: (0.14, 0.50, 0.60) vertices=535 submeshes=1
+  Material=shi_aiStandardSurface4SG; shader=Universal Render Pipeline/Lit; texture=
+Mesh low(Clone)/Sphere001/polySurface2 bounds=Center: (-0.32, 1.48, -0.12), Extents: (0.26, 0.29, 1.24) local=Center: (-0.32, 0.12, 1.48), Extents: (0.26, 1.24, 0.29) vertices=383 submeshes=1
+  Material=shi_aiStandardSurface4SG; shader=Universal Render Pipeline/Lit; texture=
+Mesh low(Clone)/Sphere001/shi_Group21994 bounds=Center: (-0.39, 0.88, -0.23), Extents: (1.60, 1.21, 1.57) local=Center: (-0.39, 0.23, 0.88), Extents: (1.60, 1.57, 1.21) vertices=5118 submeshes=1
+  Material=shi_aiStandardSurface2SG; shader=Universal Render Pipeline/Lit; texture=
+Mesh low(Clone)/Sphere001/shi_Group31753 bounds=Center: (-0.31, 1.53, -0.13), Extents: (0.56, 0.04, 0.56) local=Center: (-0.31, 0.13, 1.53), Extents: (0.56, 0.56, 0.04) vertices=1397 submeshes=1
+  Material=shi_aiStandardSurface4SG; shader=Universal Render Pipeline/Lit; texture=
+Mesh low(Clone)/Sphere001/shi_Group31754 bounds=Center: (-0.31, 1.45, -0.13), Extents: (0.70, 0.05, 0.70) local=Center: (-0.31, 0.13, 1.45), Extents: (0.70, 0.70, 0.05) vertices=1214 submeshes=1
+  Material=shi_aiStandardSurface4SG; shader=Universal Render Pipeline/Lit; texture=
+Mesh low(Clone)/Sphere001/shi_Group31755 bounds=Center: (-1.17, 1.27, 1.41), Extents: (0.18, 0.51, 0.19) local=Center: (-1.17, -1.41, -0.27), Extents: (0.18, 0.19, 0.51) vertices=250 submeshes=1
+  Material=shi_aiStandardSurface2SG; shader=Universal Render Pipeline/Lit; texture=
+Mesh low(Clone)/Sphere001/shi_Group31756 bounds=Center: (-0.31, 1.35, -0.13), Extents: (0.94, 0.07, 0.94) local=Center: (-0.31, 0.13, 1.35), Extents: (0.94, 0.94, 0.07) vertices=1989 submeshes=1
+  Material=shi_aiStandardSurface4SG; shader=Universal Render Pipeline/Lit; texture=
+Mesh low(Clone)/Sphere001/shi_Group31757 bounds=Center: (-0.32, 2.14, -1.04), Extents: (0.13, 0.40, 0.22) local=Center: (-0.32, 1.04, 2.14), Extents: (0.13, 0.22, 0.40) vertices=321 submeshes=1
+  Material=shi_aiStandardSurface4SG; shader=Universal Render Pipeline/Lit; texture=
+Mesh low(Clone)/Sphere001/shi_Group31758 bounds=Center: (-0.41, 0.37, 1.98), Extents: (0.31, 0.73, 0.33) local=Center: (-0.41, -1.98, 0.37), Extents: (0.31, 0.33, 0.73) vertices=486 submeshes=1
+  Material=shi_aiStandardSurface2SG; shader=Universal Render Pipeline/Lit; texture=
+Mesh low(Clone)/Sphere001/shi_Group31759 bounds=Center: (-2.03, 1.81, 1.51), Extents: (0.19, 0.46, 0.20) local=Center: (-2.03, -1.51, 1.81), Extents: (0.19, 0.20, 0.46) vertices=282 submeshes=1
+  Material=shi_aiStandardSurface2SG; shader=Universal Render Pipeline/Lit; texture=
+Mesh low(Clone)/Sphere001/shi_Group31760 bounds=Center: (1.33, 2.55, 1.13), Extents: (0.21, 0.54, 0.20) local=Center: (1.33, -1.13, 2.90), Extents: (0.21, 0.20, 0.54) vertices=276 submeshes=1
+  Material=shi_aiStandardSurface2SG; shader=Universal Render Pipeline/Lit; texture=
+Mesh low(Clone)/Sphere001/shi_Group31761 bounds=Center: (1.90, 0.90, 0.47), Extents: (0.16, 0.39, 0.17) local=Center: (1.90, -0.47, 0.90), Extents: (0.16, 0.17, 0.39) vertices=238 submeshes=1
+  Material=shi_aiStandardSurface2SG; shader=Universal Render Pipeline/Lit; texture=
+Mesh low(Clone)/Sphere001/shi_Group31762 bounds=Center: (-1.51, 0.22, -1.02), Extents: (0.22, 0.55, 0.20) local=Center: (-1.51, 1.02, 0.22), Extents: (0.22, 0.20, 0.55) vertices=301 submeshes=1
+  Material=shi_aiStandardSurface2SG; shader=Universal Render Pipeline/Lit; texture=
+Mesh low(Clone)/Sphere001/shi_Group31763 bounds=Center: (-2.20, 2.25, -1.35), Extents: (0.14, 0.31, 0.13) local=Center: (-2.20, 1.35, 2.25), Extents: (0.14, 0.13, 0.31) vertices=190 submeshes=1
+  Material=shi_aiStandardSurface2SG; shader=Universal Render Pipeline/Lit; texture=
+Mesh low(Clone)/Sphere001/shi_Group31764 bounds=Center: (-0.63, 1.43, -2.30), Extents: (0.28, 0.73, 0.27) local=Center: (-0.63, 2.30, 1.43), Extents: (0.28, 0.27, 0.73) vertices=462 submeshes=1
+  Material=shi_aiStandardSurface2SG; shader=Universal Render Pipeline/Lit; texture=
+Mesh low(Clone)/Sphere001/shi_Group31765 bounds=Center: (0.95, -0.41, -2.24), Extents: (0.19, 0.48, 0.19) local=Center: (0.95, 2.24, -0.41), Extents: (0.19, 0.19, 0.48) vertices=294 submeshes=1
+  Material=shi_aiStandardSurface2SG; shader=Universal Render Pipeline/Lit; texture=
+Preview=Tools/MPortalTutorial/Model-0-20261115-192316858.png
+Preview=Tools/MPortalTutorial/Model-1-20261115-192316887.png
+Preview=Tools/MPortalTutorial/Model-2-20261115-192316906.png

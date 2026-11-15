@@ -69,7 +69,8 @@ public class AdventureUI : MonoBehaviour
         }
         if (view == null) { view = AdventureCanvasRoot.Acquire(AdventureCanvasKind.Adventure); Bind(); }
         bool keepHudVisibleDuringInteraction = S.Busy && S.KeepHudVisibleDuringItemInteraction;
-        view.gameObject.SetActive(!S.Busy || keepHudVisibleDuringInteraction);
+        view.gameObject.SetActive(!S.PresentationActive && (!S.Busy || keepHudVisibleDuringInteraction));
+        if (S.PresentationActive) return;
         if (S.Busy)
         {
             if (keepHudVisibleDuringInteraction)

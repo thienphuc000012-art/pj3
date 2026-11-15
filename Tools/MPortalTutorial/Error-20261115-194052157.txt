@@ -1,0 +1,8 @@
+UnityEngine.MissingComponentException: There is no 'Light' attached to the "Portal Glow" game object, but a script is trying to access it.
+You probably need to add a Light to the game object "Portal Glow". Or your script needs to check if the component is attached before using it.
+  at UnityEngine.Object+MarshalledUnityObject.TryThrowEditorNullExceptionObject (UnityEngine.Object unityObj, System.String parameterName) [0x000e2] in <5fbef2e591e14a4c91f3c5e34508b853>:0 
+  at UnityEngine.Bindings.ThrowHelper.ThrowNullReferenceException (System.Object obj) [0x00010] in <5fbef2e591e14a4c91f3c5e34508b853>:0 
+  at UnityEngine.Light.set_type (UnityEngine.LightType value) [0x00006] in <5fbef2e591e14a4c91f3c5e34508b853>:0 
+  at MPortalTutorialSetup.BuildPortal (UnityEngine.Transform parent, UnityEngine.SceneManagement.Scene scene, System.String backup) [0x004f9] in D:\New folder (4)\pj3\Assets\Editor\MPortalTutorialSetup.cs:192 
+  at MPortalTutorialSetup.Setup () [0x0028b] in D:\New folder (4)\pj3\Assets\Editor\MPortalTutorialSetup.cs:125 
+  at MPortalTutorialSetup.Poll () [0x00079] in D:\New folder (4)\pj3\Assets\Editor\MPortalTutorialSetup.cs:25 

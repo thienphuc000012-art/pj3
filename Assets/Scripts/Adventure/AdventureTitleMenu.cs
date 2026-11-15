@@ -185,7 +185,7 @@ public sealed class AdventureTitleMenu : MonoBehaviour
             {
                 director.stopped -= CompleteIntro;
                 if (SceneManager.GetActiveScene() != scene) return;
-                if (!CampaignSession.TryBackupAutosave() || !CampaignSession.BeginFromTitle(config, save))
+                if (!CampaignSession.TryBackupAutosave() || !CampaignSession.BeginFromTitle(config, save, true))
                     Fail("Không thể bắt đầu game mới.");
             }
 

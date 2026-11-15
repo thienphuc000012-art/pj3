@@ -1,0 +1,31 @@
+Player m: (-87.2856, -91.1700, -7.5638); force=5; CC radius=0.3, slope=50, skin=0.03
+PASS: flat support, immediate takeoff, stale-grounded ascent always applies gravity.
+PASS: former overlap query reports a raised side wall as ground; downward walkable-support query rejects it.
+PASS: 70-degree slope, 30 FPS, 2s slide delta=(0.000, -5.131, -2.078)m, peak slide speed=3.000m/s; no uphill/jump input.
+PASS: 70-degree slope, 60 FPS, 2s slide delta=(0.000, -5.113, -2.071)m, peak slide speed=3.000m/s; no uphill/jump input.
+PASS: 70-degree slope, 120 FPS, 2s slide delta=(0.000, -5.103, -2.068)m, peak slide speed=3.000m/s; no uphill/jump input.
+PASS: actual player Animator recovers both Jump and Fall on steep support with recovery called every frame; no transition restart/frozen air pose.
+PASS: 35-degree terrain permits standing/jumping; 70-degree foot support ends Fall without becoming a jump platform.
+PASS: triggers ignored; real controller support on other solid floor layers preserved.
+PASS: 30 FPS, wall=False; rise=1.192m, ascending-ground frames=0, landed=True
+PASS: 30 FPS, wall=True; rise=1.192m, ascending-ground frames=0, landed=True
+PASS: 60 FPS, wall=False; rise=1.233m, ascending-ground frames=0, landed=True
+PASS: 60 FPS, wall=True; rise=1.233m, ascending-ground frames=0, landed=True
+PASS: 120 FPS, wall=False; rise=1.253m, ascending-ground frames=0, landed=True
+PASS: 120 FPS, wall=True; rise=1.253m, ascending-ground frames=0, landed=True
+PASS: full 30 FPS 4m fall -> Land -> ground; final Basic Movement, longest supported air pose=0.067s; Jump entries=0, Land=True.
+PASS: full 60 FPS 4m fall -> Land -> ground; final Basic Movement, longest supported air pose=0.067s; Jump entries=0, Land=True.
+PASS: full 120 FPS 4m fall -> Land -> ground; final Basic Movement, longest supported air pose=0.075s; Jump entries=0, Land=True.
+Terrain sample normal=(0.000, 1.000, 0.000); scene dirty=False
+Actual m terrain heading 0: old [rise=1.399m, ascending-ground frames=2, landed=True]; current [rise=1.233m, ascending-ground frames=0, landed=True]
+Actual m terrain heading 45: old [rise=1.399m, ascending-ground frames=2, landed=True]; current [rise=1.233m, ascending-ground frames=0, landed=True]
+Actual m terrain heading 90: old [rise=1.399m, ascending-ground frames=2, landed=True]; current [rise=1.233m, ascending-ground frames=0, landed=True]
+Actual m terrain heading 135: old [rise=1.399m, ascending-ground frames=2, landed=True]; current [rise=1.233m, ascending-ground frames=0, landed=True]
+Actual m terrain heading 180: old [rise=1.399m, ascending-ground frames=2, landed=True]; current [rise=1.233m, ascending-ground frames=0, landed=True]
+Actual m terrain heading 225: old [rise=1.399m, ascending-ground frames=2, landed=True]; current [rise=1.233m, ascending-ground frames=0, landed=True]
+Actual m terrain heading 270: old [rise=1.399m, ascending-ground frames=2, landed=True]; current [rise=1.233m, ascending-ground frames=0, landed=True]
+Actual m terrain heading 315: old [rise=1.399m, ascending-ground frames=2, landed=True]; current [rise=1.233m, ascending-ground frames=0, landed=True]
+PASS: full 30 FPS Jump -> slope slide -> ground; final Basic Movement, longest supported air pose=0.067s; Jump entries=1, Land=True.
+PASS: full 60 FPS Jump -> slope slide -> ground; final Basic Movement, longest supported air pose=0.067s; Jump entries=1, Land=True.
+PASS: full 120 FPS Jump -> slope slide -> ground; final Basic Movement, longest supported air pose=0.075s; Jump entries=1, Land=True.
+Isolated native CharacterController/Physics tests only. No Play Mode, map/terrain edits, spawn changes or campaign save writes.

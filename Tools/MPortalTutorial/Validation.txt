@@ -1,0 +1,23 @@
+PASS: scene m only; exact inside-portal spawn/yaw; camera references; source model materials; positive static frame colliders; energy has no collider; no extra shadow maps.
+PASS: real CharacterController walks through authored portal/terrain at 30 FPS; maximum error=0.0865m; exit error=0.0000m.
+PASS: real CharacterController walks through authored portal/terrain at 60 FPS; maximum error=0.0865m; exit error=0.0000m.
+PASS: real CharacterController walks through authored portal/terrain at 120 FPS; maximum error=0.0866m; exit error=0.0000m.
+Camera Walk Camera Start terrain clearance=2.39m.
+Camera Walk Camera End terrain clearance=2.02m.
+Camera Map Pan 1 terrain clearance=8.58m.
+Camera Map Pan 2 terrain clearance=18.01m.
+PASS: portal frame/scenery does not obstruct either walking shot's view of the player.
+PASS: older JSON compatible; progress resumes at Parkour; independent campaign data; no duplicate entry; no file saves.
+PASS: single-owner cinematic lock; no menu/encounter during arrival; normal and repeated cleanup release input; P menu opens/closes after handoff.
+PASS: arrival owns its camera blend; cleanup restores the previous camera hook.
+PASS: all 7 practice gates: move, jump, actual scan callback, open/close P, completed parkour, correct campfire interaction, close rest; no click-to-skip/repeated lesson.
+PASS: existing Cube (3) is accepted by actual parkour front/top rays and action ClimpingUp; approach=(-70.870, -90.579, -16.460)
+UI preview=Tools/MPortalTutorial/Lesson-0-Vietnamese-20261115-200059452.png
+UI preview=Tools/MPortalTutorial/Lesson-6-Vietnamese-20261115-200059964.png
+PASS: Vietnamese all seven labels; hands-on graphics pass pointer clicks; Submit cannot skip practice.
+UI preview=Tools/MPortalTutorial/Lesson-0-English-20261115-200100449.png
+UI preview=Tools/MPortalTutorial/Lesson-6-English-20261115-200100924.png
+PASS: English all seven labels; hands-on graphics pass pointer clicks; Submit cannot skip practice.
+PASS: combat tutorial restores modal click interception after exploration mode.
+Portal material preview=Tools/MPortalTutorial/Portal-Materials-20261115-200101399.png
+PASS: portal energy and point light fade to off and restore on a separate clone; stone renderers remain.

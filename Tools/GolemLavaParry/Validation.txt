@@ -1,0 +1,5 @@
+PASS: GolemLava controller attack4 -> correct clip; OpenParry 0.70s, PlayVFX and DealDamage 1.00s, EndAttack unchanged.
+PASS: early input does not block damage; OpenParry event reaches the actual ParrySystem.
+PASS: in-window parry prevents actual CombatManager Attack4 HP damage; window/result reset after DealDamage.
+PASS: missed/late parry still takes damage and cannot undo the resolved hit.
+Edit Mode only. No live battle, map scene or campaign save writes; runtime combat scripts unchanged.

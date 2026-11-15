@@ -40,6 +40,9 @@ public sealed class GuidedCombatTutorialView : MonoBehaviour, IPointerClickHandl
     Action onDismissed;
     GameObject previousSelection;
     int openedFrame;
+    bool handsOn;
+    Color[] authoredShadeColors;
+    public bool IsHandsOn => handsOn;
 
     public bool IsOpen => isActiveAndEnabled;
 
@@ -94,6 +97,7 @@ public sealed class GuidedCombatTutorialView : MonoBehaviour, IPointerClickHandl
     public void Show(int step, int totalSteps, IReadOnlyList<RectTransform> focus, string title, string body,
         string continueLabel, Action dismissed, Button requiredButton = null, bool allowCancel = false)
     {
+        SetHandsOn(false);
         if (!IsOpen && EventSystem.current != null)
             previousSelection = EventSystem.current.currentSelectedGameObject;
 
@@ -119,6 +123,7 @@ public sealed class GuidedCombatTutorialView : MonoBehaviour, IPointerClickHandl
 
     public void Close()
     {
+        SetHandsOn(false);
         onDismissed = null;
         focusTargets = null;
         requiredButton = null;
@@ -140,6 +145,7 @@ public sealed class GuidedCombatTutorialView : MonoBehaviour, IPointerClickHandl
 
     void Update()
     {
+        if (handsOn) return;
         if (Time.frameCount <= openedFrame) return;
         if (allowCancel && CancelPressed())
         {
@@ -153,6 +159,7 @@ public sealed class GuidedCombatTutorialView : MonoBehaviour, IPointerClickHandl
 
     public void OnPointerClick(PointerEventData eventData)
     {
+        if (handsOn) return;
         if (eventData == null) return;
         if (eventData.button == PointerEventData.InputButton.Right)
         {
@@ -177,14 +184,40 @@ public sealed class GuidedCombatTutorialView : MonoBehaviour, IPointerClickHandl
 
     public void OnSubmit(BaseEventData eventData)
     {
+        if (handsOn) return;
         if (!requiresAction || RequiredButtonAvailable()) Dismiss();
     }
 
     public void OnCancel(BaseEventData eventData)
     {
+        if (handsOn) return;
         if (!allowCancel) return;
         Dismiss();
         eventData?.Use();
+    }
+
+    // Exploration practice shares the combat spotlight without consuming world/UI input.
+    public void SetHandsOn(bool value)
+    {
+        handsOn = value;
+        if (overlay != null)
+        {
+            var pointer = overlay.Find("Pointer Block")?.GetComponent<Graphic>();
+            if (pointer != null) pointer.raycastTarget = !value;
+        }
+        if (authoredShadeColors == null || authoredShadeColors.Length != shade.Length)
+        {
+            authoredShadeColors = new Color[shade.Length];
+            for (int i = 0; i < shade.Length; i++)
+                if (shade[i] != null && shade[i].TryGetComponent<Graphic>(out var graphic)) authoredShadeColors[i] = graphic.color;
+        }
+        for (int i = 0; i < shade.Length; i++)
+            if (shade[i] != null && shade[i].TryGetComponent<Graphic>(out var graphic))
+            {
+                var tint = authoredShadeColors[i]; if (value) tint.a = Mathf.Min(tint.a, .22f); graphic.color = tint;
+            }
+        if (value && EventSystem.current != null && EventSystem.current.currentSelectedGameObject == gameObject)
+            EventSystem.current.SetSelectedGameObject(previousSelection != null && previousSelection.activeInHierarchy ? previousSelection : null);
     }
 
     bool RequiredButtonAvailable() => requiredButton != null && requiredButton.isActiveAndEnabled &&

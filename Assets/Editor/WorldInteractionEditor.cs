@@ -142,7 +142,7 @@ public class WorldInteractionEditor : Editor
             ? 100
             : kind == WorldInteractionKind.Chest
                 ? 30
-                : 0;
+                : kind == WorldInteractionKind.Discovery ? 25 : 0;
 
 
         // ========================================================
@@ -245,6 +245,14 @@ public class WorldInteractionEditor : Editor
         WorldInteractionKind kind =
             (WorldInteractionKind)
             kindProperty.enumValueIndex;
+
+        if (kind == WorldInteractionKind.Discovery)
+        {
+            EditorGUILayout.Space(6);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("showDiscoveryBanner"), new GUIContent("Hiện tên khu vực"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("discoveryCooldownSeconds"), new GUIContent("Hồi chiêu hiện tên (giây)"));
+            EditorGUILayout.HelpBox("Tên lấy từ Tên hiển thị. Lần khám phá đầu nhận XP/phần thưởng; các lần sau chỉ hiện tên khi đi ra rồi vào lại sau hồi chiêu. Mặc định 30 giây riêng cho từng vùng. Chỉnh khung và hiệu ứng tại AdventureCanvas > Discovery Area Banner.", MessageType.Info);
+        }
 
         if (kind == WorldInteractionKind.Cryptex)
             EditorGUILayout.HelpBox("Đặt mật khẩu và sự kiện mở cửa ở component Cryptex Lock bên dưới. Model đã lắp sẵn dài 0.55 m; chỉnh Scale của root để thay đổi kích thước.", MessageType.Info);

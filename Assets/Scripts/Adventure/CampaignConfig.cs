@@ -222,6 +222,7 @@ public class CampaignSave
         if (completedStoryDialogueIds == null) completedStoryDialogueIds = new List<string>();
         if (consumedNpcDialogueKeys == null) consumedNpcDialogueKeys = new List<string>();
         if (collectedItemTotals == null) collectedItemTotals = new List<ItemStack>();
+        if (explorationTutorials == null) explorationTutorials = new List<ExplorationTutorialProgress>();
         if (version < 4)
             foreach (var progress in quests)
                 if (progress != null && progress.completed) progress.rewardsClaimed = true;
@@ -235,6 +236,7 @@ public class CampaignSave
     public List<AdventureQuestProgress> quests = new List<AdventureQuestProgress>();
     public List<string> completedStoryDialogueIds = new List<string>();
     public List<string> consumedNpcDialogueKeys = new List<string>();
+    public List<ExplorationTutorialProgress> explorationTutorials = new List<ExplorationTutorialProgress>();
     [Tooltip("Lifetime item acquisitions used when accepting collect quests after the item was already picked up.")]
     public List<ItemStack> collectedItemTotals = new List<ItemStack>();
     public string trackedQuestId;

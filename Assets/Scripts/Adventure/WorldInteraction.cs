@@ -25,6 +25,11 @@ public class WorldInteraction : MonoBehaviour
     public string questMarkerId;
     public string displayName = "Tương tác";
     public WorldInteractionKind kind;
+    [Header("Discovery Area")]
+    [Tooltip("Tự hiện Display Name khi vào khu vực. XP/phần thưởng chỉ nhận ở lần khám phá đầu tiên.")]
+    public bool showDiscoveryBanner = true;
+    [Min(0f), Tooltip("Hồi chiêu hiện tên riêng cho khu vực này. Cần đi ra rồi đi vào lại; đứng yên trong vùng không lặp chữ.")]
+    public float discoveryCooldownSeconds = 30f;
     [Header("NPC Dialogue")]
     [Tooltip("First one-time story or quest dialogue. After it is completed or its quest is accepted, the NPC uses later unlocked dialogue or Default Dialogue.")]
     public AdventureStoryDialogue dialogue;
@@ -562,7 +567,7 @@ public class WorldInteraction : MonoBehaviour
     public void Interact()
     {
         var session = CampaignSession.Instance;
-        if (session == null || session.Busy || IsConsumed) return;
+        if (session == null || session.Busy || session.PresentationActive || (kind != WorldInteractionKind.Discovery && IsConsumed)) return;
         if (kind == WorldInteractionKind.RestPoint) { session.OpenRest(this); return; }
         if (kind == WorldInteractionKind.Encounter) { session.BeginEncounter(this); return; }
         if (kind == WorldInteractionKind.MapTransition) { session.TravelToMap(this); return; }
@@ -576,12 +581,23 @@ public class WorldInteraction : MonoBehaviour
     public void CompleteCollection(bool requireRange = true)
     {
         var session = CampaignSession.Instance;
-        if (session == null || IsConsumed || requireRange && !session.IsNear(this)) return;
-        foreach (var reward in rewards) session.AddItem(reward.id, reward.count);
-        session.GainXP(experience);
-        session.Data.collected.Add(Id);
-        session.Notify(displayName + " • +" + experience + " KN");
-        session.Save();
+        if (session == null || requireRange && !session.IsNear(this)) return;
+        bool discovery = kind == WorldInteractionKind.Discovery;
+        if (discovery) { if (!session.TryEnterDiscoveryArea(this)) return; }
+        else if (IsConsumed) return;
+        if (!IsConsumed)
+        {
+            foreach (var reward in rewards) session.AddItem(reward.id, reward.count);
+            session.GainXP(experience);
+            session.Data.collected.Add(Id);
+            session.Notify(displayName + " • +" + experience + " KN");
+            session.Save();
+        }
+        if (discovery)
+        {
+            if (showDiscoveryBanner) DiscoveryAreaBanner.Announce(this);
+            return; // Keep the discovery zone available for future entries, including old saves.
+        }
         gameObject.SetActive(false);
     }
     void OnDrawGizmosSelected()

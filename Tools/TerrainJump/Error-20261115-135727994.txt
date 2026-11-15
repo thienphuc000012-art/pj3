@@ -1,0 +1,5 @@
+System.InvalidOperationException: Repeated supported-air recovery failed: Base Layer.Jump remains at hash=125937960, normalized=4.99999, transition=False; Base Layer.fallingidle 0 remains at hash=935898651, normalized=0.04761905, transition=True
+  at TerrainJumpValidation.Check (System.Boolean condition, System.String message) [0x00009] in D:\New folder (4)\pj3\Assets\Editor\TerrainJumpValidation.cs:318 
+  at TerrainJumpValidation.ValidateFallRecovery (PlayerScript physicsPlayer, PlayerScript authored, UnityEngine.GameObject root, System.Text.StringBuilder report) [0x0039d] in D:\New folder (4)\pj3\Assets\Editor\TerrainJumpValidation.cs:300 
+  at TerrainJumpValidation.Validate () [0x00739] in D:\New folder (4)\pj3\Assets\Editor\TerrainJumpValidation.cs:123 
+  at TerrainJumpValidation.Poll () [0x00082] in D:\New folder (4)\pj3\Assets\Editor\TerrainJumpValidation.cs:36 

@@ -11,7 +11,17 @@ using Unity.Profiling;
 public class CampaignSession : MonoBehaviour
 {
     public static CampaignSession Instance { get; private set; }
-    public static bool InputBlocked => LoadingScreen.IsLoading || MapChunkStreamer.MovementBlocked || (Instance != null && (Instance.Busy || Instance.Menu != AdventureMenu.None));
+    public static bool InputBlocked => LoadingScreen.IsLoading || MapChunkStreamer.MovementBlocked || (Instance != null && (Instance.Busy || Instance.PresentationActive || Instance.Menu != AdventureMenu.None));
+    UnityEngine.Object presentationOwner;
+    bool nextMapIsFreshArrival;
+    public bool PresentationActive => presentationOwner != null;
+    public bool RestoredSavedMapPosition { get; private set; }
+    public bool TryBeginPresentation(UnityEngine.Object owner)
+    {
+        if (owner == null || !OnMap || Busy || Menu != AdventureMenu.None || (presentationOwner != null && presentationOwner != owner)) return false;
+        presentationOwner = owner; return true;
+    }
+    public void EndPresentation(UnityEngine.Object owner) { if (presentationOwner == owner) presentationOwner = null; }
     public CampaignConfig Config { get; private set; }
     public CampaignSave Data { get; private set; }
     public PlayerScript MapPlayer { get; private set; }
@@ -45,7 +55,7 @@ public class CampaignSession : MonoBehaviour
         ? Data.currentMapScene
         : Config != null ? Config.mapScene : null;
     public bool OnMap => Config != null && Config.IsMapScene(SceneManager.GetActiveScene().name);
-    public bool CanStartEncounter => OnMap && !Busy && !LoadingScreen.IsLoading && !MapChunkStreamer.MovementBlocked && Menu == AdventureMenu.None && Time.unscaledTime >= encounterAllowedAt;
+    public bool CanStartEncounter => OnMap && !Busy && !PresentationActive && !LoadingScreen.IsLoading && !MapChunkStreamer.MovementBlocked && Menu == AdventureMenu.None && Time.unscaledTime >= encounterAllowedAt;
     public bool CanUpgrade => OnMap && RestPoint != null && IsNear(RestPoint) && !Busy;
     public void BeginItemPickup(WorldInteraction point)
     {
@@ -221,6 +231,7 @@ public class CampaignSession : MonoBehaviour
     private sealed class ArrivalRestArea { public Vector3 position; public float range; }
     private readonly Dictionary<string, ArrivalRestArea> arrivalRestAreas = new Dictionary<string, ArrivalRestArea>();
     private readonly HashSet<string> exitedArrivalRests = new HashSet<string>();
+    private readonly DiscoveryAreaTriggerState discoveryAreas = new DiscoveryAreaTriggerState();
     private class EncounterData
     {
         public string id;
@@ -269,11 +280,12 @@ public class CampaignSession : MonoBehaviour
         return session;
     }
 
-    internal static bool BeginFromTitle(CampaignConfig config, CampaignSave data)
+    internal static bool BeginFromTitle(CampaignConfig config, CampaignSave data, bool freshArrival = false)
     {
         if (Instance != null || !LoadingScreen.Load(data.currentMapScene)) return false;
         var session = CreateSession(config);
         session.Data = data;
+        session.nextMapIsFreshArrival = freshArrival;
         session.playTimeSample = Time.realtimeSinceStartupAsDouble;
         session.Busy = true;
         session.gameObject.AddComponent<AdventureUI>();
@@ -375,6 +387,8 @@ public class CampaignSession : MonoBehaviour
         string sceneName = SceneManager.GetActiveScene().name;
         bool positionBelongsToThisMap = Data.hasPosition &&
             (string.IsNullOrEmpty(Data.currentMapScene) || Data.currentMapScene == sceneName);
+        RestoredSavedMapPosition = positionBelongsToThisMap && !nextMapIsFreshArrival;
+        nextMapIsFreshArrival = false;
         if (positionBelongsToThisMap) Teleport(Data.position, Data.rotation);
         else
         {
@@ -448,6 +462,7 @@ public class CampaignSession : MonoBehaviour
     bool PrepareWorldPoint(WorldInteraction point)
     {
         if (point == null || !point.isActiveAndEnabled) return false;
+        if (point.kind == WorldInteractionKind.Discovery) return true;
         if (point.kind == WorldInteractionKind.Cryptex)
         {
             var puzzle = point.GetComponent<CryptexLock>();
@@ -1148,12 +1163,18 @@ public class CampaignSession : MonoBehaviour
         if (Vector3.Distance(MapPlayer.transform.position, point.transform.position) > point.range) return false;
         return point.kind != WorldInteractionKind.Chest || point.IsPlayerInFront(MapPlayer.transform);
     }
+    public bool TryEnterDiscoveryArea(WorldInteraction point)
+    {
+        if (!OnMap || Busy || Menu != AdventureMenu.None || LoadingScreen.IsLoading || MapChunkStreamer.MovementBlocked ||
+            point == null || point.kind != WorldInteractionKind.Discovery || !IsNear(point)) return false;
+        return discoveryAreas.TryEnter(point, CurrentMapScene, Time.unscaledTime);
+    }
     void Update()
     {
         UpdatePlayTime();
         if (OnMap && MapPlayer != null && !InputBlocked)
             AdventureWorldTime.Advance(Data, Time.deltaTime);
-        if (!OnMap || MapPlayer == null || Busy || LoadingScreen.IsLoading || MapChunkStreamer.MovementBlocked) return;
+        if (!OnMap || MapPlayer == null || Busy || PresentationActive || LoadingScreen.IsLoading || MapChunkStreamer.MovementBlocked) return;
         UpdateArrivalRestExits(MapPlayer.transform.position);
         // Dialogue owns input until its final node. Esc/P must not consume a
         // one-time conversation or release its camera/player controls early.
@@ -1169,15 +1190,21 @@ public class CampaignSession : MonoBehaviour
         Nearest = null;
         float best = float.MaxValue;
         bool restoredHealth = false;
+        discoveryAreas.ObservePlayer(CurrentMapScene, MapPlayer.transform.position);
         foreach (var point in worldPoints)
         {
-            if (point == null || point.IsConsumed) continue;
+            if (point == null) continue;
+            if (point.kind == WorldInteractionKind.Discovery)
+            {
+                if (IsNear(point)) point.Interact();
+                continue;
+            }
+            if (point.IsConsumed) continue;
             bool near = IsNear(point);
             bool canHeal = point.kind != WorldInteractionKind.RestPoint || CanAutoHealAtRestPoint(point, near);
             if (!near) continue;
             if (!restoredHealth && point.kind == WorldInteractionKind.RestPoint && canHeal)
                 restoredHealth = RestorePartyHealth();
-            if (point.kind == WorldInteractionKind.Discovery) { point.Interact(); continue; }
             float distance = (point.transform.position - MapPlayer.transform.position).sqrMagnitude;
             if (distance < best) { Nearest = point; best = distance; }
         }
@@ -1189,7 +1216,7 @@ public class CampaignSession : MonoBehaviour
     }
     public void SetMenu(AdventureMenu menu)
     {
-        if (Busy || !OnMap) return;
+        if (Busy || PresentationActive || !OnMap) return;
         if (Menu == AdventureMenu.Dialogue && menu != AdventureMenu.Dialogue)
         {
             StopDialogueSpeakerPresentation();
@@ -1304,7 +1331,7 @@ public class CampaignSession : MonoBehaviour
     }
     public void OpenRest(WorldInteraction rest)
     {
-        if (Busy || Menu != AdventureMenu.None || rest == null || rest.kind != WorldInteractionKind.RestPoint || !IsNear(rest)) return;
+        if (Busy || PresentationActive || Menu != AdventureMenu.None || rest == null || rest.kind != WorldInteractionKind.RestPoint || !IsNear(rest)) return;
         var unlocked = Data.unlockedRestPoints.Find(x => x.id == rest.Id);
         if (unlocked == null) { unlocked = new UnlockedRestPoint { id = rest.Id }; Data.unlockedRestPoints.Add(unlocked); }
         unlocked.displayName = rest.displayName;
@@ -1386,6 +1413,7 @@ public class CampaignSession : MonoBehaviour
 
         SetMenu(AdventureMenu.None);
         Busy = true;
+        nextMapIsFreshArrival = true;
         return true;
     }
 
@@ -1461,7 +1489,9 @@ public class CampaignSession : MonoBehaviour
         // The scene operation is asynchronous. Replace campaign data before the
         // destination MapGameSetup binds its player and chooses initial chunks.
         Data = loaded;
+        nextMapIsFreshArrival = false;
         playTimeSample = Time.realtimeSinceStartupAsDouble;
+        discoveryAreas.Clear();
         previousTimeScale = 1;
         Busy = true;
         KeepHudVisibleDuringItemInteraction = false;
@@ -1580,7 +1610,7 @@ public class CampaignSession : MonoBehaviour
 
     public void BeginEncounter(WorldInteraction point, bool playerInitiated)
     {
-        if (Busy || Menu != AdventureMenu.None || !IsNear(point) || Time.unscaledTime < encounterAllowedAt || point.IsConsumed) return;
+        if (Busy || PresentationActive || Menu != AdventureMenu.None || !IsNear(point) || Time.unscaledTime < encounterAllowedAt || point.IsConsumed) return;
         if (point.enemyPrefabs.Count == 0 || point.enemyPrefabs.Any(x => x == null) || !Data.party.Any(p => p.hp > 0))
         { Notify("Cần party còn sống và prefab quái hợp lệ."); return; }
         if (!Application.CanStreamedLevelBeLoaded(Config.battleScene)) { Notify("Chưa thêm combattest vào Build Settings."); return; }

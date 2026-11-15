@@ -478,7 +478,9 @@ public static class LedgeClimbValidation
         {
             camera.targetTexture = rt; camera.Render(); RenderTexture.active = rt;
             tex.ReadPixels(new Rect(0, 0, 800, 800), 0, 0); tex.Apply();
-            Directory.CreateDirectory("Tools/Climbing"); File.WriteAllBytes("Tools/Climbing/ShimmyRight.png", tex.EncodeToPNG());
+            Directory.CreateDirectory("Tools/Climbing");
+            string previewPath = "Tools/Climbing/ShimmyRight-" + DateTime.Now.ToString("yyyyMMdd-HHmmssfff") + ".png";
+            File.WriteAllBytes(previewPath, tex.EncodeToPNG());
         }
         finally
         {

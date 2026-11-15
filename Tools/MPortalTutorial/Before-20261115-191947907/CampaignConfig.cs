@@ -1,0 +1,301 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+
+[CreateAssetMenu(menuName = "Adventure/Campaign Config")]
+public class CampaignConfig : ScriptableObject
+{
+    public string mapScene = "mapgame";
+    [Tooltip("Các scene khám phá thuộc cùng campaign. mapScene vẫn là điểm bắt đầu; thêm các scene như m để giữ chung save/party/inventory.")]
+    public List<string> additionalMapScenes = new List<string>();
+    public string battleScene = "combattest";
+    [SerializeField, HideInInspector] private string guidedTutorialEncounterKey;
+    public bool HasGuidedTutorialEncounter => !string.IsNullOrEmpty(guidedTutorialEncounterKey);
+
+    public bool IsGuidedTutorialEncounter(WorldInteraction point) =>
+        HasGuidedTutorialEncounter && point != null && point.kind == WorldInteractionKind.Encounter &&
+        string.Equals(guidedTutorialEncounterKey, point.GuidedTutorialEncounterKey, StringComparison.Ordinal);
+
+    public void SetGuidedTutorialEncounter(WorldInteraction point)
+    {
+        guidedTutorialEncounterKey = point != null && point.kind == WorldInteractionKind.Encounter
+            ? point.GuidedTutorialEncounterKey
+            : string.Empty;
+    }
+
+    [Header("Save Slots")]
+    [Range(1, 99), Tooltip("Số ô lưu thủ công trong menu Lưu/Tải game. Tự lưu vẫn dùng file riêng.")]
+    public int saveSlotCount = 10;
+    [Header("Encounter Transition")]
+    [Tooltip("VFX encounter phủ khung hình, bắt đầu cùng animation Hit trước khi chuyển sang trận đấu.")]
+    public GameObject encounterBlackHoleVfxPrefab;
+    [Min(0f), Tooltip("Thời gian VFX tính từ lúc bắt đầu Hit. Chỉ chuyển scene sau khi cả animation và thời gian này đã kết thúc.")]
+    public float encounterVfxDuration = 1.5f;
+    [Min(0.1f)] public float encounterVfxScale = 1.5f;
+    [Min(0)] public int initiativeSpeedBonus = 100;
+    [Tooltip("Trigger trên Animator player map khi player chủ động mở trận.")]
+    public string mapPlayerAttackTrigger = "attack";
+    [Tooltip("Tên state Attack tương ứng với trigger của player.")]
+    public string mapPlayerAttackState = "attack";
+    [Tooltip("Trigger trên Animator player map khi enemy mở trận.")]
+    public string mapPlayerHitTrigger = "Hit";
+    [Tooltip("Tên state Hit tương ứng với trigger của player.")]
+    public string mapPlayerHitState = "hit";
+    [Tooltip("Trigger Hit trên Animator model enemy map.")]
+    public string mapEnemyHitTrigger = "Hit";
+    [Tooltip("Tên state Hit tương ứng với trigger của enemy.")]
+    public string mapEnemyHitState = "hit";
+    public List<BattleUnit> startingParty = new List<BattleUnit>();
+    [Tooltip("Ảnh preview riêng cho từng nhân vật, dùng chung tại Party, Attributes và Skills. Kéo ảnh từ Assets/asset/Ui/Preview vào Image.")]
+    public List<PartyPreviewImage> partyPreviews = new List<PartyPreviewImage>();
+    public Sprite PreviewImage(BattleUnit member) => member != null
+        ? partyPreviews?.Find(x => x != null && x.member == member && x.image != null)?.image
+        : null;
+    public BattleUnit demoEnemy;
+    public List<AdventureItem> items = new List<AdventureItem>();
+    public List<CraftRecipe> recipes = new List<CraftRecipe>();
+    [Header("Quests")]
+    [Tooltip("Add every quest offered by NPC dialogue here so accepted progress remains available across maps and saved games.")]
+    public List<AdventureQuest> quests = new List<AdventureQuest>();
+    public bool defeatReturnsToCheckpoint = true;
+    [Min(1)] public int equippedSkillSlots = 4;
+    public List<SkillUnlockRule> skillUnlocks = new List<SkillUnlockRule>();
+    public bool IsMapScene(string sceneName) =>
+        string.Equals(sceneName, mapScene, StringComparison.Ordinal) ||
+        additionalMapScenes != null && additionalMapScenes.Exists(x => string.Equals(x, sceneName, StringComparison.Ordinal));
+    public SkillUnlockRule SkillRule(ActionData skill) => skillUnlocks?.Find(x => x != null && x.skill == skill);
+    public ActionData[] UnlockPrerequisites(ActionData skill) => SkillRule(skill)?.prerequisites?.Where(x => x != null).Distinct().ToArray() ?? new ActionData[0];
+    public AdventureItem FindItem(string id) => items.Find(x => x.id == id);
+    public AdventureQuest FindQuest(string id) => quests?.Find(x => x != null && string.Equals(x.Id, id, StringComparison.Ordinal));
+}
+
+[Serializable]
+public class PartyPreviewImage
+{
+    [Tooltip("Prefab nhân vật tương ứng trong Starting Party.")]
+    public BattleUnit member;
+    [Tooltip("Ảnh toàn thân riêng dùng cho preview Party và CharacterPreview của Attributes/Skills.")]
+    public Sprite image;
+}
+
+[Serializable]
+public class SkillUnlockRule
+{
+    public ActionData skill;
+    [Min(1)] public int cost = 1;
+    public bool initiallyUnlocked;
+    public List<ActionData> prerequisites = new List<ActionData>();
+}
+
+[Serializable]
+public class AdventureItem
+{
+    public string id;
+    public string displayName;
+    public Sprite icon;
+    [TextArea] public string description;
+    [Min(0)] public int mapHeal;
+    public ActionData combatAction;
+}
+
+[Serializable]
+public class ItemStack
+{
+    public string id;
+    public int count;
+    public ItemStack() { }
+    public ItemStack(string id, int count) { this.id = id; this.count = count; }
+}
+
+[Serializable]
+public class CraftRecipe
+{
+    public string displayName;
+    public List<ItemStack> ingredients = new List<ItemStack>();
+    public ItemStack output;
+}
+
+[Serializable]
+public class SkillRank
+{
+    public string id;
+    public int rank;
+}
+
+[Serializable]
+public class PartyMemberProgress
+{
+    public int prefabIndex;
+    public int level = 1;
+    public int xp;
+    public int hp = 100;
+    public int statPoints;
+    public int skillPoints;
+    public int hpBonus, atkBonus, defBonus, critBonus, critDamageBonus, speedBonus;
+    public List<SkillRank> skills = new List<SkillRank>();
+    public bool loadoutInitialized;
+    public List<string> equippedSkills = new List<string>();
+    public bool FillEmptySkillSlots(string[] learned, int capacity)
+    {
+        if (equippedSkills == null) equippedSkills = new List<string>();
+        bool changed = false;
+        while (equippedSkills.Count < capacity) { equippedSkills.Add(""); changed = true; }
+        for (int i = 0; i < capacity; i++)
+        {
+            if (!string.IsNullOrEmpty(equippedSkills[i])) continue;
+            string next = learned.FirstOrDefault(id => !string.IsNullOrEmpty(id) && !equippedSkills.Contains(id));
+            if (next == null) break;
+            equippedSkills[i] = next; changed = true;
+        }
+        return changed;
+    }
+    public bool TryEquip(int slot, string id, string[] learned, int capacity)
+    {
+        if (slot < 0 || slot >= capacity || learned == null || (!string.IsNullOrEmpty(id) && !learned.Contains(id))) return false;
+        if (equippedSkills == null) equippedSkills = new List<string>();
+        while (equippedSkills.Count < capacity) equippedSkills.Add("");
+        int previous = string.IsNullOrEmpty(id) ? -1 : equippedSkills.IndexOf(id);
+        if (previous >= 0 && previous != slot) equippedSkills[previous] = equippedSkills[slot];
+        equippedSkills[slot] = id ?? ""; loadoutInitialized = true; return true;
+    }
+    public static int RequiredXPForLevel(int value) => 100 + (Mathf.Clamp(value, 1, 100) - 1) * 50;
+    public int RequiredXP => RequiredXPForLevel(level);
+    public void GainXP(int amount)
+    {
+        xp += Mathf.Max(0, amount);
+        while (xp >= RequiredXP && level < 100)
+        {
+            xp -= RequiredXP;
+            level++;
+            statPoints += 3;
+            skillPoints++;
+        }
+        if (level >= 100) xp = Mathf.Min(xp, RequiredXP);
+    }
+    public int Rank(ActionData skill) => skill == null ? 0 : skills.Find(x => x.id == skill.name)?.rank ?? 0;
+    public bool TryAllocateStats(int[] points)
+    {
+        if (points == null || points.Length != 5 || points.Any(x => x < 0) || points.Sum() <= 0 || points.Sum() > statPoints) return false;
+        statPoints -= points.Sum();
+        hpBonus += points[0] * 10; hp += points[0] * 10;
+        atkBonus += points[1] * 2; defBonus += points[2];
+        speedBonus += points[3] * 2;
+        critDamageBonus += points[4] * 5;
+        return true;
+    }
+    public bool TryUnlock(ActionData skill, int cost)
+    {
+        if (skill == null || cost < 1 || skillPoints < cost || Rank(skill) > 0) return false;
+        var entry = skills.Find(x => x.id == skill.name);
+        if (entry == null) { entry = new SkillRank { id = skill.name }; skills.Add(entry); }
+        entry.rank = 1; skillPoints -= cost; return true;
+    }
+}
+
+[Serializable]
+public class UnlockedRestPoint
+{
+    public string id, displayName, sceneName;
+    public Vector3 position;
+    public Quaternion rotation = Quaternion.identity;
+}
+
+[Serializable]
+public class CampaignSave
+{
+    public int version = 5;
+    public double playTimeSeconds;
+    // Separate from real play time. Optional fields preserve compatibility with older saves.
+    public bool hasWorldTime;
+    public double worldTimeHours;
+    public string savedAtUtc;
+    public string saveLocationName;
+    public string currentMapScene;
+    public void MigrateSkillUnlocks()
+    {
+        if (version < 2)
+            foreach (var member in party)
+                foreach (var entry in member.skills)
+                    if (entry.rank > 1) { member.skillPoints += entry.rank - 1; entry.rank = 1; }
+        if (quests == null) quests = new List<AdventureQuestProgress>();
+        if (completedStoryDialogueIds == null) completedStoryDialogueIds = new List<string>();
+        if (consumedNpcDialogueKeys == null) consumedNpcDialogueKeys = new List<string>();
+        if (collectedItemTotals == null) collectedItemTotals = new List<ItemStack>();
+        if (version < 4)
+            foreach (var progress in quests)
+                if (progress != null && progress.completed) progress.rewardsClaimed = true;
+        if (string.IsNullOrEmpty(trackedQuestId)) trackedQuestId = string.Empty;
+        version = 5;
+    }
+    public List<PartyMemberProgress> party = new List<PartyMemberProgress>();
+    public List<ItemStack> inventory = new List<ItemStack>();
+    public List<string> collected = new List<string>();
+    public List<UnlockedRestPoint> unlockedRestPoints = new List<UnlockedRestPoint>();
+    public List<AdventureQuestProgress> quests = new List<AdventureQuestProgress>();
+    public List<string> completedStoryDialogueIds = new List<string>();
+    public List<string> consumedNpcDialogueKeys = new List<string>();
+    [Tooltip("Lifetime item acquisitions used when accepting collect quests after the item was already picked up.")]
+    public List<ItemStack> collectedItemTotals = new List<ItemStack>();
+    public string trackedQuestId;
+    public Vector3 position;
+    public Quaternion rotation = Quaternion.identity;
+    public Vector3 checkpoint;
+    public Quaternion checkpointRotation = Quaternion.identity;
+    public string checkpointMapScene;
+    public bool hasPosition;
+    public bool hasCheckpoint;
+
+    public int Count(string id) => inventory.Find(x => x.id == id)?.count ?? 0;
+    public int CollectedItemCount(string id) => collectedItemTotals?.Find(x => x != null && x.id == id)?.count ?? 0;
+    public void RecordItemAcquired(string id, int amount)
+    {
+        if (string.IsNullOrEmpty(id) || amount <= 0) return;
+        if (collectedItemTotals == null) collectedItemTotals = new List<ItemStack>();
+        var total = collectedItemTotals.Find(x => x != null && x.id == id);
+        if (total == null) collectedItemTotals.Add(new ItemStack(id, amount));
+        else total.count += amount;
+    }
+    public void AddItem(string id, int amount)
+    {
+        if (string.IsNullOrEmpty(id) || amount <= 0) return;
+        var stack = inventory.Find(x => x.id == id);
+        if (stack == null) inventory.Add(new ItemStack(id, amount)); else stack.count += amount;
+    }
+    public bool Consume(string id, int amount)
+    {
+        if (amount <= 0 || Count(id) < amount) return false;
+        var stack = inventory.Find(x => x.id == id);
+        stack.count -= amount;
+        if (stack.count == 0) inventory.Remove(stack);
+        return true;
+    }
+    public bool HasIngredients(CraftRecipe recipe) => recipe != null && recipe.output != null &&
+        !string.IsNullOrEmpty(recipe.output.id) && recipe.output.count > 0 && recipe.ingredients != null && recipe.ingredients.Count > 0 &&
+        recipe.ingredients.All(x => x != null && !string.IsNullOrEmpty(x.id) && x.count > 0) &&
+        recipe.ingredients.GroupBy(x => x.id).All(g => Count(g.Key) >= g.Sum(x => x.count));
+
+    public bool TryCraft(CraftRecipe recipe)
+    {
+        // Validate the complete recipe first so failed crafting never consumes materials.
+        if (!HasIngredients(recipe)) return false;
+        foreach (var group in recipe.ingredients.GroupBy(x => x.id)) Consume(group.Key, group.Sum(x => x.count));
+        AddItem(recipe.output.id, recipe.output.count);
+        return true;
+    }
+}
+
+[Serializable]
+public class AdventureQuestProgress
+{
+    public string questId;
+    public int objectiveCount;
+    public bool completed;
+    public bool rewardsClaimed;
+    public string turnInNpcId;
+    public string turnInMapScene;
+    public Vector3 turnInPosition;
+    public string objectiveMapScene;
+    public Vector3 objectivePosition;
+    public bool hasObjectivePosition;
+}

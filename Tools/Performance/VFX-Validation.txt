@@ -1,0 +1,45 @@
+PASS: 256 repeated leases reused one native particle instance; particle/speed/child-transform reset; exact lifetime, early cleanup and stale-expiry isolation; per-prefab and cross-prefab cache bounds; external object cleanup.
+PASS: scripted/RFX4 and self-destroying effects excluded; gameplay/projectile prefab lifecycle untouched.
+PASS: actual CombatManager hit VFX creation and turn cleanup reused one instance for 20 effects.
+ORIGINAL LIFECYCLE Assets/Adventure/Prefabs/player/Mage/_ VFX.prefab
+ORIGINAL LIFECYCLE Assets/asset/Spells Pack/Particles/Prefabs/Projectiles/Casting/Casting_Arcane.prefab
+ORIGINAL LIFECYCLE Assets/asset/vfx/Realistic Effects Pack v4/Effects/Prefabs/EffectParts/CollisionEffects/Effect1_Collision.prefab
+ORIGINAL LIFECYCLE Assets/prefab/EffectParts/CollisionEffects/Effect1_Collision.prefab
+ORIGINAL LIFECYCLE Assets/asset/vfx/Realistic Effects Pack v4/Effects/Prefabs/EffectParts/HandEffects/Effect1_Hand.prefab
+ORIGINAL LIFECYCLE Assets/prefab/EffectParts/HandEffects/Effect1_Hand.prefab
+ORIGINAL LIFECYCLE Assets/asset/vfx/Realistic Effects Pack v4/Effects/Prefabs/EffectParts/CollisionEffects/Effect10_Collision.prefab
+ORIGINAL LIFECYCLE Assets/asset/vfx/Realistic Effects Pack v4/Effects/Prefabs/EffectParts/CollisionEffects/Effect12_Explosion.prefab
+ORIGINAL LIFECYCLE Assets/prefab/EffectParts/CollisionEffects/Effect12_Explosion.prefab
+ORIGINAL LIFECYCLE Assets/prefab/EffectParts/HandEffects/Effect12_Hand.prefab
+ORIGINAL LIFECYCLE Assets/prefab/EffectParts/CollisionEffects/Effect13_Collision.prefab
+ORIGINAL LIFECYCLE Assets/prefab/EffectParts/HandEffects/Effect13_Hand.prefab
+ORIGINAL LIFECYCLE Assets/asset/vfx/Realistic Effects Pack v4/Effects/Prefabs/EffectParts/CollisionEffects/Effect15_Collision.prefab
+ORIGINAL LIFECYCLE Assets/prefab/EffectParts/CollisionEffects/Effect15_Collision.prefab
+ORIGINAL LIFECYCLE Assets/asset/vfx/Realistic Effects Pack v4/Effects/Prefabs/EffectParts/HandEffects/Effect15_Hand.prefab
+ORIGINAL LIFECYCLE Assets/prefab/EffectParts/HandEffects/Effect15_Hand.prefab
+ORIGINAL LIFECYCLE Assets/asset/vfx/Realistic Effects Pack v4/Effects/Prefabs/EffectParts/CollisionEffects/Effect17_Collision.prefab
+ORIGINAL LIFECYCLE Assets/asset/vfx/Realistic Effects Pack v4/Effects/Prefabs/Effects/Effect19.prefab
+ORIGINAL LIFECYCLE Assets/asset/vfx/Realistic Effects Pack v4/Effects/Prefabs/Effects/Effect20.prefab
+ORIGINAL LIFECYCLE Assets/prefab/Effects/Effect20.prefab
+ORIGINAL LIFECYCLE Assets/prefab/EffectParts/HandEffects/Effect20_Hand.prefab
+ORIGINAL LIFECYCLE Assets/asset/vfx/Realistic Effects Pack v4/Effects/Prefabs/EffectParts/CollisionEffects/Effect21_Collision.prefab
+ORIGINAL LIFECYCLE Assets/prefab/EffectParts/CollisionEffects/Effect21_Collision.prefab
+ORIGINAL LIFECYCLE Assets/prefab/EffectParts/HandEffects/Effect21_Hand.prefab
+ORIGINAL LIFECYCLE Assets/asset/vfx/Realistic Effects Pack v4/Effects/Prefabs/Effects/Effect22.prefab
+ORIGINAL LIFECYCLE Assets/prefab/Effects/Effect23.prefab
+ORIGINAL LIFECYCLE Assets/prefab/EffectParts/CollisionEffects/Effect23_Explosion.prefab
+ORIGINAL LIFECYCLE Assets/asset/vfx/Realistic Effects Pack v4/Effects/Prefabs/EffectParts/CollisionEffects/Effect23_Explosion.prefab
+ORIGINAL LIFECYCLE Assets/prefab/Effects/Effect26.prefab
+ORIGINAL LIFECYCLE Assets/prefab/EffectParts/HandEffects/Effect26_Hand.prefab
+ORIGINAL LIFECYCLE Assets/prefab/Effects/Effect27.prefab
+ORIGINAL LIFECYCLE Assets/prefab/Effects/Effect4.prefab
+ORIGINAL LIFECYCLE Assets/prefab/EffectParts/HandEffects/Effect4_Hand.prefab
+ORIGINAL LIFECYCLE Assets/prefab/Effects/Effect7.prefab
+ORIGINAL LIFECYCLE Assets/prefab/EffectParts/HandEffects/Effect7_Hand.prefab
+ORIGINAL LIFECYCLE Assets/asset/vfx/Realistic Effects Pack v4/Effects/Prefabs/EffectParts/CollisionEffects/Effect8_Collision.prefab
+ORIGINAL LIFECYCLE Assets/asset/vfx/Realistic Effects Pack v4/Effects/Prefabs/EffectParts/CollisionEffects/Effect9_Collision.prefab
+POOLED Assets/asset/Spells Pack/Particles/Prefabs/Projectiles/Explosion/Explosion _Fire_2.prefab
+ORIGINAL LIFECYCLE Assets/prefab/vfx1/Prefabs/Projectiles/Projectiles/Projectile_Arcane.prefab
+POOLED Assets/Vefects/Stylized AoE VFX/VFX/Dark/Particles/VFX_Dark_Area_01.prefab
+Configured visual prefab candidates eligible: 2/40
+Edit Mode only; no campaign saves or combat scenes written. These are reuse/correctness checks, not an FPS benchmark.

@@ -28,6 +28,7 @@ public sealed class AdventureScanHUD : MonoBehaviour
     AdventureScanCooldownGraphic cooldownRing;
     TMP_Text cooldownLabel;
     string lastCooldownText;
+    public RectTransform CooldownRect => cooldownRoot;
 
     public void Initialize(AdventureScanSettings scanSettings)
     {

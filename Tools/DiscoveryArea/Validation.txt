@@ -1,0 +1,5 @@
+PASS: immediate first entry, exact 30-second boundary, early re-entry suppression, no standing repeats, per-area cooldowns, streamed chunk recreation, and consumed areas from old saves remain registered.
+PASS: native reveal/hold/fade, fixed-aspect ornamental frame, staggered title fade/rise, VI/EN localization, and non-interactive HUD.
+PASS: duplicate suppression while playing/queued, later replay, final panel hides, and only the selected top ornamental frame remains.
+Integration: CampaignSession retains consumed discovery zones; first visit grants/saves rewards under the consumed-ID guard; later eligible entries only announce the title.
+Edit Mode only. No campaign saves, map scenes or player input settings were written.

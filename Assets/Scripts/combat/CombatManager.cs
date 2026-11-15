@@ -21,6 +21,37 @@ public class CombatManager : MonoBehaviour
     private int screenSlashHitIndex;
     [Header("Turn VFX Cleanup")]
     [Min(0f)] public float turnVfxCleanupDelay = 1.5f;
+    [Header("Visual VFX Performance")]
+    [Tooltip("Reuse visual-only particle prefabs. Scripted/physics projectiles retain their existing lifecycle.")]
+    public bool poolVisualVfx = true;
+    [Min(0)] public int cachedVisualVfxPerPrefab = 4;
+    [Min(0)] public int cachedVisualVfxTotal = 24;
+    private CombatVisualVfxPool visualVfxPool;
+
+    private GameObject CreateVisualVfx(GameObject prefab, Vector3 position, Quaternion rotation, Transform parent = null, bool allowPooling = true)
+    {
+        if (!poolVisualVfx || !allowPooling) return Instantiate(prefab, position, rotation, parent);
+        if (visualVfxPool == null)
+            visualVfxPool = new CombatVisualVfxPool(transform, cachedVisualVfxPerPrefab, cachedVisualVfxTotal, ForgetVisualVfx);
+        return visualVfxPool.Create(prefab, position, rotation, parent);
+    }
+    private void ForgetVisualVfx(GameObject instance)
+    {
+        combatVfxInstances.Remove(instance);
+        foreach (var list in castInstances.Values) list.Remove(instance);
+    }
+    private void ReleaseVisualVfx(GameObject instance)
+    {
+        if (instance == null || visualVfxPool != null && visualVfxPool.Release(instance)) return;
+        Destroy(instance);
+    }
+    private void ScheduleVisualVfx(GameObject instance, float lifetime)
+    {
+        if (visualVfxPool != null && visualVfxPool.Schedule(instance, lifetime, Time.timeAsDouble)) return;
+        Destroy(instance, lifetime);
+    }
+    private void LateUpdate() => visualVfxPool?.Tick(Time.timeAsDouble);
+    private void OnDestroy() { visualVfxPool?.Dispose(); visualVfxPool = null; }
     private Coroutine turnTransitionRoutine;
     private readonly List<CombatBeamVfx> activeBeams = new List<CombatBeamVfx>();
     private readonly List<GameObject> pendingVfxImpacts = new List<GameObject>();
@@ -72,7 +103,7 @@ public class CombatManager : MonoBehaviour
             // Hide particles, lights and audio immediately; Destroy completes
             // at frame end, before the enemy's new effects are created.
             vfx.SetActive(false);
-            Destroy(vfx);
+            ReleaseVisualVfx(vfx);
         }
         foreach (List<GameObject> auras in ultimateAuraInstances.Values)
         {
@@ -1403,9 +1434,9 @@ public class CombatManager : MonoBehaviour
         if (action == null || action.summonSpawnVfxPrefab == null || slot == null) return;
 
         Vector3 position = slot.TransformPoint(action.summonSpawnVfxLocalOffset);
-        GameObject vfx = Instantiate(action.summonSpawnVfxPrefab, position, slot.rotation);
+        GameObject vfx = CreateVisualVfx(action.summonSpawnVfxPrefab, position, slot.rotation);
         TrackCombatVFX(vfx);
-        Destroy(vfx, GetVfxLifeTime(vfx, action.summonSpawnVfxLifetime));
+        ScheduleVisualVfx(vfx, GetVfxLifeTime(vfx, action.summonSpawnVfxLifetime));
     }
 
     public void KillSummonsOwnedBy(BattleUnit owner)
@@ -1897,7 +1928,7 @@ public class CombatManager : MonoBehaviour
                 // the ActionData runtime speed on their first frame.
                 GameObject staging = new GameObject("Combat VFX Setup");
                 staging.SetActive(false);
-                GameObject vfx = Instantiate(
+                GameObject vfx = CreateVisualVfx(
                     action.vfxPrefab,
                     u.transform.position,
                     u.transform.rotation,
@@ -1908,7 +1939,7 @@ public class CombatManager : MonoBehaviour
                 vfx.transform.SetParent(null, true);
                 vfx.SetActive(true);
                 Destroy(staging);
-                Destroy(vfx, GetVfxLifeTime(vfx, 2f));
+                ScheduleVisualVfx(vfx, GetVfxLifeTime(vfx, 2f));
             }
 
             return;
@@ -2712,11 +2743,11 @@ public class CombatManager : MonoBehaviour
         GameObject staging = new GameObject("Combat Cast Setup");
         staging.SetActive(false);
 
-        GameObject castVfx = Instantiate(
+        GameObject castVfx = CreateVisualVfx(
             currentAction.castVfxPrefab,
             spawnPoint.position,
             spawnPoint.rotation,
-            staging.transform);
+            staging.transform, currentAction.vfxType != ActionData.VfxType.Beam);
 
         castVfx.SetActive(false);
         if (currentAction.vfxType == ActionData.VfxType.Beam)
@@ -2730,7 +2761,7 @@ public class CombatManager : MonoBehaviour
         castVfx.SetActive(true);
         Destroy(staging);
 
-        Destroy(castVfx, GetVfxLifeTime(castVfx, currentAction.castVfxLifeTime));
+        ScheduleVisualVfx(castVfx, GetVfxLifeTime(castVfx, currentAction.castVfxLifeTime));
         return castVfx;
     }
 
@@ -3119,9 +3150,9 @@ public class CombatManager : MonoBehaviour
     {
         if (hitPrefab == null) return;
 
-        GameObject hitVfx = Instantiate(hitPrefab, position, Quaternion.identity);
+        GameObject hitVfx = CreateVisualVfx(hitPrefab, position, Quaternion.identity);
         TrackCombatVFX(hitVfx);
-        Destroy(hitVfx, GetVfxLifeTime(hitVfx, lifetime));
+        ScheduleVisualVfx(hitVfx, GetVfxLifeTime(hitVfx, lifetime));
     }
 
     private static float GetVfxLifeTime(GameObject vfx, float minimumLifetime)

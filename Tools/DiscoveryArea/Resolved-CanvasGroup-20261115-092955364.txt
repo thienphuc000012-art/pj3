@@ -1,0 +1,7 @@
+UnityEngine.MissingComponentException: There is no 'CanvasGroup' attached to the "Discovery Area" game object, but a script is trying to access it.
+You probably need to add a CanvasGroup to the game object "Discovery Area". Or your script needs to check if the component is attached before using it.
+  at UnityEngine.Object+MarshalledUnityObject.TryThrowEditorNullExceptionObject (UnityEngine.Object unityObj, System.String parameterName) [0x000e2] in <5fbef2e591e14a4c91f3c5e34508b853>:0 
+  at UnityEngine.Bindings.ThrowHelper.ThrowNullReferenceException (System.Object obj) [0x00010] in <5fbef2e591e14a4c91f3c5e34508b853>:0 
+  at UnityEngine.CanvasGroup.set_interactable (System.Boolean value) [0x00006] in <9e2a121eac574ca99a239161a15e6b8b>:0 
+  at DiscoveryAreaBannerSetup.Setup () [0x0017f] in D:\New folder (4)\pj3\Assets\Editor\DiscoveryAreaBannerSetup.cs:52 
+  at DiscoveryAreaBannerSetup.Poll () [0x00079] in D:\New folder (4)\pj3\Assets\Editor\DiscoveryAreaBannerSetup.cs:25 

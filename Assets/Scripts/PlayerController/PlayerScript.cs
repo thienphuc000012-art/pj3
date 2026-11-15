@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -102,6 +102,12 @@ public class PlayerScript : MonoBehaviour
     public Vector3 surfaceCheckOffset;
     public LayerMask surfaceLayer;
     public bool onSurface { get; private set; }
+    private bool onSteepSurface;
+    private Vector3 surfaceNormal = Vector3.up;
+    private float currentSlopeSlideSpeed;
+    // A steep foot contact can end a fall without becoming a valid jump platform.
+    public bool HasGroundSupport => onSurface || onSteepSurface;
+    public bool IsOnSteepSurface => onSteepSurface;
     public bool playerOnLedge { get; set; }
     public bool playerHanging { get; set; }
     public LedgeInfo LedgeInfo { get; set; }
@@ -113,7 +119,14 @@ public class PlayerScript : MonoBehaviour
 
     [Header("Jump Settings")]
     public float jumpForce = 5f;
+    public int JumpCount { get; private set; }
     bool wasOnSurface;
+
+    [Header("Slope Sliding")]
+    [Tooltip("Toc do truot toi da tren doc vuot Slope Limit cua CharacterController (m/s). Dat 0 de tat.")]
+    [Min(0f)] public float slopeSlideSpeed = 3f;
+    [Tooltip("Gia toc truot xuong doc (m/s2).")]
+    [Min(.01f)] public float slopeSlideAcceleration = 8f;
 
     [Header("Fall & Landing")]
     [Tooltip("Phai roi it nhat bao nhieu met moi phat animation Land.")]
@@ -139,7 +152,6 @@ public class PlayerScript : MonoBehaviour
     private float groundedFallRecoveryTime;
     private float landingStateGraceTime;
     private bool trackingAirborne;
-    private bool fallingAnimationActive;
 
     private void Awake()
     {
@@ -193,21 +205,63 @@ public class PlayerScript : MonoBehaviour
 
         velocity = Vector3.zero;
 
-        wasOnSurface = onSurface;
+        UpdateGroundingAndLanding(Time.deltaTime);
+
+        if (HasGroundSupport && !isClimbingLadder)
+        {
+            if (Input.GetKeyDown(KeyCode.LeftShift))
+            {
+                isRunning = !isRunning;
+            }
+
+            currentSpeed = isRunning ? runSpeed : walkSpeed;
+
+            velocity = GetHorizontalVelocity();
+
+            playerOnLedge = enviromentChecker.CheckLedge(moveDir, out LedgeInfo ledgeInfo);
+            if (playerOnLedge)
+            {
+                LedgeInfo = ledgeInfo;
+                playerLedgeMovement();
+            }
+
+            float animValue = velocity.magnitude / runSpeed;
+            animator.SetFloat("movementvalue", animValue, 0.1f, Time.deltaTime);
+        }
+        else if (!isClimbingLadder)
+        {
+            velocity = GetHorizontalVelocity();
+        }
+
+        if (!isClimbingLadder)
+        {
+            AdvanceVerticalSpeed(Time.deltaTime);
+            velocity.y = fallingSpeed;
+            velocity += GetSlopeSlideVelocity(Time.deltaTime);
+        }
+
+        PlayerMovement();
+
+        UpdateMovementAnimator();
+    }
+
+    private void UpdateGroundingAndLanding(float deltaTime)
+    {
+        wasOnSurface = HasGroundSupport;
         SurfaceCheck();
 
-        if (onSurface)
-            groundedFallRecoveryTime += Time.deltaTime;
+        if (HasGroundSupport)
+            groundedFallRecoveryTime += deltaTime;
         else
             groundedFallRecoveryTime = 0f;
-        landingStateGraceTime = Mathf.Max(0f, landingStateGraceTime - Time.deltaTime);
+        landingStateGraceTime = Mathf.Max(0f, landingStateGraceTime - deltaTime);
 
         // =========================================================
         // FALL / LANDING TRACKING
         // - Khong kich hoat Falling/Land chi vi mat ground 1-2 frame.
         // - Chi Land khi Player that su roi du xa va du nhanh.
         // =========================================================
-        if (!onSurface && !isClimbingLadder)
+        if (!HasGroundSupport && !isClimbingLadder)
         {
             if (!trackingAirborne)
             {
@@ -219,11 +273,11 @@ public class PlayerScript : MonoBehaviour
             if (transform.position.y > airbornePeakY)
                 airbornePeakY = transform.position.y;
 
-            airTime += Time.deltaTime;
+            airTime += deltaTime;
         }
 
         if (!wasOnSurface &&
-            onSurface &&
+            HasGroundSupport &&
             trackingAirborne &&
             !playerInAction &&
             !isClimbingLadder)
@@ -257,67 +311,21 @@ public class PlayerScript : MonoBehaviour
                 // tranh truong hop bi ket o fallingidle vi khong co Land trigger.
                 animator.ResetTrigger("Land");
 
-                if (fallingAnimationActive &&
-                    !string.IsNullOrEmpty(basicMovementStateName))
-                {
-                    animator.CrossFadeInFixedTime(
-                        basicMovementStateName,
-                        Mathf.Max(0.01f, smallDropRecoveryBlend),
-                        0,
-                        0f
-                    );
-                }
+                RecoverSupportedAirAnimation(false);
             }
 
-            fallingAnimationActive = false;
             trackingAirborne = false;
             airTime = 0f;
             airbornePeakY = transform.position.y;
         }
 
-        RecoverStuckFallingIdle();
+        RecoverSupportedAirAnimation();
+    }
 
-        if (onSurface && !isClimbingLadder)
-        {
-            if (fallingSpeed <= 0f)
-            {
-                fallingSpeed = -2f;
-            }
-
-            if (Input.GetKeyDown(KeyCode.LeftShift))
-            {
-                isRunning = !isRunning;
-            }
-
-            currentSpeed = isRunning ? runSpeed : walkSpeed;
-
-            velocity = moveDir * currentSpeed;
-
-            playerOnLedge = enviromentChecker.CheckLedge(moveDir, out LedgeInfo ledgeInfo);
-            if (playerOnLedge)
-            {
-                LedgeInfo = ledgeInfo;
-                playerLedgeMovement();
-            }
-
-            float animValue = velocity.magnitude / runSpeed;
-            animator.SetFloat("movementvalue", animValue, 0.1f, Time.deltaTime);
-        }
-        else if (!isClimbingLadder)
-        {
-            fallingSpeed += Physics.gravity.y * Time.deltaTime;
-            velocity = transform.forward * walkSpeed / 2;
-        }
-
-        if (!isClimbingLadder)
-        {
-            velocity.y = fallingSpeed;
-        }
-
-        PlayerMovement();
-
+    private void UpdateMovementAnimator()
+    {
         // Cập nhật thông số Animator
-        animator.SetBool("OnSurface", onSurface);
+        animator.SetBool("OnSurface", HasGroundSupport);
         animator.SetFloat("VerticalSpeed", fallingSpeed);
 
         float currentFallDistance = 0f;
@@ -325,7 +333,7 @@ public class PlayerScript : MonoBehaviour
             currentFallDistance = Mathf.Max(0f, airbornePeakY - transform.position.y);
 
         bool isFalling =
-            !onSurface &&
+            !HasGroundSupport &&
             !isClimbingLadder &&
             fallingSpeed < -0.5f &&
             airTime >= minFallingAirTime &&
@@ -333,17 +341,53 @@ public class PlayerScript : MonoBehaviour
 
         animator.SetBool("IsFalling", isFalling);
 
-        if (isFalling)
-            fallingAnimationActive = true;
-
         // --- CẬP NHẬT ANIMATOR CHO LEO THANG ---
         animator.SetBool("IsClimbing", isClimbingLadder);
     }
 
     public void PerformJump()
     {
+        JumpCount++;
         fallingSpeed = jumpForce;
-        animator.SetTrigger("Jump");
+        onSurface = false;
+        onSteepSurface = false;
+        currentSlopeSlideSpeed = 0f;
+        groundedFallRecoveryTime = 0f;
+        landingStateGraceTime = 0f;
+        if (animator != null) animator.SetTrigger("Jump");
+    }
+
+    private void AdvanceVerticalSpeed(float deltaTime)
+    {
+        // A side contact or stale grounded flag must never suspend gravity during ascent.
+        if (HasGroundSupport && fallingSpeed <= 0f) fallingSpeed = onSteepSurface ? 0f : -2f;
+        else fallingSpeed += Physics.gravity.y * deltaTime;
+    }
+
+    private Vector3 GetHorizontalVelocity()
+    {
+        Vector3 inputVelocity = moveDir * (HasGroundSupport ? currentSpeed : walkSpeed * .5f);
+        if (onSteepSurface && slopeSlideSpeed > 0f)
+        {
+            // Preserve sideways/downhill control without using input to climb the steep face.
+            Vector3 downhill = new Vector3(surfaceNormal.x, 0f, surfaceNormal.z).normalized;
+            float alongSlope = Vector3.Dot(inputVelocity, downhill);
+            if (alongSlope < 0f) inputVelocity -= downhill * alongSlope;
+        }
+        return inputVelocity;
+    }
+
+    private Vector3 GetSlopeSlideVelocity(float deltaTime)
+    {
+        if (!onSteepSurface || slopeSlideSpeed <= 0f || isClimbingLadder || playerHanging || playerInAction)
+        {
+            currentSlopeSlideSpeed = 0f;
+            return Vector3.zero;
+        }
+        Vector3 downhill = Vector3.ProjectOnPlane(Vector3.down, surfaceNormal).normalized;
+        currentSlopeSlideSpeed = Mathf.MoveTowards(currentSlopeSlideSpeed, slopeSlideSpeed,
+            Mathf.Max(.01f, slopeSlideAcceleration) * Mathf.Max(0f, deltaTime));
+        return downhill * currentSlopeSlideSpeed;
     }
 
     void PlayerMovement()
@@ -721,37 +765,80 @@ public class PlayerScript : MonoBehaviour
 
     void SurfaceCheck()
     {
-        if (isClimbingLadder)
+        onSurface = false;
+        onSteepSurface = false;
+        surfaceNormal = Vector3.up;
+        // CharacterController.isGrounded describes the previous Move. Ignore that
+        // contact during ascent so a jump cannot remain grounded against a terrain bank.
+        if (isClimbingLadder || fallingSpeed > 0f)
         {
-            onSurface = false;
             return;
         }
 
-        bool controllerGrounded = CC != null && CC.enabled && CC.isGrounded;
-        bool nearGround = Physics.CheckSphere(
-            transform.TransformPoint(surfaceCheckOffset),
-            Mathf.Max(surfaceCheckRadius, CC != null ? CC.radius * 0.65f : surfaceCheckRadius),
-            surfaceLayer,
-            QueryTriggerInteraction.Ignore);
-        onSurface = controllerGrounded || nearGround;
+        Vector3 foot = transform.TransformPoint(surfaceCheckOffset);
+        // Match the controller's bottom hemisphere so a valid slope contact isn't
+        // missed just because the root sits above the ground under its centre.
+        float radius = Mathf.Max(.01f, Mathf.Max(surfaceCheckRadius, CC != null ? CC.radius : surfaceCheckRadius));
+        float reach = Mathf.Max(.06f, CC != null ? CC.skinWidth + .02f : .06f);
+        // Start clear of the capsule skin on steep terrain too; an overlapping sphere cast misses its initial contact.
+        float lift = Mathf.Max(.05f, (CC != null ? CC.skinWidth : .01f) / .2f + .05f);
+        Vector3 origin = foot + Vector3.up * (radius + lift);
+        float minNormalY = Mathf.Cos(Mathf.Min(CC != null ? CC.slopeLimit : 50f, 89f) * Mathf.Deg2Rad);
+
+        bool found = TryGetFootSupport(origin, radius, lift, reach, surfaceLayer, out RaycastHit support);
+        // Keep actual controller support on floors outside the optional probe mask,
+        // but still validate its normal instead of trusting a stale side contact.
+        if (!found && CC != null && CC.enabled && CC.isGrounded)
+            found = TryGetFootSupport(origin, radius, lift, reach, Physics.DefaultRaycastLayers & ~(1 << gameObject.layer), out support);
+        if (found)
+        {
+            surfaceNormal = support.normal;
+            onSurface = support.normal.y >= minNormalY;
+            onSteepSurface = !onSurface;
+        }
     }
 
-    private void RecoverStuckFallingIdle()
+    private static bool TryGetFootSupport(Vector3 origin, float radius, float lift, float reach, int mask, out RaycastHit support)
     {
-        if (!onSurface || isClimbingLadder || playerInAction || animator == null ||
-            landingStateGraceTime > 0f || groundedFallRecoveryTime < 0.10f)
+        // OverlapSphere also hits vertical walls. Probe down for an upward-facing
+        // foot contact; SurfaceCheck separately classifies jumpable slopes. The centre ray finds the floor when a nearby wall
+        // is the sphere's first contact, and confirms the actual terrain slope.
+        if (Physics.Raycast(origin, Vector3.down, out support, radius + lift + reach, mask, QueryTriggerInteraction.Ignore))
+            return support.normal.y >= .2f;
+        return Physics.SphereCast(origin, radius, Vector3.down, out support, lift + reach, mask, QueryTriggerInteraction.Ignore)
+            && support.normal.y >= .2f;
+    }
+
+    private void RecoverSupportedAirAnimation(bool requireStableContact = true)
+    {
+        if (!HasGroundSupport || fallingSpeed > 0f || !playerControl || playerHanging || isMountingLadder ||
+            isClimbingLadder || playerInAction || animator == null || landingStateGraceTime > 0f ||
+            (requireStableContact && groundedFallRecoveryTime < 0.10f))
             return;
 
         AnimatorStateInfo state = animator.GetCurrentAnimatorStateInfo(0);
-        if (state.shortNameHash != Animator.StringToHash("fallingidle 0")) return;
+        bool airborneState = IsAirborneAnimation(state);
+        if (animator.IsInTransition(0))
+        {
+            // Let an existing exit to locomotion or Land finish; restarting it each frame freezes the blend.
+            var next = animator.GetNextAnimatorStateInfo(0);
+            if (!IsAirborneAnimation(next)) return;
+            airborneState = true;
+        }
+        if (!airborneState) return;
 
         animator.SetBool("IsFalling", false);
         animator.SetBool("OnSurface", true);
+        animator.ResetTrigger("Jump");
         animator.ResetTrigger("Land");
         RecoverToLocomotion();
-        fallingAnimationActive = false;
         trackingAirborne = false;
         airTime = 0f;
+    }
+
+    private static bool IsAirborneAnimation(AnimatorStateInfo state)
+    {
+        return state.shortNameHash == Animator.StringToHash("Jump") || state.shortNameHash == Animator.StringToHash("fallingidle 0");
     }
 
     private void RecoverToLocomotion()
@@ -1446,6 +1533,18 @@ public class PlayerScript : MonoBehaviour
     public void ResetRequiredRotation()
     {
         requiredRotation = transform.rotation;
+    }
+
+    public void ResetAfterCinematic()
+    {
+        fallingSpeed = 0f; velocity = moveDir = requiredMoveDir = Vector3.zero;
+        currentSlopeSlideSpeed = 0f; trackingAirborne = false; airTime = groundedFallRecoveryTime = landingStateGraceTime = 0f;
+        requiredRotation = transform.rotation; SurfaceCheck();
+        if (animator != null)
+        {
+            animator.ResetTrigger("Jump"); animator.ResetTrigger("Land");
+            animator.SetBool("IsFalling", false); animator.SetBool("OnSurface", HasGroundSupport); animator.SetFloat("movementvalue", 0f);
+        }
     }
 
     public bool HasPlayerControl

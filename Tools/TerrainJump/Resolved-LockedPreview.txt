@@ -1,0 +1,119 @@
+FAILED: System.IO.IOException: Win32 IO returned 1224. Path: D:\New folder (4)\pj3\Tools\Climbing\ShimmyRight.png
+  at System.IO.FileStream..ctor (System.String path, System.IO.FileMode mode, System.IO.FileAccess access, System.IO.FileShare share, System.Int32 bufferSize, System.Boolean anonymous, System.IO.FileOptions options) [0x0019e] in <41d29b352f6a475ab1bf7c6628b82790>:0 
+  at System.IO.FileStream..ctor (System.String path, System.IO.FileMode mode, System.IO.FileAccess access, System.IO.FileShare share) [0x00000] in <41d29b352f6a475ab1bf7c6628b82790>:0 
+  at (wrapper remoting-invoke-with-check) System.IO.FileStream..ctor(string,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare)
+  at System.IO.File.InternalWriteAllBytes (System.String path, System.Byte[] bytes) [0x00000] in <41d29b352f6a475ab1bf7c6628b82790>:0 
+  at System.IO.File.WriteAllBytes (System.String path, System.Byte[] bytes) [0x00039] in <41d29b352f6a475ab1bf7c6628b82790>:0 
+  at LedgeClimbValidation.CaptureShimmyPose (PlayerClimb player) [0x002cb] in D:\New folder (4)\pj3\Assets\Editor\LedgeClimbValidation.cs:481 
+  at LedgeClimbValidation.VerifyShimmy (PlayerClimb player, UnityEngine.Animator anim, System.String hangState, System.Collections.Generic.List`1[T] lines) [0x00200] in D:\New folder (4)\pj3\Assets\Editor\LedgeClimbValidation.cs:256 
+  at LedgeClimbValidation.Validate () [0x00872] in D:\New folder (4)\pj3\Assets\Editor\LedgeClimbValidation.cs:157 
+Hop Up hand offset = -0.0434 m: lowered by 0.2414 m from the previous 0.198 m setting.
+probe x=-0.08 1 rootHeight=1.15 stale=False -> HopUp climb2
+probe x=-0.08 1 rootHeight=1.15 stale=True -> HopUp climb2
+probe x=-0.08 1 rootHeight=1.45 stale=False -> HopUp climb2
+probe x=-0.08 1 rootHeight=1.45 stale=True -> HopUp climb2
+probe x=-0.08 1 rootHeight=1.8 stale=False -> HopUp climb2
+probe x=-0.08 1 rootHeight=1.8 stale=True -> HopUp climb2
+probe x=-0.08 2 rootHeight=1.15 stale=False -> HopUp climb3
+probe x=-0.08 2 rootHeight=1.15 stale=True -> HopUp climb3
+probe x=-0.08 2 rootHeight=1.45 stale=False -> HopUp climb3
+probe x=-0.08 2 rootHeight=1.45 stale=True -> HopUp climb3
+probe x=-0.08 2 rootHeight=1.8 stale=False -> HopUp climb3
+probe x=-0.08 2 rootHeight=1.8 stale=True -> HopUp climb3
+probe x=-0.08 3 rootHeight=1.15 stale=False -> HopUp climb4
+probe x=-0.08 3 rootHeight=1.15 stale=True -> HopUp climb4
+probe x=-0.08 3 rootHeight=1.45 stale=False -> HopUp climb4
+probe x=-0.08 3 rootHeight=1.45 stale=True -> HopUp climb4
+probe x=-0.08 3 rootHeight=1.8 stale=False -> HopUp climb4
+probe x=-0.08 3 rootHeight=1.8 stale=True -> HopUp climb4
+probe x=-0.08 4 rootHeight=1.15 stale=False -> HopUp climb5
+probe x=-0.08 4 rootHeight=1.15 stale=True -> HopUp climb5
+probe x=-0.08 4 rootHeight=1.45 stale=False -> HopUp climb5
+probe x=-0.08 4 rootHeight=1.45 stale=True -> HopUp climb5
+probe x=-0.08 4 rootHeight=1.8 stale=False -> HopUp climb5
+probe x=-0.08 4 rootHeight=1.8 stale=True -> HopUp climb5
+probe x=-0.08 5 rootHeight=1.15 stale=False -> HopUp climb6
+probe x=-0.08 5 rootHeight=1.15 stale=True -> HopUp climb6
+probe x=-0.08 5 rootHeight=1.45 stale=False -> HopUp climb6
+probe x=-0.08 5 rootHeight=1.45 stale=True -> HopUp climb6
+probe x=-0.08 5 rootHeight=1.8 stale=False -> HopUp climb6
+probe x=-0.08 5 rootHeight=1.8 stale=True -> HopUp climb6
+probe x=-0.08 6 rootHeight=1.15 stale=False -> ClimbToRoof 
+probe x=-0.08 6 rootHeight=1.15 stale=True -> ClimbToRoof 
+probe x=-0.08 6 rootHeight=1.45 stale=False -> ClimbToRoof 
+probe x=-0.08 6 rootHeight=1.45 stale=True -> ClimbToRoof 
+probe x=-0.08 6 rootHeight=1.8 stale=False -> ClimbToRoof 
+probe x=-0.08 6 rootHeight=1.8 stale=True -> ClimbToRoof 
+probe x=0 1 rootHeight=1.15 stale=False -> HopUp climb2
+probe x=0 1 rootHeight=1.15 stale=True -> HopUp climb2
+probe x=0 1 rootHeight=1.45 stale=False -> HopUp climb2
+probe x=0 1 rootHeight=1.45 stale=True -> HopUp climb2
+probe x=0 1 rootHeight=1.8 stale=False -> HopUp climb2
+probe x=0 1 rootHeight=1.8 stale=True -> HopUp climb2
+probe x=0 2 rootHeight=1.15 stale=False -> HopUp climb3
+probe x=0 2 rootHeight=1.15 stale=True -> HopUp climb3
+probe x=0 2 rootHeight=1.45 stale=False -> HopUp climb3
+probe x=0 2 rootHeight=1.45 stale=True -> HopUp climb3
+probe x=0 2 rootHeight=1.8 stale=False -> HopUp climb3
+probe x=0 2 rootHeight=1.8 stale=True -> HopUp climb3
+probe x=0 3 rootHeight=1.15 stale=False -> HopUp climb4
+probe x=0 3 rootHeight=1.15 stale=True -> HopUp climb4
+probe x=0 3 rootHeight=1.45 stale=False -> HopUp climb4
+probe x=0 3 rootHeight=1.45 stale=True -> HopUp climb4
+probe x=0 3 rootHeight=1.8 stale=False -> HopUp climb4
+probe x=0 3 rootHeight=1.8 stale=True -> HopUp climb4
+probe x=0 4 rootHeight=1.15 stale=False -> HopUp climb5
+probe x=0 4 rootHeight=1.15 stale=True -> HopUp climb5
+probe x=0 4 rootHeight=1.45 stale=False -> HopUp climb5
+probe x=0 4 rootHeight=1.45 stale=True -> HopUp climb5
+probe x=0 4 rootHeight=1.8 stale=False -> HopUp climb5
+probe x=0 4 rootHeight=1.8 stale=True -> HopUp climb5
+probe x=0 5 rootHeight=1.15 stale=False -> HopUp climb6
+probe x=0 5 rootHeight=1.15 stale=True -> HopUp climb6
+probe x=0 5 rootHeight=1.45 stale=False -> HopUp climb6
+probe x=0 5 rootHeight=1.45 stale=True -> HopUp climb6
+probe x=0 5 rootHeight=1.8 stale=False -> HopUp climb6
+probe x=0 5 rootHeight=1.8 stale=True -> HopUp climb6
+probe x=0 6 rootHeight=1.15 stale=False -> ClimbToRoof 
+probe x=0 6 rootHeight=1.15 stale=True -> ClimbToRoof 
+probe x=0 6 rootHeight=1.45 stale=False -> ClimbToRoof 
+probe x=0 6 rootHeight=1.45 stale=True -> ClimbToRoof 
+probe x=0 6 rootHeight=1.8 stale=False -> ClimbToRoof 
+probe x=0 6 rootHeight=1.8 stale=True -> ClimbToRoof 
+probe x=0.08 1 rootHeight=1.15 stale=False -> HopUp climb2
+probe x=0.08 1 rootHeight=1.15 stale=True -> HopUp climb2
+probe x=0.08 1 rootHeight=1.45 stale=False -> HopUp climb2
+probe x=0.08 1 rootHeight=1.45 stale=True -> HopUp climb2
+probe x=0.08 1 rootHeight=1.8 stale=False -> HopUp climb2
+probe x=0.08 1 rootHeight=1.8 stale=True -> HopUp climb2
+probe x=0.08 2 rootHeight=1.15 stale=False -> HopUp climb3
+probe x=0.08 2 rootHeight=1.15 stale=True -> HopUp climb3
+probe x=0.08 2 rootHeight=1.45 stale=False -> HopUp climb3
+probe x=0.08 2 rootHeight=1.45 stale=True -> HopUp climb3
+probe x=0.08 2 rootHeight=1.8 stale=False -> HopUp climb3
+probe x=0.08 2 rootHeight=1.8 stale=True -> HopUp climb3
+probe x=0.08 3 rootHeight=1.15 stale=False -> HopUp climb4
+probe x=0.08 3 rootHeight=1.15 stale=True -> HopUp climb4
+probe x=0.08 3 rootHeight=1.45 stale=False -> HopUp climb4
+probe x=0.08 3 rootHeight=1.45 stale=True -> HopUp climb4
+probe x=0.08 3 rootHeight=1.8 stale=False -> HopUp climb4
+probe x=0.08 3 rootHeight=1.8 stale=True -> HopUp climb4
+probe x=0.08 4 rootHeight=1.15 stale=False -> HopUp climb5
+probe x=0.08 4 rootHeight=1.15 stale=True -> HopUp climb5
+probe x=0.08 4 rootHeight=1.45 stale=False -> HopUp climb5
+probe x=0.08 4 rootHeight=1.45 stale=True -> HopUp climb5
+probe x=0.08 4 rootHeight=1.8 stale=False -> HopUp climb5
+probe x=0.08 4 rootHeight=1.8 stale=True -> HopUp climb5
+probe x=0.08 5 rootHeight=1.15 stale=False -> HopUp climb6
+probe x=0.08 5 rootHeight=1.15 stale=True -> HopUp climb6
+probe x=0.08 5 rootHeight=1.45 stale=False -> HopUp climb6
+probe x=0.08 5 rootHeight=1.45 stale=True -> HopUp climb6
+probe x=0.08 5 rootHeight=1.8 stale=False -> HopUp climb6
+probe x=0.08 5 rootHeight=1.8 stale=True -> HopUp climb6
+probe x=0.08 6 rootHeight=1.15 stale=False -> ClimbToRoof 
+probe x=0.08 6 rootHeight=1.15 stale=True -> ClimbToRoof 
+probe x=0.08 6 rootHeight=1.45 stale=False -> ClimbToRoof 
+probe x=0.08 6 rootHeight=1.45 stale=True -> ClimbToRoof 
+probe x=0.08 6 rootHeight=1.8 stale=False -> ClimbToRoof 
+probe x=0.08 6 rootHeight=1.8 stale=True -> ClimbToRoof 
+idle to hang: no completion teleport; peak recovery=0.0103; peak additional leg step=0.0297 m/frame.
