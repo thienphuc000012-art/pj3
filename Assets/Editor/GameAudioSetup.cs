@@ -88,6 +88,10 @@ public static class GameAudioSetup
             foreach (var row in prefab.GetComponent<GameOptionsView>().rows)
             {
                 var image = row.slider.transform.parent.GetComponent<Image>(); image.sprite = sprite; image.color = Color.white;
+                var label = (RectTransform)row.slider.transform.parent.Find("Label");
+                label.offsetMin = new Vector2(43, 0); label.offsetMax = new Vector2(43, 0);
+                row.percentage.rectTransform.offsetMin = new Vector2(-43, 0); row.percentage.rectTransform.offsetMax = new Vector2(-43, 0);
+                var increaseRect = (RectTransform)row.increase.transform; increaseRect.offsetMax = new Vector2(-43, increaseRect.offsetMax.y);
                 row.decrease.GetComponent<Image>().color = row.increase.GetComponent<Image>().color = new Color(0, 0, 0, .01f);
             }
             foreach (var button in new[] { prefab.GetComponent<GameOptionsView>().languageButton, prefab.GetComponent<GameOptionsView>().backButton })
@@ -120,7 +124,8 @@ public static class GameAudioSetup
                 float top = .75f - i * .125f;
                 var row = Rect(panel, ((GameAudioBus)i).ToString(), new Vector2(0, top - .105f), new Vector2(1, top));
                 var background = row.gameObject.AddComponent<Image>(); background.sprite = theme.buttonBackground; background.type = Image.Type.Simple; background.color = new Color(.55f, .52f, .47f, .8f); background.raycastTarget = false;
-                Text(row, "Label", labels[i], font, 27, new Vector2(.035f, 0), new Vector2(.40f, 1));
+                var label = Text(row, "Label", labels[i], font, 27, new Vector2(.035f, 0), new Vector2(.40f, 1));
+                label.rectTransform.offsetMin = label.rectTransform.offsetMax = new Vector2(43, 0);
                 var minus = Button(row, "Decrease", "‹", font, null, new Vector2(.40f, .10f), new Vector2(.46f, .90f));
                 var plus = Button(row, "Increase", "›", font, null, new Vector2(.84f, .10f), new Vector2(.90f, .90f));
                 var sliderRect = Rect(row, "Slider", new Vector2(.46f, .27f), new Vector2(.84f, .73f));
@@ -134,6 +139,8 @@ public static class GameAudioSetup
                 slider.fillRect = fill; slider.handleRect = handle; slider.targetGraphic = handleImage; slider.direction = Slider.Direction.LeftToRight;
                 slider.navigation = new Navigation { mode = Navigation.Mode.Automatic }; slider.value = i < 2 ? .8f : 1f;
                 var percentage = Text(row, "Percentage", i < 2 ? "80%" : "100%", font, 25, new Vector2(.9f, 0), new Vector2(.99f, 1));
+                percentage.rectTransform.offsetMin = percentage.rectTransform.offsetMax = new Vector2(-43, 0);
+                ((RectTransform)plus.transform).offsetMax = new Vector2(-43, ((RectTransform)plus.transform).offsetMax.y);
                 view.rows[i] = new GameVolumeRow { bus = (GameAudioBus)i, slider = slider, percentage = percentage, decrease = minus, increase = plus };
             }
             Text(panel, "Language Label", "Ngôn ngữ", font, 27, new Vector2(.035f, -.075f), new Vector2(.4f, .025f));

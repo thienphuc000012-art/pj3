@@ -13,6 +13,12 @@ MonoBehaviour:
   m_Name: SwordAttack1
   m_EditorClassIdentifier: Assembly-CSharp::ActionData
   actionName: SwordAttack1
+  useSound:
+    clips: []
+    volume: 0.8
+    pitch: {x: 1, y: 1}
+    spatialBlend: 1
+    maxDistance: 24
   description: 
   icon: {fileID: 21300000, guid: 779ff2d03c859954d928e76c8725151c, type: 3}
   type: 0
@@ -83,7 +89,7 @@ MonoBehaviour:
   parryOpenBeforeImpact: 0.25
   parryWindowDuration: 0.3
   beamParryDelay: 0.1
-  useMeleeHitboxParry: 1
+  useMeleeHitboxParry: 0
   beamPlaybackSpeed: 1
   beamParticleNames: []
   beamParticleStream: 0

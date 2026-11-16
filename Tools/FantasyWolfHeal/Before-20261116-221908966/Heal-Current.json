@@ -1,0 +1,186 @@
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "Heal",
+        "m_EditorClassIdentifier": "Assembly-CSharp::ActionData",
+        "actionName": "heal",
+        "useSound": {
+            "clips": [],
+            "volume": 0.800000011920929,
+            "pitch": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "spatialBlend": 1.0,
+            "maxDistance": 24.0
+        },
+        "description": "",
+        "icon": {
+            "instanceID": 0
+        },
+        "type": 1,
+        "element": 0,
+        "isUltimate": false,
+        "ultimateEnergyGain": 10.0,
+        "power": 10,
+        "damageMultiplier": 1.0,
+        "useLifeSteal": false,
+        "lifeStealPercent": 33.33300018310547,
+        "damageCondition": 0,
+        "damageMultiplierWhenCasterBurned": 2.0,
+        "damageMultiplierWhenCasterNotBurned": 0.5,
+        "damageMultiplierWhenTargetPoisoned": 1.5,
+        "damageMultiplierWhenTargetNotPoisoned": 1.0,
+        "ignoreBurnAttackReductionWhenEmpowered": true,
+        "isSummonSkill": false,
+        "summonPrefab": {
+            "instanceID": 0
+        },
+        "summonCount": 2,
+        "summonDeathOwnerMaxHpCostPercent": 10.0,
+        "summonSpawnVfxPrefab": {
+            "instanceID": 0
+        },
+        "summonSpawnVfxLocalOffset": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "summonSpawnVfxLifetime": 2.0,
+        "summonSpawnDelay": 0.6499999761581421,
+        "isHeal": true,
+        "animationTriggerName": "heal",
+        "isFriendlyAction": true,
+        "isAoE": false,
+        "isSelfOnly": true,
+        "stainChange": 0,
+        "enemyCooldownTurns": 0,
+        "buffStat": 0,
+        "buffAmount": 0,
+        "buffDuration": 1,
+        "debuffs": [],
+        "cleanse": 0,
+        "statusOnly": false,
+        "skillCinematic": {
+            "instanceID": 0
+        },
+        "isMelee": false,
+        "screenSlash": false,
+        "screenSlashColor": {
+            "r": 0.25,
+            "g": 0.800000011920929,
+            "b": 1.0,
+            "a": 1.0
+        },
+        "screenSlashDuration": 0.41999998688697817,
+        "screenSlashWidth": 10.0,
+        "screenSlashAngle": -24.0,
+        "screenSlashCount": 1,
+        "screenSlashBurstTime": 0.44999998807907107,
+        "screenSlashFinisherScale": 2.0,
+        "screenSpaceSplit": false,
+        "screenSplitFrames": 2,
+        "screenSplitPixels": 18.0,
+        "screenSplitHold": false,
+        "screenSplitRestoreStart": 0.800000011920929,
+        "screenSlashTimeScale": 1.0,
+        "vfxType": 2,
+        "vfxPrefab": {
+            "fileID": 544098064047111422,
+            "guid": "0dd0b9a4b9d4d30449985aee6c911e17",
+            "type": 3
+        },
+        "vfxPlaybackSpeed": 1.0,
+        "ultimateAuraVfxPrefab": {
+            "instanceID": 0
+        },
+        "ultimateAuraVfxLocalOffset": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+        },
+        "ultimateAuraVfxPlaybackSpeed": 1.0,
+        "castVfxPrefab": {
+            "instanceID": 0
+        },
+        "hitVfxPrefab": {
+            "instanceID": 0
+        },
+        "useCustomHitVfxOffset": false,
+        "hitVfxOffset": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "hitVfxTiming": 0,
+        "castVfxLifeTime": 5.0,
+        "hitVfxLifeTime": 5.0,
+        "useVfxParry": true,
+        "parryOpenBeforeImpact": 0.25,
+        "parryWindowDuration": 0.30000001192092898,
+        "beamParryDelay": 0.10000000149011612,
+        "useMeleeHitboxParry": true,
+        "beamPlaybackSpeed": 1.0,
+        "beamParticleNames": [],
+        "beamParticleStream": false,
+        "beamStreamParticleName": "Flames",
+        "beamStreamTravelTime": 0.44999998807907107,
+        "projectileMoveMode": 0,
+        "vfxSpeed": 15.0,
+        "vfxLifeTime": 5.0,
+        "projectileStartOffset": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "projectileTargetOffset": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+        },
+        "curveHeight": 2.0,
+        "curveSideOffset": 0.0,
+        "rfxUseGravity": false,
+        "cameraImpactProfile": {
+            "instanceID": 0
+        },
+        "swordSlashVfxPrefab": {
+            "instanceID": 0
+        },
+        "swordSlashVfxLocalOffset": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "swordSlashVfxLocalEuler": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "swordSlashVfxScale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+        },
+        "swordSlashVfxLifetime": 2.0,
+        "swordSlashTravelsToTarget": true,
+        "swordSlashTravelSpeed": 24.0,
+        "swordSlashGroundLayers": {
+            "serializedVersion": "2",
+            "m_Bits": 4294967291
+        },
+        "swordSlashGroundProbeDistance": 20.0,
+        "swordSlashGroundHeightOffset": 0.019999999552965165,
+        "useClawAttackTrailVfx": false,
+        "clawAttackTrailColor": {
+            "r": 0.8799999952316284,
+            "g": 0.9200000166893005,
+            "b": 0.9599999785423279,
+            "a": 1.0
+        },
+        "clawAttackTrailLifetime": 0.14000000059604646,
+        "clawAttackTrailWidth": 1.0,
+        "clawAttackTrailHandSpread": 0.5
+    }
+}

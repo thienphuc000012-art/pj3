@@ -26,13 +26,20 @@ public sealed class GameOptionsView : MonoBehaviour
     bool bound;
     public bool IsOpen => gameObject.activeSelf;
 
-    public static GameOptionsView Create(Transform canvas)
+    public static GameOptionsView Create(Transform canvas, bool showLanguage = true)
     {
         var prefab = Resources.Load<GameOptionsView>("Adventure/UI/GameOptions");
         if (prefab == null) { Debug.LogError("GameOptions prefab missing. Run Tools > Adventure > Audio > Setup Audio and Options."); return null; }
         var view = Instantiate(prefab, canvas, false); view.name = "Options"; view.gameObject.SetActive(false);
+        view.SetLanguageVisible(showLanguage);
         GameLocalization.BindHierarchy(view.gameObject);
         return view;
+    }
+    public void SetLanguageVisible(bool visible)
+    {
+        var heading = transform.Find("Volume Panel/Language Label");
+        if (heading != null) heading.gameObject.SetActive(visible);
+        if (languageButton != null) languageButton.gameObject.SetActive(visible);
     }
     void Awake() => Bind();
     void Bind()

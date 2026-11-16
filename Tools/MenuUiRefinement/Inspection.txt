@@ -1,0 +1,70 @@
+Menu/Attributes/CharacterPreview
+CharacterPreview active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(180.00, -370.00) size=(250.00, 650.00) offsets=(180.00, -1020.00)/(430.00, -370.00)
+Portrait active=True anchors=(0.50, 1.00)/(0.50, 1.00) pivot=(0.50, 1.00) pos=(-80.00, -12.00) size=(440.00, 660.00) offsets=(-300.00, -672.00)/(140.00, -12.00) sprite=White
+Render active=True anchors=(0.00, 0.00)/(1.00, 1.00) pivot=(0.00, 1.00) pos=(0.00, 0.00) size=(0.00, 0.00) offsets=(0.00, 0.00)/(0.00, 0.00)
+Menu/Skills/CharacterPreview
+CharacterPreview active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(180.00, -370.00) size=(250.00, 650.00) offsets=(180.00, -1020.00)/(430.00, -370.00)
+Portrait active=True anchors=(0.00, 0.00)/(1.00, 1.00) pivot=(0.00, 1.00) pos=(0.00, 0.00) size=(0.00, 0.00) offsets=(0.00, 0.00)/(0.00, 0.00) sprite=White
+Render active=True anchors=(0.00, 0.00)/(1.00, 1.00) pivot=(0.00, 1.00) pos=(0.00, 0.00) size=(0.00, 0.00) offsets=(0.00, 0.00)/(0.00, 0.00)
+Menu/Attributes/Summary
+Summary active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(1475.00, -300.00) size=(355.00, 390.00) offsets=(1475.00, -690.00)/(1830.00, -300.00) sprite=White
+Name active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(25.00, -18.00) size=(305.00, 58.00) offsets=(25.00, -76.00)/(330.00, -18.00) FONT=35 auto=True text=Thành viên
+Progress active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(25.00, -86.00) size=(305.00, 46.00) offsets=(25.00, -132.00)/(330.00, -86.00) FONT=22 auto=True text=Cấp 1 • 0 / 100 KN
+XP active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(25.00, -146.00) size=(305.00, 10.00) offsets=(25.00, -156.00)/(330.00, -146.00) sprite=White
+Fill active=True anchors=(0.00, 0.00)/(1.00, 1.00) pivot=(0.00, 1.00) pos=(0.00, 0.00) size=(0.00, 0.00) offsets=(0.00, 0.00)/(0.00, 0.00) sprite=White
+Details active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(25.00, -179.00) size=(305.00, 200.00) offsets=(25.00, -379.00)/(330.00, -179.00) FONT=24 auto=True text=Máu 100 / 100
+Công 10    Thủ 5
+Chí mạng 10%
+Sát thương chí mạng 150%
+Menu/Skills/Summary
+Summary active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(1440.00, -260.00) size=(395.00, 360.00) offsets=(1440.00, -620.00)/(1835.00, -260.00) sprite=White
+Name active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(25.00, -18.00) size=(345.00, 58.00) offsets=(25.00, -76.00)/(370.00, -18.00) FONT=35 auto=True text=Thành viên
+Progress active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(25.00, -86.00) size=(345.00, 46.00) offsets=(25.00, -132.00)/(370.00, -86.00) FONT=22 auto=True text=Cấp 1 • 0 / 100 KN
+XP active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(25.00, -146.00) size=(345.00, 10.00) offsets=(25.00, -156.00)/(370.00, -146.00) sprite=White
+Fill active=True anchors=(0.00, 0.00)/(1.00, 1.00) pivot=(0.00, 1.00) pos=(0.00, 0.00) size=(0.00, 0.00) offsets=(0.00, 0.00)/(0.00, 0.00) sprite=White
+Details active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(25.00, -179.00) size=(345.00, 170.00) offsets=(25.00, -349.00)/(370.00, -179.00) FONT=24 auto=True text=Máu 100 / 100
+Công 10    Thủ 5
+Chí mạng 10%
+Sát thương chí mạng 150%
+Menu/Rest
+Rest active=False anchors=(0.00, 0.00)/(1.00, 1.00) pivot=(0.00, 1.00) pos=(0.00, 0.00) size=(0.00, 0.00) offsets=(0.00, 0.00)/(0.00, 0.00)
+Backdrop active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(70.00, -240.00) size=(1780.00, 766.00) offsets=(70.00, -1006.00)/(1850.00, -240.00) sprite=White
+Save active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(105.00, -320.00) size=(470.00, 58.00) offsets=(105.00, -378.00)/(575.00, -320.00) sprite=White
+GoldLine active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(8.00, 0.00) size=(454.00, 1.00) offsets=(8.00, -1.00)/(462.00, 0.00) sprite=White
+Label active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(16.00, -3.00) size=(438.00, 52.00) offsets=(16.00, -55.00)/(454.00, -3.00) FONT=24 auto=True text=Lưu game
+Attributes active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(105.00, -400.00) size=(470.00, 58.00) offsets=(105.00, -458.00)/(575.00, -400.00) sprite=White
+GoldLine active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(8.00, 0.00) size=(454.00, 1.00) offsets=(8.00, -1.00)/(462.00, 0.00) sprite=White
+Label active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(16.00, -3.00) size=(438.00, 52.00) offsets=(16.00, -55.00)/(454.00, -3.00) FONT=24 auto=True text=Nâng thuộc tính
+Skills active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(105.00, -480.00) size=(470.00, 58.00) offsets=(105.00, -538.00)/(575.00, -480.00) sprite=White
+GoldLine active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(8.00, 0.00) size=(454.00, 1.00) offsets=(8.00, -1.00)/(462.00, 0.00) sprite=White
+Label active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(16.00, -3.00) size=(438.00, 52.00) offsets=(16.00, -55.00)/(454.00, -3.00) FONT=24 auto=True text=Mở khóa kỹ năng
+Craft active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(105.00, -560.00) size=(470.00, 58.00) offsets=(105.00, -618.00)/(575.00, -560.00) sprite=White
+GoldLine active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(8.00, 0.00) size=(454.00, 1.00) offsets=(8.00, -1.00)/(462.00, 0.00) sprite=White
+Label active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(16.00, -3.00) size=(438.00, 52.00) offsets=(16.00, -55.00)/(454.00, -3.00) FONT=24 auto=True text=Chế tạo vật phẩm
+Motto active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(110.00, -698.00) size=(490.00, 140.00) offsets=(110.00, -838.00)/(600.00, -698.00) FONT=28 auto=True text=Dừng chân. Hồi phục.
+Chuẩn bị cho chặng đường tiếp theo.
+Members active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(1495.00, -310.00) size=(325.00, 600.00) offsets=(1495.00, -910.00)/(1820.00, -310.00)
+Viewport active=True anchors=(0.00, 0.00)/(1.00, 1.00) pivot=(0.00, 1.00) pos=(0.00, 0.00) size=(0.00, 0.00) offsets=(0.00, 0.00)/(0.00, 0.00) sprite=White
+Content active=True anchors=(0.00, 1.00)/(1.00, 1.00) pivot=(0.00, 1.00) pos=(0.00, 0.00) size=(0.00, 185.00) offsets=(0.00, -185.00)/(0.00, 0.00)
+Template active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(0.00, 0.00) size=(315.00, 175.00) offsets=(0.00, -175.00)/(315.00, 0.00) sprite=White
+Portrait active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(108.00, 0.00) size=(94.00, 100.00) offsets=(108.00, -100.00)/(202.00, 0.00) sprite=White
+Name active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(10.00, -112.00) size=(295.00, 37.00) offsets=(10.00, -149.00)/(305.00, -112.00) FONT=20 auto=True text=Thành viên • 100/100
+HP active=True anchors=(0.00, 1.00)/(0.00, 1.00) pivot=(0.00, 1.00) pos=(22.00, -158.00) size=(270.00, 9.00) offsets=(22.00, -167.00)/(292.00, -158.00) sprite=White
+Fill active=True anchors=(0.00, 0.00)/(1.00, 1.00) pivot=(0.00, 1.00) pos=(0.00, 0.00) size=(0.00, 0.00) offsets=(0.00, 0.00)/(0.00, 0.00) sprite=White
+Options/Master/Label anchors=(0.04, 0.00)/(0.40, 1.00) offsets=(0.00, 0.00)/(0.00, 0.00)
+Options/Master/Percentage anchors=(0.90, 0.00)/(0.99, 1.00) offsets=(0.00, 0.00)/(0.00, 0.00)
+Options/Music/Label anchors=(0.04, 0.00)/(0.40, 1.00) offsets=(0.00, 0.00)/(0.00, 0.00)
+Options/Music/Percentage anchors=(0.90, 0.00)/(0.99, 1.00) offsets=(0.00, 0.00)/(0.00, 0.00)
+Options/Voice/Label anchors=(0.04, 0.00)/(0.40, 1.00) offsets=(0.00, 0.00)/(0.00, 0.00)
+Options/Voice/Percentage anchors=(0.90, 0.00)/(0.99, 1.00) offsets=(0.00, 0.00)/(0.00, 0.00)
+Options/UserInterface/Label anchors=(0.04, 0.00)/(0.40, 1.00) offsets=(0.00, 0.00)/(0.00, 0.00)
+Options/UserInterface/Percentage anchors=(0.90, 0.00)/(0.99, 1.00) offsets=(0.00, 0.00)/(0.00, 0.00)
+Options/SpecialEffects/Label anchors=(0.04, 0.00)/(0.40, 1.00) offsets=(0.00, 0.00)/(0.00, 0.00)
+Options/SpecialEffects/Percentage anchors=(0.90, 0.00)/(0.99, 1.00) offsets=(0.00, 0.00)/(0.00, 0.00)
+TRANSLATE: Lưu game -> Lưu game
+TRANSLATE: LƯU GAME -> LƯU GAME
+TRANSLATE: Lưu -> Lưu
+TRANSLATE: Lưu / Hồi máu -> Lưu / Hồi máu
+TRANSLATE: Lưu game / Hồi máu -> Rest / Save
+TRANSLATE: Điểm nghỉ • Lưu game / Hồi máu -> Điểm nghỉ • Lưu game / Hồi HP
+Assets/Scenes/mapgame.unity canvas=AdventureCanvas prefab=Assets/Resources/Adventure/UI/AdventureCanvas.prefab restSave=Lưu game

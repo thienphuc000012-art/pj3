@@ -1,0 +1,3 @@
+PASS: heal trigger → GoToRest → Sleeping → GoBackUp; both automatic transitions have Exit Time; exactly one heal event at 0.033s matches the existing VFX; EndAttack is reachable.
+PASS: real AnimationEvents/CombatManager path heals only FantasyWolf, preserves other enemy/player HP, clamps to max HP and ends the action. Fixture amount=25 (ATK15 × 1 + Power10).
+Edit Mode only; no campaign save writes or live combat. User scene remains unsaved.

@@ -1,0 +1,7 @@
+Prefab: Assets/Adventure/Prefabs/Enemy/MountainDragon/MountainDragon_PBR 1.prefab; controller: Assets/Adventure/Prefabs/Enemy/MountainDragon/MountainDragon.controller
+Enemy melee hitboxes: 0. Claw actions use existing animation windows instead of requiring absent weapon hitboxes.
+PASS clawsAttack2HitCombo: 0.400–0.667s, 1.400–1.633s; early/late inputs take damage; on-time inputs block; per-hit reset and EndAttack pass.
+PASS ClawsAttackLeft: 0.400–0.600s; early/late inputs take damage; on-time inputs block; per-hit reset and EndAttack pass.
+PASS ClawsAttackRight: 0.533–0.700s; early/late inputs take damage; on-time inputs block; per-hit reset and EndAttack pass.
+PASS combo isolation: block first/miss second and miss first/block second. Existing clip events, action damage/VFX, prefab assignments, open scenes and campaign saves unchanged.
+Validation uses the real CombatManager damage path in Edit Mode; no live battle or save writes.

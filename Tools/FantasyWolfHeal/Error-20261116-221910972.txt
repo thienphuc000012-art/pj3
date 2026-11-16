@@ -1,0 +1,5 @@
+System.InvalidOperationException: The heal trigger enters GoToRest.
+  at FantasyWolfHealSetup.Check (System.Boolean valid, System.String message) [0x00009] in D:\New folder (4)\pj3\Assets\Editor\FantasyWolfHealSetup.cs:126 
+  at FantasyWolfHealSetup.Validate () [0x000f7] in D:\New folder (4)\pj3\Assets\Editor\FantasyWolfHealSetup.cs:75 
+  at FantasyWolfHealSetup.Setup () [0x004a7] in D:\New folder (4)\pj3\Assets\Editor\FantasyWolfHealSetup.cs:64 
+  at FantasyWolfHealSetup.Poll () [0x000a7] in D:\New folder (4)\pj3\Assets\Editor\FantasyWolfHealSetup.cs:24 

@@ -183,7 +183,6 @@ public class AdventureUI : MonoBehaviour
         }
         else if (page == "Inventory") Inventory();
         else if (page == "Dialogue") UpdateDialogue();
-        else if (page == "Rest") Rest();
         else if (page == "Attributes") Attributes();
         else if (page == "Skills") Skills();
         else if (page == "Craft") Craft();
@@ -231,6 +230,9 @@ public class AdventureUI : MonoBehaviour
             CloseSkillChange();
         });
         view.Click("Menu/Rest/Save", () => OpenSaveSlots(true));
+        view.Text("Menu/Rest/Save/Label", "Lưu game");
+        var obsoleteRestMembers = view.transform.Find("Menu/Rest/Members");
+        if (obsoleteRestMembers != null) obsoleteRestMembers.gameObject.SetActive(false);
         view.Click("Menu/Rest/Attributes", () => restPage = 1);
         view.Click("Menu/Rest/Skills", () => { restPage = 2; SelectLearnable(); });
         view.Click("Menu/Rest/Craft", () => restPage = 3);
@@ -276,7 +278,7 @@ public class AdventureUI : MonoBehaviour
         optionsButton.onClick.AddListener(() =>
         {
             if (S == null || S.Menu != AdventureMenu.Main || OptionsOpen) return;
-            if (optionsView == null) optionsView = GameOptionsView.Create(view.transform);
+            if (optionsView == null) optionsView = GameOptionsView.Create(view.transform, false);
             var menu = view.Node("Menu");
             var group = menu.GetComponent<CanvasGroup>();
             if (group == null) group = menu.gameObject.AddComponent<CanvasGroup>();
@@ -1074,18 +1076,13 @@ public class AdventureUI : MonoBehaviour
         view.Text(prefix + "/Name", u.unitName);
         view.Text(prefix + "/Progress", "Cấp " + p.level + " • " + p.xp + " / " + p.RequiredXP + " KN");
         view.Fill(prefix + "/XP/Fill", (float)p.xp / p.RequiredXP);
-        view.Text(prefix + "/Details", "Máu " + p.hp + " / " + S.MaxHP(p) + "\nCông " + (u.baseAtk + p.atkBonus) + "    Thủ " + (u.baseDef + p.defBonus) + "\n" + GameLocalization.Translate("Tốc độ lượt") + " " + (u.speed + p.speedBonus) + "\nSát thương chí mạng " + (u.baseCritDamage + p.critDamageBonus) + "%");
-    }
-    void Rest()
-    {
-        var rows = view.Rows("Menu/Rest/Members" + Content, S.Data.party.Count);
-        for (int i = 0; i < S.Data.party.Count; i++)
+        bool hasHealthBar = view.transform.Find(prefix + "/HealthLabel") != null && view.transform.Find(prefix + "/HealthBar/Fill") != null;
+        if (hasHealthBar)
         {
-            var p = S.Data.party[i];
-            AdventureCanvasRoot.RowPortrait(rows[i], "Portrait", S.Template(p).unitPortrait);
-            AdventureCanvasRoot.RowText(rows[i], "Name", S.Template(p).unitName + " • " + p.hp + "/" + S.MaxHP(p) + " máu");
-            AdventureCanvasRoot.RowFill(rows[i], "HP/Fill", (float)p.hp / S.MaxHP(p));
+            view.Text(prefix + "/HealthLabel", "Máu " + p.hp + "/" + S.MaxHP(p));
+            view.Fill(prefix + "/HealthBar/Fill", (float)p.hp / S.MaxHP(p));
         }
+        view.Text(prefix + "/Details", (hasHealthBar ? "" : "Máu " + p.hp + " / " + S.MaxHP(p) + "\n") + "Công " + (u.baseAtk + p.atkBonus) + "    Thủ " + (u.baseDef + p.defBonus) + "\n" + GameLocalization.Translate("Tốc độ lượt") + " " + (u.speed + p.speedBonus) + "\nSát thương chí mạng " + (u.baseCritDamage + p.critDamageBonus) + "%");
     }
     void Attributes()
     {
@@ -1215,17 +1212,19 @@ public class AdventureUI : MonoBehaviour
 
         SetTopLeftRect(summary.Find("Name") as RectTransform, new Vector2(25, -18), new Vector2(305, 48));
         SetTopLeftRect(summary.Find("Progress") as RectTransform, new Vector2(25, -70), new Vector2(305, 28));
+        var progress = summary.Find("Progress").GetComponent<TMP_Text>();
+        progress.enableAutoSizing = false; progress.fontSize = 22;
         SetTopLeftRect(summary.Find("XP") as RectTransform, new Vector2(25, -101), new Vector2(305, 8));
         details.gameObject.SetActive(false);
 
         if (summary.Find("HealthLabel") == null)
-            CreateSummaryText(summary, "HealthLabel", style, "Máu", new Vector2(25, -117), new Vector2(305, 22), 15, TextAlignmentOptions.Left, Color.white);
+            CreateSummaryText(summary, "HealthLabel", style, "Máu", new Vector2(25, -117), new Vector2(305, 28), 22, TextAlignmentOptions.Left, Color.white);
 
         if (summary.Find("HealthBar") == null)
         {
             var background = new GameObject("HealthBar", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
             background.transform.SetParent(summary, false);
-            SetTopLeftRect(background.GetComponent<RectTransform>(), new Vector2(25, -143), new Vector2(305, 8));
+            SetTopLeftRect(background.GetComponent<RectTransform>(), new Vector2(25, -151), new Vector2(305, 8));
             var backgroundImage = background.GetComponent<Image>();
             backgroundImage.color = new Color(.13f, .14f, .15f, .9f);
             backgroundImage.raycastTarget = false;
@@ -1241,6 +1240,11 @@ public class AdventureUI : MonoBehaviour
             fillImage.fillOrigin = (int)Image.OriginHorizontal.Left;
             fillImage.raycastTarget = false;
         }
+
+        var healthLabel = summary.Find("HealthLabel").GetComponent<TMP_Text>();
+        healthLabel.font = progress.font; healthLabel.enableAutoSizing = false; healthLabel.fontSize = progress.fontSize;
+        SetTopLeftRect(healthLabel.rectTransform, new Vector2(25, -117), new Vector2(305, 28));
+        SetTopLeftRect(summary.Find("HealthBar") as RectTransform, new Vector2(25, -151), new Vector2(305, 8));
 
         if (summary.Find("CombatStatsTitle") == null)
             CreateSummaryText(summary, "CombatStatsTitle", style, "CHỈ SỐ CHIẾN ĐẤU", new Vector2(25, -164), new Vector2(305, 24), 18, TextAlignmentOptions.Left, new Color(.89f, .73f, .48f, 1f));
