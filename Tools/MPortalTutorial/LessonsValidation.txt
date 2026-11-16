@@ -1,0 +1,13 @@
+PASS: final encounter target=Enemy Encounter at (-36.845580, -85.880510, -29.934030)
+PASS: older JSON compatible; progress resumes at Parkour; independent campaign data; no duplicate entry; no file saves.
+PASS: all eight legacy progress positions migrate once; old Jump resumes the combined hint with movement retained; old graduates receive only the new encounter hint.
+PASS: single-owner cinematic lock; no menu/encounter during arrival; normal and repeated cleanup release input; P menu opens/closes after handoff.
+PASS: arrival owns its camera blend; cleanup restores the previous camera hook.
+PASS: 7 hints: combined move+jump, scan, P menu, parkour, E interaction, campfire, correct enemy encounter. Wrong enemy ignored; final hint completes during Busy transition and never repeats.
+UI preview=Tools/MPortalTutorial/Lesson-0-Vietnamese-20261116-110421848.png
+UI preview=Tools/MPortalTutorial/Lesson-6-Vietnamese-20261116-110422544.png
+PASS: Vietnamese all seven labels; hands-on graphics pass pointer clicks; Submit cannot skip practice.
+UI preview=Tools/MPortalTutorial/Lesson-0-English-20261116-110423424.png
+UI preview=Tools/MPortalTutorial/Lesson-6-English-20261116-110424178.png
+PASS: English all seven labels; hands-on graphics pass pointer clicks; Submit cannot skip practice.
+PASS: combat tutorial restores modal click interception after exploration mode.

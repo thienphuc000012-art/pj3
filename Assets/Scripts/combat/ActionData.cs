@@ -5,6 +5,10 @@ public class ActionData : ScriptableObject
 {
     public string actionName;
 
+    [Header("Audio")]
+    [Tooltip("Phát khi animation hành động bắt đầu, sau khi áp sát. Để trống dùng Skill trong ActorAudioProfile.")]
+    public GameSound useSound = new GameSound();
+
     // Kept for item copy and compatibility with existing assets. Skills generate their own text.
     [Tooltip("Manual description for Items. Attack/Skill descriptions are generated from the combat settings below.")]
     [TextArea(2, 4)]

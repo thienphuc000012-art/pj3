@@ -12,6 +12,7 @@ public sealed class MExplorationTutorial : MonoBehaviour
 {
     public const string ProgressId = "m.portal-and-exploration.v1";
     public const int LessonCount = 7;
+    public const int CurriculumVersion = 2;
     [Header("Existing systems")]
     public MapGameSetup mapSetup;
     public PlayerScript player;
@@ -20,6 +21,8 @@ public sealed class MExplorationTutorial : MonoBehaviour
     public CinemachineCamera gameplayCamera;
     public Collider parkourObstacle;
     public WorldInteraction campfire;
+    [Tooltip("Enemy được đánh dấu trong hint cuối. Hoàn tất khi chạm trán đúng Enemy này, bằng E/chuột trái hoặc bị Enemy tấn công.")]
+    public WorldInteraction encounterEnemy;
     [Header("Arrival poses")]
     public Transform walkStart;
     public Transform walkExit;
@@ -93,7 +96,17 @@ public sealed class MExplorationTutorial : MonoBehaviour
         if (data == null) return null;
         data.explorationTutorials ??= new List<ExplorationTutorialProgress>();
         var entry = data.explorationTutorials.Find(p => p != null && p.id == ProgressId);
-        if (entry == null && create) { entry = new ExplorationTutorialProgress { id = ProgressId }; data.explorationTutorials.Add(entry); }
+        if (entry == null && create) { entry = new ExplorationTutorialProgress { id = ProgressId, curriculumVersion = CurriculumVersion }; data.explorationTutorials.Add(entry); }
+        if (entry != null && entry.curriculumVersion < CurriculumVersion)
+        {
+            int previousLesson = Mathf.Clamp(entry.nextLesson, 0, LessonCount);
+            entry.movementCompleted = previousLesson >= 1;
+            entry.jumpCompleted = previousLesson >= 2;
+            // Keep finished practice; old graduates receive only the new final hint.
+            entry.nextLesson = entry.complete || previousLesson >= LessonCount ? 6 : Mathf.Max(0, previousLesson - 1);
+            entry.complete = false;
+            entry.curriculumVersion = CurriculumVersion;
+        }
         return entry;
     }
     void SetupViews()
@@ -216,6 +229,8 @@ public sealed class MExplorationTutorial : MonoBehaviour
     void BeginPractice()
     {
         practicing = true;
+        session.EncounterStarted -= OnEncounterStarted;
+        session.EncounterStarted += OnEncounterStarted;
         foreach (var hint in keyHints) if (hint != null) hint.gameObject.SetActive(true);
         ResetPractice(); ShowLesson();
     }
@@ -224,7 +239,14 @@ public sealed class MExplorationTutorial : MonoBehaviour
         practiceOrigin = player.transform.position; jumpBaseline = player.JumpCount;
         scannerUsed = menuOpened = restOpened = parkourStarted = false;
     }
-    void ScanUsed() { if (CurrentLesson == 2) scannerUsed = true; }
+    void ScanUsed() { if (CurrentLesson == 1) scannerUsed = true; }
+    void OnEncounterStarted(WorldInteraction point)
+    {
+        if (!practicing || progress == null || encounterEnemy == null || point != encounterEnemy) return;
+        progress.enemyEncountered = true;
+        if (CurrentLesson == 6) Advance();
+        else SaveProgress();
+    }
     void RefreshLanguage() { if (practicing) { shownLesson = -1; ShowLesson(); } }
     void Update()
     {
@@ -237,22 +259,27 @@ public sealed class MExplorationTutorial : MonoBehaviour
         {
             case 0:
                 Vector3 delta = player.transform.position - practiceOrigin; delta.y = 0;
-                done = delta.magnitude >= movementPracticeDistance; break;
-            case 1: done = player.JumpCount > jumpBaseline; break;
-            case 2: done = scannerUsed; break;
-            case 3:
+                bool changed = false;
+                if (!progress.movementCompleted && delta.magnitude >= movementPracticeDistance) { progress.movementCompleted = true; changed = true; }
+                if (!progress.jumpCompleted && player.JumpCount > jumpBaseline) { progress.jumpCompleted = true; changed = true; }
+                done = progress.movementCompleted && progress.jumpCompleted;
+                if (changed && !done) SaveProgress();
+                break;
+            case 1: done = scannerUsed; break;
+            case 2:
                 if (session.Menu == AdventureMenu.Main || session.Menu == AdventureMenu.Party) menuOpened = true;
                 done = menuOpened && session.Menu == AdventureMenu.None; break;
-            case 4:
+            case 3:
                 bool near = parkourObstacle != null && Vector3.Distance(player.transform.position, parkourObstacle.ClosestPoint(player.transform.position)) < 6f;
                 var climb = player.GetComponent<PlayerClimb>();
                 bool action = player.playerInAction || climb != null && climb.isClimbing;
                 if (near && action) parkourStarted = true;
                 done = parkourStarted && !action; break;
-            case 5: done = session.Menu == AdventureMenu.Rest && session.RestPoint == campfire; break;
-            case 6:
+            case 4: done = session.Menu == AdventureMenu.Rest && session.RestPoint == campfire; break;
+            case 5:
                 if (session.Menu == AdventureMenu.Rest && session.RestPoint == campfire) restOpened = true;
                 done = restOpened && session.Menu == AdventureMenu.None; break;
+            case 6: done = progress.enemyEncountered || encounterEnemy != null && encounterEnemy.IsConsumed; break;
         }
         if (done) Advance();
     }
@@ -281,6 +308,7 @@ public sealed class MExplorationTutorial : MonoBehaviour
         StopAllCoroutines();
         practicing = false; RestorePresentation(); HideAll();
         if (scanner != null) scanner.onScanStarted.RemoveListener(ScanUsed);
+        if (session != null) session.EncounterStarted -= OnEncounterStarted;
         GameLocalization.LanguageChanged -= RefreshLanguage;
     }
     void OnDrawGizmosSelected()
@@ -297,24 +325,24 @@ public sealed class MExplorationTutorial : MonoBehaviour
         if (lessons == null || progress == null || progress.complete || player == null) return;
         int index = Mathf.Clamp(CurrentLesson, 0, LessonCount - 1); bool en = GameLocalization.IsEnglish;
         string scan = scanner != null && scanner.settings != null ? scanner.settings.scanKey.ToString() : "Q";
-        string[] titles = en ? new[] { "Movement", "Jump", "Scan your surroundings", "Main menu", "Parkour", "Interact", "Campfire" }
-            : new[] { "Di chuyển", "Nhảy", "Quét môi trường", "Menu chính", "Parkour", "Tương tác", "Lửa trại" };
+        string[] titles = en ? new[] { "Movement and jump", "Scan your surroundings", "Main menu", "Parkour", "Interact", "Campfire", "Enemy encounter" }
+            : new[] { "Di chuyển và nhảy", "Quét môi trường", "Menu chính", "Parkour", "Tương tác", "Lửa trại", "Chạm trán kẻ địch" };
         string[] bodies = en ? new[] {
-            "Use W A S D to move. Move a short distance to continue.\n\nPress Shift to toggle running. Move the mouse to look around.",
-            "Press Space while standing on walkable ground to jump.\n\nThe same key performs a contextual parkour action near a suitable obstacle.",
+            "Use W A S D to move and Space to jump while standing on walkable ground.\n\nMove a short distance and jump once to continue. Press Shift to toggle running; move the mouse to look around.",
             "Press " + scan + " to send a scan pulse and reveal nearby points of interest.\n\nThe highlighted circle shows the scan key and its cooldown.",
             "Press P to open the main menu. Review Party, Inventory, Quests and Load Game.\n\nClose the menu with P or Esc to continue.",
             "Go to the highlighted obstacle near the portal. Face it, hold W and press Space to vault or climb.\n\nFinish the action to continue.",
             "Go to the highlighted campfire. When its interaction prompt appears, press E to interact.\n\nE also interacts with items, chests and other available objects.",
-            "The campfire restores party health and opens rest options: save, attributes, skills and unlocked fast travel.\n\nOpen it with E if needed, then close its menu with Esc to finish." }
+            "The campfire restores party health and opens rest options: save, attributes, skills and unlocked fast travel.\n\nOpen it with E if needed, then close its menu with Esc to continue.",
+            "Go to the highlighted enemy. When in interaction range, press E or left-click to start combat.\n\nAn enemy that detects and attacks you can also trigger an encounter. Encounter this enemy to finish the tutorial." }
             : new[] {
-            "Dùng W A S D để di chuyển. Đi một đoạn ngắn để tiếp tục.\n\nBấm Shift để bật/tắt chạy. Di chuột để quan sát.",
-            "Bấm Space khi đứng trên nền có thể đi để nhảy.\n\nSpace cũng thực hiện parkour khi đứng gần vật cản phù hợp.",
+            "Dùng W A S D để di chuyển và Space để nhảy khi đứng trên nền.\n\nĐi một đoạn ngắn và nhảy một lần để tiếp tục. Bấm Shift để bật/tắt chạy; di chuột để quan sát.",
             "Bấm " + scan + " để quét và phát hiện các điểm đáng chú ý gần bạn.\n\nVòng tròn được làm sáng hiển thị phím quét và thời gian hồi.",
             "Bấm P để mở menu chính. Tại đây có Đội hình, Rương đồ, Nhiệm vụ và Tải game.\n\nĐóng menu bằng P hoặc Esc để tiếp tục.",
             "Đi tới vật cản được đánh dấu gần cổng. Hướng mặt vào vật cản, giữ W và bấm Space để vượt hoặc leo lên.\n\nHoàn tất động tác để tiếp tục.",
             "Đi tới lửa trại được đánh dấu. Khi có lời nhắc tương tác, bấm E để sử dụng.\n\nE cũng dùng để nhặt đồ, mở rương và tương tác với vật thể phù hợp.",
-            "Lửa trại hồi máu cho đội và mở các mục nghỉ: lưu game, thuộc tính, kỹ năng và dịch chuyển đã mở khóa.\n\nNếu cần, bấm E để mở lại; đóng menu bằng Esc để hoàn tất." };
+            "Lửa trại hồi máu cho đội và mở các mục nghỉ: lưu game, thuộc tính, kỹ năng và dịch chuyển đã mở khóa.\n\nNếu cần, bấm E để mở lại; đóng menu bằng Esc để tiếp tục.",
+            "Đi tới kẻ địch được đánh dấu. Khi vào phạm vi tương tác, bấm E hoặc chuột trái để bắt đầu chiến đấu.\n\nKẻ địch phát hiện và tấn công bạn cũng có thể mở encounter. Chạm trán kẻ địch này để hoàn tất hướng dẫn." };
         var targets = FocusTargets(index);
         lessons.Close();
         lessons.Show(index + 1, LessonCount, targets, titles[index], bodies[index], en ? "Perform the action to continue" : "Thực hiện thao tác để tiếp tục", null);
@@ -323,14 +351,15 @@ public sealed class MExplorationTutorial : MonoBehaviour
     List<RectTransform> FocusTargets(int index)
     {
         var targets = new List<RectTransform>();
-        int key = index == 0 ? 0 : index == 1 || index == 4 ? 1 : index == 2 ? 2 : index == 3 ? 3 : 4;
+        int key = index == 0 ? 0 : index == 1 ? 2 : index == 2 ? 3 : index == 3 ? 1 : 4;
         if (keyHints != null && key < keyHints.Length && keyHints[key] != null) targets.Add(keyHints[key]);
-        if (index == 2 && scanner != null)
+        if (index == 0 && keyHints != null && keyHints.Length > 1 && keyHints[1] != null) targets.Add(keyHints[1]);
+        if (index == 1 && scanner != null)
         {
             var rect = scanner.GetComponent<AdventureScanHUD>()?.CooldownRect; if (rect != null && rect.gameObject.activeInHierarchy) { targets.Clear(); targets.Add(rect); }
         }
-        if ((index == 4 || index >= 5) && worldFocus != null && worldFocus.gameObject.activeInHierarchy) { targets.Clear(); targets.Add(worldFocus); }
-        if (index == 6 && session != null && session.Menu == AdventureMenu.Rest && adventureCanvas != null)
+        if (index >= 3 && worldFocus != null && worldFocus.gameObject.activeInHierarchy) { targets.Clear(); targets.Add(worldFocus); }
+        if (index == 5 && session != null && session.Menu == AdventureMenu.Rest && adventureCanvas != null)
         {
             var panel = adventureCanvas.transform.Find("Menu/Rest") as RectTransform;
             if (panel != null && panel.gameObject.activeInHierarchy) { targets.Clear(); targets.Add(panel); }
@@ -340,11 +369,13 @@ public sealed class MExplorationTutorial : MonoBehaviour
     void LateUpdate()
     {
         if (!practicing || worldFocus == null || tutorialCanvas == null || player == null || session == null) return;
-        Transform target = CurrentLesson == 4 ? parkourObstacle != null ? parkourObstacle.transform : null : CurrentLesson >= 5 ? campfire != null ? campfire.transform : null : null;
+        Transform target = CurrentLesson == 3 ? parkourObstacle != null ? parkourObstacle.transform : null :
+            CurrentLesson == 4 || CurrentLesson == 5 ? campfire != null ? campfire.transform : null :
+            CurrentLesson == 6 ? encounterEnemy != null ? encounterEnemy.transform : null : null;
         var camera = Camera.main;
         bool visible = target != null && camera != null && session.Menu == AdventureMenu.None;
         Vector3 point = target != null ? target.position + Vector3.up : Vector3.zero;
-        if (CurrentLesson == 4 && parkourObstacle != null) point = parkourObstacle.bounds.center;
+        if (CurrentLesson == 3 && parkourObstacle != null) point = parkourObstacle.bounds.center;
         Vector3 screen = visible ? camera.WorldToScreenPoint(point) : Vector3.zero;
         if (visible && screen.z < 0) { screen.x = Screen.width - screen.x; screen.y = Screen.height - screen.y; }
         if (worldFocus.gameObject.activeSelf != visible) { worldFocus.gameObject.SetActive(visible); shownLesson = -1; }
@@ -355,7 +386,7 @@ public sealed class MExplorationTutorial : MonoBehaviour
             if (RectTransformUtility.ScreenPointToLocalPointInRectangle(root, screen, null, out var local)) worldFocus.anchoredPosition = local;
             if (worldFocusLabel != null)
             {
-                string label = CurrentLesson == 4 ? "Parkour" : GameLocalization.IsEnglish ? "Campfire" : "Lửa trại";
+                string label = CurrentLesson == 3 ? "Parkour" : CurrentLesson == 6 ? GameLocalization.IsEnglish ? "Enemy" : "Kẻ địch" : GameLocalization.IsEnglish ? "Campfire" : "Lửa trại";
                 worldFocusLabel.text = label + " • " + Mathf.RoundToInt(Vector3.Distance(player.transform.position, target.position)) + " m";
             }
         }

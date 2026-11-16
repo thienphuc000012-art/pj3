@@ -670,6 +670,7 @@ public class BattleUnit : MonoBehaviour
         if (deathAnimationTriggered) return;
         RestoreDeathPresentation();
         deathAnimationTriggered = true;
+        ActorAudio.For(gameObject).PlayDeathSound();
         deathStateSeen = false;
         deathAnimationFinished = false;
         if (animator == null) return;
@@ -681,6 +682,9 @@ public class BattleUnit : MonoBehaviour
         animator.SetTrigger("Die");
     }
     public bool isPlayer;
+    [Header("Audio")]
+    [Tooltip("Để trống dùng profile Player/Enemy chung trong GameAudioSettings.")]
+    public ActorAudioProfile audioProfile;
 
     [Header("VFX References")]
     public Transform handTransform;
@@ -981,6 +985,7 @@ public class BattleUnit : MonoBehaviour
 
         int hpLost = Mathf.Min(currentHP, finalDamage);
         currentHP = Mathf.Max(0, currentHP - finalDamage);
+        if (hpLost > 0 && currentHP > 0) ActorAudio.For(gameObject).PlayHurtSound();
         if (hpLost > 0) AddUltimateEnergy(damageUltimateGain * hpLost / Mathf.Max(1f, maxHP));
 
         if (currentHP <= 0 && isBoss && bossPhases != null && currentPhaseIndex + 1 < bossPhases.Count)

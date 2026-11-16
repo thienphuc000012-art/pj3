@@ -9,6 +9,8 @@ public class PlayerScript : MonoBehaviour
     public float runSpeed = 4f;
     float currentSpeed;
     private bool isRunning = false;
+    [Header("Audio")]
+    public ActorAudioProfile audioProfile;
 
     public MainCameraController MCC;
     public EnviromentChecker enviromentChecker;
@@ -155,6 +157,7 @@ public class PlayerScript : MonoBehaviour
 
     private void Awake()
     {
+        if (Application.isPlaying) ActorAudio.For(gameObject);
         ledgeClimb = GetComponent<PlayerClimb>();
         // MatchTarget yêu cầu Apply Root Motion phải được bật.
         // Giữ nó luôn ON và tự quyết định lúc nào áp delta trong OnAnimatorMove
@@ -348,6 +351,7 @@ public class PlayerScript : MonoBehaviour
     public void PerformJump()
     {
         JumpCount++;
+        ActorAudio.For(gameObject).PlayJumpSound();
         fallingSpeed = jumpForce;
         onSurface = false;
         onSteepSurface = false;

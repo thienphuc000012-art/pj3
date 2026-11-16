@@ -33,6 +33,9 @@ public class AdventureUI : MonoBehaviour
     Button returnTitleButton, returnTitleYes, returnTitleNo;
     GameObject questPage, questDialog, dialoguePage;
     Button languageToggleButton, questRowTemplate;
+    GameOptionsView optionsView;
+    Button optionsButton;
+    public bool OptionsOpen => optionsView != null && optionsView.IsOpen;
     RectTransform questContent, dialoguePanel, dialogueChoices;
     GameObject dialogueOptionsPanel;
     TMPro.TMP_Text questPrompt, dialogueSpeaker, dialogueText;
@@ -90,6 +93,7 @@ public class AdventureUI : MonoBehaviour
         {
             saveSlotsView?.Close();
             CloseReturnToTitleDialog();
+            if (OptionsOpen) optionsView.Close();
             restPage = 0; selectedSkill = 0; CloseSkillChange(); CloseTravel();
             if (S.Menu != AdventureMenu.Tasks) CloseQuestDialog();
             previousMenu = S.Menu;
@@ -104,6 +108,7 @@ public class AdventureUI : MonoBehaviour
             if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
         }
         if (ReturnToTitleConfirmationOpen && Input.GetMouseButtonDown(1)) CloseReturnToTitleDialog();
+        if (OptionsOpen && Input.GetMouseButtonDown(1)) optionsView.Close();
         selectedMember = Mathf.Clamp(selectedMember, 0, Mathf.Max(0, S.Data.party.Count - 1));
         bool menuOpen = S.Menu != AdventureMenu.None;
         if (S.Menu != AdventureMenu.Main) foreach (var card in cardStages) card.Hide();
@@ -191,6 +196,7 @@ public class AdventureUI : MonoBehaviour
         BuildDialogueUI();
         BuildSaveLoadUI();
         BuildReturnToTitleUI();
+        BuildOptionsUI();
         var attributeConfirm = view.Component<Button>("Menu/Attributes/Confirm");
         attributeUpgradeHold = attributeConfirm.GetComponent<HoldToConfirmButton>();
         if (attributeUpgradeHold == null) attributeUpgradeHold = attributeConfirm.gameObject.AddComponent<HoldToConfirmButton>();
@@ -252,6 +258,31 @@ public class AdventureUI : MonoBehaviour
         button.onClick.AddListener(() => OpenSaveSlots(false));
         GameLocalization.SetText(button.GetComponentInChildren<TMP_Text>(true), "Tải game");
         button.gameObject.SetActive(true);
+    }
+
+    void BuildOptionsUI()
+    {
+        var overview = view.Node("Menu/Party/Overview");
+        optionsButton = overview.Find("Options")?.GetComponent<Button>();
+        if (optionsButton == null)
+        {
+            optionsButton = Instantiate(view.Component<Button>("Menu/Party/Overview/LoadGame"), overview);
+            optionsButton.name = "Options";
+            ((RectTransform)optionsButton.transform).anchoredPosition += Vector2.down * 88f;
+            ((RectTransform)returnTitleButton.transform).anchoredPosition = ((RectTransform)optionsButton.transform).anchoredPosition + Vector2.down * 88f;
+        }
+        GameLocalization.SetText(optionsButton.GetComponentInChildren<TMP_Text>(true), "Tùy chọn");
+        optionsButton.onClick = new Button.ButtonClickedEvent();
+        optionsButton.onClick.AddListener(() =>
+        {
+            if (S == null || S.Menu != AdventureMenu.Main || OptionsOpen) return;
+            if (optionsView == null) optionsView = GameOptionsView.Create(view.transform);
+            var menu = view.Node("Menu");
+            var group = menu.GetComponent<CanvasGroup>();
+            if (group == null) group = menu.gameObject.AddComponent<CanvasGroup>();
+            optionsView?.Open(group, optionsButton.gameObject);
+        });
+        optionsButton.gameObject.SetActive(true);
     }
 
     void BuildReturnToTitleUI()
@@ -877,6 +908,7 @@ public class AdventureUI : MonoBehaviour
     }
     public bool HandleBack()
     {
+        if (OptionsOpen) { optionsView.Close(); return true; }
         if (ReturnToTitleConfirmationOpen) { CloseReturnToTitleDialog(); return true; }
         if (saveSlotsView != null && saveSlotsView.HandleBack()) return true;
         if (S.Menu == AdventureMenu.Dialogue) return true;

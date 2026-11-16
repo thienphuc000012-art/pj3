@@ -32,8 +32,6 @@ public sealed class CombatActionButtonFeedback : MonoBehaviour,
     float hover, pulse, enabledAt;
     bool initialized, capturePending;
     static CombatActionButtonFeedback pointerFocus;
-    static AudioSource audioSource;
-    static AudioClip fallbackClick;
 
     public void Configure(Sprite sprite)
     {
@@ -232,34 +230,12 @@ public sealed class CombatActionButtonFeedback : MonoBehaviour,
         PlayClick();
     }
 
-    static void PlayClick()
+    void PlayClick()
     {
-        if (audioSource == null)
-        {
-            var go = new GameObject("Combat UI Audio", typeof(AudioSource));
-            audioSource = go.GetComponent<AudioSource>();
-            audioSource.playOnAwake = false;
-            audioSource.spatialBlend = 0f;
-            audioSource.ignoreListenerPause = true;
-        }
-        var clip = GameUITheme.CombatButtonPressSound;
-        if (clip == null)
-        {
-            if (fallbackClick == null)
-            {
-                const int rate = 44100;
-                var samples = new float[2205];
-                for (int i = 0; i < samples.Length; i++)
-                {
-                    float t = (float)i / rate;
-                    samples[i] = Mathf.Sin(t * 2f * Mathf.PI * 1100f) * Mathf.Exp(-t * 145f) * .3f;
-                }
-                fallbackClick = AudioClip.Create("UI Soft Click", samples.Length, 1, rate, false);
-                fallbackClick.SetData(samples, 0);
-            }
-            clip = fallbackClick;
-        }
-        audioSource.PlayOneShot(clip, .28f);
+        bool actionMenu = false;
+        for (var current = transform; current != null; current = current.parent)
+            if (current.name == "ActionMenu") { actionMenu = true; break; }
+        GameAudio.Button(actionMenu);
     }
 
     void ResetVisuals()

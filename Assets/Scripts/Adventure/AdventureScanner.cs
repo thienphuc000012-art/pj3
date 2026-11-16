@@ -28,7 +28,6 @@ public sealed class AdventureScanner : MonoBehaviour
     readonly List<Reveal> revealed = new List<Reveal>();
     readonly List<OutlineState> outlineStates = new List<OutlineState>();
     AdventureScanHUD hud;
-    AudioSource audioSource;
     Vector3 origin;
     float pulseAge, cooldownUntil;
     bool scanning, ownsSettings;
@@ -170,15 +169,8 @@ public sealed class AdventureScanner : MonoBehaviour
         int count = Mathf.Clamp(settings.maxDetectedTargets, 1, 128);
         if (pending.Count > count) pending.RemoveRange(count, pending.Count - count);
         InitializeOutline();
-        if (settings.scanSound != null)
-        {
-            if (audioSource == null)
-            {
-                audioSource = gameObject.AddComponent<AudioSource>();
-                audioSource.playOnAwake = false; audioSource.spatialBlend = 0f;
-            }
-            audioSource.PlayOneShot(settings.scanSound, settings.volume);
-        }
+        if (GameAudio.Settings.scan.HasClip) GameAudio.Play(GameAudio.Settings.scan, origin);
+        else GameAudio.PlayClipAt(settings.scanSound, origin, settings.volume, GameAudioBus.SpecialEffects, 0f);
         onScanStarted.Invoke();
         return true;
     }

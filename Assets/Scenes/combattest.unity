@@ -2297,8 +2297,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 203175422}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.014203008, y: 0.08886555, z: 0.018844398, w: 0.99576414}
-  m_LocalPosition: {x: -7.166992, y: 4.8499756, z: -5.89}
+  m_LocalRotation: {x: -0.021174362, y: 0.3696603, z: -0.010416302, w: -0.9288673}
+  m_LocalPosition: {x: -2.369995, y: 4.0700073, z: -1.663}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -6889,6 +6889,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleEncounterSetup
   setupId: default
+  battleMusic:
+    clip: {fileID: 8300000, guid: 6ce43a718cfaa634b930d0cde1373b73, type: 3}
+    volume: 0.65
   arenaSpawn:
     playerDistance: 2.5
     enemyDistance: 0
@@ -18509,6 +18512,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleEncounterSetup
   setupId: dra
+  battleMusic:
+    clip: {fileID: 8300000, guid: 3d33934bcaed0a04dacf6bd870991fdb, type: 3}
+    volume: 0.65
   arenaSpawn:
     playerDistance: 8.5
     enemyDistance: 0

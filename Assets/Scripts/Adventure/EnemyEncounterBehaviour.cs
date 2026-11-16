@@ -6,6 +6,9 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
 {
     public enum TravelMode { Ground, Flying, GroundAndFlying }
     public enum Activity { Idle, Patrol, Chase, Return, Attack, TakeOff, Landing }
+    [Header("Audio")]
+    public ActorAudioProfile audioProfile;
+    float nextGrowl;
     [Header("Map Model")]
     public Animator mapAnimator;
     public TravelMode travelMode;
@@ -107,6 +110,9 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
         agent = GetComponent<NavMeshAgent>();
         InitializePatrolAtSpawn();
         initialized = true;
+        var soundProfile = audioProfile != null ? audioProfile : GameAudio.Settings.enemy;
+        if (soundProfile != null)
+            nextGrowl = Time.time + Random.Range(Mathf.Max(1f, soundProfile.growlInterval.x), Mathf.Max(1f, soundProfile.growlInterval.y));
     }
 
     void InitializePatrolAtSpawn()
@@ -187,6 +193,14 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
         if (CurrentActivity == Activity.TakeOff || CurrentActivity == Activity.Landing)
         { UpdateFlightTransition(); return; }
         var player = session.MapPlayer.transform;
+        var soundProfile = audioProfile != null ? audioProfile : GameAudio.Settings.enemy;
+        if (soundProfile != null && Time.time >= nextGrowl &&
+            (CurrentActivity == Activity.Patrol || CurrentActivity == Activity.Idle))
+        {
+            nextGrowl = Time.time + Random.Range(Mathf.Max(1f, soundProfile.growlInterval.x), Mathf.Max(1f, soundProfile.growlInterval.y));
+            if (Vector3.Distance(player.position, transform.position) <= soundProfile.growl.maxDistance)
+                GameAudio.Play(soundProfile.growl, transform.position, GameAudioBus.Voice);
+        }
         if (CurrentActivity == Activity.Attack)
         {
             StopMovement();

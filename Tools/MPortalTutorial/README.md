@@ -10,13 +10,13 @@ Camera quay Player đi ra từ phía trước cổng, sau đó lia qua hai góc 
 
 Tiếp theo là 7 bài thực hành, dùng spotlight của hệ thống Guided Combat Tutorial:
 
-1. Di chuyển WASD đủ 2 m; giải thích Shift và chuột.
-2. Nhảy bằng Space; đếm lần nhảy thật.
-3. Scan bằng phím trong AdventureScanSettings (mặc định Q); chờ sự kiện scan thật.
-4. Mở menu bằng P và đóng lại bằng P/Esc.
-5. Đi tới **Cube (3)** gần cổng, hướng vào vật cản và W + Space để thực hiện parkour; chờ động tác kết thúc.
-6. Đi tới **Save Point** hiện có, bấm E khi lời nhắc xuất hiện.
-7. Giới thiệu chức năng lửa trại, đóng menu nghỉ bằng Esc để kết thúc.
+1. **Di chuyển và nhảy** trong cùng một hint: WASD đủ 2 m và Space nhảy một lần; spotlight cả WASD/SPACE. Hai thao tác làm theo thứ tự nào cũng được; phần đã làm được lưu lại.
+2. Scan bằng phím trong AdventureScanSettings (mặc định Q); chờ sự kiện scan thật.
+3. Mở menu bằng P và đóng lại bằng P/Esc.
+4. Đi tới **Cube (3)** gần cổng, hướng vào vật cản và W + Space để thực hiện parkour; chờ động tác kết thúc.
+5. Đi tới **Save Point** hiện có, bấm E khi lời nhắc xuất hiện.
+6. Giới thiệu chức năng lửa trại, đóng menu nghỉ bằng Esc để tiếp tục.
+7. **Chạm trán kẻ địch**: tới Enemy Encounter tại `(-36.8455811, -85.8805084, -29.9340305)`, dùng E/chuột trái trong phạm vi hoặc để Enemy phát hiện và tấn công. Marker theo đúng Enemy đang di chuyển; hoàn tất khi encounter của Enemy đó được chốt.
 
 Khung hướng dẫn cho phép chuột bấm xuyên xuống menu/rest. Enter hoặc click không tự bỏ qua bài thực hành. Đổi ngôn ngữ sẽ cập nhật bài đang mở.
 
@@ -52,7 +52,9 @@ Material mới nằm trong `Assets/Adventure/Generated/MPortalTutorial`. Chỉ s
 
 ## Lưu tiến trình
 
-Tiến trình nằm trong `CampaignSave.explorationTutorials`, id `m.portal-and-exploration.v1`. Hoàn tất mỗi bài sẽ dùng cơ chế tự lưu sẵn có. Quay lại từ combat hoặc tải bản lưu đang học sẽ tiếp tục bài còn lại; đoạn đi ra cổng không phát lại.
+Tiến trình nằm trong `CampaignSave.explorationTutorials`, id ổn định `m.portal-and-exploration.v1`, `curriculumVersion = 2`. Hoàn tất mỗi bài sẽ dùng cơ chế tự lưu sẵn có. Quay lại từ combat hoặc tải bản lưu đang học sẽ tiếp tục bài còn lại; đoạn đi ra cổng không phát lại. Tiến trình cũ được chuyển đúng bước mới; người đã xong bảy bài cũ chỉ nhận thêm hint encounter. Enemy đã được hoàn tất trước đó sẽ không bắt Player đánh lại.
+
+Chọn **M Arrival Tutorial → Encounter Enemy** để đổi Enemy của hint cuối. Tham chiếu đã được gán trực tiếp tới Enemy sẵn có tại tọa độ yêu cầu; di chuyển Enemy sau đó vẫn giữ đúng mục tiêu. Dấu mốc hướng dẫn đi theo Enemy, còn tâm quét đấu trường vẫn do EnemyCombatOrigin quyết định như trước.
 
 Bản lưu cũ đã ở m sẽ giữ nguyên vị trí và bỏ qua đoạn mở đầu mới. Để xem từ đầu, dùng một lượt **game mới** đi tới m (hoặc chế độ Start New Game hiện có trên Campaign Map Setup khi chủ động kiểm thử). Không cần xóa file save thủ công.
 
@@ -60,7 +62,7 @@ Bản lưu cũ đã ở m sẽ giữ nguyên vị trí và bỏ qua đoạn mở
 
 Unity menu: **Tools → Adventure → Tutorial → Validate m Arrival Tutorial** trong Edit Mode, mở scene m.
 
-Kết quả: `Validation.txt`; ảnh `Lesson-*` và `Portal-Materials-*`. Kiểm tra gồm CharacterController thật qua cổng trên terrain ở 30/60/120 FPS, camera không bị khung cổng chắn Player, vật cản dùng được bằng ray/action parkour hiện tại, 7 điều kiện thực hành, VI/EN, chữ không tràn, click xuyên spotlight, nhả khóa điều khiển và khôi phục camera. Đồng thời chạy lại kiểm tra Guided Combat Tutorial; kiểm tra terrain jump/slide cũng đã chạy riêng và đạt.
+Kết quả đầy đủ: `Validation.txt`; lượt cập nhật hint: `LessonsValidation.txt`; ảnh `Lesson-*` và `Portal-Materials-*`. Kiểm tra hint gồm gộp di chuyển/nhảy, lưu phần đã thực hiện, chuyển tám trạng thái tiến trình cũ, đủ 7 hint, chỉ đúng Enemy mới hoàn tất, hoàn tất ngay cả khi transition Busy, marker Enemy và spotlight WASD/SPACE, VI/EN, chữ không tràn và click xuyên spotlight. Lượt cập nhật hint không sửa lại camera/canvas/portal. Công cụ kiểm tra đầy đủ vẫn có các kiểm tra CharacterController qua cổng, góc máy và parkour trước đó.
 
 Các kiểm tra dùng fixture tách biệt trong Edit Mode, không bắt đầu Play Mode hoặc ghi file save của người chơi. Cần chơi lượt mới để xem trọn chuyển động camera và animation theo thời gian thực trong Game View.
 

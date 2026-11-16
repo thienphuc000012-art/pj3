@@ -248,6 +248,7 @@ public class WorldInteractionEditor : Editor
 
         if (kind == WorldInteractionKind.Discovery)
         {
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("areaMusic"), new GUIContent("Discovery Area Music"), true);
             EditorGUILayout.Space(6);
             EditorGUILayout.PropertyField(serializedObject.FindProperty("showDiscoveryBanner"), new GUIContent("Hiện tên khu vực"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("discoveryCooldownSeconds"), new GUIContent("Hồi chiêu hiện tên (giây)"));
@@ -256,6 +257,9 @@ public class WorldInteractionEditor : Editor
 
         if (kind == WorldInteractionKind.Cryptex)
             EditorGUILayout.HelpBox("Đặt mật khẩu và sự kiện mở cửa ở component Cryptex Lock bên dưới. Model đã lắp sẵn dài 0.55 m; chỉnh Scale của root để thay đổi kích thước.", MessageType.Info);
+
+        if (kind == WorldInteractionKind.RestPoint)
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("restMusic"), new GUIContent("Campfire Music Override"), true);
 
         if (kind == WorldInteractionKind.MapTransition)
         {

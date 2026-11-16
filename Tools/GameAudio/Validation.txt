@@ -1,0 +1,10 @@
+PASS: global/audio profile assets; six default music contexts; five distinct sliders with arrow/percentage controls; bilingual labels; authored Menu Options.
+PASS: Master × per-bus gain; Voice/SFX isolation; Master zero mutes every bus. No PlayerPrefs or campaign save writes.
+PASS: real Options bindings change the chosen bus; both arrows step 5%; bounds clamp; Back closes once and restores menu interaction. Persistence disabled on fixture only.
+PASS: real music resolution chooses map → Discovery → campfire override/fallback → Discovery; remaining in a zone does not restart playback; unloading a zone restores map music.
+PASS: embedded/pool AudioSource gain is applied once, restored on disable, reapplied on reuse, and reacts immediately to volume changes.
+PASS: common click survives a closing panel and event replacement; ActionMenu uses its own cue without duplication; other combat rows use the common cue.
+PASS: Title Settings button resolves from its existing authored selection screen.
+Scope: isolated Edit Mode validation and render; does not start Play Mode or touch player saves. Clips intentionally empty until user assigns audio.
+Preview: Tools/GameAudio/Options-Vietnamese-20261116-120733688.png
+Preview: Tools/GameAudio/Options-English-20261116-120734400.png

@@ -24,7 +24,7 @@ public static class MPortalTutorialSetup
             .Any(path => File.GetLastWriteTimeUtc("Library/ScriptAssemblies/Assembly-CSharp-Editor.dll") < File.GetLastWriteTimeUtc(path))) return;
         if (File.GetLastWriteTimeUtc("Library/ScriptAssemblies/Assembly-CSharp.dll") < File.GetLastWriteTimeUtc("Assets/Scripts/Adventure/MExplorationTutorial.cs")) return;
         string command = File.ReadAllText(Request).Trim(); File.Delete(Request);
-        try { if (command == "setup") Setup(); else if (command == "finish") Finish(); else if (command == "validate") Validate(); else Inspect(); }
+        try { if (command == "setup") Setup(); else if (command == "lessons") UpdateLessons(); else if (command == "finish") Finish(); else if (command == "validate") Validate(); else Inspect(); }
         catch (Exception error) { Directory.CreateDirectory(Output); File.WriteAllText(Output + "/Error-" + DateTime.Now.ToString("yyyyMMdd-HHmmssfff") + ".txt", error.ToString()); Debug.LogException(error); }
     }
     [MenuItem("Tools/Adventure/Tutorial/Inspect m Portal and Route")]
@@ -118,6 +118,7 @@ public static class MPortalTutorialSetup
         if (root == null) { root = new GameObject("M Arrival Tutorial"); SceneManager.MoveGameObjectToScene(root, scene); Undo.RegisterCreatedObjectUndo(root, "Create m tutorial"); }
         var tutorial = Component<MExplorationTutorial>(root);
         tutorial.player = player; tutorial.mapSetup = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<MapGameSetup>(true)).First();
+        tutorial.encounterEnemy = FindEncounterEnemy(scene);
         Undo.RecordObject(player.transform, "Set portal arrival spawn"); player.transform.SetPositionAndRotation(Spawn, SpawnRotation);
         tutorial.walkStart = Pose(root.transform, "Arrival Poses/Player Start", Spawn, SpawnRotation);
         Vector3 forward = SpawnRotation * Vector3.forward, right = SpawnRotation * Vector3.right;
@@ -301,9 +302,37 @@ public static class MPortalTutorialSetup
     {
         var scene = SceneManager.GetSceneByPath("Assets/Scenes/m.unity");
         var tutorial = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<MExplorationTutorial>(true)).Single();
-        if (tutorial.player == null || tutorial.portal == null || tutorial.lessons == null || tutorial.campfire == null || tutorial.parkourObstacle == null)
+        if (tutorial.player == null || tutorial.portal == null || tutorial.lessons == null || tutorial.campfire == null || tutorial.parkourObstacle == null || tutorial.encounterEnemy == null)
             throw new InvalidOperationException("Tutorial references are incomplete.");
         MPortalTutorialValidation.Run(tutorial);
+    }
+    static readonly Vector3 TutorialEnemyPosition = new Vector3(-36.8455811f, -85.8805084f, -29.9340305f);
+    static WorldInteraction FindEncounterEnemy(Scene scene)
+    {
+        var enemy = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<WorldInteraction>(true))
+            .Where(p => p.kind == WorldInteractionKind.Encounter)
+            .OrderBy(p => (p.transform.position - TutorialEnemyPosition).sqrMagnitude).FirstOrDefault();
+        if (enemy == null || Vector3.Distance(enemy.transform.position, TutorialEnemyPosition) > 1f)
+            throw new InvalidOperationException("Không tìm thấy Enemy Encounter tại vị trí " + TutorialEnemyPosition.ToString("F4") + ".");
+        return enemy;
+    }
+    [MenuItem("Tools/Adventure/Tutorial/Update m Lessons and Encounter")]
+    public static void UpdateLessons()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Exit Play Mode before updating scene m.");
+        var scene = SceneManager.GetSceneByPath("Assets/Scenes/m.unity");
+        if (!scene.IsValid() || !scene.isLoaded) throw new InvalidOperationException("Open scene m first.");
+        var tutorial = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<MExplorationTutorial>(true)).Single();
+        var enemy = FindEncounterEnemy(scene);
+        string backup = Output + "/Before-EncounterLesson-" + DateTime.Now.ToString("yyyyMMdd-HHmmssfff"); Directory.CreateDirectory(backup);
+        File.Copy(scene.path, backup + "/m.disk.unity");
+        if (!EditorSceneManager.SaveScene(scene, backup + "/m.current.unity", true)) throw new IOException("Could not back up unsaved scene changes.");
+        Undo.RecordObject(tutorial, "Assign final exploration encounter lesson"); tutorial.encounterEnemy = enemy;
+        EditorUtility.SetDirty(tutorial); EditorSceneManager.MarkSceneDirty(scene);
+        if (!EditorSceneManager.SaveScene(scene)) throw new IOException("Could not save tutorial encounter reference.");
+        File.WriteAllText(Output + "/LessonSetup.txt", "Merged movement/jump; final enemy=" + Hierarchy(enemy.transform) + "\nPosition=" + enemy.transform.position.ToString("F7") +
+            "\nWorld ID=" + enemy.Id + "\nBackup=" + backup + "\nExisting camera/canvas/portal poses preserved.");
+        MPortalTutorialValidation.Run(tutorial, lessonsOnly: true);
     }
     static void Finish()
     {

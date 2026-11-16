@@ -52,6 +52,7 @@ public sealed class BattleEntryWalk
         animator.Play(walkState, 0, 0f);
         animator.Update(0f);
         IsComplete = false;
+        ActorAudio.For(unit.gameObject).battleEntryWalking = true;
     }
 
     public void Tick(float deltaTime)
@@ -88,6 +89,7 @@ public sealed class BattleEntryWalk
     {
         if (IsComplete) return;
         IsComplete = true;
+        if (unit != null) ActorAudio.For(unit.gameObject).battleEntryWalking = false;
         if (unit != null && snapToSlot) unit.transform.SetPositionAndRotation(destination, destinationRotation);
         if (animator != null && ownsAnimation)
         {

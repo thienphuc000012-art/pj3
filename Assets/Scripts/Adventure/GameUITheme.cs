@@ -165,6 +165,7 @@ public static class GameUITheme
         foreach (var button in root.GetComponentsInChildren<Button>(true))
         {
             if (button == null) continue;
+            if (Application.isPlaying) GameButtonSound.Ensure(button);
             if (button.GetComponentInParent<PreserveAuthoredUI>(true) != null) continue;
             if (button.GetComponent<CombatSkillRowUI>() != null) continue;
             if (IsSaveSlotsElement(button.transform) || IsQuestElement(button.transform)) continue;

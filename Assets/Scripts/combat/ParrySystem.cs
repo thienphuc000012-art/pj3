@@ -255,7 +255,14 @@ public class ParrySystem : MonoBehaviour
 
     private void SpawnParrySuccessVFX(BattleUnit player, BattleUnit attacker, bool playImpactSound = true, Vector3? contactPosition = null)
     {
-        if (player == null || parrySuccessVfxPrefab == null) return;
+        if (player == null) return;
+        if (playImpactSound)
+        {
+            var sound = ActorAudio.For(player.gameObject).Profile?.parry;
+            if (sound != null && sound.HasClip) GameAudio.Play(sound, contactPosition ?? player.transform.position);
+            else GameAudio.PlayClipAt(parryImpactAudioClip, contactPosition ?? player.transform.position, parryImpactVolume);
+        }
+        if (parrySuccessVfxPrefab == null) return;
 
         Vector3 towardAttacker = attacker != null
             ? attacker.transform.position - player.transform.position
@@ -292,8 +299,6 @@ public class ParrySystem : MonoBehaviour
         effect.SetActive(true);
         Destroy(staging);
 
-        if (playImpactSound && parryImpactAudioClip != null)
-            AudioSource.PlayClipAtPoint(parryImpactAudioClip, impactPosition, parryImpactVolume);
 
         float lifetime = Mathf.Max(0.1f, parrySuccessVfxLifetime);
         foreach (ParticleSystem particles in effect.GetComponentsInChildren<ParticleSystem>(true))

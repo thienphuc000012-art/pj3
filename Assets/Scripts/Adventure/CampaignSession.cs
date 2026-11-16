@@ -45,6 +45,7 @@ public class CampaignSession : MonoBehaviour
     public string Message { get; private set; }
     public float MessageUntil { get; private set; }
     public bool InEncounter => encounter != null;
+    public event Action<WorldInteraction> EncounterStarted;
     public bool IsGuidedTutorialEncounter => encounter != null && encounter.guidedTutorial;
     public bool EncounterHasBoss => encounter != null && encounter.enemies != null && encounter.enemies.Any(enemy => enemy != null && enemy.isBoss);
     public int ResultExperience => encounter?.xp ?? 0;
@@ -104,11 +105,13 @@ public class CampaignSession : MonoBehaviour
                 if (!opening)
                 {
                     opening = true;
+                    GameAudio.Play(GameAudio.Settings.chestOpen, point.transform.position);
                     chestStartedAt = Time.time;
                     chestFinishedAt = chestStartedAt + point.PlayChestOpen();
                 }
                 return;
             }
+            GameAudio.Play(GameAudio.Settings.pickup, point.transform.position);
             point.CompleteCollection();
             collected = point.IsConsumed;
         };
@@ -1201,7 +1204,7 @@ public class CampaignSession : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.P))
         {
             var ui = GetComponent<AdventureUI>();
-            if (ui != null && (ui.SaveSlotsOpen || ui.ReturnToTitleConfirmationOpen)) { ui.HandleBack(); return; }
+            if (ui != null && (ui.OptionsOpen || ui.SaveSlotsOpen || ui.ReturnToTitleConfirmationOpen)) { ui.HandleBack(); return; }
             SetMenu(Menu == AdventureMenu.None ? AdventureMenu.Main : AdventureMenu.None);
         }
         if (Menu != AdventureMenu.None) return;
@@ -1622,7 +1625,7 @@ public class CampaignSession : MonoBehaviour
     public void Craft(CraftRecipe recipe)
     {
         if (!CanCraft(recipe)) return;
-        Data.TryCraft(recipe); Notify("Đã chế tạo " + recipe.displayName); Save();
+        Data.TryCraft(recipe); GameAudio.Play(GameAudio.Settings.craft, MapPlayer != null ? MapPlayer.transform.position : Vector3.zero); Notify("Đã chế tạo " + recipe.displayName); Save();
     }
     public void BeginEncounter(WorldInteraction point) => BeginEncounter(point, true);
 
@@ -1648,6 +1651,7 @@ public class CampaignSession : MonoBehaviour
             guidedTutorial = Config.IsGuidedTutorialEncounter(point)
         };
         Busy = true;
+        EncounterStarted?.Invoke(point);
         StartCoroutine(PlayEncounterTransition(point, playerInitiated));
     }
 

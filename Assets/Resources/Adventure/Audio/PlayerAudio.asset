@@ -1,0 +1,74 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9746bc2102a26fd4389a2f12d1f1708b, type: 3}
+  m_Name: PlayerAudio
+  m_EditorClassIdentifier: Assembly-CSharp::ActorAudioProfile
+  walk:
+    clips:
+    - {fileID: 8300000, guid: 6c8d702492e59ca43a91d7e280c4027f, type: 3}
+    volume: 0.8
+    pitch: {x: 1, y: 1}
+    spatialBlend: 1
+    maxDistance: 24
+  run:
+    clips:
+    - {fileID: 8300000, guid: 037898a1c6c36df43af36e5724d409ee, type: 3}
+    volume: 0.8
+    pitch: {x: 1, y: 1}
+    spatialBlend: 1
+    maxDistance: 24
+  jump:
+    clips:
+    - {fileID: 8300000, guid: 9b53cd2e8836591439181e07518b23ae, type: 3}
+    volume: 0.8
+    pitch: {x: 1, y: 1}
+    spatialBlend: 1
+    maxDistance: 24
+  walkStepDistance: 1.25
+  runStepDistance: 1.65
+  runSpeedThreshold: 3
+  footstepsByAnimationEvent: 0
+  loopMovementAudio: 0
+  skill:
+    clips: []
+    volume: 0.8
+    pitch: {x: 1, y: 1}
+    spatialBlend: 1
+    maxDistance: 24
+  parry:
+    clips:
+    - {fileID: 8300000, guid: a57477fb5bbe654499ba2f4e5c56cb1c, type: 3}
+    volume: 0.8
+    pitch: {x: 1, y: 1}
+    spatialBlend: 1
+    maxDistance: 24
+  hurt:
+    clips:
+    - {fileID: 8300000, guid: 41d50ea14845dbb44afe084971e15095, type: 3}
+    volume: 0.8
+    pitch: {x: 1, y: 1}
+    spatialBlend: 1
+    maxDistance: 24
+  die:
+    clips:
+    - {fileID: 8300000, guid: 972ecfbedd0fa9f4a9f36d18893898c1, type: 3}
+    volume: 0.8
+    pitch: {x: 1, y: 1}
+    spatialBlend: 1
+    maxDistance: 24
+  growl:
+    clips: []
+    volume: 0.8
+    pitch: {x: 1, y: 1}
+    spatialBlend: 1
+    maxDistance: 24
+  growlInterval: {x: 7, y: 15}

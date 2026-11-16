@@ -1,0 +1,83 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 781fd3cb42e60dc428ac20cb4181b16a, type: 3}
+  m_Name: GameAudioSettings
+  m_EditorClassIdentifier: Assembly-CSharp::GameAudioSettings
+  master: 0.8
+  music: 0.8
+  voice: 1
+  userInterface: 1
+  specialEffects: 1
+  titleScene: Title
+  introScene: MangaIntro
+  title:
+    clip: {fileID: 8300000, guid: dabe98b9cdb004b4f866b4b45cf4c451, type: 3}
+    volume: 0.65
+  intro:
+    clip: {fileID: 8300000, guid: 64cf3927e67dd5148a7a7a046bc72f4d, type: 3}
+    volume: 0.65
+  mapgame:
+    clip: {fileID: 0}
+    volume: 0.65
+  m:
+    clip: {fileID: 0}
+    volume: 0.65
+  battle:
+    clip: {fileID: 0}
+    volume: 0.65
+  campfire:
+    clip: {fileID: 8300000, guid: 1ec3ce51262626d45b8f746d546e98a6, type: 3}
+    volume: 0.65
+  musicFadeSeconds: 1.2
+  player: {fileID: 11400000, guid: 2795378ac3825554fb533bb87042ac4a, type: 2}
+  enemy: {fileID: 11400000, guid: 85c609f9ea945854ca4bf7dfbfc5c303, type: 2}
+  pickup:
+    clips: []
+    volume: 0.8
+    pitch: {x: 1, y: 1}
+    spatialBlend: 1
+    maxDistance: 24
+  chestOpen:
+    clips: []
+    volume: 0.8
+    pitch: {x: 1, y: 1}
+    spatialBlend: 1
+    maxDistance: 24
+  scan:
+    clips:
+    - {fileID: 8300000, guid: 51cec55f68bedd14393015ce0aae5663, type: 3}
+    volume: 0.8
+    pitch: {x: 1, y: 1}
+    spatialBlend: 1
+    maxDistance: 24
+  craft:
+    clips:
+    - {fileID: 8300000, guid: 0b3ae40b7dd4bb749b0bdcbbc841d68b, type: 3}
+    volume: 0.8
+    pitch: {x: 1, y: 1}
+    spatialBlend: 1
+    maxDistance: 24
+  commonButton:
+    clips:
+    - {fileID: 8300000, guid: 9a65d8b1926f64841a4f737a67d4f349, type: 3}
+    volume: 0.28
+    pitch: {x: 1, y: 1}
+    spatialBlend: 0
+    maxDistance: 24
+  actionMenuButton:
+    clips:
+    - {fileID: 8300000, guid: 9a65d8b1926f64841a4f737a67d4f349, type: 3}
+    volume: 0.28
+    pitch: {x: 1, y: 1}
+    spatialBlend: 0
+    maxDistance: 24
+  maxOneShots: 32

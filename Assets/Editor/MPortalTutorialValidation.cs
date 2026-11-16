@@ -21,10 +21,11 @@ public static class MPortalTutorialValidation
     static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
     static void Set(object target, string name, object value) => target.GetType().GetField(name, Private).SetValue(target, value);
     static object Call(object target, string name, params object[] args) => target.GetType().GetMethod(name, Private).Invoke(target, args);
-    public static void Run(MExplorationTutorial authored)
+    public static void Run(MExplorationTutorial authored, bool lessonsOnly = false)
     {
         Check(!EditorApplication.isPlayingOrWillChangePlaymode, "Validate in Edit Mode.");
         var report = new StringBuilder(); Directory.CreateDirectory(Output);
+        string resultPath = Output + (lessonsOnly ? "/LessonsValidation.txt" : "/Validation.txt");
         Scene active = SceneManager.GetActiveScene(), test = default;
         var previousSession = CampaignSession.Instance;
         var sessionField = typeof(CampaignSession).GetField("<Instance>k__BackingField", BindingFlags.Static | BindingFlags.NonPublic);
@@ -36,6 +37,11 @@ public static class MPortalTutorialValidation
         try
         {
             Check(authored.gameObject.scene.name == "m", "Arrival must belong only to scene m.");
+            Check(authored.encounterEnemy != null && authored.encounterEnemy.kind == WorldInteractionKind.Encounter && authored.encounterEnemy.gameObject.scene == active,
+                "The final lesson must reference an existing enemy encounter in m.");
+            report.AppendLine("PASS: final encounter target=" + authored.encounterEnemy.name + " at " + authored.encounterEnemy.transform.position.ToString("F6"));
+            if (!lessonsOnly)
+            {
             Check(Vector3.Distance(authored.walkStart.position, new Vector3(-87.2855682f, -91.1699982f, -7.56377697f)) < .001f, "Incorrect inside-portal start.");
             Check(Mathf.Abs(Mathf.DeltaAngle(authored.walkStart.eulerAngles.y, 124.340195f)) < .01f, "Incorrect spawn yaw.");
             Check(authored.gameplayCamera != null && authored.cinematicCamera != null && !authored.cinematicCamera.enabled, "Camera handoff references/default state.");
@@ -46,6 +52,7 @@ public static class MPortalTutorialValidation
             Check(authored.portal.glowLights.All(l => l.shadows == LightShadows.None), "Portal light must not add shadow atlas load.");
             Check(authored.campfire.gameObject.scene == active && authored.parkourObstacle.gameObject.scene == active, "Use the existing map campfire and parkour obstacle.");
             report.AppendLine("PASS: scene m only; exact inside-portal spawn/yaw; camera references; source model materials; positive static frame colliders; energy has no collider; no extra shadow maps.");
+            }
 
             test = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive); SceneManager.SetActiveScene(active);
             var root = new GameObject("Isolated m tutorial validation"); SceneManager.MoveGameObjectToScene(root, test);
@@ -56,6 +63,8 @@ public static class MPortalTutorialValidation
             cc.height = source.height; cc.radius = source.radius; cc.center = source.center; cc.skinWidth = source.skinWidth;
             cc.stepOffset = source.stepOffset; cc.slopeLimit = source.slopeLimit; cc.minMoveDistance = source.minMoveDistance;
             foreach (var c in authored.player.GetComponentsInChildren<Collider>(true)) Physics.IgnoreCollision(cc, c);
+            if (!lessonsOnly)
+            {
             foreach (int fps in new[] { 30, 60, 120 })
             {
                 cc.enabled = false; actor.transform.SetPositionAndRotation(authored.walkStart.position, authored.walkStart.rotation); cc.enabled = true; Physics.SyncTransforms();
@@ -79,14 +88,25 @@ public static class MPortalTutorialValidation
             Check(!Physics.Linecast(authored.walkCameraStart.position, authored.walkStart.position + Vector3.up * 1.2f, authored.player.surfaceLayer, QueryTriggerInteraction.Ignore), "Portal frame occludes the starting camera.");
             Check(!Physics.Linecast(authored.walkCameraEnd.position, authored.walkExit.position + Vector3.up * 1.25f, authored.player.surfaceLayer, QueryTriggerInteraction.Ignore), "Scenery occludes the exit camera.");
             report.AppendLine("PASS: portal frame/scenery does not obstruct either walking shot's view of the player.");
+            }
 
             var restored = JsonUtility.FromJson<CampaignSave>("{\"version\":5}");
             Check(MExplorationTutorial.FindProgress(restored, false) == null, "Old saves should have no invented progress.");
-            var entry = MExplorationTutorial.FindProgress(restored, true); entry.introComplete = true; entry.nextLesson = 4;
+            var entry = MExplorationTutorial.FindProgress(restored, true); entry.introComplete = true; entry.nextLesson = 3;
             var roundTrip = JsonUtility.FromJson<CampaignSave>(JsonUtility.ToJson(restored));
-            Check(MExplorationTutorial.FindProgress(roundTrip, false).nextLesson == 4 && roundTrip.explorationTutorials.Count == 1, "Save/resume progress round trip.");
+            Check(MExplorationTutorial.FindProgress(roundTrip, false).nextLesson == 3 && roundTrip.explorationTutorials.Count == 1, "Save/resume progress round trip.");
             Check(MExplorationTutorial.FindProgress(restored, true) == entry && restored.explorationTutorials.Count == 1, "Tutorial progress duplicated.");
             report.AppendLine("PASS: older JSON compatible; progress resumes at Parkour; independent campaign data; no duplicate entry; no file saves.");
+            for (int oldLesson = 0; oldLesson <= 7; oldLesson++)
+            {
+                var old = JsonUtility.FromJson<CampaignSave>("{\"explorationTutorials\":[{\"id\":\"" + MExplorationTutorial.ProgressId + "\",\"introComplete\":true,\"nextLesson\":" + oldLesson + ",\"complete\":" + (oldLesson == 7 ? "true" : "false") + "}]}");
+                var migrated = MExplorationTutorial.FindProgress(old, false);
+                Check(migrated.curriculumVersion == MExplorationTutorial.CurriculumVersion && migrated.nextLesson == Math.Max(0, oldLesson - 1) && !migrated.complete,
+                    "Old tutorial migration failed at lesson " + oldLesson);
+                Check(migrated.movementCompleted == (oldLesson >= 1) && migrated.jumpCompleted == (oldLesson >= 2), "Migration lost completed movement/jump practice.");
+                int step = migrated.nextLesson; MExplorationTutorial.FindProgress(old, false); Check(migrated.nextLesson == step, "Migration ran twice.");
+            }
+            report.AppendLine("PASS: all eight legacy progress positions migrate once; old Jump resumes the combined hint with movement retained; old graduates receive only the new encounter hint.");
 
             var host = new GameObject("Inactive campaign fixture"); host.SetActive(false); host.transform.SetParent(root.transform);
             var session = host.AddComponent<CampaignSession>();
@@ -116,29 +136,42 @@ public static class MPortalTutorialValidation
             Call(tutorial, "RestorePresentation"); Check(CinemachineCore.GetBlendOverride == originalBlend, "Camera blend hook leaks after cutscene cleanup.");
             report.AppendLine("PASS: arrival owns its camera blend; cleanup restores the previous camera hook.");
 
-            tutorial.campfire = authored.campfire; tutorial.parkourObstacle = authored.parkourObstacle;
+            tutorial.campfire = authored.campfire; tutorial.parkourObstacle = authored.parkourObstacle; tutorial.encounterEnemy = authored.encounterEnemy;
             Call(tutorial, "BeginPractice");
-            actor.transform.position += Vector3.right * 2.2f; Call(tutorial, "Update"); Check(tutorial.CurrentLesson == 1, "Movement lesson.");
-            Set(player, "<JumpCount>k__BackingField", player.JumpCount + 1); Call(tutorial, "Update"); Check(tutorial.CurrentLesson == 2, "Jump lesson.");
-            Call(tutorial, "Update"); Check(tutorial.CurrentLesson == 2, "Scan must wait for the scan event.");
-            Call(tutorial, "ScanUsed"); Call(tutorial, "Update"); Check(tutorial.CurrentLesson == 3, "Scan event lesson.");
-            session.SetMenu(AdventureMenu.Main); Call(tutorial, "Update"); Check(tutorial.CurrentLesson == 3, "Menu lesson must wait until closed.");
-            session.SetMenu(AdventureMenu.None); Call(tutorial, "Update"); Check(tutorial.CurrentLesson == 4, "P menu lesson.");
+            actor.transform.position += Vector3.right * 2.2f; Call(tutorial, "Update"); Check(tutorial.CurrentLesson == 0 && entry.movementCompleted && !entry.jumpCompleted, "Moving alone skipped the combined hint.");
+            var partial = MExplorationTutorial.FindProgress(JsonUtility.FromJson<CampaignSave>(JsonUtility.ToJson(restored)), false);
+            Check(partial.movementCompleted && !partial.jumpCompleted && partial.nextLesson == 0, "Partial movement/jump progress did not survive save round trip.");
+            Set(player, "<JumpCount>k__BackingField", player.JumpCount + 1); Call(tutorial, "Update"); Check(tutorial.CurrentLesson == 1, "Combined movement/jump lesson.");
+            Call(tutorial, "Update"); Check(tutorial.CurrentLesson == 1, "Scan must wait for the scan event.");
+            Call(tutorial, "ScanUsed"); Call(tutorial, "Update"); Check(tutorial.CurrentLesson == 2, "Scan event lesson.");
+            session.SetMenu(AdventureMenu.Main); Call(tutorial, "Update"); Check(tutorial.CurrentLesson == 2, "Menu lesson must wait until closed.");
+            session.SetMenu(AdventureMenu.None); Call(tutorial, "Update"); Check(tutorial.CurrentLesson == 3, "P menu lesson.");
             actor.transform.position = authored.parkourObstacle.bounds.center + Vector3.forward * 2;
-            Set(player, "<playerInAction>k__BackingField", true); Call(tutorial, "Update"); Check(tutorial.CurrentLesson == 4, "Parkour must wait for completed action.");
-            Set(player, "<playerInAction>k__BackingField", false); Call(tutorial, "Update"); Check(tutorial.CurrentLesson == 5, "Parkour lesson.");
+            Set(player, "<playerInAction>k__BackingField", true); Call(tutorial, "Update"); Check(tutorial.CurrentLesson == 3, "Parkour must wait for completed action.");
+            Set(player, "<playerInAction>k__BackingField", false); Call(tutorial, "Update"); Check(tutorial.CurrentLesson == 4, "Parkour lesson.");
             Set(session, "<RestPoint>k__BackingField", authored.campfire); Set(session, "<Menu>k__BackingField", AdventureMenu.Rest);
-            Call(tutorial, "Update"); Check(tutorial.CurrentLesson == 6, "E/campfire lesson."); Call(tutorial, "Update");
+            Call(tutorial, "Update"); Check(tutorial.CurrentLesson == 5, "E/campfire lesson."); Call(tutorial, "Update");
             Set(session, "<Menu>k__BackingField", AdventureMenu.None); Call(tutorial, "Update");
+            Check(tutorial.CurrentLesson == 6 && !entry.complete, "Closing campfire must lead to the final encounter hint.");
+            var wrongEnemy = controllerHost.AddComponent<WorldInteraction>(); wrongEnemy.kind = WorldInteractionKind.Encounter;
+            var encounterEvent = (Action<WorldInteraction>)typeof(CampaignSession).GetField("EncounterStarted", Private).GetValue(session);
+            Check(encounterEvent != null, "Tutorial did not subscribe to encounter start.");
+            encounterEvent(wrongEnemy); Check(!entry.complete && !entry.enemyEncountered, "A different enemy completed the final hint.");
+            Set(session, "<Busy>k__BackingField", true); encounterEvent(authored.encounterEnemy);
             Check(entry.complete && !tutorial.IsPracticing && entry.nextLesson == MExplorationTutorial.LessonCount, "Tutorial must complete once and stop.");
-            report.AppendLine("PASS: all 7 practice gates: move, jump, actual scan callback, open/close P, completed parkour, correct campfire interaction, close rest; no click-to-skip/repeated lesson.");
-            CheckParkour(authored, actor, report);
+            encounterEvent(authored.encounterEnemy); Check(entry.nextLesson == MExplorationTutorial.LessonCount, "Repeated encounter completion changed progress.");
+            Set(session, "<Busy>k__BackingField", false);
+            report.AppendLine("PASS: 7 hints: combined move+jump, scan, P menu, parkour, E interaction, campfire, correct enemy encounter. Wrong enemy ignored; final hint completes during Busy transition and never repeats.");
+            if (!lessonsOnly) CheckParkour(authored, actor, report);
 
             var canvas = UnityEngine.Object.Instantiate(authored.tutorialCanvas, root.transform, false);
             var view = GuidedCombatTutorialView.Create(canvas, TMP_Settings.defaultFontAsset);
             tutorial.lessons = view; tutorial.tutorialCanvas = canvas; tutorial.keyHints = canvas.transform.Find("Controls").GetComponentsInChildren<RectTransform>(true).Skip(1).Where(t => t.name != "Key").ToArray();
+            tutorial.worldFocus = canvas.transform.Find("World Focus") as RectTransform;
+            tutorial.worldFocusLabel = tutorial.worldFocus.GetComponentInChildren<TMP_Text>(true);
             foreach (var hint in tutorial.keyHints) hint.gameObject.SetActive(true);
             Set(tutorial, "progress", new ExplorationTutorialProgress { id = MExplorationTutorial.ProgressId });
+            Set(tutorial, "practicing", true);
             foreach (var lang in new[] { GameLanguage.Vietnamese, GameLanguage.English })
             {
                 languageField.SetValue(null, lang);
@@ -146,11 +179,15 @@ public static class MPortalTutorialValidation
                 {
                     ((ExplorationTutorialProgress)typeof(MExplorationTutorial).GetField("progress", Private).GetValue(tutorial)).nextLesson = index;
                     Call(tutorial, "ShowLesson");
+                    Call(tutorial, "LateUpdate");
                     Check(view.IsOpen && view.IsHandsOn, "Hands-on lesson did not open.");
                     Check(view.GetComponentsInChildren<Graphic>(true).Where(g => g.gameObject.activeInHierarchy).All(g => !g.raycastTarget), "Tutorial steals pointer clicks from menu/rest.");
                     view.OnSubmit(null); Check(view.IsOpen, "Enter must not skip exploration practice.");
                     var heading = (TMP_Text)typeof(GuidedCombatTutorialView).GetField("heading", Private).GetValue(view);
                     Check(!string.IsNullOrWhiteSpace(heading.text), "Empty localized lesson.");
+                    var focused = (IReadOnlyList<RectTransform>)typeof(GuidedCombatTutorialView).GetField("focusTargets", Private).GetValue(view);
+                    if (index == 0) Check(focused.Count == 2 && focused.Contains(tutorial.keyHints[0]) && focused.Contains(tutorial.keyHints[1]), "The combined hint must spotlight WASD and Space together.");
+                    if (index == 6) Check(tutorial.worldFocus.gameObject.activeSelf && tutorial.worldFocusLabel.text.Contains(lang == GameLanguage.English ? "Enemy" : "Kẻ địch"), "Final hint marker must identify the enemy, not the campfire.");
                     if (index == 0 || index == 6) RenderLesson(authored, canvas, view, test, index, lang, report);
                 }
                 report.AppendLine("PASS: " + lang + " all seven labels; hands-on graphics pass pointer clicks; Submit cannot skip practice.");
@@ -158,10 +195,10 @@ public static class MPortalTutorialValidation
             view.Close(); view.Show(1, 1, null, "Combat regression", "Modal", "Continue", null);
             Check(!view.IsHandsOn && view.transform.Find("Pointer Block").GetComponent<Graphic>().raycastTarget, "Combat modal pointer blocking was not restored."); view.Close();
             report.AppendLine("PASS: combat tutorial restores modal click interception after exploration mode.");
-            RenderPortal(authored, root.transform, test, report);
-            File.WriteAllText(Output + "/Validation.txt", report.ToString()); Debug.Log("[m Portal Tutorial] PASS: " + Output + "/Validation.txt");
+            if (!lessonsOnly) RenderPortal(authored, root.transform, test, report);
+            File.WriteAllText(resultPath, report.ToString()); Debug.Log("[m Portal Tutorial] PASS: " + resultPath);
         }
-        catch (Exception error) { File.WriteAllText(Output + "/Validation.txt", report + "\nFAIL: " + error); throw; }
+        catch (Exception error) { File.WriteAllText(resultPath, report + "\nFAIL: " + error); throw; }
         finally
         {
             sessionField.SetValue(null, previousSession); languageField.SetValue(null, language);

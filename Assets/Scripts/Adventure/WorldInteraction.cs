@@ -19,6 +19,12 @@ public sealed class NpcQuestRepeatableDialogue
 
 public class WorldInteraction : MonoBehaviour
 {
+    public static readonly HashSet<WorldInteraction> All = new HashSet<WorldInteraction>();
+    [Header("Audio")]
+    [Tooltip("Nhạc khi ở trong bán kính Discovery Area. Để trống dùng nhạc map.")]
+    public GameMusic areaMusic = new GameMusic();
+    [Tooltip("Nhạc khi mở menu campfire này. Để trống dùng Campfire trong GameAudioSettings.")]
+    public GameMusic restMusic = new GameMusic();
     public string persistentId;
     [HideInInspector] public string savedWorldId;
     [Tooltip("Optional short ID used by quest assets to point the compass at this location.")]
@@ -158,6 +164,7 @@ public class WorldInteraction : MonoBehaviour
     void OnEnable()
     {
         if (!Application.isPlaying) return;
+        All.Add(this);
         if (kind == WorldInteractionKind.Encounter) EnemyCombatOrigin.CaptureFor(this);
         AdventureScanTarget.EnsureForInteraction(this);
         if (kind == WorldInteractionKind.DialogueNPC)
@@ -207,6 +214,7 @@ public class WorldInteraction : MonoBehaviour
 
     void OnDisable()
     {
+        All.Remove(this);
         StopChestAnimation();
         if (dialogueChatMarker != null) dialogueChatMarker.gameObject.SetActive(false);
     }

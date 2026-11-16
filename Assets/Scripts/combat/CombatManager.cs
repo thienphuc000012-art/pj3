@@ -30,10 +30,13 @@ public class CombatManager : MonoBehaviour
 
     private GameObject CreateVisualVfx(GameObject prefab, Vector3 position, Quaternion rotation, Transform parent = null, bool allowPooling = true)
     {
-        if (!poolVisualVfx || !allowPooling) return Instantiate(prefab, position, rotation, parent);
+        if (!poolVisualVfx || !allowPooling)
+        {
+            var created = Instantiate(prefab, position, rotation, parent); GameAudioSourceBus.Bind(created); return created;
+        }
         if (visualVfxPool == null)
             visualVfxPool = new CombatVisualVfxPool(transform, cachedVisualVfxPerPrefab, cachedVisualVfxTotal, ForgetVisualVfx);
-        return visualVfxPool.Create(prefab, position, rotation, parent);
+        var instance = visualVfxPool.Create(prefab, position, rotation, parent); GameAudioSourceBus.Bind(instance); return instance;
     }
     private void ForgetVisualVfx(GameObject instance)
     {
@@ -274,6 +277,7 @@ public class CombatManager : MonoBehaviour
                 guidedTutorial = GuidedCombatTutorial.Create(AdvancedUIManager.Instance);
         }
         state = CombatState.Start;
+        GameAudio.BeginBattle(this, activeEncounterSetup);
         SetupPositions();
         CombatShadowBudget.Active?.RegisterScene(gameObject.scene);
         if (playerParty.Count > 0 && playerParty[0] != null)
@@ -1521,6 +1525,7 @@ public class CombatManager : MonoBehaviour
             string animTrigger = !string.IsNullOrEmpty(action.animationTriggerName) ? action.animationTriggerName : "Attack";
             acceptingActionAnimationEvents = true;
             StartClawAttackTrail(attacker, action);
+            ActorAudio.For(attacker.gameObject).PlaySkillSound(action);
             attacker.animator.SetTrigger(animTrigger);
             yield return new WaitUntil(() => isAttackAnimationFinished || attacker == null || attacker.IsDead);
             StopClawAttackTrail(attacker);
@@ -1540,6 +1545,7 @@ public class CombatManager : MonoBehaviour
             string animTrigger = action != null ? action.animationTriggerName : "Attack";
             acceptingActionAnimationEvents = true;
             StartClawAttackTrail(attacker, action);
+            ActorAudio.For(attacker.gameObject).PlaySkillSound(action);
             if (action != null && action.isSummonSkill)
                 TryPlaySummonAnimation(attacker, animTrigger);
             else if (attacker.animator != null)
@@ -1937,6 +1943,7 @@ public class CombatManager : MonoBehaviour
                 SetVfxPlaybackSpeed(vfx, action.vfxPlaybackSpeed);
                 TrackCombatVFX(vfx);
                 vfx.transform.SetParent(null, true);
+                GameAudioSourceBus.Bind(vfx);
                 vfx.SetActive(true);
                 Destroy(staging);
                 ScheduleVisualVfx(vfx, GetVfxLifeTime(vfx, 2f));
@@ -2087,6 +2094,7 @@ public class CombatManager : MonoBehaviour
     {
         TrackCombatVFX(vfx);
         vfx.transform.SetParent(null, true);
+        GameAudioSourceBus.Bind(vfx);
         vfx.SetActive(true);
         Destroy(staging);
         Destroy(vfx, Mathf.Max(0.1f, lifetime));
@@ -2717,6 +2725,7 @@ public class CombatManager : MonoBehaviour
         instances.Add(aura);
 
         CombatShadowBudget.Active?.RegisterHierarchy(aura, true);
+        GameAudioSourceBus.Bind(aura);
         aura.SetActive(true);
         Destroy(staging);
     }
@@ -2758,6 +2767,7 @@ public class CombatManager : MonoBehaviour
         }
         castVfx.transform.SetParent(spawnPoint, true);
         TrackCombatVFX(castVfx);
+        GameAudioSourceBus.Bind(castVfx);
         castVfx.SetActive(true);
         Destroy(staging);
 
@@ -3069,6 +3079,7 @@ public class CombatManager : MonoBehaviour
 
         // Free Slash VFX keeps Play On Awake disabled so it can be placed in
         // the demo selector. Start its root system here; child systems follow.
+        GameAudioSourceBus.Bind(slashVfx);
         slashVfx.SetActive(true);
         ParticleSystem rootParticles = slashVfx.GetComponent<ParticleSystem>();
         if (rootParticles != null)

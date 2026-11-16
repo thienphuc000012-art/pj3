@@ -36,6 +36,8 @@ public sealed class AdventureTitleMenu : MonoBehaviour
 
     CampaignConfig config;
     AdventureSaveSlotsView saveSlotsView;
+    GameOptionsView optionsView;
+    Button optionsButton;
     bool menuOpened;
     bool leaving;
     static string startupError;
@@ -50,6 +52,9 @@ public sealed class AdventureTitleMenu : MonoBehaviour
         newGameButton.onClick.AddListener(NewGame);
         quitButton.onClick.AddListener(Quit);
         GameLocalization.BindHierarchy(gameObject);
+        foreach (var button in selectionScreen.GetComponentsInChildren<Button>(true))
+            if (button.name == "Settings" || button.name == "Options") { optionsButton = button; break; }
+        if (optionsButton != null) optionsButton.onClick.AddListener(OpenOptions);
         if (!string.IsNullOrEmpty(startupError))
         {
             ShowError(startupError);
@@ -61,6 +66,8 @@ public sealed class AdventureTitleMenu : MonoBehaviour
 
     void Update()
     {
+        if (optionsView != null && optionsView.IsOpen)
+        { if (WasBackPressed()) optionsView.Close(); return; }
         if (!menuOpened && WasButtonPressed()) ShowMenu();
         else if (saveSlotsView != null && saveSlotsView.IsOpen && WasBackPressed())
             saveSlotsView.HandleBack();
@@ -72,6 +79,13 @@ public sealed class AdventureTitleMenu : MonoBehaviour
         menuOpened = true;
         continueButton.gameObject.SetActive(GetTitleSlots().Exists(slot => !slot.isEmpty && !slot.isCorrupt));
         StartCoroutine(RevealMenu());
+    }
+
+    void OpenOptions()
+    {
+        if (leaving || !menuOpened) return;
+        if (optionsView == null) optionsView = GameOptionsView.Create(selectionScreen.transform.parent);
+        optionsView?.Open(selectionScreen, optionsButton.gameObject);
     }
 
     IEnumerator RevealMenu()

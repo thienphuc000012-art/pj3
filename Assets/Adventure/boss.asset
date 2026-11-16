@@ -18,7 +18,7 @@ MonoBehaviour:
     fieldOfView: 50
     cameraDistance: 3.35
     maximumDistance: 4.45
-    orbitAngle: -24
+    orbitAngle: -18
     targetWeight: 0
     primaryScreenPosition: {x: 0.29, y: 0.48}
     damping: 0.16
@@ -87,7 +87,7 @@ MonoBehaviour:
   targetSelection:
     followOffset: {x: 0, y: 0.3, z: 0}
     lookAtOffset: {x: 0, y: -0.5, z: 0}
-    fieldOfView: 30
+    fieldOfView: 45
     cameraDistance: 2
     maximumDistance: 7.8
     orbitAngle: 0
@@ -123,7 +123,7 @@ MonoBehaviour:
   enemyAnticipation:
     followOffset: {x: 0, y: 0.65, z: 0}
     lookAtOffset: {x: 0, y: 0, z: 0}
-    fieldOfView: 45
+    fieldOfView: 50
     cameraDistance: 4.15
     maximumDistance: 5.7
     orbitAngle: -31
@@ -159,7 +159,7 @@ MonoBehaviour:
   enemyExecution:
     followOffset: {x: 0, y: 0.5, z: 0}
     lookAtOffset: {x: 0, y: 0, z: 0}
-    fieldOfView: 46
+    fieldOfView: 55
     cameraDistance: 3.85
     maximumDistance: 5.8
     orbitAngle: -35
@@ -195,7 +195,7 @@ MonoBehaviour:
   enemyRecovery:
     followOffset: {x: 0, y: 0.7, z: 0}
     lookAtOffset: {x: 0, y: 0, z: 0}
-    fieldOfView: 45
+    fieldOfView: 50
     cameraDistance: 4.1
     maximumDistance: 5.7
     orbitAngle: -32

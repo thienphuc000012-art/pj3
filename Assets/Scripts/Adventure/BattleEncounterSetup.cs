@@ -42,6 +42,10 @@ public class BattleEncounterSetup : MonoBehaviour
     [Tooltip("Phải giống Combat Setup ID trên WorldInteraction ở map.")]
     public string setupId = "default";
 
+    [Header("Encounter Music")]
+    [Tooltip("Nhạc riêng cho encounter/quái này. Để trống dùng Battle trong GameAudioSettings.")]
+    public GameMusic battleMusic = new GameMusic();
+
     [Header("Combat Arena")]
     public CombatArenaSpawnSettings arenaSpawn = new CombatArenaSpawnSettings();
 

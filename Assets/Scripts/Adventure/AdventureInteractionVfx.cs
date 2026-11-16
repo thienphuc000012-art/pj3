@@ -49,6 +49,7 @@ public sealed class AdventureInteractionVfx : MonoBehaviour
             main.scalingMode = ParticleSystemScalingMode.Hierarchy;
             main.stopAction = ParticleSystemStopAction.None;
         }
+        GameAudioSourceBus.Bind(instance);
         instance.SetActive(true);
         foreach (var system in cast.particles) if (system.gameObject.activeInHierarchy) system.Play(false);
         return cast;
