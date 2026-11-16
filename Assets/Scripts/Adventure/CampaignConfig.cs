@@ -27,6 +27,8 @@ public class CampaignConfig : ScriptableObject
     [Header("Save Slots")]
     [Range(1, 99), Tooltip("Số ô lưu thủ công trong menu Lưu/Tải game. Tự lưu vẫn dùng file riêng.")]
     public int saveSlotCount = 10;
+    [Header("Exploration Interaction VFX")]
+    public AdventureInteractionVfxSettings interactionVfx = new AdventureInteractionVfxSettings();
     [Header("Encounter Transition")]
     [Tooltip("VFX encounter phủ khung hình, bắt đầu cùng animation Hit trước khi chuyển sang trận đấu.")]
     public GameObject encounterBlackHoleVfxPrefab;

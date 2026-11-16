@@ -21,6 +21,7 @@ public sealed class CombatCameraDirector : MonoBehaviour
     CinemachineCamera cameraRig;
     CombatCameraTargetResolver targets;
     CombatCameraSettings runtimeSettings;
+    CombatCameraSettings encounterSettings;
     CombatManager combat;
     OutputChannels previousChannelMask;
     CinemachineBrain.UpdateMethods previousUpdateMethod;
@@ -40,7 +41,20 @@ public sealed class CombatCameraDirector : MonoBehaviour
     Vector3 lastAim;
     bool hasShot;
 
-    CombatCameraSettings Settings => settings != null ? settings : runtimeSettings;
+    CombatCameraSettings Settings => encounterSettings != null ? encounterSettings : settings != null ? settings : runtimeSettings;
+    public CombatCameraSettings ActiveSettings => Settings;
+
+    public void ApplyEncounterSettings(CombatCameraSettings encounterOverride)
+    {
+        if (encounterSettings == encounterOverride) return;
+        encounterSettings = encounterOverride;
+        if (hasShot && cameraRig != null && Settings != null)
+        {
+            var shot = Settings.Shot(baseState);
+            transition.Begin(currentPosition, currentRotation, currentFov, shot,
+                shot.easing == CombatCameraEase.Cut ? 0f : shot.blendDuration);
+        }
+    }
     public CombatCameraState BaseState => baseState;
     public CombatCameraState State => skill != null && skill.IsPlaying ? CombatCameraState.SkillCinematic :
         impact != null && impact.IsActive ? CombatCameraState.Impact : baseState;
@@ -488,6 +502,7 @@ public sealed class CombatCameraDirector : MonoBehaviour
             brain.CustomBlends = previousCustomBlends;
         }
         if (runtimeSettings != null) Destroy(runtimeSettings);
+        encounterSettings = null;
         cameraRig = null;
         hasShot = false;
     }

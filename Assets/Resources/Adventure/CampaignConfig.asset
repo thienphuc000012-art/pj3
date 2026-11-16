@@ -19,6 +19,14 @@ MonoBehaviour:
   guidedTutorialEncounterKey: Assets/Scenes/mapgame.unity|world:69cef69b177f4a529bdb3115b5496cea|Enemy
     Encounter#17
   saveSlotCount: 10
+  interactionVfx:
+    healPrefab: {fileID: 5992701628586220299, guid: f8d7fbe4c97263e4188baf45282515ab, type: 3}
+    healOffset: {x: 0, y: 0.03, z: 0}
+    healScale: 1
+    pickupPrefab: {fileID: 2159532520669609145, guid: 81dd40a4580977845874a761d4a1b166, type: 3}
+    pickupOffset: {x: 0, y: 0.03, z: 0}
+    pickupScale: 1
+    maximumLifetime: 12
   encounterBlackHoleVfxPrefab: {fileID: 8016646600747896881, guid: 156ed5bf7d1fca448b8bf68959aef780, type: 3}
   encounterVfxDuration: 1.5
   encounterVfxScale: 1.5

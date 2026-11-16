@@ -8,6 +8,7 @@ public class CameraManager : MonoBehaviour
 
     [Header("Cinematic Combat Camera")]
     [SerializeField] bool useDynamicCombatCamera = true;
+    public bool DynamicCombatCameraEnabled => useDynamicCombatCamera;
     CombatCameraDirector director;
     public bool UsesDynamicCombatCamera => useDynamicCombatCamera && ResolveSceneBrain() != null &&
         (director == null || director.isActiveAndEnabled);
@@ -241,14 +242,16 @@ public class CameraManager : MonoBehaviour
 
     public void ApplyEncounterSetup(BattleEncounterSetup setup, List<BattleUnit> enemies)
     {
-        if (setup == null || enemies == null)
-            return;
-
+        if (director == null) director = GetComponent<CombatCameraDirector>();
         if (UsesDynamicCombatCamera)
         {
-            setup.SetAllCameraPriorities(0);
+            if (director == null) director = gameObject.AddComponent<CombatCameraDirector>();
+            director.ApplyEncounterSettings(setup != null ? setup.cameraSettings : null);
+            if (setup != null) setup.SetAllCameraPriorities(0);
             return;
         }
+        if (director != null) director.ApplyEncounterSettings(null);
+        if (setup == null || enemies == null) return;
 
         // Camera chung của encounter: chỉ override khi preset có gán.
         if (setup.battleStartCamera != null)

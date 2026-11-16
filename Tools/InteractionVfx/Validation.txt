@@ -1,0 +1,6 @@
+PASS: full party HP gives no VFX; real HP recovery casts once; repeated full-HP calls stay silent; multiple wounded/defeated members receive one shared cast.
+PASS: pickup/chest cast once at the item/model position, independent of model scale; no following the player/source; source hide/destruction and streamed chunk unload do not remove the cast; rewards and duplicate guards preserved; discovery has no pickup cast.
+PASS: all particle systems use unscaled time; paused rest-menu cleanup and early completion cleanup work.
+Heal preview=Tools/InteractionVfx/Heal-20261115-225540050.png
+Pickup preview=Tools/InteractionVfx/Pickup-20261115-225540146.png
+PASS: both requested prefabs emit particles with valid materials; missing prefab does not block gameplay. Isolated Edit Mode only; no campaign save or scene writes.

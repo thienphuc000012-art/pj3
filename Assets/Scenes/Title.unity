@@ -391,8 +391,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AdventureTitleMenu
   introScene: MangaIntro
-  startMapScene: mapgame
-  overrideSpawnPosition: 1
+  startMapScene: m
+  overrideSpawnPosition: 0
   spawnPosition: {x: -17.831972, y: 259.32806, z: -216.90288}
   spawnYaw: 356.39075
   pressScreen: {fileID: 10017}
@@ -2381,6 +2381,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DialogueChoiceTextHover
   respondToSelection: 1
+  navigationSelectionOnly: 0
   normalColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   hoverColor: {r: 1, g: 1, b: 1, a: 1}
   labels:
@@ -3241,6 +3242,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DialogueChoiceTextHover
   respondToSelection: 1
+  navigationSelectionOnly: 0
   normalColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   hoverColor: {r: 1, g: 1, b: 1, a: 1}
   labels:
@@ -3476,6 +3478,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DialogueChoiceTextHover
   respondToSelection: 1
+  navigationSelectionOnly: 0
   normalColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   hoverColor: {r: 1, g: 1, b: 1, a: 1}
   labels:
@@ -4254,6 +4257,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DialogueChoiceTextHover
   respondToSelection: 1
+  navigationSelectionOnly: 0
   normalColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   hoverColor: {r: 1, g: 1, b: 1, a: 1}
   labels:

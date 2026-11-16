@@ -1,0 +1,5 @@
+PASS: private camera profiles clone existing authored settings and keep independent shot data.
+PASS: CameraManager applies A/B before initialization; unset profile and missing setup both restore common settings and blend duration.
+PASS: actual dynamic Target Selection rig uses encounter FOV and distance, accepts live profile edits, then restores the common shot.
+PASS: legacy battle-start camera assignment still works; dynamic override does not affect legacy mode.
+PASS: custom encounter Inspector is registered; existing camera asset unchanged. Isolated Edit Mode only, no scene/save writes.

@@ -585,11 +585,8 @@ public class WorldInteraction : MonoBehaviour
         bool discovery = kind == WorldInteractionKind.Discovery;
         if (discovery) { if (!session.TryEnterDiscoveryArea(this)) return; }
         else if (IsConsumed) return;
-        if (!IsConsumed)
+        if (GrantCollectionRewards(session))
         {
-            foreach (var reward in rewards) session.AddItem(reward.id, reward.count);
-            session.GainXP(experience);
-            session.Data.collected.Add(Id);
             session.Notify(displayName + " • +" + experience + " KN");
             session.Save();
         }
@@ -599,6 +596,17 @@ public class WorldInteraction : MonoBehaviour
             return; // Keep the discovery zone available for future entries, including old saves.
         }
         gameObject.SetActive(false);
+    }
+    // Grant once at the real pickup/chest completion point. Persistence remains
+    // in CompleteCollection; the cast stays at this item after it disappears.
+    bool GrantCollectionRewards(CampaignSession session)
+    {
+        if (session == null || session.Data == null || IsConsumed) return false;
+        foreach (var reward in rewards) session.AddItem(reward.id, reward.count);
+        session.GainXP(experience);
+        session.Data.collected.Add(Id);
+        if (kind == WorldInteractionKind.Pickup || kind == WorldInteractionKind.Chest) session.PlayCollectionVfx(this);
+        return true;
     }
     void OnDrawGizmosSelected()
     {

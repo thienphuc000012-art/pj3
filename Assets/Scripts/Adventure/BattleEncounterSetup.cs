@@ -114,7 +114,11 @@ public class BattleEncounterSetup : MonoBehaviour
             : new List<BattleStartEffect>();
     }
 
-    [Header("Optional Cameras cho Encounter")]
+    [Header("Cinematic Camera Settings cho Encounter")]
+    [Tooltip("Cấu hình zoom, FOV, offset, framing và chuyển cảnh riêng cho encounter này. Để trống sẽ dùng CombatCameraSettings chung trên CombatCameraDirector. Chỉ áp dụng khi bật Dynamic Combat Camera.")]
+    public CombatCameraSettings cameraSettings;
+
+    [Header("Optional Cameras cho Encounter (Legacy)")]
     [Tooltip("Nếu để trống sẽ dùng Battle Start Camera mặc định trong CameraManager.")]
     public CinemachineCamera battleStartCamera;
 

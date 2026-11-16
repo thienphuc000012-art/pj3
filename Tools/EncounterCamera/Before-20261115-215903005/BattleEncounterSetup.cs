@@ -1,0 +1,163 @@
+﻿using System;
+using System.Collections.Generic;
+using UnityEngine;
+using Unity.Cinemachine;
+using UnityEngine.Serialization;
+
+[Serializable]
+public class EnemyCombatSetup
+{
+    [Header("Enemy Spawn")]
+    [Tooltip("Vị trí và rotation đứng mặc định của enemy trong scene combat.")]
+    public Transform spawnPoint;
+
+    [Header("Melee khi Enemy này đánh Player")]
+    [Min(0f), Tooltip("Khoảng cách Enemy này dừng trước Player khi áp sát để đánh.")]
+    public float meleeApproachDistance = 1.6f;
+    [Tooltip("Độ lệch vị trí riêng của Enemy này: X lệch ngang, Y độ cao, Z tiến/lùi theo hướng Player.")]
+    public Vector3 meleePositionOffset;
+
+    [Header("Camera khi Player chọn Enemy")]
+    [Tooltip("Camera dùng khi Player đang chọn enemy này làm mục tiêu.")]
+    public CinemachineCamera targetCamera;
+
+    [Header("Camera khi Enemy hành động")]
+    [Tooltip("Camera dùng khi chính enemy này tới lượt và thực hiện đòn đơn mục tiêu.")]
+    public CinemachineCamera actionCamera;
+}
+
+[Serializable]
+public class BattleUnitStartingEffectsSetup
+{
+    [Tooltip("Bật để thay thế hiệu ứng khởi đầu trên prefab bằng cấu hình riêng của encounter này. Để tắt sẽ dùng cấu hình trên BattleUnit.")]
+    public bool overridePrefabEffects;
+
+    [Tooltip("Các buff/debuff áp dụng riêng cho unit ở vị trí này khi trận bắt đầu.")]
+    public List<BattleStartEffect> effects = new List<BattleStartEffect>();
+}
+
+public class BattleEncounterSetup : MonoBehaviour
+{
+    [Header("Encounter Setup ID")]
+    [Tooltip("Phải giống Combat Setup ID trên WorldInteraction ở map.")]
+    public string setupId = "default";
+
+    [Header("Combat Arena")]
+    public CombatArenaSpawnSettings arenaSpawn = new CombatArenaSpawnSettings();
+
+    [SerializeField, HideInInspector, FormerlySerializedAs("battleMapObjects")]
+    List<GameObject> legacyBattleMaps = new List<GameObject>();
+
+    // Resolve all desired states before changing objects: shared maps stay enabled.
+    public void ApplyBattleMap(bool streamedArena = false)
+    {
+        var allMaps = new HashSet<GameObject>();
+        var selectedMaps = new HashSet<GameObject>();
+        foreach (var setup in FindObjectsByType<BattleEncounterSetup>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (setup.gameObject.scene != gameObject.scene || setup.legacyBattleMaps == null) continue;
+            foreach (var map in setup.legacyBattleMaps)
+            {
+                if (map == null) continue;
+                if (map.scene != gameObject.scene ||
+                    map.GetComponentInChildren<CombatManager>(true) != null ||
+                    map.GetComponentInChildren<BattleUnit>(true) != null ||
+                    map.GetComponentInChildren<Canvas>(true) != null)
+                {
+                    Debug.LogError("[Battle Map] Chỉ gán nhóm môi trường cùng scene, không chứa CombatManager, nhân vật hoặc Canvas: " + map.name, map);
+                    return;
+                }
+                allMaps.Add(map);
+                if (setup == this && !streamedArena) selectedMaps.Add(map);
+            }
+        }
+        foreach (var map in allMaps)
+            foreach (var other in allMaps)
+                if (map != other && map.transform.IsChildOf(other.transform))
+                {
+                    Debug.LogError("[Battle Map] Các nhóm map không được lồng nhau: " + map.name + " / " + other.name, map);
+                    return;
+                }
+        foreach (var map in allMaps)
+        {
+#if UNITY_EDITOR
+            if (!Application.isPlaying) UnityEditor.Undo.RecordObject(map, "Preview battle map");
+#endif
+            map.SetActive(selectedMaps.Contains(map));
+        }
+    }
+
+    [ContextMenu("Preview This Battle Map")]
+    void PreviewBattleMap() => ApplyBattleMap();
+
+    [Header("Enemy Setup - thứ tự phải giống enemyPrefabs")]
+    public List<EnemyCombatSetup> enemies = new List<EnemyCombatSetup>();
+
+    [Header("Starting Battle Effects theo encounter")]
+    [Tooltip("Element 0 áp dụng cho playerParty[0], element 1 cho playerParty[1], ... Chỉ ghi đè hiệu ứng trên prefab khi bật Override Prefab Effects.")]
+    public List<BattleUnitStartingEffectsSetup> playerStartingEffects = new List<BattleUnitStartingEffectsSetup>();
+    [Tooltip("Element 0 áp dụng cho enemyParty[0], element 1 cho enemyParty[1], ... Có thể cấu hình riêng từng enemy trong encounter này.")]
+    public List<BattleUnitStartingEffectsSetup> enemyStartingEffects = new List<BattleUnitStartingEffectsSetup>();
+
+    public void ApplyStartingEffects(BattleUnit unit, bool isPlayer, int unitIndex)
+    {
+        if (unit == null) return;
+
+        List<BattleUnitStartingEffectsSetup> setups = isPlayer ? playerStartingEffects : enemyStartingEffects;
+        if (setups == null || unitIndex < 0 || unitIndex >= setups.Count) return;
+
+        BattleUnitStartingEffectsSetup setup = setups[unitIndex];
+        if (setup == null || !setup.overridePrefabEffects) return;
+
+        unit.startingBattleEffects = setup.effects != null
+            ? new List<BattleStartEffect>(setup.effects)
+            : new List<BattleStartEffect>();
+    }
+
+    [Header("Optional Cameras cho Encounter")]
+    [Tooltip("Nếu để trống sẽ dùng Battle Start Camera mặc định trong CameraManager.")]
+    public CinemachineCamera battleStartCamera;
+
+    [Tooltip("Nếu để trống sẽ dùng Enemy AoE Camera mặc định trong CameraManager.")]
+    public CinemachineCamera enemyAoECamera;
+
+    [Tooltip("Nếu để trống sẽ dùng Enemy Phase 2 Camera mặc định trong CameraManager.")]
+    public CinemachineCamera enemyPhase2Camera;
+
+    public EnemyCombatSetup GetEnemySetup(int index)
+    {
+        if (index < 0 || index >= enemies.Count)
+            return null;
+
+        return enemies[index];
+    }
+
+    public void SetAllCameraPriorities(int priority)
+    {
+        if (battleStartCamera != null)
+            battleStartCamera.Priority = priority;
+
+        if (enemyAoECamera != null)
+            enemyAoECamera.Priority = priority;
+
+        if (enemyPhase2Camera != null)
+            enemyPhase2Camera.Priority = priority;
+
+        foreach (EnemyCombatSetup setup in enemies)
+        {
+            if (setup == null)
+                continue;
+
+            if (setup.targetCamera != null)
+                setup.targetCamera.Priority = priority;
+
+            if (setup.actionCamera != null)
+                setup.actionCamera.Priority = priority;
+        }
+    }
+
+    private void Awake()
+    {
+        SetAllCameraPriorities(0);
+    }
+}

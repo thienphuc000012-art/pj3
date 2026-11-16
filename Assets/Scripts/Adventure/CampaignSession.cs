@@ -1122,7 +1122,25 @@ public class CampaignSession : MonoBehaviour
             member.hp = maximum;
             restored = true;
         }
+        if (restored && Config != null && Config.interactionVfx != null)
+        {
+            var vfx = Config.interactionVfx;
+            AdventureInteractionVfx.Play(vfx.healPrefab, MapPlayer != null ? MapPlayer.transform : null,
+                vfx.healOffset, vfx.healScale, vfx.maximumLifetime);
+        }
         return restored;
+    }
+    internal void PlayCollectionVfx(WorldInteraction source)
+    {
+        if (Config == null || Config.interactionVfx == null || source == null) return;
+        var vfx = Config.interactionVfx;
+        Transform origin = source.pickupModelInstance != null ? source.pickupModelInstance.transform : source.transform;
+        var cast = AdventureInteractionVfx.Play(vfx.pickupPrefab, origin,
+            vfx.pickupOffset, vfx.pickupScale, vfx.maximumLifetime, followAnchor: false);
+        // A streamed item chunk may unload immediately after collection. Keep the
+        // temporary cast in the map player's scene until its particles finish.
+        if (cast != null && MapPlayer != null && cast.gameObject.scene != MapPlayer.gameObject.scene)
+            SceneManager.MoveGameObjectToScene(cast.gameObject, MapPlayer.gameObject.scene);
     }
     private void ResetRestHealingOnMapArrival(Vector3 position)
     {
@@ -2054,7 +2072,7 @@ public class CampaignSession : MonoBehaviour
         if (CameraManager.Instance == null || !CameraManager.Instance.UsesDynamicCombatCamera)
             RebindCameras(oldPlayers, oldEnemies, manager);
 
-        if (battleSetup != null && CameraManager.Instance != null)
+        if (CameraManager.Instance != null)
             CameraManager.Instance.ApplyEncounterSetup(battleSetup, manager.enemyParty);
 
         RefreshBattleItems(manager);
