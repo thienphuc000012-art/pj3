@@ -9,6 +9,7 @@ using UnityEngine.InputSystem;
 public sealed class MangaIntroSkip : MonoBehaviour
 {
     [SerializeField] PlayableDirector director;
+    [SerializeField] PlayableDirector[] chapterDirectors = new PlayableDirector[0];
     [SerializeField] GameObject prompt;
     [SerializeField] HoldProgressRingGraphic progress;
     [SerializeField] CanvasGroup fadeOverlay;
@@ -38,6 +39,7 @@ public sealed class MangaIntroSkip : MonoBehaviour
             director.stopped -= OnDirectorStopped;
         }
 
+        StopChapters();
         HidePrompt();
     }
 
@@ -102,7 +104,24 @@ public sealed class MangaIntroSkip : MonoBehaviour
     }
 
     void OnDirectorStopped(PlayableDirector _)
-        => HidePrompt();
+    {
+        StopChapters();
+        HidePrompt();
+    }
+
+    void StopChapters()
+    {
+        // Nested Control clips can pause/retain their graph independently of the
+        // master. Explicitly stop each child so skipping never leaves voice audio running.
+        foreach (var chapter in chapterDirectors)
+        {
+            if (chapter == null || chapter == director) continue;
+            chapter.Stop();
+            foreach (var source in chapter.GetComponentsInChildren<AudioSource>(true))
+                source.Stop();
+            chapter.gameObject.SetActive(false);
+        }
+    }
 
     void HidePrompt()
     {

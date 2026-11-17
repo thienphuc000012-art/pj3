@@ -1,0 +1,5 @@
+System.InvalidOperationException: Stopping/skipping the master destroys child audio graphs and stops narration.
+  at MangaIntroVoiceSetup.Require (System.Boolean valid, System.String message) [0x00009] in D:\New folder (4)\pj3\Assets\Editor\MangaIntroVoiceSetup.cs:59 
+  at MangaIntroVoiceSetup.Validate () [0x007be] in D:\New folder (4)\pj3\Assets\Editor\MangaIntroVoiceSetup.cs:245 
+  at MangaIntroVoiceSetup.Setup () [0x00ec3] in D:\New folder (4)\pj3\Assets\Editor\MangaIntroVoiceSetup.cs:197 
+  at MangaIntroVoiceSetup.Poll () [0x0009f] in D:\New folder (4)\pj3\Assets\Editor\MangaIntroVoiceSetup.cs:35 

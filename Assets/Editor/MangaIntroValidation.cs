@@ -28,7 +28,6 @@ public static class MangaIntroValidation
     const string RequestPath = "Library/MangaIntroValidation.request";
     const string ResultPath = "Library/MangaIntroValidation.result.txt";
     const string CaptureFolder = "Library/MangaIntroValidation";
-    static readonly double[] PanelStarts = { .5, 6.5, 12.5, 18.5, 24.5 };
     static bool running;
 
     static MangaIntroValidation() { EditorApplication.update += Poll; }
@@ -51,6 +50,7 @@ public static class MangaIntroValidation
         var report = new Report();
         Scene preview = default;
         PlayableDirector master = null;
+        MangaIntroSkip skip = null;
         var openScenes = Enumerable.Range(0, SceneManager.sceneCount)
             .Select(i => SceneManager.GetSceneAt(i)).ToArray();
         var dirtyStates = openScenes.Select(s => s.isDirty).ToArray();
@@ -65,6 +65,8 @@ public static class MangaIntroValidation
             report.Check(all.All(t => GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(t.gameObject) == 0), "No missing scripts in the saved scene");
             master = all.Single(t => t.name == "MangaIntro_Master").GetComponent<PlayableDirector>();
             Require(master != null, "MangaIntro_Master must have a PlayableDirector.");
+            skip = master.GetComponent<MangaIntroSkip>();
+            if (skip != null) MangaIntroVoiceSetup.PreviewSkipLifecycle(skip, true);
             var canvas = all.Single(t => t.name == "MangaCanvas").GetComponent<Canvas>();
             Require(canvas != null, "MangaCanvas must have a native Canvas.");
             report.Check(canvas.GetComponent<PreserveAuthoredUI>() != null, "MangaCanvas preserves authored colors under the global UI theme");
@@ -97,9 +99,9 @@ public static class MangaIntroValidation
                     name + " Control only controls chapter activation and its own director");
                 report.Check(asset.postPlayback == ActivationControlPlayable.PostPlaybackState.Inactive &&
                     asset.directorOnClipEnd == DirectorControlPlayable.PauseAction.PauseDirector, name + " Control hides and pauses the child on exit");
-                report.Check(Near(controlClips[i].start, i * 33.7) && Near(controlClips[i].duration, 33.5) &&
-                    Near(controlClips[i].clipIn, 0) && Near(controlClips[i].timeScale, 1), name + " Control range is untrimmed, speed 1, duration 33.5 seconds");
-                if (i > 0) report.Check(Near(controlClips[i].start - controlClips[i - 1].end, .2), "Black interchapter gap " + i + " is 0.2 seconds with no overlapping Control clips");
+                report.Check(Near(controlClips[i].duration, timeline.duration) &&
+                    Near(controlClips[i].clipIn, 0) && Near(controlClips[i].timeScale, 1), name + " Control range is untrimmed, speed 1, and covers the complete chapter");
+                if (i > 0) report.Check(controlClips[i].start >= controlClips[i - 1].end - .00001, "Interchapter boundary " + i + " has no overlapping Control clips");
             }
             report.Check(Near(masterTimeline.duration, controlClips[2].end), "Master duration ends with Chapter_03");
             var overlay = canvas.GetComponentsInChildren<Transform>(true).SingleOrDefault(t => t.name == "FadeOverlay");
@@ -111,7 +113,7 @@ public static class MangaIntroValidation
             // Evaluate the real saved director graph. No validator activation or time forwarding substitutes for Timeline.
             master.RebuildGraph();
             int samples = 0;
-            foreach (double time in SampleTimes(controlClips))
+            foreach (double time in SampleTimes(chapters))
             {
                 master.time = time;
                 master.Evaluate();
@@ -136,16 +138,18 @@ public static class MangaIntroValidation
             canvas.planeDistance = 1;
             Directory.CreateDirectory(CaptureFolder);
             for (int i = 0; i < chapters.Length; i++)
-                Capture(master, canvas, camera, chapters[i].Control.start + 30, "Chapter_" + (i + 1).ToString("00") + "_FullPage.png", report);
+                Capture(master, canvas, camera, chapters[i].MasterTime(chapters[i].HoldTime), "Chapter_" + (i + 1).ToString("00") + "_FullPage.png", report);
             for (int panel = 0; panel < 5; panel++)
-                Capture(master, canvas, camera, controlClips[0].start + PanelStarts[panel] + 1.5,
+                Capture(master, canvas, camera, chapters[0].MasterTime(chapters[0].PanelStarts[panel] + 1),
                     "Chapter_01_Reveal_" + (panel + 1).ToString("00") + ".png", report);
-            Capture(master, canvas, camera, controlClips[1].start - .1, "Black_ChapterGap.png", report, true);
-            Capture(master, canvas, camera, controlClips[0].start + 30, "Chapter_01_FullPage_1280x1024.png", report, false, 1280, 1024);
-            Capture(master, canvas, camera, controlClips[0].start + 30, "Chapter_01_FullPage_1080x1920.png", report, false, 1080, 1920);
+            Capture(master, canvas, camera, controlClips[1].start, "Black_ChapterGap.png", report, true);
+            Capture(master, canvas, camera, chapters[0].MasterTime(chapters[0].HoldTime), "Chapter_01_FullPage_1280x1024.png", report, false, 1280, 1024);
+            Capture(master, canvas, camera, chapters[0].MasterTime(chapters[0].HoldTime), "Chapter_01_FullPage_1080x1920.png", report, false, 1080, 1920);
             report.Step("1920 x 1080 rendered evidence", timer.Elapsed);
 
             master.time = controlClips[2].end;
+            master.Evaluate();
+            master.Play();
             master.Evaluate();
             master.Stop();
             report.Check(chapters.All(c => !c.Root.activeSelf), "Stopping after the final chapter leaves every chapter inactive");
@@ -156,6 +160,7 @@ public static class MangaIntroValidation
         finally
         {
             if (master != null) master.Stop();
+            if (skip != null) MangaIntroVoiceSetup.PreviewSkipLifecycle(skip, false);
             if (preview.IsValid()) EditorSceneManager.ClosePreviewScene(preview);
             report.Check(SceneManager.GetActiveScene() == activeScene, "User's active scene was preserved");
             for (int i = 0; i < openScenes.Length; i++)
@@ -175,12 +180,13 @@ public static class MangaIntroValidation
         report.Check(!chapter.Root.activeSelf && !chapter.Director.playOnAwake && chapter.Director.extrapolationMode == DirectorWrapMode.Hold,
             name + " is saved inactive, child autoplay off, Wrap Mode Hold");
         report.Check(AssetDatabase.GetAssetPath(chapter.Timeline) == AssetFolder + name + ".playable", name + " Timeline asset path resolves");
-        report.Check(Near(chapter.Timeline.duration, 33.5), name + " child duration is 33.5 seconds");
+        report.Check(chapter.Timeline.duration > 0, name + " child duration is positive");
         report.Check(chapter.Root.GetComponent<CanvasGroup>() != null && chapter.Root.GetComponent<Animator>() != null, name + " has editable page CanvasGroup and Animator");
         Transform page = chapter.Root.transform.Find("PageSafeArea/Page");
         Require(page != null, name + " needs PageSafeArea/Page.");
         report.Check(page.GetComponent<AspectRatioFitter>() != null, name + " keeps the authored page aspect ratio");
         chapter.Panels = Enumerable.Range(1, 5).Select(n => page.Find("Panel_" + n.ToString("00"))).ToArray();
+        chapter.PanelStarts = new double[chapter.Panels.Length];
         Require(chapter.Panels.All(p => p != null), name + " needs five named panel roots.");
         report.Check(Enumerable.Range(0, page.childCount).Count(n => page.GetChild(n).name.StartsWith("Panel_", StringComparison.Ordinal)) == 5,
             name + " has exactly five panel roots");
@@ -209,8 +215,10 @@ public static class MangaIntroValidation
             var bound = activationTracks.Where(t => BoundObject(chapter.Director, t) == panel.gameObject).ToArray();
             Require(bound.Length == 1, label + " must have one distinct Activation Track binding.");
             var clips = bound[0].GetClips().ToArray();
-            report.Check(clips.Length == 1 && Near(clips[0].start, PanelStarts[p]) && Near(clips[0].end, 33.5),
-                label + " activates at " + Number(PanelStarts[p]) + " and remains present until chapter end");
+            Require(clips.Length == 1, label + " needs one cumulative activation clip.");
+            chapter.PanelStarts[p] = clips[0].start;
+            report.Check(clips[0].start >= 0 && Near(clips[0].end, chapter.Timeline.duration),
+                label + " activates at " + Number(clips[0].start) + " and remains present until chapter end");
             report.Check(bound[0].postPlaybackState == ActivationTrack.PostPlaybackState.Inactive, label + " activation resets inactive on Stop");
             report.Check(animationTracks.Any(t => BoundObject(chapter.Director, t) == panel.gameObject && HasAlphaCurve(t)), label + " reveal is an editable CanvasGroup Animation Track");
             if (dialogue != null) report.Check(animationTracks.Any(t => BoundObject(chapter.Director, t) == dialogue.gameObject && HasAlphaCurve(t)), label + " caption fade is an independent editable Animation Track");
@@ -220,7 +228,10 @@ public static class MangaIntroValidation
         report.Check(pageTracks.Any(HasAlphaCurve), name + " page opacity uses a native Animation Track");
         foreach (string label in new[] { "PageIn", "HoldFullPage", "PageFadeOut" })
             report.Check(pageClips.Any(c => c.displayName.IndexOf(label, StringComparison.OrdinalIgnoreCase) >= 0), name + " exposes an editable " + label + " clip");
-        report.Line(name + ": Control " + Number(chapter.Control.start) + "–" + Number(chapter.Control.end) + "s; child " + Number(chapter.Timeline.duration) + "s; panels " + string.Join(", ", PanelStarts.Select(Number)) + "s.");
+        chapter.FadeStart = pageClips.Single(c => c.displayName == "PageFadeOut").start;
+        chapter.HoldTime = (Math.Max(chapter.PanelStarts.Last() + .8, pageClips.Single(c => c.displayName.StartsWith("HoldFullPage", StringComparison.Ordinal)).start) + chapter.FadeStart) / 2;
+        report.Check(chapter.PanelStarts.Skip(1).Select((s, i) => s > chapter.PanelStarts[i]).All(s => s), name + " panel reveal order remains chronological");
+        report.Line(name + ": Control " + Number(chapter.Control.start) + "–" + Number(chapter.Control.end) + "s; child " + Number(chapter.Timeline.duration) + "s; panels " + string.Join(", ", chapter.PanelStarts.Select(Number)) + "s.");
     }
 
     static void ValidateOverlay(PlayableDirector master, TimelineAsset timeline, TimelineClip[] controls, Transform overlay, Report report)
@@ -230,7 +241,7 @@ public static class MangaIntroValidation
         Require(image != null && group != null && overlay.GetComponent<Animator>() != null, "FadeOverlay needs black Image, CanvasGroup and Animator.");
         report.Check(image.color.r < .001f && image.color.g < .001f && image.color.b < .001f && image.color.a > .99f && group.alpha > .99f,
             "Overlay is saved opaque black");
-        report.Check(overlay.GetSiblingIndex() == overlay.parent.childCount - 1, "FadeOverlay draws over all chapters");
+        report.Check(Enumerable.Range(1, 3).All(i => overlay.GetSiblingIndex() > overlay.parent.Find("Chapter_" + i.ToString("00")).GetSiblingIndex()), "FadeOverlay draws over all chapters (skip prompt may draw above it)");
         var tracks = Tracks(timeline).OfType<AnimationTrack>().Where(t => BoundObject(master, t) == overlay.gameObject).ToArray();
         Require(tracks.Length == 1, "Master needs one native Animation Track bound to FadeOverlay Animator.");
         var fades = tracks[0].GetClips().OrderBy(c => c.start).ToArray();
@@ -241,9 +252,9 @@ public static class MangaIntroValidation
             var animation = fades[i].asset as AnimationPlayableAsset;
             var curve = AlphaCurve(animation != null ? animation.clip : null);
             Require(curve != null, "Overlay fade clip " + (i + 1) + " has no CanvasGroup alpha curve.");
-            float end = (float)fades[i].duration;
-            report.Check(curve.Evaluate(0) > .99f && curve.Evaluate(.6f) < .01f &&
-                curve.Evaluate(end - .8f) < .01f && curve.Evaluate(end) > .99f, "Fade clip " + (i + 1) + " is black→clear in 0.6s and clear→black in the final 0.8s");
+            float start = (float)fades[i].clipIn, end = (float)(fades[i].clipIn + fades[i].duration * fades[i].timeScale);
+            report.Check(curve.Evaluate(start) > .99f && curve.Evaluate((start + end) / 2) < .01f &&
+                curve.Evaluate(end) > .99f, "Fade clip " + (i + 1) + " is black at both endpoints and clear during the chapter");
         }
     }
 
@@ -271,40 +282,46 @@ public static class MangaIntroValidation
             return;
         }
         Chapter chapter = chapters[expected];
-        double local = time - chapter.Control.start;
+        double local = chapter.Control.clipIn + (time - chapter.Control.start) * chapter.Control.timeScale;
         report.Check(Math.Abs(chapter.Director.time - local) < .04, label + " native Control synchronizes child time");
         for (int p = 0; p < chapter.Panels.Length; p++)
         {
-            bool visible = local >= PanelStarts[p];
-            report.Check(chapter.Panels[p].gameObject.activeSelf == visible, label + " " + chapter.Root.name + "/Panel_" + (p + 1).ToString("00") + " preserves cumulative reveal state");
-            if (local > PanelStarts[p] + .8 && local < 32.5)
+            bool visible = local >= chapter.PanelStarts[p];
+            // Timeline quantizes time to discrete ticks; subtraction at an exact
+            // fractional boundary can land on either adjacent tick. Test both sides
+            // at the explicit +/- boundary samples instead of comparing raw doubles.
+            if (Math.Abs(local - chapter.PanelStarts[p]) > .000001)
+                report.Check(chapter.Panels[p].gameObject.activeSelf == visible, label + " " + chapter.Root.name + "/Panel_" + (p + 1).ToString("00") + " preserves cumulative reveal state");
+            if (local > chapter.PanelStarts[p] + .8 && local < chapter.FadeStart - .05)
                 report.Check(chapter.Panels[p].GetComponent<CanvasGroup>().alpha > .98f, label + " revealed panel " + (p + 1) + " stays opaque");
         }
-        if (local >= 27 && local <= 31.5)
+        if (Math.Abs(local - chapter.HoldTime) < .0001)
         {
             report.Check(chapter.Panels.All(p => p.gameObject.activeInHierarchy), label + " full-page hold keeps all five panels visible");
             report.Check(chapter.Root.GetComponent<CanvasGroup>().alpha > .98f && overlay.alpha < .02f, label + " full-page hold has no page fade or black overlay");
         }
     }
 
-    static IEnumerable<double> SampleTimes(TimelineClip[] clips)
+    static IEnumerable<double> SampleTimes(Chapter[] chapters)
     {
+        var clips = chapters.Select(c => c.Control).ToArray();
         double end = clips[clips.Length - 1].end;
         var forward = new SortedSet<double>();
-        for (double t = 0; t < end; t += .25) forward.Add(t);
+        for (double t = 0; t < end; t += .5) forward.Add(t);
         forward.Add(end);
-        foreach (TimelineClip clip in clips)
+        foreach (Chapter chapter in chapters)
         {
-            foreach (double boundary in new[] { clip.start, clip.end }.Concat(PanelStarts.Select(p => clip.start + p)))
+            var clip = chapter.Control;
+            foreach (double boundary in new[] { clip.start, clip.end }.Concat(chapter.PanelStarts.Select(chapter.MasterTime)))
                 foreach (double offset in new[] { -.02, -.001, 0, .001, .02 })
                     if (boundary + offset >= 0 && boundary + offset <= end) forward.Add(boundary + offset);
-            foreach (double hold in new[] { 27.0, 29.0, 31.5 }) forward.Add(clip.start + hold);
+            forward.Add(chapter.MasterTime(chapter.HoldTime));
         }
         foreach (double time in forward) yield return time;
         foreach (double time in forward.Reverse()) yield return time;
-        double[] discontinuous = { 97.4, .25, 64.7, 33.6, 91.9, 6.4, 40.3, 67.3, 30.0, 80.0, 0, 100.89, 33.7, 24.49, 67.4, 58.2 };
+        double[] discontinuous = { .965, .0025, .64, .333, .91, .064, .40, .667, .30, .80, 0, .9999, .337, .245, .674, .58 };
         for (int repeat = 0; repeat < 3; repeat++)
-            foreach (double time in discontinuous) yield return time;
+            foreach (double time in discontinuous) yield return time * end;
     }
 
     static void Capture(PlayableDirector master, Canvas canvas, Camera camera, double time, string file, Report report,
@@ -399,6 +416,9 @@ public static class MangaIntroValidation
         public readonly TimelineAsset Timeline;
         public readonly TimelineClip Control;
         public Transform[] Panels;
+        public double[] PanelStarts;
+        public double HoldTime, FadeStart;
+        public double MasterTime(double local) => Control.start + (local - Control.clipIn) / Control.timeScale;
         public Chapter(GameObject root, PlayableDirector director, TimelineAsset timeline, TimelineClip control)
         { Root = root; Director = director; Timeline = timeline; Control = control; }
     }

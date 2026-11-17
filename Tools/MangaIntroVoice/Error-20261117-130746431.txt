@@ -1,0 +1,5 @@
+System.InvalidOperationException: The correct panel remains the newest panel for the full speech.
+  at MangaIntroVoiceSetup.Require (System.Boolean valid, System.String message) [0x00009] in D:\New folder (4)\pj3\Assets\Editor\MangaIntroVoiceSetup.cs:63 
+  at MangaIntroVoiceSetup.Validate () [0x00560] in D:\New folder (4)\pj3\Assets\Editor\MangaIntroVoiceSetup.cs:421 
+  at MangaIntroVoiceSetup.RetimeChapterOnePanelTwo () [0x009b8] in D:\New folder (4)\pj3\Assets\Editor\MangaIntroVoiceSetup.cs:153 
+  at MangaIntroVoiceSetup.Poll () [0x00106] in D:\New folder (4)\pj3\Assets\Editor\MangaIntroVoiceSetup.cs:40 

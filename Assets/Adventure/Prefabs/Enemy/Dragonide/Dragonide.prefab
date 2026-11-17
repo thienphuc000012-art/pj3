@@ -1,0 +1,302 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2313754688410771839
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6564948289060267456}
+  m_Layer: 7
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6564948289060267456
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2313754688410771839}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1.51, z: -2.18}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8331764869638071902}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &5409077007040245191
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8331764869638071902}
+  - component: {fileID: 1346827573739585742}
+  - component: {fileID: 1343151211444828469}
+  - component: {fileID: 57662457006771733}
+  - component: {fileID: 8523987224800596629}
+  - component: {fileID: 7692792383118082497}
+  m_Layer: 7
+  m_Name: Dragonide
+  m_TagString: Player
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8331764869638071902
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5409077007040245191}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 182540983465059521}
+  - {fileID: 6564948289060267456}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!95 &1346827573739585742
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5409077007040245191}
+  m_Enabled: 1
+  m_Avatar: {fileID: 9000000, guid: dc09a78f44fd3c9478986ec5f94343df, type: 3}
+  m_Controller: {fileID: 9100000, guid: 87bb0a30a98125b48861c8d667236f88, type: 2}
+  m_CullingMode: 1
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 1
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &1343151211444828469
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5409077007040245191}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b5f2d10865edc14abb6dde67d2891ce, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BattleUnit
+  unitName: OakTreeEnt
+  maxHP: 150
+  isSummonedUnit: 0
+  summonOwner: {fileID: 0}
+  summonDeathOwnerMaxHpCostPercent: 0
+  partyHudWaitingPortrait: {fileID: 0}
+  partyHudTurnPortrait: {fileID: 0}
+  parryUltimateGain: 15
+  damageUltimateGain: 50
+  baseAtk: 10
+  baseDef: 5
+  baseCrit: 10
+  baseCritDamage: 150
+  element: 3
+  defaultAttack: {fileID: 0}
+  characterSkills: []
+  battleEntryWalkStateName: Base Layer.BattleEntryWalk
+  battleEntryAnimationSpeed: 1
+  isBoss: 0
+  actionsPerTurn: 2
+  baseActionPattern:
+  - {fileID: 11400000, guid: f020ca7279dc07843a21b00376043de3, type: 2}
+  - {fileID: 11400000, guid: c853d07e5314f4041a89689bbc87268b, type: 2}
+  - {fileID: 11400000, guid: ad643b5c9727bb940b41596e66198530, type: 2}
+  - {fileID: 11400000, guid: 39e82124b6d3674469fafb0860057f36, type: 2}
+  - {fileID: 11400000, guid: 26cc8b1d5b2e30046adf9e6e9ef8a357, type: 2}
+  - {fileID: 11400000, guid: 526bfd2096f639b4fab2c833c8fbcf56, type: 2}
+  - {fileID: 11400000, guid: 801db318376bb9f408ae02b42d5c38f7, type: 2}
+  startingBattleEffects: []
+  bossPhases:
+  - phaseIcon: {fileID: 0}
+    actionsPerTurn: 2
+    phaseActionPattern: []
+  phase1Icon: {fileID: 0}
+  phase2AnimationTriggerName: Phase2
+  phase2IntroDuration: 2.5
+  phase2IntroPlayed: 0
+  baseIdleClip: {fileID: 0}
+  phase2IdleClip: {fileID: 0}
+  idleStateName: Base Layer.Idle
+  idleVfx: []
+  phase2IdleVfx: []
+  baseHitClip: {fileID: 0}
+  criticalHitClip: {fileID: 0}
+  phase2HitClip: {fileID: 0}
+  phase2CriticalHitClip: {fileID: 0}
+  lastTarget: {fileID: 0}
+  speed: 1500
+  unitPortrait: {fileID: 21300000, guid: 82361fa11de5cc34386d1b5565ad8f5a, type: 3}
+  deathStateName: death
+  deathAnimationTimeout: 30
+  enemyDeathDissolveMaterial: {fileID: 2100000, guid: b2364fd72099e8a498208246f334c948, type: 2}
+  deathDissolveStartTime: 0
+  deathDissolveFinishTime: 1
+  deathDissolveTransitionHoldAmount: 0.9
+  deathDissolveCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 2
+      outSlope: 2
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  isPlayer: 0
+  audioProfile: {fileID: 0}
+  handTransform: {fileID: 0}
+  leftHandTransform: {fileID: 0}
+  animator: {fileID: 1346827573739585742}
+  activeBuffs: []
+--- !u!114 &57662457006771733
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5409077007040245191}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9626160da26561d4b8a6bfc900d6578b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BattleUnit_AnimationEvents
+  ownerUnit: {fileID: 1343151211444828469}
+  swordTrail: {fileID: 0}
+--- !u!114 &8523987224800596629
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5409077007040245191}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a95e22257e15e3448b035fce710e4195, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ClickableUnit
+--- !u!136 &7692792383118082497
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5409077007040245191}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 1.8694117
+  m_Height: 4.435356
+  m_Direction: 1
+  m_Center: {x: 0, y: 1.7876363, z: -0.1985507}
+--- !u!1001 &8232335159090062228
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 8331764869638071902}
+    m_Modifications:
+    - target: {fileID: 8122142127718177461, guid: 647af1557e9e1cf4db93f7fbd35d1ab1, type: 3}
+      propertyPath: m_Name
+      value: Dragonide_PBR
+      objectReference: {fileID: 0}
+    - target: {fileID: 8122142127718598485, guid: 647af1557e9e1cf4db93f7fbd35d1ab1, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8122142127718598485, guid: 647af1557e9e1cf4db93f7fbd35d1ab1, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8122142127718598485, guid: 647af1557e9e1cf4db93f7fbd35d1ab1, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8122142127718598485, guid: 647af1557e9e1cf4db93f7fbd35d1ab1, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8122142127718598485, guid: 647af1557e9e1cf4db93f7fbd35d1ab1, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8122142127718598485, guid: 647af1557e9e1cf4db93f7fbd35d1ab1, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8122142127718598485, guid: 647af1557e9e1cf4db93f7fbd35d1ab1, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8122142127718598485, guid: 647af1557e9e1cf4db93f7fbd35d1ab1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8122142127718598485, guid: 647af1557e9e1cf4db93f7fbd35d1ab1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8122142127718598485, guid: 647af1557e9e1cf4db93f7fbd35d1ab1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents:
+    - {fileID: 8122142127710922949, guid: 647af1557e9e1cf4db93f7fbd35d1ab1, type: 3}
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 647af1557e9e1cf4db93f7fbd35d1ab1, type: 3}
+--- !u!4 &182540983465059521 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8122142127718598485, guid: 647af1557e9e1cf4db93f7fbd35d1ab1, type: 3}
+  m_PrefabInstance: {fileID: 8232335159090062228}
+  m_PrefabAsset: {fileID: 0}

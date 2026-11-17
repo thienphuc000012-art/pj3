@@ -1,0 +1,891 @@
+TimelineAsset MangaIntro_Master
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "MangaIntro_Master",
+        "m_EditorClassIdentifier": "Unity.Timeline::UnityEngine.Timeline.TimelineAsset",
+        "m_Version": 0,
+        "m_Tracks": [
+            {
+                "fileID": 4349867637149893700,
+                "guid": "3db1b9cb56c2c4a4da5617d19e436de4",
+                "type": 2
+            },
+            {
+                "fileID": -1498153484972499175,
+                "guid": "3db1b9cb56c2c4a4da5617d19e436de4",
+                "type": 2
+            }
+        ],
+        "m_FixedDuration": 0.0,
+        "m_EditorSettings": {
+            "m_Framerate": 60.0,
+            "m_ScenePreview": true
+        },
+        "m_DurationMode": 0,
+        "m_MarkerTrack": {
+            "instanceID": 0
+        }
+    }
+}
+
+AnimationTrack Shared FadeOverlay — move with chapter controls
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "Shared FadeOverlay — move with chapter controls",
+        "m_EditorClassIdentifier": "Unity.Timeline::UnityEngine.Timeline.AnimationTrack",
+        "m_Version": 3,
+        "m_AnimClip": {
+            "instanceID": 0
+        },
+        "m_Locked": false,
+        "m_Muted": false,
+        "m_CustomPlayableFullTypename": "",
+        "m_Curves": {
+            "instanceID": 0
+        },
+        "m_Parent": {
+            "fileID": 11400000,
+            "guid": "3db1b9cb56c2c4a4da5617d19e436de4",
+            "type": 2
+        },
+        "m_Children": [],
+        "m_Clips": [
+            {
+                "m_Version": 1,
+                "m_Start": 0.0,
+                "m_ClipIn": 0.0,
+                "m_Asset": {
+                    "fileID": -7484965621910259848,
+                    "guid": "3db1b9cb56c2c4a4da5617d19e436de4",
+                    "type": 2
+                },
+                "m_Duration": 49.22300000000001,
+                "m_TimeScale": 1.0,
+                "m_ParentTrack": {
+                    "fileID": -1498153484972499175,
+                    "guid": "3db1b9cb56c2c4a4da5617d19e436de4",
+                    "type": 2
+                },
+                "m_EaseInDuration": 0.0,
+                "m_EaseOutDuration": 0.0,
+                "m_BlendInDuration": -1.0,
+                "m_BlendOutDuration": -1.0,
+                "m_MixInCurve": {
+                    "serializedVersion": "2",
+                    "m_Curve": [
+                        {
+                            "serializedVersion": "3",
+                            "time": 0.0,
+                            "value": 0.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        },
+                        {
+                            "serializedVersion": "3",
+                            "time": 1.0,
+                            "value": 1.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        }
+                    ],
+                    "m_PreInfinity": 2,
+                    "m_PostInfinity": 2,
+                    "m_RotationOrder": 4
+                },
+                "m_MixOutCurve": {
+                    "serializedVersion": "2",
+                    "m_Curve": [
+                        {
+                            "serializedVersion": "3",
+                            "time": 0.0,
+                            "value": 1.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        },
+                        {
+                            "serializedVersion": "3",
+                            "time": 1.0,
+                            "value": 0.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        }
+                    ],
+                    "m_PreInfinity": 2,
+                    "m_PostInfinity": 2,
+                    "m_RotationOrder": 4
+                },
+                "m_BlendInCurveMode": 0,
+                "m_BlendOutCurveMode": 0,
+                "m_ExposedParameterNames": [],
+                "m_AnimationCurves": {
+                    "instanceID": 0
+                },
+                "m_Recordable": false,
+                "m_PostExtrapolationMode": 1,
+                "m_PreExtrapolationMode": 1,
+                "m_PostExtrapolationTime": 0.0,
+                "m_PreExtrapolationTime": 0.0,
+                "m_DisplayName": "Chapter_01 — shared black fade"
+            },
+            {
+                "m_Version": 1,
+                "m_Start": 49.22300000000001,
+                "m_ClipIn": 0.0,
+                "m_Asset": {
+                    "fileID": 5894112087257704173,
+                    "guid": "3db1b9cb56c2c4a4da5617d19e436de4",
+                    "type": 2
+                },
+                "m_Duration": 34.81399999999999,
+                "m_TimeScale": 1.0,
+                "m_ParentTrack": {
+                    "fileID": -1498153484972499175,
+                    "guid": "3db1b9cb56c2c4a4da5617d19e436de4",
+                    "type": 2
+                },
+                "m_EaseInDuration": 0.0,
+                "m_EaseOutDuration": 0.0,
+                "m_BlendInDuration": -1.0,
+                "m_BlendOutDuration": -1.0,
+                "m_MixInCurve": {
+                    "serializedVersion": "2",
+                    "m_Curve": [
+                        {
+                            "serializedVersion": "3",
+                            "time": 0.0,
+                            "value": 0.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        },
+                        {
+                            "serializedVersion": "3",
+                            "time": 1.0,
+                            "value": 1.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        }
+                    ],
+                    "m_PreInfinity": 2,
+                    "m_PostInfinity": 2,
+                    "m_RotationOrder": 4
+                },
+                "m_MixOutCurve": {
+                    "serializedVersion": "2",
+                    "m_Curve": [
+                        {
+                            "serializedVersion": "3",
+                            "time": 0.0,
+                            "value": 1.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        },
+                        {
+                            "serializedVersion": "3",
+                            "time": 1.0,
+                            "value": 0.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        }
+                    ],
+                    "m_PreInfinity": 2,
+                    "m_PostInfinity": 2,
+                    "m_RotationOrder": 4
+                },
+                "m_BlendInCurveMode": 0,
+                "m_BlendOutCurveMode": 0,
+                "m_ExposedParameterNames": [],
+                "m_AnimationCurves": {
+                    "instanceID": 0
+                },
+                "m_Recordable": false,
+                "m_PostExtrapolationMode": 1,
+                "m_PreExtrapolationMode": 1,
+                "m_PostExtrapolationTime": 0.0,
+                "m_PreExtrapolationTime": 0.0,
+                "m_DisplayName": "Chapter_02 — shared black fade"
+            },
+            {
+                "m_Version": 1,
+                "m_Start": 84.037,
+                "m_ClipIn": 0.0,
+                "m_Asset": {
+                    "fileID": 2734893511451133524,
+                    "guid": "3db1b9cb56c2c4a4da5617d19e436de4",
+                    "type": 2
+                },
+                "m_Duration": 31.849999999999996,
+                "m_TimeScale": 1.0,
+                "m_ParentTrack": {
+                    "fileID": -1498153484972499175,
+                    "guid": "3db1b9cb56c2c4a4da5617d19e436de4",
+                    "type": 2
+                },
+                "m_EaseInDuration": 0.0,
+                "m_EaseOutDuration": 0.0,
+                "m_BlendInDuration": -1.0,
+                "m_BlendOutDuration": -1.0,
+                "m_MixInCurve": {
+                    "serializedVersion": "2",
+                    "m_Curve": [
+                        {
+                            "serializedVersion": "3",
+                            "time": 0.0,
+                            "value": 0.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        },
+                        {
+                            "serializedVersion": "3",
+                            "time": 1.0,
+                            "value": 1.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        }
+                    ],
+                    "m_PreInfinity": 2,
+                    "m_PostInfinity": 2,
+                    "m_RotationOrder": 4
+                },
+                "m_MixOutCurve": {
+                    "serializedVersion": "2",
+                    "m_Curve": [
+                        {
+                            "serializedVersion": "3",
+                            "time": 0.0,
+                            "value": 1.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        },
+                        {
+                            "serializedVersion": "3",
+                            "time": 1.0,
+                            "value": 0.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        }
+                    ],
+                    "m_PreInfinity": 2,
+                    "m_PostInfinity": 2,
+                    "m_RotationOrder": 4
+                },
+                "m_BlendInCurveMode": 0,
+                "m_BlendOutCurveMode": 0,
+                "m_ExposedParameterNames": [],
+                "m_AnimationCurves": {
+                    "instanceID": 0
+                },
+                "m_Recordable": false,
+                "m_PostExtrapolationMode": 1,
+                "m_PreExtrapolationMode": 1,
+                "m_PostExtrapolationTime": Infinity,
+                "m_PreExtrapolationTime": 0.0,
+                "m_DisplayName": "Chapter_03 — shared black fade"
+            }
+        ],
+        "m_Markers": {
+            "m_Objects": []
+        },
+        "m_InfiniteClipPreExtrapolation": 0,
+        "m_InfiniteClipPostExtrapolation": 0,
+        "m_InfiniteClipOffsetPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_InfiniteClipOffsetEulerAngles": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_InfiniteClipTimeOffset": 0.0,
+        "m_InfiniteClipRemoveOffset": false,
+        "m_InfiniteClipApplyFootIK": true,
+        "mInfiniteClipLoop": 0,
+        "m_MatchTargetFields": 63,
+        "m_Position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_EulerAngles": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_AvatarMask": {
+            "instanceID": 0
+        },
+        "m_ApplyAvatarMask": true,
+        "m_TrackOffset": 0,
+        "m_InfiniteClip": {
+            "instanceID": 0
+        },
+        "m_OpenClipOffsetRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_Rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_ApplyOffsets": false
+    }
+}
+
+ControlTrack Chapters — ONE active at a time
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "Chapters — ONE active at a time",
+        "m_EditorClassIdentifier": "Unity.Timeline::UnityEngine.Timeline.ControlTrack",
+        "m_Version": 3,
+        "m_AnimClip": {
+            "instanceID": 0
+        },
+        "m_Locked": false,
+        "m_Muted": false,
+        "m_CustomPlayableFullTypename": "",
+        "m_Curves": {
+            "instanceID": 0
+        },
+        "m_Parent": {
+            "fileID": 11400000,
+            "guid": "3db1b9cb56c2c4a4da5617d19e436de4",
+            "type": 2
+        },
+        "m_Children": [],
+        "m_Clips": [
+            {
+                "m_Version": 1,
+                "m_Start": 0.0,
+                "m_ClipIn": 0.0,
+                "m_Asset": {
+                    "fileID": -7721059559397046417,
+                    "guid": "3db1b9cb56c2c4a4da5617d19e436de4",
+                    "type": 2
+                },
+                "m_Duration": 49.22300000000001,
+                "m_TimeScale": 1.0,
+                "m_ParentTrack": {
+                    "fileID": 4349867637149893700,
+                    "guid": "3db1b9cb56c2c4a4da5617d19e436de4",
+                    "type": 2
+                },
+                "m_EaseInDuration": 0.0,
+                "m_EaseOutDuration": 0.0,
+                "m_BlendInDuration": 0.0,
+                "m_BlendOutDuration": 0.0,
+                "m_MixInCurve": {
+                    "serializedVersion": "2",
+                    "m_Curve": [
+                        {
+                            "serializedVersion": "3",
+                            "time": 0.0,
+                            "value": 0.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        },
+                        {
+                            "serializedVersion": "3",
+                            "time": 1.0,
+                            "value": 1.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        }
+                    ],
+                    "m_PreInfinity": 2,
+                    "m_PostInfinity": 2,
+                    "m_RotationOrder": 4
+                },
+                "m_MixOutCurve": {
+                    "serializedVersion": "2",
+                    "m_Curve": [
+                        {
+                            "serializedVersion": "3",
+                            "time": 0.0,
+                            "value": 1.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        },
+                        {
+                            "serializedVersion": "3",
+                            "time": 1.0,
+                            "value": 0.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        }
+                    ],
+                    "m_PreInfinity": 2,
+                    "m_PostInfinity": 2,
+                    "m_RotationOrder": 4
+                },
+                "m_BlendInCurveMode": 0,
+                "m_BlendOutCurveMode": 0,
+                "m_ExposedParameterNames": [],
+                "m_AnimationCurves": {
+                    "instanceID": 0
+                },
+                "m_Recordable": false,
+                "m_PostExtrapolationMode": 0,
+                "m_PreExtrapolationMode": 0,
+                "m_PostExtrapolationTime": 0.0,
+                "m_PreExtrapolationTime": 0.0,
+                "m_DisplayName": "Chapter_01 — Tàn tích thức tỉnh"
+            },
+            {
+                "m_Version": 1,
+                "m_Start": 49.22300000000001,
+                "m_ClipIn": 0.0,
+                "m_Asset": {
+                    "fileID": 5859484670765199289,
+                    "guid": "3db1b9cb56c2c4a4da5617d19e436de4",
+                    "type": 2
+                },
+                "m_Duration": 34.81399999999999,
+                "m_TimeScale": 1.0,
+                "m_ParentTrack": {
+                    "fileID": 4349867637149893700,
+                    "guid": "3db1b9cb56c2c4a4da5617d19e436de4",
+                    "type": 2
+                },
+                "m_EaseInDuration": 0.0,
+                "m_EaseOutDuration": 0.0,
+                "m_BlendInDuration": 0.0,
+                "m_BlendOutDuration": 0.0,
+                "m_MixInCurve": {
+                    "serializedVersion": "2",
+                    "m_Curve": [
+                        {
+                            "serializedVersion": "3",
+                            "time": 0.0,
+                            "value": 0.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        },
+                        {
+                            "serializedVersion": "3",
+                            "time": 1.0,
+                            "value": 1.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        }
+                    ],
+                    "m_PreInfinity": 2,
+                    "m_PostInfinity": 2,
+                    "m_RotationOrder": 4
+                },
+                "m_MixOutCurve": {
+                    "serializedVersion": "2",
+                    "m_Curve": [
+                        {
+                            "serializedVersion": "3",
+                            "time": 0.0,
+                            "value": 1.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        },
+                        {
+                            "serializedVersion": "3",
+                            "time": 1.0,
+                            "value": 0.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        }
+                    ],
+                    "m_PreInfinity": 2,
+                    "m_PostInfinity": 2,
+                    "m_RotationOrder": 4
+                },
+                "m_BlendInCurveMode": 0,
+                "m_BlendOutCurveMode": 0,
+                "m_ExposedParameterNames": [],
+                "m_AnimationCurves": {
+                    "instanceID": 0
+                },
+                "m_Recordable": false,
+                "m_PostExtrapolationMode": 0,
+                "m_PreExtrapolationMode": 0,
+                "m_PostExtrapolationTime": 0.0,
+                "m_PreExtrapolationTime": 0.0,
+                "m_DisplayName": "Chapter_02 — Điện thờ và thánh vật"
+            },
+            {
+                "m_Version": 1,
+                "m_Start": 84.037,
+                "m_ClipIn": 0.0,
+                "m_Asset": {
+                    "fileID": -6560608934229319639,
+                    "guid": "3db1b9cb56c2c4a4da5617d19e436de4",
+                    "type": 2
+                },
+                "m_Duration": 31.849999999999996,
+                "m_TimeScale": 1.0,
+                "m_ParentTrack": {
+                    "fileID": 4349867637149893700,
+                    "guid": "3db1b9cb56c2c4a4da5617d19e436de4",
+                    "type": 2
+                },
+                "m_EaseInDuration": 0.0,
+                "m_EaseOutDuration": 0.0,
+                "m_BlendInDuration": 0.0,
+                "m_BlendOutDuration": 0.0,
+                "m_MixInCurve": {
+                    "serializedVersion": "2",
+                    "m_Curve": [
+                        {
+                            "serializedVersion": "3",
+                            "time": 0.0,
+                            "value": 0.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        },
+                        {
+                            "serializedVersion": "3",
+                            "time": 1.0,
+                            "value": 1.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        }
+                    ],
+                    "m_PreInfinity": 2,
+                    "m_PostInfinity": 2,
+                    "m_RotationOrder": 4
+                },
+                "m_MixOutCurve": {
+                    "serializedVersion": "2",
+                    "m_Curve": [
+                        {
+                            "serializedVersion": "3",
+                            "time": 0.0,
+                            "value": 1.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        },
+                        {
+                            "serializedVersion": "3",
+                            "time": 1.0,
+                            "value": 0.0,
+                            "inSlope": 0.0,
+                            "outSlope": 0.0,
+                            "tangentMode": 0,
+                            "weightedMode": 0,
+                            "inWeight": 0.0,
+                            "outWeight": 0.0
+                        }
+                    ],
+                    "m_PreInfinity": 2,
+                    "m_PostInfinity": 2,
+                    "m_RotationOrder": 4
+                },
+                "m_BlendInCurveMode": 0,
+                "m_BlendOutCurveMode": 0,
+                "m_ExposedParameterNames": [],
+                "m_AnimationCurves": {
+                    "instanceID": 0
+                },
+                "m_Recordable": false,
+                "m_PostExtrapolationMode": 0,
+                "m_PreExtrapolationMode": 0,
+                "m_PostExtrapolationTime": 0.0,
+                "m_PreExtrapolationTime": 0.0,
+                "m_DisplayName": "Chapter_03 — Chiếc nhẫn và cổng thế giới khác"
+            }
+        ],
+        "m_Markers": {
+            "m_Objects": []
+        }
+    }
+}
+
+AnimationPlayableAsset AnimationPlayableAsset of Master_Fade_Chapter_01
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "AnimationPlayableAsset of Master_Fade_Chapter_01",
+        "m_EditorClassIdentifier": "Unity.Timeline::UnityEngine.Timeline.AnimationPlayableAsset",
+        "m_Clip": {
+            "fileID": 7400000,
+            "guid": "cbced30fba08d4442969981d8d8e416e",
+            "type": 2
+        },
+        "m_Position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_EulerAngles": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_UseTrackMatchFields": true,
+        "m_MatchTargetFields": 63,
+        "m_RemoveStartOffset": true,
+        "m_ApplyFootIK": true,
+        "m_Loop": 0,
+        "m_Version": 1,
+        "m_Rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        }
+    }
+}
+
+AnimationPlayableAsset AnimationPlayableAsset of Master_Fade_Chapter_02
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "AnimationPlayableAsset of Master_Fade_Chapter_02",
+        "m_EditorClassIdentifier": "Unity.Timeline::UnityEngine.Timeline.AnimationPlayableAsset",
+        "m_Clip": {
+            "fileID": 7400000,
+            "guid": "9093e858006f21d4c81dea9389440eda",
+            "type": 2
+        },
+        "m_Position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_EulerAngles": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_UseTrackMatchFields": true,
+        "m_MatchTargetFields": 63,
+        "m_RemoveStartOffset": true,
+        "m_ApplyFootIK": true,
+        "m_Loop": 0,
+        "m_Version": 1,
+        "m_Rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        }
+    }
+}
+
+AnimationPlayableAsset AnimationPlayableAsset of Master_Fade_Chapter_03
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "AnimationPlayableAsset of Master_Fade_Chapter_03",
+        "m_EditorClassIdentifier": "Unity.Timeline::UnityEngine.Timeline.AnimationPlayableAsset",
+        "m_Clip": {
+            "fileID": 7400000,
+            "guid": "3681479451d9f3440bf1e90a98d41f2e",
+            "type": 2
+        },
+        "m_Position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_EulerAngles": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_UseTrackMatchFields": true,
+        "m_MatchTargetFields": 63,
+        "m_RemoveStartOffset": true,
+        "m_ApplyFootIK": true,
+        "m_Loop": 0,
+        "m_Version": 1,
+        "m_Rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        }
+    }
+}
+
+ControlPlayableAsset ControlPlayableAsset
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "ControlPlayableAsset",
+        "m_EditorClassIdentifier": "Unity.Timeline::UnityEngine.Timeline.ControlPlayableAsset",
+        "sourceGameObject": {
+            "exposedName": "MangaIntro_Chapter_01",
+            "defaultValue": {
+                "instanceID": 0
+            }
+        },
+        "prefabGameObject": {
+            "instanceID": 0
+        },
+        "updateParticle": false,
+        "particleRandomSeed": 7226,
+        "updateDirector": true,
+        "updateITimeControl": false,
+        "searchHierarchy": false,
+        "active": true,
+        "postPlayback": 1,
+        "directorOnClipEnd": 1
+    }
+}
+
+ControlPlayableAsset ControlPlayableAsset
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "ControlPlayableAsset",
+        "m_EditorClassIdentifier": "Unity.Timeline::UnityEngine.Timeline.ControlPlayableAsset",
+        "sourceGameObject": {
+            "exposedName": "MangaIntro_Chapter_02",
+            "defaultValue": {
+                "instanceID": 0
+            }
+        },
+        "prefabGameObject": {
+            "instanceID": 0
+        },
+        "updateParticle": false,
+        "particleRandomSeed": 9448,
+        "updateDirector": true,
+        "updateITimeControl": false,
+        "searchHierarchy": false,
+        "active": true,
+        "postPlayback": 1,
+        "directorOnClipEnd": 1
+    }
+}
+
+ControlPlayableAsset ControlPlayableAsset
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "ControlPlayableAsset",
+        "m_EditorClassIdentifier": "Unity.Timeline::UnityEngine.Timeline.ControlPlayableAsset",
+        "sourceGameObject": {
+            "exposedName": "MangaIntro_Chapter_03",
+            "defaultValue": {
+                "instanceID": 0
+            }
+        },
+        "prefabGameObject": {
+            "instanceID": 0
+        },
+        "updateParticle": false,
+        "particleRandomSeed": 1850,
+        "updateDirector": true,
+        "updateITimeControl": false,
+        "searchHierarchy": false,
+        "active": true,
+        "postPlayback": 1,
+        "directorOnClipEnd": 1
+    }
+}

@@ -1,0 +1,4 @@
+System.InvalidOperationException: Stopping/skipping the master stops narration and deactivates chapters.
+  at MangaIntroVoiceSetup.Require (System.Boolean valid, System.String message) [0x00009] in D:\New folder (4)\pj3\Assets\Editor\MangaIntroVoiceSetup.cs:59 
+  at MangaIntroVoiceSetup.Validate () [0x008c4] in D:\New folder (4)\pj3\Assets\Editor\MangaIntroVoiceSetup.cs:249 
+  at MangaIntroVoiceSetup.Poll () [0x000b8] in D:\New folder (4)\pj3\Assets\Editor\MangaIntroVoiceSetup.cs:36 

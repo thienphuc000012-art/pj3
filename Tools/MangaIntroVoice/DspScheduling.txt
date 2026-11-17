@@ -1,0 +1,20 @@
+Backup: Tools/MangaIntroVoice/Before-DspScheduling-20261117-123800774
+Root cause: child directors use Manual clock. DirectorControlPlayable.ProcessFrame evaluates them on time resync; ScheduleRuntimeClip treats Evaluate as forceSeek and reschedules audio. Move narration to the autonomous master DSP graph.
+Chapter_01 Panel_01 / Speech_01 master 0.725..5.093s
+Chapter_01 Panel_01 / Speech_02 master 5.273..13.817s
+Chapter_01 Panel_01 / Speech_03 master 13.997..17.285s
+Chapter_01 Panel_02 / Speech_01 master 18.110..29.942s
+Chapter_01 Panel_03 / Speech_01 master 30.767..34.079s
+Chapter_01 Panel_04 / Speech_01 master 34.904..40.400s
+Chapter_01 Panel_05 / Speech_01 master 41.225..48.473s
+Chapter_02 Panel_01 / Speech_01 master 49.948..54.916s
+Chapter_02 Panel_02 / Speech_01 master 55.741..60.253s
+Chapter_02 Panel_03 / Speech_01 master 61.078..64.438s
+Chapter_02 Panel_03 / Speech_02 master 64.618..68.026s
+Chapter_02 Panel_05 / Speech_01 master 71.851..75.979s
+Chapter_02 Panel_05 / Speech_02 master 76.159..83.287s
+Chapter_03 Panel_01 / Speech_01 master 84.762..89.778s
+Chapter_03 Panel_01 / Speech_02 master 89.958..94.518s
+Chapter_03 Panel_02 / Speech_01 master 95.343..99.159s
+Chapter_03 Panel_03 / Speech_01 master 99.984..105.600s
+Chapter_03 Panel_05 / Speech_01 master 109.425..115.137s
