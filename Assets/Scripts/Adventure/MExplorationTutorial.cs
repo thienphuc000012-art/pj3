@@ -6,6 +6,8 @@ using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.UI;
 
+public enum ExplorationTutorialAction { Movement = 0, Scan = 1, Menu = 2, Parkour = 3, Interact = 4, Encounter = 6 }
+
 /// <summary>Only scene m: portal arrival, a short panorama, then hands-on lessons on existing gameplay systems.</summary>
 [DefaultExecutionOrder(200)]
 public sealed class MExplorationTutorial : MonoBehaviour
@@ -35,6 +37,15 @@ public sealed class MExplorationTutorial : MonoBehaviour
     [Min(0f)] public float portalShutdownDistance = .8f;
     [Min(.05f)] public float portalFadeSeconds = .65f;
     [Range(25, 80)] public float cinematicFieldOfView = 48;
+    [Header("After arrival: voice and discovery")]
+    [Tooltip("Các câu thoại phát lần lượt sau khi camera lia map và trở về player.")]
+    public AudioClip[] arrivalDialogue = Array.Empty<AudioClip>();
+    public AudioSource arrivalVoice;
+    public WorldInteraction arrivalDiscoveryArea;
+    public DiscoveryAreaBanner arrivalDiscoveryBanner;
+    [Min(0f)] public float dialogueGapSeconds = .18f;
+    [Min(0f), Tooltip("Chờ sau khi hết thoại và tên khu vực, rồi mới hiện tutorial.")]
+    public float tutorialDelaySeconds = 2f;
     [Header("Tutorial canvas")]
     public Canvas tutorialCanvas;
     public GuidedCombatTutorialView lessons;
@@ -59,6 +70,16 @@ public sealed class MExplorationTutorial : MonoBehaviour
     bool animationCaptured;
     CinemachineCore.GetBlendOverrideDelegate previousBlendOverride;
     bool blendOverrideInstalled;
+    static MExplorationTutorial activePractice;
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetPracticeOwner() => activePractice = null;
+    public static bool Allows(ExplorationTutorialAction action, PlayerScript actor = null)
+    {
+        var owner = activePractice;
+        if (owner == null || !owner.practicing || owner.progress == null || owner.progress.complete ||
+            owner.gameObject.scene.name != "m" || actor != null && owner.player != actor) return true;
+        return owner.CurrentLesson >= (int)action;
+    }
     public bool IsPresenting => locked;
     public bool IsPracticing => practicing;
     public int CurrentLesson => progress != null ? progress.nextLesson : -1;
@@ -183,9 +204,42 @@ public sealed class MExplorationTutorial : MonoBehaviour
             // hand back this frame without its additional two-second default blend.
             cinematicCamera.enabled = false;
             yield return null;
+            yield return ArrivalDialogue();
         }
         finally { RestorePresentation(); }
         progress.introComplete = true; SaveProgress();
+    }
+    IEnumerator ArrivalDialogue()
+    {
+        // AdventureUI hides the HUD during a presentation. This scene-owned copy
+        // shares the discovery styling but stays visible with the cinematic bars.
+        if (arrivalDiscoveryArea != null)
+        {
+            arrivalDiscoveryArea.CompleteCollection(requireRange: true, announceDiscovery: false);
+            arrivalDiscoveryBanner?.Enqueue(arrivalDiscoveryArea.Id,
+                string.IsNullOrWhiteSpace(arrivalDiscoveryArea.displayName) ? arrivalDiscoveryArea.name : arrivalDiscoveryArea.displayName);
+        }
+        if (arrivalVoice != null && arrivalDialogue != null)
+        {
+            arrivalVoice.playOnAwake = false; arrivalVoice.loop = false; arrivalVoice.pitch = 1f;
+            arrivalVoice.spatialBlend = 0f; arrivalVoice.ignoreListenerPause = true;
+            bool previousLine = false;
+            foreach (var clip in arrivalDialogue)
+            {
+                if (clip == null) continue;
+                if (previousLine && dialogueGapSeconds > 0) yield return new WaitForSecondsRealtime(dialogueGapSeconds);
+                if (clip.loadState == AudioDataLoadState.Unloaded) clip.LoadAudioData();
+                while (clip.loadState == AudioDataLoadState.Loading) yield return null;
+                if (clip.loadState == AudioDataLoadState.Failed) { Debug.LogWarning("[m Tutorial] Cannot load arrival dialogue: " + clip.name); continue; }
+                arrivalVoice.clip = clip;
+                if (Application.isPlaying) arrivalVoice.Play();
+                yield return new WaitForSecondsRealtime(clip.length);
+                arrivalVoice.Stop(); previousLine = true;
+            }
+            arrivalVoice.clip = null;
+        }
+        while (arrivalDiscoveryBanner != null && arrivalDiscoveryBanner.IsPlaying) yield return null;
+        if (tutorialDelaySeconds > 0) yield return new WaitForSecondsRealtime(tutorialDelaySeconds);
     }
     IEnumerator BlendTo(Vector3 position, Quaternion rotation, float seconds, float targetFieldOfView = -1f)
     {
@@ -202,6 +256,8 @@ public sealed class MExplorationTutorial : MonoBehaviour
     }
     void RestorePresentation()
     {
+        if (arrivalVoice != null) { arrivalVoice.Stop(); arrivalVoice.clip = null; }
+        arrivalDiscoveryBanner?.Cancel();
         if (!locked && !animationCaptured && !blendOverrideInstalled) return;
         if (blendOverrideInstalled)
         {
@@ -228,7 +284,7 @@ public sealed class MExplorationTutorial : MonoBehaviour
     }
     void BeginPractice()
     {
-        practicing = true;
+        practicing = true; activePractice = this;
         session.EncounterStarted -= OnEncounterStarted;
         session.EncounterStarted += OnEncounterStarted;
         foreach (var hint in keyHints) if (hint != null) hint.gameObject.SetActive(true);
@@ -251,7 +307,7 @@ public sealed class MExplorationTutorial : MonoBehaviour
     void Update()
     {
         if (!practicing || progress == null || session == null || player == null) return;
-        if (!session.OnMap || session.MapPlayer != player || session.Busy || LoadingScreen.IsLoading)
+        if (!session.OnMap || session.MapPlayer != player || session.Busy || session.PresentationActive || LoadingScreen.IsLoading)
         { lessons?.Close(); return; }
         if (lessons != null && !lessons.IsOpen) ShowLesson();
         bool done = false;
@@ -290,6 +346,7 @@ public sealed class MExplorationTutorial : MonoBehaviour
         if (progress.nextLesson >= LessonCount)
         {
             progress.complete = true; practicing = false; HideAll();
+            if (activePractice == this) activePractice = null;
             session?.Notify(GameLocalization.IsEnglish ? "Exploration tutorial completed." : "Đã hoàn thành hướng dẫn khám phá.");
         }
         else { ResetPractice(); ShowLesson(); }
@@ -304,6 +361,7 @@ public sealed class MExplorationTutorial : MonoBehaviour
     }
     void OnDisable()
     {
+        if (activePractice == this) activePractice = null;
         if (!Application.isPlaying) return;
         StopAllCoroutines();
         practicing = false; RestorePresentation(); HideAll();
@@ -324,6 +382,14 @@ public sealed class MExplorationTutorial : MonoBehaviour
     {
         if (lessons == null || progress == null || progress.complete || player == null) return;
         int index = Mathf.Clamp(CurrentLesson, 0, LessonCount - 1); bool en = GameLocalization.IsEnglish;
+        var actions = new[] { ExplorationTutorialAction.Movement, ExplorationTutorialAction.Movement,
+            ExplorationTutorialAction.Scan, ExplorationTutorialAction.Menu, ExplorationTutorialAction.Interact };
+        for (int i = 0; keyHints != null && i < keyHints.Length && i < actions.Length; i++)
+            if (keyHints[i] != null)
+            {
+                var group = keyHints[i].GetComponent<CanvasGroup>(); if (group == null) group = keyHints[i].gameObject.AddComponent<CanvasGroup>();
+                group.alpha = Allows(actions[i], player) ? 1f : .28f;
+            }
         string scan = scanner != null && scanner.settings != null ? scanner.settings.scanKey.ToString() : "Q";
         string[] titles = en ? new[] { "Movement and jump", "Scan your surroundings", "Main menu", "Parkour", "Interact", "Campfire", "Enemy encounter" }
             : new[] { "Di chuyển và nhảy", "Quét môi trường", "Menu chính", "Parkour", "Tương tác", "Lửa trại", "Chạm trán kẻ địch" };
@@ -369,6 +435,13 @@ public sealed class MExplorationTutorial : MonoBehaviour
     void LateUpdate()
     {
         if (!practicing || worldFocus == null || tutorialCanvas == null || player == null || session == null) return;
+        if (session.PresentationActive)
+        {
+            lessons?.Close(); worldFocus.gameObject.SetActive(false); shownLesson = -1;
+            foreach (var hint in keyHints) if (hint != null) hint.gameObject.SetActive(false);
+            return;
+        }
+        foreach (var hint in keyHints) if (hint != null) hint.gameObject.SetActive(true);
         Transform target = CurrentLesson == 3 ? parkourObstacle != null ? parkourObstacle.transform : null :
             CurrentLesson == 4 || CurrentLesson == 5 ? campfire != null ? campfire.transform : null :
             CurrentLesson == 6 ? encounterEnemy != null ? encounterEnemy.transform : null : null;

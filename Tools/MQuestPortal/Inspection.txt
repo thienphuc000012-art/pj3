@@ -1,0 +1,25 @@
+Dialogue NPC | Dialogue NPC | DialogueNPC | marker= | id=world:b2064065d5564948ba61398682c2f2a6 | position=(-31.620, -85.439, -21.600)
+Parent: Dialogue NPC
+Components: Transform, WorldInteraction
+Offers: Assets/Dialogue/Quest.asset | 12 | Main Quest
+Enemy Tutorial | Enemy Encounter | Encounter | marker= | id=world:44cd1e5190324008a912494b91992674 | position=(-40.672, -85.881, -27.360)
+Parent: Enemy Tutorial
+Components: Transform, WorldInteraction, EnemyCombatOrigin, EnemyEncounterBehaviour
+Animator: NONE
+Enemy prefab: Assets/Adventure/Prefabs/Enemy/VampireEnemy/Vampire.prefab | dissolve=Assets/Eric VFX Studio/Resource/Materials/SliceDissolve_URP.mat
+Enemy Encounter | miniboss1 | Encounter | marker=12 | id=world:34d671dba16049b594d778c4e0b3e085 | position=(-76.880, -47.348, -192.110)
+Parent: Enemy Encounter
+Components: Transform, WorldInteraction, EnemyCombatOrigin, EnemyEncounterBehaviour
+Animator: NONE
+Enemy prefab: Assets/Adventure/Prefabs/Enemy/DemonLord/DemonLord.prefab | dissolve=Assets/Eric VFX Studio/Resource/Materials/SliceDissolve_URP.mat
+Enemy Encounter | miniboss2 | Encounter | marker=12 | id=world:5b4a293a34b747b18471a4fcd2ee0fc6 | position=(81.790, -94.558, -1.170)
+Parent: Enemy Encounter
+Components: Transform, WorldInteraction, EnemyCombatOrigin, EnemyEncounterBehaviour
+Animator: NONE
+Enemy prefab: Assets/Adventure/Prefabs/Enemy/GolemLava/GolemLava.prefab | dissolve=Assets/Eric VFX Studio/Resource/Materials/SliceDissolve_URP.mat
+Discovery Area | Discovery Area | MapTransition | marker= | id=world:ae73a9ea0e7e40b1b464c2ebd68068e9 | position=(204.380, -80.098, -33.900)
+Parent: Discovery Area
+Components: Transform, WorldInteraction
+Destination:  | active=True | enabled=True
+PORTAL: portal_textured | position=(202.704, -71.260, -33.510) | bounds=Center: (202.70, -71.26, -33.51), Extents: (2.61, 10.00, 5.57) | colliders=0
+QUEST: Assets/Dialogue/Quest.asset | name=Main Quest | id=12 | marker= | map=m

@@ -259,7 +259,11 @@ public class WorldInteractionEditor : Editor
             EditorGUILayout.HelpBox("Đặt mật khẩu và sự kiện mở cửa ở component Cryptex Lock bên dưới. Model đã lắp sẵn dài 0.55 m; chỉnh Scale của root để thay đổi kích thước.", MessageType.Info);
 
         if (kind == WorldInteractionKind.RestPoint)
+        {
             EditorGUILayout.PropertyField(serializedObject.FindProperty("restMusic"), new GUIContent("Campfire Music Override"), true);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("restFirstVisitVoice"), new GUIContent("Thoại lần đầu gặp / First Visit Voice"), true);
+            EditorGUILayout.HelpBox("Tự phát khi đi vào phạm vi tương tác lần đầu, dùng âm lượng Giọng nói trong Options. Mỗi save point ghi nhớ riêng theo bản lưu. Để trống rồi gán clip sau vẫn phát được.", MessageType.Info);
+        }
 
         if (kind == WorldInteractionKind.MapTransition)
         {
@@ -268,6 +272,8 @@ public class WorldInteractionEditor : Editor
             EditorGUILayout.PropertyField(
                 serializedObject.FindProperty("targetMapScene"),
                 new GUIContent("Scene đích"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("useSavedMapPosition"),
+                new GUIContent("Về vị trí đã lưu của map"));
             EditorGUILayout.PropertyField(
                 serializedObject.FindProperty("targetMapPosition"),
                 new GUIContent("Target Map Position"));
@@ -275,7 +281,7 @@ public class WorldInteractionEditor : Editor
                 serializedObject.FindProperty("targetMapEuler"),
                 new GUIContent("Góc xoay khi đến"));
             EditorGUILayout.HelpBox(
-                "Target Map Position là tọa độ World trong scene đích. Chọn một điểm đứng an toàn trên địa hình của scene đó rồi nhập X, Y, Z tại đây.",
+                "Nếu bật Về vị trí đã lưu, dùng vị trí gần nhất đã ghi của scene đích. Target Map Position là vị trí dự phòng khi bản lưu cũ chưa có vị trí của map đó.",
                 MessageType.Info);
         }
 
@@ -388,7 +394,8 @@ public class WorldInteractionEditor : Editor
             }
             else if (GUILayout.Button("Validate Spawn and Scan"))
             {
-                CombatArenaStageValidation.ValidateSpawnAndScan();
+                serializedObject.ApplyModifiedProperties();
+                CombatArenaStageValidation.InspectEncounter(point);
             }
 
             if (combatSetupId != null)
@@ -1207,6 +1214,8 @@ internal static class CombatArenaStageValidation
             AssertScan(point, streamer, Vector3.right * 30, Quaternion.identity, "remote");
             Debug.Log("[Combat Arena] PASS: origin survives movement and rotation, encounters stay independent, " +
                 "pool respawn replaces origin, and scan includes intersecting bounds once.");
+            var selected = Selection.activeGameObject != null ? Selection.activeGameObject.GetComponentInParent<WorldInteraction>() : null;
+            if (selected != null && selected.kind == WorldInteractionKind.Encounter) InspectEncounter(selected);
         }
         finally
         {
@@ -1217,7 +1226,7 @@ internal static class CombatArenaStageValidation
     }
 
     [MenuItem(InspectMenu, true)]
-    static bool CanInspect() => EditorApplication.isPlaying && Selection.activeGameObject != null &&
+    static bool CanInspect() => Selection.activeGameObject != null &&
         Selection.activeGameObject.GetComponentInParent<WorldInteraction>() != null;
 
     [MenuItem(InspectMenu)]
@@ -1229,14 +1238,19 @@ internal static class CombatArenaStageValidation
 
     internal static void InspectEncounter(WorldInteraction point)
     {
-        if (!CombatAreaScanner.TryScan(point, MapChunkStreamer.Instance, out CombatAreaScan scan, out string error))
+        var streamer = point != null && point.gameObject.scene.IsValid() ? point.gameObject.scene.GetRootGameObjects()
+            .SelectMany(root => root.GetComponentsInChildren<MapChunkStreamer>(true)).FirstOrDefault() : null;
+        CombatAreaScan scan; string error;
+        bool valid = EditorApplication.isPlaying ? CombatAreaScanner.TryScan(point, streamer, out scan, out error)
+            : CombatAreaScanner.TryScanAuthored(point, streamer, out scan, out error);
+        if (!valid)
         {
             Debug.LogWarning("[Combat Arena] " + error, point);
             return;
         }
         Debug.Log($"[Combat Arena] {point.name}\nSpawn: {scan.SpawnPose.position}\nCurrent: {point.transform.position}\n" +
-            $"Scan radius: {scan.Radius:0.#} m\nChunks: {scan.ChunkPaths.Count}\n" +
-            string.Join("\n", scan.ChunkPaths), point);
+            $"Scan radius: {scan.Radius:0.#} m\nChunks: {scan.ChunkPaths.Count}; scene environment objects: {scan.EnvironmentObjects.Count}\n" +
+            (scan.UsesSceneEnvironment ? string.Join("\n", scan.EnvironmentObjects.Select(item => item.name)) : string.Join("\n", scan.ChunkPaths)), point);
     }
 
     static WorldInteraction CreateEncounter(GameObject actor)

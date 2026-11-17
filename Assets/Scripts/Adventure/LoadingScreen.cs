@@ -82,6 +82,12 @@ public class LoadingScreen : MonoBehaviour
         Scene battle = default;
         string error = null;
         loadingChunks = true;
+        if (scan.UsesSceneEnvironment)
+        {
+            bool staged = session.StageCombatSceneEnvironment(out Scene environment, out error);
+            if (environment.IsValid() && environment.isLoaded) chunks.Add(environment);
+            if (staged) progress = .7f;
+        }
         foreach (string path in scan.ChunkPaths)
         {
             Scene chunk = SceneManager.GetSceneByPath(path);

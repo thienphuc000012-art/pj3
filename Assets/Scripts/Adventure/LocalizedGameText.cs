@@ -71,6 +71,8 @@ public sealed class LocalizedGameText : MonoBehaviour
         }
         if (!hasSource) { source = target.text; hasSource = true; }
         string translated = GameLocalization.Translate(source);
+        var keys = GetComponent<TutorialInstructionKeys>();
+        if (keys != null) translated = keys.Format(translated);
         if (target.text != translated) target.text = translated;
     }
 }

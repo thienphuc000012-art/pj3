@@ -1480,7 +1480,7 @@ MonoBehaviour:
     volume: 0.65
   persistentId: 9273b2c032cf46cf9ef1eb624107532c
   savedWorldId: world:9273b2c032cf46cf9ef1eb624107532c
-  questMarkerId: 
+  questMarkerId: 1
   displayName: Enemy Encounter
   kind: 4
   showDiscoveryBanner: 1
@@ -42710,7 +42710,7 @@ MonoBehaviour:
     volume: 0.65
   persistentId: 3893aaa9626a4747afed4d4c489e88f4
   savedWorldId: world:3893aaa9626a4747afed4d4c489e88f4
-  questMarkerId: 
+  questMarkerId: 1
   displayName: Enemy Encounter
   kind: 4
   showDiscoveryBanner: 1
@@ -42779,7 +42779,7 @@ Transform:
   m_GameObject: {fileID: 1033299413}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -19.02, y: 280.767, z: -95.25}
+  m_LocalPosition: {x: -19.02, y: 280.767, z: -72.61}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -55586,6 +55586,14 @@ PrefabInstance:
     - target: {fileID: 180044, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
       propertyPath: m_AnchoredPosition.x
       value: 21.034912
+      objectReference: {fileID: 0}
+    - target: {fileID: 8449758581206642239, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 8449758581206642239, guid: 3740f8973c8b469fbe994b5cb78f9712, type: 3}
+      propertyPath: 'm_ActiveFontFeatures.Array.data[0]'
+      value: 1801810542
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

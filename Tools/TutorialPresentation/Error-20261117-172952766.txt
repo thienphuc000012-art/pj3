@@ -1,0 +1,6 @@
+System.InvalidOperationException: Two-second delay and Voice category.
+  at MArrivalDialogueSetup.Check (System.Boolean valid, System.String message) [0x00009] in D:\New folder (4)\pj3\Assets\Editor\MArrivalDialogueSetup.cs:21 
+  at MArrivalDialogueSetup.Validate () [0x000d5] in D:\New folder (4)\pj3\Assets\Editor\MArrivalDialogueSetup.cs:99 
+  at TutorialPresentationSetup.Validate () [0x00b1f] in D:\New folder (4)\pj3\Assets\Editor\TutorialPresentationSetup.cs:157 
+  at TutorialPresentationSetup.Setup () [0x00293] in D:\New folder (4)\pj3\Assets\Editor\TutorialPresentationSetup.cs:70 
+  at TutorialPresentationSetup.Poll () [0x000d0] in D:\New folder (4)\pj3\Assets\Editor\TutorialPresentationSetup.cs:33 

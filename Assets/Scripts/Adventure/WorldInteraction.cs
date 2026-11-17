@@ -25,6 +25,8 @@ public class WorldInteraction : MonoBehaviour
     public GameMusic areaMusic = new GameMusic();
     [Tooltip("Nhạc khi mở menu campfire này. Để trống dùng Campfire trong GameAudioSettings.")]
     public GameMusic restMusic = new GameMusic();
+    [Tooltip("Thoại khi player lần đầu đi vào phạm vi tương tác của save point này. Mỗi bản lưu chỉ phát một lần; để trống chưa tính là đã nghe. Nếu gán nhiều clip sẽ chọn một clip.")]
+    public GameSound restFirstVisitVoice = new GameSound { spatialBlend = 0f, volume = 1f };
     public string persistentId;
     [HideInInspector] public string savedWorldId;
     [Tooltip("Optional short ID used by quest assets to point the compass at this location.")]
@@ -97,6 +99,8 @@ public class WorldInteraction : MonoBehaviour
     [Header("Map Transition")]
     [Tooltip("Tên scene đích phải có trong Campaign Config > Additional Map Scenes và Build Settings.")]
     public string targetMapScene;
+    [Tooltip("Trở lại vị trí đã lưu gần nhất của scene đích. Tọa độ bên dưới là dự phòng khi chưa có dữ liệu.")]
+    public bool useSavedMapPosition;
     [Tooltip("Vị trí spawn của player trong scene đích (tọa độ world của scene đích).")]
     public Vector3 targetMapPosition;
     public Vector3 targetMapEuler;
@@ -575,6 +579,8 @@ public class WorldInteraction : MonoBehaviour
     public void Interact()
     {
         var session = CampaignSession.Instance;
+        if (session != null && kind != WorldInteractionKind.Discovery && !MExplorationTutorial.Allows(
+            kind == WorldInteractionKind.Encounter ? ExplorationTutorialAction.Encounter : ExplorationTutorialAction.Interact, session.MapPlayer)) return;
         if (session == null || session.Busy || session.PresentationActive || (kind != WorldInteractionKind.Discovery && IsConsumed)) return;
         if (kind == WorldInteractionKind.RestPoint) { session.OpenRest(this); return; }
         if (kind == WorldInteractionKind.Encounter) { session.BeginEncounter(this); return; }
@@ -586,7 +592,9 @@ public class WorldInteraction : MonoBehaviour
         CompleteCollection();
     }
 
-    public void CompleteCollection(bool requireRange = true)
+    public void CompleteCollection(bool requireRange = true) => CompleteCollection(requireRange, true);
+
+    public void CompleteCollection(bool requireRange, bool announceDiscovery)
     {
         var session = CampaignSession.Instance;
         if (session == null || requireRange && !session.IsNear(this)) return;
@@ -600,7 +608,7 @@ public class WorldInteraction : MonoBehaviour
         }
         if (discovery)
         {
-            if (showDiscoveryBanner) DiscoveryAreaBanner.Announce(this);
+            if (showDiscoveryBanner && announceDiscovery) DiscoveryAreaBanner.Announce(this);
             return; // Keep the discovery zone available for future entries, including old saves.
         }
         gameObject.SetActive(false);

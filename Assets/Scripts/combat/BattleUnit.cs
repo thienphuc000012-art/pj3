@@ -492,7 +492,7 @@ public class BattleUnit : MonoBehaviour
         ApplyEnemyDeathDissolve(0f);
     }
 
-    private static void CopySurfaceProperties(Material source, Material destination)
+    internal static void CopySurfaceProperties(Material source, Material destination)
     {
         string baseMap = FindMaterialProperty(source, "_BaseMap", "_MainTex");
         CopyTexture(source, destination, baseMap, "_BaseMap");

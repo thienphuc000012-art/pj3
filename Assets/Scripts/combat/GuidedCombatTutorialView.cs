@@ -53,6 +53,7 @@ public sealed class GuidedCombatTutorialView : MonoBehaviour, IPointerClickHandl
         if (existing != null)
         {
             existing.sourceCanvas = canvas.rootCanvas;
+            existing.EnsureLessonPresentation();
             existing.Close();
             return existing;
         }
@@ -62,6 +63,7 @@ public sealed class GuidedCombatTutorialView : MonoBehaviour, IPointerClickHandl
             var authored = Instantiate(template, canvas.rootCanvas.transform, false);
             authored.name = "Guided Combat Tutorial";
             authored.sourceCanvas = canvas.rootCanvas;
+            authored.EnsureLessonPresentation();
             authored.Close();
             return authored;
         }
@@ -97,6 +99,9 @@ public sealed class GuidedCombatTutorialView : MonoBehaviour, IPointerClickHandl
     public void Show(int step, int totalSteps, IReadOnlyList<RectTransform> focus, string title, string body,
         string continueLabel, Action dismissed, Button requiredButton = null, bool allowCancel = false)
     {
+        EnsureLessonPresentation();
+        // Lesson can be hidden while editing the canvas; showing a lesson owns its visibility.
+        if (page != null) page.gameObject.SetActive(true);
         SetHandsOn(false);
         if (!IsOpen && EventSystem.current != null)
             previousSelection = EventSystem.current.currentSelectedGameObject;
@@ -155,7 +160,7 @@ public sealed class GuidedCombatTutorialView : MonoBehaviour, IPointerClickHandl
         if (SubmitPressed()) OnSubmit(null);
     }
 
-    void LateUpdate() => UpdateLayout();
+    void LateUpdate() { UpdateLayout(); page?.GetComponent<TutorialLessonBackground>()?.Align(); content?.GetComponent<TutorialInstructionKeys>()?.RefreshFrames(); }
 
     public void OnPointerClick(PointerEventData eventData)
     {
@@ -256,6 +261,32 @@ public sealed class GuidedCombatTutorialView : MonoBehaviour, IPointerClickHandl
 
         footer = Label("Input Hint", page, Rect.MinMaxRect(.105f, .075f, .895f, .151f),
             font, 24, 14, Gold, FontStyles.Normal, TextAlignmentOptions.MidlineLeft);
+        EnsureLessonPresentation();
+    }
+
+    public void EnsureLessonPresentation()
+    {
+        if (page == null || content == null) return;
+        if (page.Find("Pattern") == null)
+        {
+            if (page.TryGetComponent<Image>(out var background)) { var tint = background.color; tint.a = Mathf.Min(tint.a, .9f); background.color = tint; }
+            var pattern = Element("Pattern", page, Full); pattern.SetAsFirstSibling(); pattern.gameObject.AddComponent<RectMask2D>();
+            var diamond = Element("Diamond", pattern, Full).gameObject.AddComponent<TutorialDiamondPattern>();
+            diamond.color = new Color(Gold.r, Gold.g, Gold.b, .045f); diamond.raycastTarget = false;
+        }
+        if (page.Find("Frame") == null)
+        {
+            var frame = Element("Frame", page, Full); frame.offsetMin = Vector2.one * 9; frame.offsetMax = Vector2.one * -9;
+            Frame(frame, new Color(Gold.r, Gold.g, Gold.b, .58f));
+        }
+        var keys = content.GetComponent<TutorialInstructionKeys>(); if (keys == null) keys = content.gameObject.AddComponent<TutorialInstructionKeys>();
+        keys.EnsureFrames();
+        var backdrop = page.GetComponent<TutorialLessonBackground>();
+        if (backdrop == null)
+        {
+            var style = Resources.Load<TutorialLessonStyle>("Combat/TutorialLessonStyle");
+            if (style != null) { backdrop = page.gameObject.AddComponent<TutorialLessonBackground>(); backdrop.Build(style); }
+        }
     }
 
     void UpdateLayout()

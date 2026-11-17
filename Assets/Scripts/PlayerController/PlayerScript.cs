@@ -558,7 +558,7 @@ public class PlayerScript : MonoBehaviour
                 // Không còn tự động bám chỉ vì đi sát vào thang.
                 if (isFrontFace && isVerticalSurface && isFacingLadder && isWithinCenterWidth)
                 {
-                    if (Input.GetKeyDown(KeyCode.G))
+                    if (Input.GetKeyDown(KeyCode.G) && MExplorationTutorial.Allows(ExplorationTutorialAction.Parkour, this))
                     {
                         // Ép điểm bám về đúng trục giữa của thang theo chiều ngang.
                         Vector3 centeredHitPoint =
@@ -573,6 +573,7 @@ public class PlayerScript : MonoBehaviour
             if (topHitIsLadder &&
                 ladderBelow != null &&
                 Input.GetKeyDown(KeyCode.G) &&
+                MExplorationTutorial.Allows(ExplorationTutorialAction.Parkour, this) &&
                 !isMountingLadder)
             {
                 // =========================================================

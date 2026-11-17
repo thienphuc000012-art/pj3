@@ -42,6 +42,7 @@ public class CampaignSession : MonoBehaviour
     public List<AdventureQuestProgress> QuestProgresses => Data != null ? Data.quests : null;
     public AdventureQuest TrackedQuest => Data != null ? FindQuestDefinition(Data.trackedQuestId) : null;
     public WorldInteraction TrackedQuestObjective => FindTrackedQuestObjective();
+    readonly List<QuestObjectivePosition> trackedQuestPositionBuffer = new List<QuestObjectivePosition>();
     public string Message { get; private set; }
     public float MessageUntil { get; private set; }
     public bool InEncounter => encounter != null;
@@ -56,10 +57,11 @@ public class CampaignSession : MonoBehaviour
         ? Data.currentMapScene
         : Config != null ? Config.mapScene : null;
     public bool OnMap => Config != null && Config.IsMapScene(SceneManager.GetActiveScene().name);
-    public bool CanStartEncounter => OnMap && !Busy && !PresentationActive && !LoadingScreen.IsLoading && !MapChunkStreamer.MovementBlocked && Menu == AdventureMenu.None && Time.unscaledTime >= encounterAllowedAt;
+    public bool CanStartEncounter => OnMap && !Busy && !PresentationActive && !LoadingScreen.IsLoading && !MapChunkStreamer.MovementBlocked && Menu == AdventureMenu.None && Time.unscaledTime >= encounterAllowedAt && MExplorationTutorial.Allows(ExplorationTutorialAction.Encounter, MapPlayer);
     public bool CanUpgrade => OnMap && RestPoint != null && IsNear(RestPoint) && !Busy;
     public void BeginItemPickup(WorldInteraction point)
     {
+        if (!MExplorationTutorial.Allows(ExplorationTutorialAction.Interact, MapPlayer)) return;
         if (Busy || Menu != AdventureMenu.None || !OnMap || MapPlayer == null || point == null ||
             (point.kind != WorldInteractionKind.Pickup && point.kind != WorldInteractionKind.Chest) || point.IsConsumed || !IsNear(point)) return;
         Busy = true;
@@ -203,6 +205,7 @@ public class CampaignSession : MonoBehaviour
     readonly List<WorldInteraction> worldPointBuffer = new List<WorldInteraction>();
     static readonly ProfilerMarker WorldRefreshMarker = new ProfilerMarker("Adventure.RefreshWorld");
     private EncounterData encounter;
+    private CombatSceneEnvironment sceneArenaTransfer;
     private float previousTimeScale = 1;
     private CursorLockMode previousCursor;
     private bool previousCursorVisible;
@@ -315,7 +318,7 @@ public class CampaignSession : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
     }
-    void OnDestroy() { if (Instance == this) { StopDialogueSpeakerPresentation(); Instance = null; Time.timeScale = previousTimeScale; } }
+    void OnDestroy() { sceneArenaTransfer?.Dispose(); sceneArenaTransfer = null; if (Instance == this) { StopDialogueSpeakerPresentation(); Instance = null; Time.timeScale = previousTimeScale; } }
     void OnApplicationFocus(bool focused) { playTimeSample = Time.realtimeSinceStartupAsDouble; }
     void OnApplicationPause(bool paused) { playTimePaused = paused; playTimeSample = Time.realtimeSinceStartupAsDouble; }
     void UpdatePlayTime()
@@ -472,7 +475,7 @@ public class CampaignSession : MonoBehaviour
             if (puzzle != null) puzzle.RestoreSavedState(point.IsConsumed);
             return !point.IsConsumed;
         }
-        if (point.IsConsumed) { point.gameObject.SetActive(false); return false; }
+        if (point.IsConsumed) { if (!QuestPortalDefinition.KeepForPresentation(point)) point.gameObject.SetActive(false); return false; }
         if (point.kind == WorldInteractionKind.RestPoint && Data?.unlockedRestPoints != null)
         {
             var known = Data.unlockedRestPoints.Find(x => x != null && x.id == point.Id);
@@ -498,6 +501,7 @@ public class CampaignSession : MonoBehaviour
 
     public void BeginDialogue(WorldInteraction npc)
     {
+        if (!MExplorationTutorial.Allows(ExplorationTutorialAction.Interact, MapPlayer)) return;
         if (!OnMap || Busy || Menu != AdventureMenu.None || npc == null || npc.kind != WorldInteractionKind.DialogueNPC ||
             !IsNear(npc)) return;
         TurnInCompletedQuests(npc);
@@ -895,57 +899,91 @@ public class CampaignSession : MonoBehaviour
     public bool TryGetTrackedQuestPosition(out Vector3 position)
     {
         position = Vector3.zero;
+        CollectTrackedQuestTargets(trackedQuestPositionBuffer);
+        if (trackedQuestPositionBuffer.Count == 0) return false;
+        float nearest = float.PositiveInfinity;
+        foreach (var target in trackedQuestPositionBuffer)
+        {
+            float distance = MapPlayer != null ? (target.position - MapPlayer.transform.position).sqrMagnitude : 0;
+            if (distance >= nearest) continue;
+            nearest = distance; position = target.position;
+        }
+        return true;
+    }
+
+    public void CollectTrackedQuestTargets(List<QuestObjectivePosition> targets)
+    {
+        targets.Clear();
         var quest = TrackedQuest;
         var progress = quest != null ? QuestProgress(quest.Id) : null;
-        if (quest == null || progress == null || progress.completed && progress.rewardsClaimed) return false;
+        if (quest == null || progress == null || progress.completed && progress.rewardsClaimed) return;
+        string currentMap = SceneManager.GetActiveScene().name;
 
         if (progress.completed)
         {
             var giver = FindQuestTurnInNpc(progress, quest);
-            string turnInMapScene = SceneManager.GetActiveScene().name;
             if (giver != null)
             {
-                position = giver.transform.position;
-                progress.turnInMapScene = turnInMapScene;
-                progress.turnInPosition = position;
-                return true;
+                progress.turnInMapScene = currentMap;
+                progress.turnInPosition = giver.transform.position;
+                targets.Add(new QuestObjectivePosition { worldPointId = giver.Id, mapScene = currentMap, position = progress.turnInPosition });
             }
-            if (progress.turnInMapScene == turnInMapScene)
-            {
-                position = progress.turnInPosition;
-                return true;
-            }
-            return false;
+            else if (progress.turnInMapScene == currentMap)
+                targets.Add(new QuestObjectivePosition { worldPointId = progress.turnInNpcId, mapScene = currentMap, position = progress.turnInPosition });
+            return;
         }
 
-        var point = FindQuestObjectivePoint(quest);
-        string currentMap = SceneManager.GetActiveScene().name;
-        if (point != null)
-        {
-            position = point.transform.position;
-            progress.objectiveMapScene = currentMap;
-            progress.objectivePosition = position;
-            progress.hasObjectivePosition = true;
-            return true;
-        }
+        if (!QuestObjectiveOnCurrentMap(quest)) return;
+        CacheKnownQuestObjectives(progress, quest);
+        foreach (var target in progress.objectivePositions)
+            if (string.Equals(target.mapScene, currentMap, StringComparison.Ordinal)) targets.Add(target);
+        if (targets.Count > 0) return;
         if (progress.hasObjectivePosition &&
             (string.IsNullOrEmpty(progress.objectiveMapScene) || string.Equals(progress.objectiveMapScene, currentMap, StringComparison.Ordinal)))
         {
-            position = progress.objectivePosition;
-            return true;
+            targets.Add(new QuestObjectivePosition { mapScene = currentMap, position = progress.objectivePosition });
+            return;
         }
         if (quest.useFixedObjectivePosition &&
             (string.IsNullOrEmpty(quest.objectiveMapScene) || string.Equals(quest.objectiveMapScene, currentMap, StringComparison.Ordinal)))
+            targets.Add(new QuestObjectivePosition { mapScene = currentMap, position = quest.objectivePosition });
+    }
+
+    void CacheKnownQuestObjectives(AdventureQuestProgress progress, AdventureQuest quest)
+    {
+        progress.objectivePositions ??= new List<QuestObjectivePosition>();
+        bool removed = false;
+        for (int i = progress.objectivePositions.Count - 1; i >= 0; i--)
         {
-            position = quest.objectivePosition;
-            return true;
+            var known = progress.objectivePositions[i];
+            if (!string.IsNullOrEmpty(known.worldPointId) && Data.collected.Contains(known.worldPointId))
+            { progress.objectivePositions.RemoveAt(i); removed = true; }
         }
-        return false;
+        if (QuestObjectiveOnCurrentMap(quest) && worldPoints != null)
+            foreach (var point in worldPoints)
+            {
+                if (point == null) continue;
+                string id = point.Id;
+                int index = -1;
+                for (int i = 0; i < progress.objectivePositions.Count; i++)
+                    if (progress.objectivePositions[i].worldPointId == id) { index = i; break; }
+                if (!MatchesQuestObjective(quest, point))
+                {
+                    if (index >= 0) { progress.objectivePositions.RemoveAt(index); removed = true; }
+                    continue;
+                }
+                var destination = new QuestObjectivePosition { worldPointId = id, mapScene = SceneManager.GetActiveScene().name, position = point.transform.position };
+                if (index < 0) progress.objectivePositions.Add(destination);
+                else progress.objectivePositions[index] = destination;
+            }
+        // Do not resurrect the old single-position cache at a defeated target.
+        if (removed) progress.hasObjectivePosition = false;
     }
 
     void CacheQuestObjectivePosition(AdventureQuestProgress progress, AdventureQuest quest)
     {
         if (progress == null || quest == null) return;
+        CacheKnownQuestObjectives(progress, quest);
         if (quest.useFixedObjectivePosition)
         {
             progress.objectiveMapScene = string.IsNullOrWhiteSpace(quest.objectiveMapScene)
@@ -1018,26 +1056,36 @@ public class CampaignSession : MonoBehaviour
 
     WorldInteraction FindQuestObjectivePoint(AdventureQuest quest)
     {
-        if (quest == null || worldPoints == null) return null;
-        string currentMap = SceneManager.GetActiveScene().name;
-        if (!string.IsNullOrWhiteSpace(quest.objectiveMapScene) &&
-            !string.Equals(quest.objectiveMapScene.Trim(), currentMap, StringComparison.Ordinal)) return null;
-        bool IsAvailable(WorldInteraction point) => point != null && point.isActiveAndEnabled && point.gameObject.activeInHierarchy && !point.IsConsumed;
-        if (!string.IsNullOrWhiteSpace(quest.objectiveWorldPointId))
+        if (quest == null || worldPoints == null || !QuestObjectiveOnCurrentMap(quest)) return null;
+        WorldInteraction nearest = null; float distance = float.PositiveInfinity;
+        foreach (var point in worldPoints)
         {
-            var specific = worldPoints.FirstOrDefault(point => IsAvailable(point) &&
-                (string.Equals(point.questMarkerId, quest.objectiveWorldPointId, StringComparison.Ordinal) ||
-                 string.Equals(point.persistentId, quest.objectiveWorldPointId, StringComparison.Ordinal) ||
-                 string.Equals(point.Id, quest.objectiveWorldPointId, StringComparison.Ordinal)));
-            if (specific != null) return specific;
+            if (!MatchesQuestObjective(quest, point)) continue;
+            float candidate = MapPlayer != null ? (point.transform.position - MapPlayer.transform.position).sqrMagnitude : 0;
+            if (candidate >= distance) continue;
+            nearest = point; distance = candidate;
         }
+        return nearest;
+    }
+
+    bool QuestObjectiveOnCurrentMap(AdventureQuest quest)
+    {
+        string currentMap = SceneManager.GetActiveScene().name;
+        return string.IsNullOrWhiteSpace(quest.objectiveMapScene) || string.Equals(quest.objectiveMapScene.Trim(), currentMap, StringComparison.Ordinal);
+    }
+
+    bool MatchesQuestObjective(AdventureQuest quest, WorldInteraction point)
+    {
+        if (point == null || !point.isActiveAndEnabled || !point.gameObject.activeInHierarchy || point.IsConsumed) return false;
+        if (!string.IsNullOrWhiteSpace(quest.objectiveWorldPointId) &&
+            !string.Equals(point.questMarkerId, quest.objectiveWorldPointId, StringComparison.Ordinal) &&
+            !string.Equals(point.persistentId, quest.objectiveWorldPointId, StringComparison.Ordinal) &&
+            !string.Equals(point.Id, quest.objectiveWorldPointId, StringComparison.Ordinal)) return false;
         if (quest.objectiveType == AdventureQuestObjectiveType.CollectItem)
-            return worldPoints.Where(IsAvailable).Where(point => (point.kind == WorldInteractionKind.Pickup || point.kind == WorldInteractionKind.Chest) &&
-                point.rewards != null && point.rewards.Any(reward => reward != null && reward.id == quest.targetItemId))
-                .OrderBy(point => MapPlayer != null ? (point.transform.position - MapPlayer.transform.position).sqrMagnitude : 0f).FirstOrDefault();
-        return worldPoints.Where(IsAvailable).Where(point => point.kind == WorldInteractionKind.Encounter && point.enemyPrefabs != null &&
-                (quest.targetEnemy == null || point.enemyPrefabs.Contains(quest.targetEnemy)))
-            .OrderBy(point => MapPlayer != null ? (point.transform.position - MapPlayer.transform.position).sqrMagnitude : 0f).FirstOrDefault();
+            return (point.kind == WorldInteractionKind.Pickup || point.kind == WorldInteractionKind.Chest) &&
+                point.rewards != null && point.rewards.Any(reward => reward != null && reward.id == quest.targetItemId);
+        return point.kind == WorldInteractionKind.Encounter && point.enemyPrefabs != null &&
+            (quest.targetEnemy == null || point.enemyPrefabs.Contains(quest.targetEnemy));
     }
 
     WorldInteraction FindTrackedQuestObjective()
@@ -1211,6 +1259,7 @@ public class CampaignSession : MonoBehaviour
         Nearest = null;
         float best = float.MaxValue;
         bool restoredHealth = false;
+        bool playedRestVoice = false;
         discoveryAreas.ObservePlayer(CurrentMapScene, MapPlayer.transform.position);
         foreach (var point in worldPoints)
         {
@@ -1220,10 +1269,13 @@ public class CampaignSession : MonoBehaviour
                 if (IsNear(point)) point.Interact();
                 continue;
             }
+            if (!MExplorationTutorial.Allows(point.kind == WorldInteractionKind.Encounter ? ExplorationTutorialAction.Encounter : ExplorationTutorialAction.Interact, MapPlayer)) continue;
             if (point.IsConsumed) continue;
             bool near = IsNear(point);
             bool canHeal = point.kind != WorldInteractionKind.RestPoint || CanAutoHealAtRestPoint(point, near);
             if (!near) continue;
+            if (point.kind == WorldInteractionKind.RestPoint)
+                playedRestVoice |= TryPlayRestFirstVisitVoice(point);
             if (!restoredHealth && point.kind == WorldInteractionKind.RestPoint && canHeal)
                 restoredHealth = RestorePartyHealth();
             float distance = (point.transform.position - MapPlayer.transform.position).sqrMagnitude;
@@ -1231,12 +1283,13 @@ public class CampaignSession : MonoBehaviour
         }
         // Persist recovered HP only when it changes. Merely standing near a
         // rest point must not write a save every frame or show a healing toast.
-        if (restoredHealth) Save();
+        if (restoredHealth || playedRestVoice) Save();
         if (Nearest != null && (Input.GetKeyDown(KeyCode.E) || (Nearest.kind == WorldInteractionKind.Encounter && Input.GetMouseButtonDown(0))))
             Nearest.Interact();
     }
     public void SetMenu(AdventureMenu menu)
     {
+        if (menu != AdventureMenu.None && !MExplorationTutorial.Allows(ExplorationTutorialAction.Menu, MapPlayer)) return;
         if (Busy || PresentationActive || !OnMap) return;
         if (Menu == AdventureMenu.Dialogue && menu != AdventureMenu.Dialogue)
         {
@@ -1295,6 +1348,7 @@ public class CampaignSession : MonoBehaviour
         Data.position = MapPlayer.transform.position;
         Data.rotation = MapPlayer.transform.rotation;
         Data.hasPosition = true;
+        Data.RememberMapPose(Data.currentMapScene, Data.position, Data.rotation);
     }
     void Teleport(Vector3 position, Quaternion rotation)
     {
@@ -1352,7 +1406,9 @@ public class CampaignSession : MonoBehaviour
     }
     public void OpenRest(WorldInteraction rest)
     {
+        if (!MExplorationTutorial.Allows(ExplorationTutorialAction.Interact, MapPlayer)) return;
         if (Busy || PresentationActive || Menu != AdventureMenu.None || rest == null || rest.kind != WorldInteractionKind.RestPoint || !IsNear(rest)) return;
+        TryPlayRestFirstVisitVoice(rest);
         var unlocked = Data.unlockedRestPoints.Find(x => x.id == rest.Id);
         if (unlocked == null) { unlocked = new UnlockedRestPoint { id = rest.Id }; Data.unlockedRestPoints.Add(unlocked); }
         unlocked.displayName = rest.displayName;
@@ -1364,6 +1420,17 @@ public class CampaignSession : MonoBehaviour
         RestPoint = rest;
         SetMenu(AdventureMenu.Rest);
         rest.GetComponent<RestPointPresentation>()?.Begin(MapPlayer);
+    }
+    bool TryPlayRestFirstVisitVoice(WorldInteraction rest)
+    {
+        if (!OnMap || Data == null || Busy || PresentationActive || Menu != AdventureMenu.None || LoadingScreen.IsLoading || MapChunkStreamer.MovementBlocked ||
+            rest == null || !rest.isActiveAndEnabled || rest.kind != WorldInteractionKind.RestPoint || !IsNear(rest) ||
+            !MExplorationTutorial.Allows(ExplorationTutorialAction.Interact, MapPlayer) || rest.restFirstVisitVoice?.HasClip != true) return false;
+        Data.heardRestPointVoices ??= new List<string>();
+        if (Data.heardRestPointVoices.Contains(rest.Id) || GameAudio.Instance == null) return false;
+        GameAudio.Play(rest.restFirstVisitVoice, MapPlayer.transform.position, GameAudioBus.Voice);
+        Data.heardRestPointVoices.Add(rest.Id);
+        return true;
     }
     public bool FastTravel(string id)
     {
@@ -1390,10 +1457,12 @@ public class CampaignSession : MonoBehaviour
 
     public bool TravelToMap(WorldInteraction portal)
     {
-        if (!OnMap || Busy || Menu != AdventureMenu.None || portal == null ||
+        if (!MExplorationTutorial.Allows(ExplorationTutorialAction.Interact, MapPlayer)) return false;
+        if (!OnMap || Busy || PresentationActive || Menu != AdventureMenu.None || portal == null || !portal.isActiveAndEnabled ||
             portal.kind != WorldInteractionKind.MapTransition || !IsNear(portal) || LoadingScreen.IsLoading)
             return false;
 
+        if (portal.TryGetComponent<QuestPortalTravelGate>(out var questGate) && !questGate.IsOpen) return false;
         string targetScene = portal.targetMapScene != null ? portal.targetMapScene.Trim() : string.Empty;
         if (string.IsNullOrEmpty(targetScene) || Config == null || !Config.IsMapScene(targetScene) ||
             !Application.CanStreamedLevelBeLoaded(targetScene) || !Application.CanStreamedLevelBeLoaded(LoadingScreen.SceneName))
@@ -1408,8 +1477,9 @@ public class CampaignSession : MonoBehaviour
         Quaternion previousRotation = Data.rotation;
         bool hadPosition = Data.hasPosition;
         Data.currentMapScene = targetScene;
-        Data.position = portal.targetMapPosition;
-        Data.rotation = Quaternion.Euler(portal.targetMapEuler);
+        var destination = ResolveMapTransitionPose(portal, targetScene);
+        Data.position = destination.position;
+        Data.rotation = destination.rotation;
         Data.hasPosition = true;
         if (!Save(false))
         {
@@ -1442,6 +1512,19 @@ public class CampaignSession : MonoBehaviour
     {
         if (!CanUpgrade || Menu != AdventureMenu.Rest) return;
         GetComponent<AdventureUI>()?.OpenSaveSlots(true);
+    }
+
+    public Pose ResolveMapTransitionPose(WorldInteraction portal, string scene)
+    {
+        if (portal.useSavedMapPosition)
+        {
+            if (Data.TryGetMapPose(scene, out var pose)) return pose;
+            foreach (var slot in GetSaveSlots().Where(s => !s.isEmpty && !s.isCorrupt && s.mapScene == scene).OrderByDescending(s => s.savedAtUtc))
+                if (CampaignSaveSlots.TryLoad(Application.persistentDataPath, slot.slot, SaveSlotCount, out var saved, out _, out _) && saved.hasPosition)
+                    return new Pose(saved.position, saved.rotation);
+            if (Data.hasCheckpoint && Data.checkpointMapScene == scene) return new Pose(Data.checkpoint, Data.checkpointRotation);
+        }
+        return new Pose(portal.targetMapPosition, Quaternion.Euler(portal.targetMapEuler));
     }
 
     public IReadOnlyList<CampaignSaveSlotInfo> GetSaveSlots() =>
@@ -1631,6 +1714,7 @@ public class CampaignSession : MonoBehaviour
 
     public void BeginEncounter(WorldInteraction point, bool playerInitiated)
     {
+        if (!MExplorationTutorial.Allows(ExplorationTutorialAction.Encounter, MapPlayer)) return;
         if (Busy || PresentationActive || Menu != AdventureMenu.None || !IsNear(point) || Time.unscaledTime < encounterAllowedAt || point.IsConsumed) return;
         if (point.enemyPrefabs.Count == 0 || point.enemyPrefabs.Any(x => x == null) || !Data.party.Any(p => p.hp > 0))
         { Notify("Cần party còn sống và prefab quái hợp lệ."); return; }
@@ -1766,16 +1850,15 @@ public class CampaignSession : MonoBehaviour
             if (vfxRemaining > 0f) yield return new WaitForSecondsRealtime(vfxRemaining);
 
             var streamer = MapChunkStreamer.Instance;
-            if (streamer != null && streamer.gameObject.scene == SceneManager.GetActiveScene())
+            if (!CombatAreaScanner.TryScan(point, streamer, out CombatAreaScan scan, out string scanError))
             {
-                if (!CombatAreaScanner.TryScan(point, streamer, out CombatAreaScan scan, out string scanError))
-                {
-                    Debug.LogWarning("[Combat Arena] " + scanError, point);
-                    Notify(scanError);
-                    yield break;
-                }
-                encounter.arenaScan = scan;
+                Debug.LogWarning("[Combat Arena] " + scanError, point);
+                Notify(scanError);
+                yield break;
             }
+            encounter.arenaScan = scan;
+            if (scan.UsesSceneEnvironment && !CombatSceneEnvironment.TryPrepare(scan, out sceneArenaTransfer, out scanError))
+            { Debug.LogWarning("[Combat Arena] " + scanError, point); Notify(scanError); yield break; }
 
             if (!LoadingScreen.Load(Config.battleScene))
             {
@@ -1791,6 +1874,7 @@ public class CampaignSession : MonoBehaviour
         {
             if (!loadingStarted)
             {
+                sceneArenaTransfer?.Dispose(); sceneArenaTransfer = null;
                 if (blackHole != null) Destroy(blackHole);
                 if (playerTransform != null)
                     playerTransform.rotation = playerStartRotation;
@@ -1968,8 +2052,17 @@ public class CampaignSession : MonoBehaviour
 
     internal void CancelCombatArenaLoad()
     {
+        sceneArenaTransfer?.Dispose(); sceneArenaTransfer = null;
         encounter = null;
         Busy = false;
+    }
+
+    internal bool StageCombatSceneEnvironment(out Scene scene, out string error)
+    {
+        scene = default;
+        if (sceneArenaTransfer == null) { error = "Thiếu môi trường đã giữ từ map khám phá."; return false; }
+        scene = SceneManager.CreateScene("Combat Environment Staging");
+        return sceneArenaTransfer.Stage(scene, out error);
     }
 
     internal bool TryBuildCombatArena(Scene battleScene, IReadOnlyList<Scene> chunks, out string error)
@@ -2000,6 +2093,7 @@ public class CampaignSession : MonoBehaviour
 
         encounter.arenaSetup = setup;
         encounter.arenaLayout = layout;
+        sceneArenaTransfer?.Release(); sceneArenaTransfer = null;
         return true;
     }
 
@@ -2237,6 +2331,7 @@ public class CampaignSession : MonoBehaviour
         CaptureBattlePartyHealth(manager);
         if (victory)
         {
+            QuestPortalDefinition.Current?.RecordVictory(Data, CurrentMapScene, encounter.questMarkerId, encounter.id);
             foreach (var defeatedEnemy in encounter.enemies)
                 RecordQuestProgress(AdventureQuestObjectiveType.DefeatEnemy, null, defeatedEnemy, 1,
                     encounter.id, encounter.questMarkerId, encounter.persistentId);

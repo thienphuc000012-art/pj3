@@ -225,6 +225,7 @@ public class CampaignSave
         if (consumedNpcDialogueKeys == null) consumedNpcDialogueKeys = new List<string>();
         if (collectedItemTotals == null) collectedItemTotals = new List<ItemStack>();
         if (explorationTutorials == null) explorationTutorials = new List<ExplorationTutorialProgress>();
+        if (heardRestPointVoices == null) heardRestPointVoices = new List<string>();
         if (version < 4)
             foreach (var progress in quests)
                 if (progress != null && progress.completed) progress.rewardsClaimed = true;
@@ -235,10 +236,26 @@ public class CampaignSave
     public List<ItemStack> inventory = new List<ItemStack>();
     public List<string> collected = new List<string>();
     public List<UnlockedRestPoint> unlockedRestPoints = new List<UnlockedRestPoint>();
+    public List<string> heardRestPointVoices = new List<string>();
     public List<AdventureQuestProgress> quests = new List<AdventureQuestProgress>();
     public List<string> completedStoryDialogueIds = new List<string>();
     public List<string> consumedNpcDialogueKeys = new List<string>();
     public List<ExplorationTutorialProgress> explorationTutorials = new List<ExplorationTutorialProgress>();
+    public List<QuestPortalProgress> questPortals = new List<QuestPortalProgress>();
+    public List<SavedMapPose> mapPositions = new List<SavedMapPose>();
+    public void RememberMapPose(string scene, Vector3 position, Quaternion rotation)
+    {
+        if (string.IsNullOrWhiteSpace(scene)) return;
+        mapPositions ??= new List<SavedMapPose>();
+        var pose = mapPositions.Find(p => p != null && p.scene == scene);
+        if (pose == null) { pose = new SavedMapPose { scene = scene }; mapPositions.Add(pose); }
+        pose.position = position; pose.rotation = rotation;
+    }
+    public bool TryGetMapPose(string scene, out Pose result)
+    {
+        var saved = mapPositions?.Find(p => p != null && p.scene == scene);
+        result = saved != null ? new Pose(saved.position, saved.rotation) : default; return saved != null;
+    }
     [Tooltip("Lifetime item acquisitions used when accepting collect quests after the item was already picked up.")]
     public List<ItemStack> collectedItemTotals = new List<ItemStack>();
     public string trackedQuestId;
@@ -302,4 +319,22 @@ public class AdventureQuestProgress
     public string objectiveMapScene;
     public Vector3 objectivePosition;
     public bool hasObjectivePosition;
+    // Optional in older saves. Retains each known destination when its chunk unloads.
+    public List<QuestObjectivePosition> objectivePositions = new List<QuestObjectivePosition>();
+}
+
+[Serializable]
+public struct QuestObjectivePosition
+{
+    public string worldPointId;
+    public string mapScene;
+    public Vector3 position;
+}
+
+[Serializable]
+public sealed class SavedMapPose
+{
+    public string scene;
+    public Vector3 position;
+    public Quaternion rotation = Quaternion.identity;
 }

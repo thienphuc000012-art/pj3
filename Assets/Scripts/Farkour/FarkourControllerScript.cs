@@ -37,6 +37,11 @@ public class FarkourControllerScript : MonoBehaviour
         if (!Input.GetButtonDown("Jump"))
             return;
 
+        TryJumpOrParkour();
+    }
+
+    void TryJumpOrParkour()
+    {
 
         if (playerScript == null)
             return;
@@ -49,6 +54,13 @@ public class FarkourControllerScript : MonoBehaviour
         if (playerScript.playerHanging)
             return;
 
+        // Space still performs the ordinary jump taught in the first lesson.
+        // Only the obstacle/climb branch waits for the Parkour lesson.
+        if (!MExplorationTutorial.Allows(ExplorationTutorialAction.Parkour, playerScript))
+        {
+            if (playerScript.onSurface) playerScript.PerformJump();
+            return;
+        }
 
         bool isParkourPerformed = false;
 

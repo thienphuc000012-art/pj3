@@ -1,0 +1,6 @@
+System.InvalidOperationException: Key frame count at Vietnamese step 0: links=0, boxes=0, rich=True, active=False, chars=0, text=Dùng <color=#FFD66B><b><link="tutorial-key">W</link></b></color> <color=#FFD66B><b><link="tutorial-key">A</link></b></color> <color=#FFD66B><b><link="tutorial-key">S</link></b></color> <color=#FFD66B><b><link="tutorial-key">D</link></b></color> để di chuyển và <color=#FFD66B><b><link="tutorial-key">Space</link></b></color> để nhảy khi đứng trên nền.
+
+Đi một đoạn ngắn và nhảy một lần để tiếp tục. Bấm <color=#FFD66B><b><link="tutorial-key">Shift</link></b></color> để bật/tắt chạy; di chuột để quan sát.
+  at TutorialPresentationSetup.Check (System.Boolean condition, System.String message) [0x00009] in D:\New folder (4)\pj3\Assets\Editor\TutorialPresentationSetup.cs:23 
+  at TutorialPresentationSetup.Validate () [0x0082a] in D:\New folder (4)\pj3\Assets\Editor\TutorialPresentationSetup.cs:123 
+  at TutorialPresentationSetup.Poll () [0x000d8] in D:\New folder (4)\pj3\Assets\Editor\TutorialPresentationSetup.cs:33 

@@ -34,19 +34,29 @@ public sealed class CombatAreaScan
     public Pose SpawnPose { get; }
     public float Radius { get; }
     public IReadOnlyList<string> ChunkPaths { get; }
+    public IReadOnlyList<GameObject> EnvironmentObjects { get; }
+    public bool UsesSceneEnvironment => EnvironmentObjects.Count > 0;
 
-    internal CombatAreaScan(Pose spawnPose, float radius, List<string> chunkPaths)
+    internal CombatAreaScan(Pose spawnPose, float radius, List<string> chunkPaths, List<GameObject> environmentObjects = null)
     {
         SpawnPose = spawnPose;
         Radius = radius;
         ChunkPaths = chunkPaths.AsReadOnly();
+        EnvironmentObjects = (environmentObjects ?? new List<GameObject>()).AsReadOnly();
     }
 }
 
-/// <summary>Reads the exploration streamer's catalogue, including chunks that are currently unloaded.</summary>
+/// <summary>Reads streamed chunks or nearby static scenery in a map whose environment lives directly in its scene.</summary>
 public static class CombatAreaScanner
 {
     public static bool TryScan(WorldInteraction encounter, MapChunkStreamer streamer, out CombatAreaScan scan, out string error)
+        => TryScan(encounter, streamer, false, out scan, out error);
+
+    // Authoring uses the current placed pose; inspecting must not mutate the runtime patrol origin.
+    public static bool TryScanAuthored(WorldInteraction encounter, MapChunkStreamer streamer, out CombatAreaScan scan, out string error)
+        => TryScan(encounter, streamer, true, out scan, out error);
+
+    static bool TryScan(WorldInteraction encounter, MapChunkStreamer streamer, bool authored, out CombatAreaScan scan, out string error)
     {
         scan = null;
         if (encounter == null || encounter.kind != WorldInteractionKind.Encounter)
@@ -56,20 +66,27 @@ public static class CombatAreaScanner
         }
 
         var origin = encounter.GetComponent<EnemyCombatOrigin>();
-        if (origin == null || !origin.TryGetSpawnPoint(out Pose spawn))
+        Pose spawn = new Pose(encounter.transform.position, encounter.transform.rotation);
+        if (!authored && (origin == null || !origin.TryGetSpawnPoint(out spawn)))
         {
             error = "Encounter chưa lưu Enemy Combat Origin. Hãy đặt enemy và lưu spawn trước khi chạy patrol.";
             return false;
         }
-        if (streamer == null)
-        {
-            error = "Map chưa có danh mục chunk trong Map Chunk Streamer.";
-            return false;
-        }
-
         float radius = CombatArenaScanSettings.ResolveRadius(encounter) +
             Mathf.Max(0f, encounter.combatArenaScan?.edgePadding ?? 0f);
         var paths = new List<string>();
+        if (streamer == null || streamer.gameObject.scene != encounter.gameObject.scene || streamer.chunks == null || streamer.chunks.Count == 0)
+        {
+            var objects = CombatSceneEnvironment.Collect(encounter.gameObject.scene, spawn.position, radius);
+            if (objects.Count == 0)
+            {
+                error = $"Không có địa hình hoặc môi trường trong vùng quét {radius:0.#} m quanh Spawn Position {spawn.position}.";
+                return false;
+            }
+            scan = new CombatAreaScan(spawn, radius, paths, objects);
+            error = null;
+            return true;
+        }
         streamer.CollectChunkPaths(spawn.position, radius, paths);
         if (paths.Count == 0)
         {

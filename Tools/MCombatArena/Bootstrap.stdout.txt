@@ -1,0 +1,34 @@
+[Licensing::Module] Trying to connect to existing licensing client channel...
+Built from '6000.3/staging' branch; Version is '6000.3.12f1 (fca03ac9b0d5) revision 16556090'; Using compiler version '194234433'; Build Type 'Release'
+[Licensing::IpcConnector] Connection to channel LicenseClient-Phuc refused
+OS: 'Windows 11  (10.0.26300) Core' Language: 'en' Physical Memory: 24299 MB
+BatchMode: 1, IsHumanControllingUs: 0, StartBugReporterOnCrash: 0, Is64bit: 1
+System  architecture: x64
+Process architecture: x64
+Assertion failed on expression: 'SUCCEEDED(hr)'
+Date: 2026-11-17T12:19:21Z
+Assertion failed on expression: 'wmiOpened'
+Assertion failed on expression: 'ERROR_SUCCESS == status'
+
+COMMAND LINE ARGUMENTS:
+D:\New folder (2)\6000.3.12f1\Editor\Unity.exe
+-batchmode
+-nographics
+-projectPath
+D:/New folder (4)/pj3
+-executeMethod
+MCombatArenaValidation.RunBatch
+-quit
+-logFile
+-
+Successfully changed project path to: D:/New folder (4)/pj3
+D:/New folder (4)/pj3
+
+Aborting batchmode due to fatal error:
+It looks like another Unity instance is running with this project open.
+
+Multiple Unity instances cannot open the same project.
+
+Project: D:/New folder (4)/pj3
+
+Exiting without the bug reporter. Application will terminate with return code 1

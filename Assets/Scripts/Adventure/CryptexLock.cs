@@ -80,6 +80,7 @@ public sealed class CryptexLock : MonoBehaviour
     }
     public void Interact(CampaignSession session)
     {
+        if (session != null && !MExplorationTutorial.Allows(ExplorationTutorialAction.Interact, session.MapPlayer)) return;
         Initialize();
         if (IsUnlocked || view != null || session == null || session.Busy || session.Menu != AdventureMenu.None || !session.OnMap || !session.IsNear(point)) return;
         if (!PasswordValid || viewPrefab == null || modelRoot == null)

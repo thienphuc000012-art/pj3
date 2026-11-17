@@ -1,0 +1,5 @@
+System.InvalidOperationException: Key frame count at Vietnamese step 0
+  at TutorialPresentationSetup.Check (System.Boolean condition, System.String message) [0x00009] in D:\New folder (4)\pj3\Assets\Editor\TutorialPresentationSetup.cs:23 
+  at TutorialPresentationSetup.Validate () [0x00790] in D:\New folder (4)\pj3\Assets\Editor\TutorialPresentationSetup.cs:119 
+  at TutorialPresentationSetup.Setup () [0x00162] in D:\New folder (4)\pj3\Assets\Editor\TutorialPresentationSetup.cs:57 
+  at TutorialPresentationSetup.Poll () [0x000d0] in D:\New folder (4)\pj3\Assets\Editor\TutorialPresentationSetup.cs:33 

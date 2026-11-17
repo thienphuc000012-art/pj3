@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08db41dd87be29649850f7ad8362c2c9, type: 3}
+  m_Name: TutorialLessonStyle
+  m_EditorClassIdentifier: Assembly-CSharp::TutorialLessonStyle
+  inkBrush: {fileID: 392493835, guid: ed76e4366141d034ca591e6b92cf416f, type: 3}
+  inkMaterial: {fileID: 2100000, guid: 0cec27e4c6d352948b517d2b99e492fc, type: 2}
+  opacity: 0.94
+  brushOverhang: 0.28
+  ornamentColor: {r: 0.69, g: 0.6, b: 0.42, a: 0.09}
+  borderColor: {r: 0.8, g: 0.77, b: 0.65, a: 0.42}

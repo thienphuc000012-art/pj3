@@ -1,0 +1,27 @@
+{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "Quest",
+        "m_EditorClassIdentifier": "Assembly-CSharp::AdventureQuest",
+        "questId": "12",
+        "displayName": "Main Quest",
+        "description": "aaaaa",
+        "objectiveType": 1,
+        "requiredCount": 2,
+        "targetItemId": "herb",
+        "targetEnemy": {
+            "instanceID": 0
+        },
+        "objectiveWorldPointId": "12",
+        "useFixedObjectivePosition": false,
+        "objectiveMapScene": "m",
+        "objectivePosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "experienceReward": 100,
+        "itemRewards": []
+    }
+}

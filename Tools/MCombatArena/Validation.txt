@@ -1,0 +1,7 @@
+PASS: existing streamed-map origin and chunk selection regression.
+PASS: unchunked read-only scan, nearby static floor, remote/gameplay exclusion, negative/nonuniform parent matrices, and aborted-load rollback.
+m scan: Enemy Encounter, setup=default, spawn=(77.199, -94.558, 15.631), radius=22, objects=65, terrain=1
+m scan: Enemy Encounter, setup=default, spawn=(-36.846, -85.881, -29.934), radius=22, objects=3, terrain=1
+PASS: safe two-player arena layout for m encounter at (77.199, -94.558, 15.631)
+PASS: actual m tutorial encounter -> captured local scenery -> map scene unloaded -> combattest arena builder; safe player/enemy slots and visible colliders/terrain at unchanged world poses.
+PASS: Edit Mode only. No campaign, prefab, source scene or Build Settings writes.

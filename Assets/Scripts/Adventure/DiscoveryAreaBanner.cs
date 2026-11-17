@@ -110,5 +110,6 @@ public sealed class DiscoveryAreaBanner : MonoBehaviour
         playing = false;
         if (panel != null) { panel.alpha = 0f; panel.gameObject.SetActive(false); }
     }
-    void OnDisable() { pending.Clear(); queuedIds.Clear(); activeId = null; Hide(); }
+    public void Cancel() { pending.Clear(); queuedIds.Clear(); activeId = null; Hide(); }
+    void OnDisable() => Cancel();
 }

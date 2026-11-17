@@ -82,7 +82,8 @@ public sealed class AdventureScanner : MonoBehaviour
         var session = CampaignSession.Instance;
         return settings != null && settings.scanEnabled && isActiveAndEnabled && Time.timeScale > 0f &&
             session != null && session.OnMap && session.MapPlayer != null &&
-            session.MapPlayer.gameObject == gameObject && !CampaignSession.InputBlocked;
+            session.MapPlayer.gameObject == gameObject && !CampaignSession.InputBlocked &&
+            MExplorationTutorial.Allows(ExplorationTutorialAction.Scan, session.MapPlayer);
     }
 
     bool InputPressed()

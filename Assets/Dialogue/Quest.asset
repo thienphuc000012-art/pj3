@@ -12,16 +12,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6ddf13f5523f4a048c23937b82d2ad11, type: 3}
   m_Name: Quest
   m_EditorClassIdentifier: Assembly-CSharp::AdventureQuest
-  questId: 1
-  displayName: "Nhi\u1EC7m v\u1EE5 m\u1EDBi"
+  questId: 12
+  displayName: Main Quest
   description: aaaaa
-  objectiveType: 0
-  requiredCount: 1
+  objectiveType: 1
+  requiredCount: 2
   targetItemId: herb
   targetEnemy: {fileID: 0}
-  objectiveWorldPointId: 
-  useFixedObjectivePosition: 1
-  objectiveMapScene: mapgame
+  objectiveWorldPointId: 12
+  useFixedObjectivePosition: 0
+  objectiveMapScene: m
   objectivePosition: {x: 0, y: 0, z: 0}
   experienceReward: 100
   itemRewards: []

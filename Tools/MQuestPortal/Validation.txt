@@ -1,0 +1,21 @@
+PASS: quest acceptance, map/group/target filtering, escape exclusion, distinct victories, pending-save recovery, two-scene unlock, duplicate/replay prevention and legacy progress.
+PASS: per-map position/rotation history, replacement rather than duplicate entries, JSON persistence and travel gate.
+Animation inspection: miniboss1 | active=True | avatar=SK_DemonLordAvatar (UnityEngine.Avatar) | clip=Assets/Adventure/Prefabs/Enemy/DemonLord/Anim/Death.anim | bindings=917 | moved bones=60
+Preview: Tools/MQuestPortal/Enemy-miniboss1.png
+PASS: miniboss1 | Die=Death | duration=3 | renderers=3 | camera=(-69.88, -43.75, -185.54)
+Animation inspection: miniboss2 | active=True | avatar=SK_GolemAvatar (UnityEngine.Avatar) | clip=Assets/Adventure/Prefabs/Enemy/GolemLava/Anim/death.anim | bindings=347 | moved bones=32
+Preview: Tools/MQuestPortal/Enemy-miniboss2.png
+PASS: miniboss2 | Die=death | duration=2.366667 | renderers=1 | camera=(74.28, -90.36, -10.53)
+Zap particle VFX_Zap_01_Red(Clone) | count=0 | bounds=Center: (202.70, -71.26, -33.51), Extents: (0.71, 0.71, 0.71)
+Zap particle Zap | count=0 | bounds=Center: (0.00, 0.00, 0.00), Extents: (0.00, 0.00, 0.00)
+Zap particle Zap LUT | count=0 | bounds=Center: (0.00, 0.00, 0.00), Extents: (0.00, 0.00, 0.00)
+Zap particle Zap Add | count=1 | bounds=Center: (202.70, -71.26, -33.51), Extents: (35.23, 35.23, 35.23)
+Zap particle Zap Add Floor | count=4 | bounds=Center: (202.70, -71.25, -33.51), Extents: (3.48, 3.49, 3.48)
+Zap particle Zap BG | count=1 | bounds=Center: (202.70, -71.26, -33.51), Extents: (27.10, 27.10, 27.10)
+Zap particle Scorch | count=1 | bounds=Center: (202.70, -71.25, -33.51), Extents: (7.10, 7.10, 7.10)
+Zap particle Flare | count=0 | bounds=Center: (202.70, -71.26, -33.51), Extents: (0.00, 0.00, 0.00)
+Zap particle Light Spawn | count=0 | bounds=Center: (202.70, -71.21, -33.51), Extents: (14.20, 14.25, 14.20)
+Preview: Tools/MQuestPortal/Portal-strike.png
+Preview: Tools/MQuestPortal/Portal-unlocked.png
+PASS: actual scene bindings, two native death playables/dissolve cleanup, portal strike, locked/unlocked transition, one Dark instance and persistent NPC destination.
+PASS: no Play Mode, campaign save write, live scene mutation or active-scene switch.

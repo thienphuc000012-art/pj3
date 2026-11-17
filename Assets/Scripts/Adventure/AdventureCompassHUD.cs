@@ -13,6 +13,9 @@ public sealed class AdventureCompassHUD : MonoBehaviour
 
     readonly List<CompassMark> ticks = new List<CompassMark>(360 / TickStep);
     readonly CompassMark[] directions = new CompassMark[8];
+    readonly List<ObjectiveMark> objectives = new List<ObjectiveMark>();
+    readonly List<QuestObjectivePosition> trackedTargets = new List<QuestObjectivePosition>();
+    readonly List<Vector2> objectivePlacements = new List<Vector2>();
     RectTransform strip;
     RectTransform objectiveIcon;
     RectTransform objectiveDistance;
@@ -25,8 +28,15 @@ public sealed class AdventureCompassHUD : MonoBehaviour
         public float bearing;
     }
 
+    sealed class ObjectiveMark
+    {
+        public RectTransform icon, distance;
+        public TMP_Text label;
+    }
+
     void Awake()
     {
+        if (strip != null) return;
         var hud = transform.Find("HUD");
         if (hud == null) { enabled = false; return; }
 
@@ -65,6 +75,7 @@ public sealed class AdventureCompassHUD : MonoBehaviour
             new Vector2(0f, 30f), new Vector2(92f, 26f));
         objectiveIcon.gameObject.SetActive(false);
         objectiveDistance.gameObject.SetActive(false);
+        objectives.Add(new ObjectiveMark { icon = objectiveIcon, distance = objectiveDistance, label = objectiveDistance.GetComponent<TMP_Text>() });
 
         ResizeStrip();
     }
@@ -86,25 +97,44 @@ public sealed class AdventureCompassHUD : MonoBehaviour
 
     void UpdateTrackedObjective(CampaignSession session, float heading)
     {
-        Vector3 targetPosition = Vector3.zero;
-        bool visible = session.MapPlayer != null && session.TryGetTrackedQuestPosition(out targetPosition);
-        if (objectiveIcon.gameObject.activeSelf != visible) objectiveIcon.gameObject.SetActive(visible);
-        if (objectiveDistance.gameObject.activeSelf != visible) objectiveDistance.gameObject.SetActive(visible);
-        if (!visible) return;
-
+        trackedTargets.Clear();
+        if (session.MapPlayer != null) session.CollectTrackedQuestTargets(trackedTargets);
+        while (objectives.Count < trackedTargets.Count)
+        {
+            int number = objectives.Count + 1;
+            // Clone the original visual so changes to the marker's style apply to every target.
+            var icon = Instantiate(objectiveIcon, strip, false); icon.name = "Tracked Quest Marker " + number;
+            var distance = Instantiate(objectiveDistance, strip, false); distance.name = "Tracked Quest Distance " + number;
+            objectives.Add(new ObjectiveMark { icon = icon, distance = distance, label = distance.GetComponent<TMP_Text>() });
+        }
+        for (int i = 0; i < objectives.Count; i++)
+        {
+            bool visible = i < trackedTargets.Count;
+            objectives[i].icon.gameObject.SetActive(visible); objectives[i].distance.gameObject.SetActive(visible);
+        }
+        if (trackedTargets.Count == 0) return;
+        objectivePlacements.Clear();
         Vector3 from = session.MapPlayer.transform.position;
-        Vector3 direction = Vector3.ProjectOnPlane(targetPosition - from, Vector3.up);
-        float bearing = direction.sqrMagnitude > .0001f
-            ? Mathf.Repeat(Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg, 360f)
-            : heading;
-        float relative = Mathf.Clamp(Mathf.DeltaAngle(heading, bearing), -VisibleHalfAngle, VisibleHalfAngle);
-        float markerX = relative / VisibleHalfAngle * stripWidth * .5f;
-        float edgePadding = 48f;
-        markerX = Mathf.Clamp(markerX, -stripWidth * .5f + edgePadding, stripWidth * .5f - edgePadding);
-        objectiveIcon.anchoredPosition = new Vector2(markerX, 0f);
-        objectiveDistance.anchoredPosition = new Vector2(markerX, 30f);
-        direction.y = 0f;
-        GameLocalization.SetText(objectiveDistance.GetComponent<TMP_Text>(), Mathf.RoundToInt(direction.magnitude) + " m");
+        for (int i = 0; i < trackedTargets.Count; i++)
+        {
+            Vector3 direction = Vector3.ProjectOnPlane(trackedTargets[i].position - from, Vector3.up);
+            float bearing = direction.sqrMagnitude > .0001f ? Mathf.Repeat(Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg, 360f) : heading;
+            float relative = Mathf.Clamp(Mathf.DeltaAngle(heading, bearing), -VisibleHalfAngle, VisibleHalfAngle);
+            float markerX = Mathf.Clamp(relative / VisibleHalfAngle * stripWidth * .5f, -stripWidth * .5f + 48f, stripWidth * .5f - 48f);
+            // Keep the true compass bearing. Stack close directions instead of covering another icon/distance.
+            int row = 0;
+            for (; row < i; row++)
+            {
+                bool occupied = false;
+                foreach (var placement in objectivePlacements)
+                    if (Mathf.Abs(placement.x - markerX) < 98f && Mathf.Approximately(placement.y, -row * 60f)) { occupied = true; break; }
+                if (!occupied) break;
+            }
+            var location = new Vector2(markerX, -row * 60f); objectivePlacements.Add(location);
+            objectives[i].icon.anchoredPosition = location;
+            objectives[i].distance.anchoredPosition = location + Vector2.up * 30f;
+            GameLocalization.SetText(objectives[i].label, Mathf.RoundToInt(direction.magnitude) + " m");
+        }
     }
 
     float ReadHeading(Transform player)
