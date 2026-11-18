@@ -13,6 +13,8 @@ public sealed class AdventureWorldTimeSettings : ScriptableObject
 
 public static class AdventureWorldTime
 {
+    public static float DayLengthMinutes(CampaignSave data) => data != null && data.dayLengthMinutesOverride > 0 && !float.IsInfinity(data.dayLengthMinutesOverride)
+        ? Mathf.Max(1, data.dayLengthMinutesOverride) : Mathf.Max(1, Settings != null ? Settings.dayLengthMinutes : 24);
     static AdventureWorldTimeSettings settings;
     public static AdventureWorldTimeSettings Settings => settings != null ? settings : settings = Resources.Load<AdventureWorldTimeSettings>("Adventure/WorldTimeSettings");
 
@@ -28,7 +30,7 @@ public static class AdventureWorldTime
         data.worldTimeHours = Read(data);
         data.hasWorldTime = true;
         if (Settings == null || Settings.advanceTime)
-            data.worldTimeHours += seconds * 24d / (Math.Max(1, Settings != null ? Settings.dayLengthMinutes : 24) * 60d);
+            data.worldTimeHours += seconds * 24d / (DayLengthMinutes(data) * 60d);
     }
     public static string Format(double hours)
     {

@@ -552,6 +552,7 @@ public class WorldInteraction : MonoBehaviour
         pickupModelInstance.transform.localScale = pickupModelScale;
     }
     public List<BattleUnit> enemyPrefabs = new List<BattleUnit>();
+    public EnemySpawnSettings enemySpawn = new EnemySpawnSettings();
     [Header("Combat Scene Setup")]
     [Tooltip("ID của BattleEncounterSetup trong scene combat. Ví dụ: goblin_01, boss_dragon_01.")]
     public string combatSetupId = "default";
@@ -559,8 +560,16 @@ public class WorldInteraction : MonoBehaviour
     public bool IsConsumed => CampaignSession.Instance != null && CampaignSession.Instance.Data != null && CampaignSession.Instance.Data.collected.Contains(Id);
     // A duplicated prefab must not share collection/defeat state with another instance.
     public string Id => string.IsNullOrEmpty(savedWorldId) ? gameObject.scene.name + ":" + persistentId + ":" + HierarchyPath(transform) : savedWorldId;
-    // Scene and hierarchy distinguish encounters duplicated in the Hierarchy with the same saved ID.
-    internal string GuidedTutorialEncounterKey => gameObject.scene.path + "|" + Id + "|" + HierarchyPath(transform);
+    [SerializeField, HideInInspector] private string guidedTutorialEncounterId;
+    public string GuidedTutorialEncounterId => guidedTutorialEncounterId;
+    // Baked into the scene by the editor; never depends on names, sibling indices or build stripping.
+    internal string GuidedTutorialEncounterKey => string.IsNullOrEmpty(guidedTutorialEncounterId)
+        ? LegacyGuidedTutorialEncounterKey : "guided-tutorial:v2:" + guidedTutorialEncounterId;
+    public string LegacyGuidedTutorialEncounterKey => gameObject.scene.path + "|" + Id + "|" + HierarchyPath(transform);
+    internal void EnsureGuidedTutorialEncounterId()
+    {
+        if (string.IsNullOrEmpty(guidedTutorialEncounterId)) guidedTutorialEncounterId = Guid.NewGuid().ToString("N");
+    }
     private static string HierarchyPath(Transform t) => t.parent == null ? t.name + "#" + t.GetSiblingIndex() : HierarchyPath(t.parent) + "/" + t.name + "#" + t.GetSiblingIndex();
     void OnValidate() { if (string.IsNullOrEmpty(persistentId)) persistentId = Guid.NewGuid().ToString("N"); }
 

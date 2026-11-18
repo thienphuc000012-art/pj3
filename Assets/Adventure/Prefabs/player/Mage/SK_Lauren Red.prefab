@@ -2156,10 +2156,14 @@ MonoBehaviour:
   element: 2
   defaultAttack: {fileID: 11400000, guid: 39755a63f54e7974396bbbf389df346c, type: 2}
   characterSkills:
-  - {fileID: 11400000, guid: 7caca4445e732f448bfb7b0130e732f0, type: 2}
-  - {fileID: 11400000, guid: cfff066c7c479f147bfc4367cc34a26b, type: 2}
+  - {fileID: 11400000, guid: 85f12953be2c5a1418884f7f366e142d, type: 2}
   - {fileID: 11400000, guid: 13a4bf5805814754a886519a71ab305a, type: 2}
-  - {fileID: 11400000, guid: bc8d3073739ad30429f0a6a1a7cdd84c, type: 2}
+  - {fileID: 11400000, guid: 240a5ba6b16727542a312bbfd7b8bae7, type: 2}
+  - {fileID: 11400000, guid: 7caca4445e732f448bfb7b0130e732f0, type: 2}
+  - {fileID: 11400000, guid: 6bbf56e2da6bc6341955cc1869fce613, type: 2}
+  - {fileID: 11400000, guid: 99b6c9a674c4d3f4c8e8536e4e21634d, type: 2}
+  - {fileID: 11400000, guid: dbd7032cce897c64ea880078e9861bfc, type: 2}
+  - {fileID: 11400000, guid: cfff066c7c479f147bfc4367cc34a26b, type: 2}
   - {fileID: 11400000, guid: 6466aedd6465cd34aa83297bb5bb802f, type: 2}
   battleEntryWalkStateName: Base Layer.BattleEntryWalk
   battleEntryAnimationSpeed: 1
@@ -2215,6 +2219,7 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   isPlayer: 1
+  audioProfile: {fileID: 0}
   handTransform: {fileID: 0}
   leftHandTransform: {fileID: 0}
   animator: {fileID: 3053764435061098793}

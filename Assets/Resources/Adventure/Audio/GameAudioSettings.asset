@@ -23,16 +23,16 @@ MonoBehaviour:
     clip: {fileID: 8300000, guid: 9fa814775592e67419093b5ad7a183ff, type: 3}
     volume: 0.65
   intro:
-    clip: {fileID: 8300000, guid: 046ce48f818dc9c4a8d59618687dec12, type: 3}
+    clip: {fileID: 8300000, guid: 1df3a1b70dd78d24ebe632951c46e3ca, type: 3}
     volume: 0.28
   mapgame:
-    clip: {fileID: 0}
+    clip: {fileID: 8300000, guid: 046ce48f818dc9c4a8d59618687dec12, type: 3}
     volume: 0.65
   m:
-    clip: {fileID: 0}
+    clip: {fileID: 8300000, guid: fd4e2a5cd873e7e4cadb854356f6c90e, type: 3}
     volume: 0.65
   battle:
-    clip: {fileID: 0}
+    clip: {fileID: 8300000, guid: 046ce48f818dc9c4a8d59618687dec12, type: 3}
     volume: 0.65
   campfire:
     clip: {fileID: 8300000, guid: 7bbd377beeba49f4987c23b220bbf3f3, type: 3}
@@ -41,13 +41,15 @@ MonoBehaviour:
   player: {fileID: 11400000, guid: 2795378ac3825554fb533bb87042ac4a, type: 2}
   enemy: {fileID: 11400000, guid: 85c609f9ea945854ca4bf7dfbfc5c303, type: 2}
   pickup:
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: cb2c54300eb0eb847841036327178114, type: 3}
     volume: 0.8
     pitch: {x: 1, y: 1}
     spatialBlend: 1
     maxDistance: 24
   chestOpen:
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: cb2c54300eb0eb847841036327178114, type: 3}
     volume: 0.8
     pitch: {x: 1, y: 1}
     spatialBlend: 1

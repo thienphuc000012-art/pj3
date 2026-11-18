@@ -1,0 +1,10 @@
+Previous selection: guided-tutorial:v2:GlobalObjectId_V1-2-13b0cbd29f805104796f9d9580b2766e-1550172918-0
+Saved selection: guided-tutorial:v2:GlobalObjectId_V1-2-13b0cbd29f805104796f9d9580b2766e-1550172918-0
+Selected enemy: Assets/Scenes/m.unity | Enemy Tutorial | world:44cd1e5190324008a912494b91992674
+PASS: existing selection recovered and saved; original scene/config backed up.
+PASS: object/parent renames, reparenting, root reorder and EditorOnly stripping retain the same selected enemy.
+PASS: duplicate enemies with the same world/persistent ID remain distinct; explicit select/reselect/uncheck works.
+PASS: scene reopen and serialized Player-like reconstruction with a different scene path/hierarchy retain the tutorial flag.
+PASS: migration from the old hierarchy-dependent key remains compatible.
+Compiling Windows64 Player scripts...
+PASS: Windows64 Player scripts compiled; identity matching has no UnityEditor dependency. No Play Mode or real campaign save writes.

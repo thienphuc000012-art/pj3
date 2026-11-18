@@ -43,7 +43,6 @@ public class PlayerScript : MonoBehaviour
     [SerializeField] private float topLadderHeightTolerance = 0.65f;
     [SerializeField] private float ladderSurfaceOffset = 0.35f;
     [SerializeField] private float climbDownDropHeight = 1f;
-    [SerializeField] private float climbDownTransitionDuration = 0.8f;
     [Tooltip("Thoi gian chi dung de ha Player xuong diem bam sau khi da SNAP ngay ra mat ngoai thang.")]
     [SerializeField] private float climbDownVerticalAlignDuration = 0.18f;
 
@@ -129,6 +128,8 @@ public class PlayerScript : MonoBehaviour
     [Min(0f)] public float slopeSlideSpeed = 3f;
     [Tooltip("Gia toc truot xuong doc (m/s2).")]
     [Min(.01f)] public float slopeSlideAcceleration = 8f;
+    [Tooltip("Khoảng bám xuống đất tối đa khi đang đi trên mặt dốc (m). Chỉ áp dụng khi vừa có điểm tựa; không áp dụng khi đang nhảy hoặc rơi tự do.")]
+    [SerializeField, Min(0f)] private float groundSnapDistance = .25f;
 
     [Header("Fall & Landing")]
     [Tooltip("Phai roi it nhat bao nhieu met moi phat animation Land.")]
@@ -239,7 +240,8 @@ public class PlayerScript : MonoBehaviour
         if (!isClimbingLadder)
         {
             AdvanceVerticalSpeed(Time.deltaTime);
-            velocity.y = fallingSpeed;
+            // Keep the slope-tangent input's vertical component as well as gravity.
+            velocity += Vector3.up * fallingSpeed;
             velocity += GetSlopeSlideVelocity(Time.deltaTime);
         }
 
@@ -289,7 +291,7 @@ public class PlayerScript : MonoBehaviour
             bool fellFarEnough = fallDistance >= minLandingFallDistance;
             bool fellFastEnough = fallingSpeed <= minLandingFallSpeed;
 
-            bool shouldPlayLanding = fellFarEnough && fellFastEnough;
+            bool shouldPlayLanding = onSurface && fellFarEnough && fellFastEnough;
 
             // Vua cham dat thi Falling phai tat NGAY, bat ke cu roi lon hay nho.
             animator.SetBool("IsFalling", false);
@@ -378,6 +380,10 @@ public class PlayerScript : MonoBehaviour
             float alongSlope = Vector3.Dot(inputVelocity, downhill);
             if (alongSlope < 0f) inputVelocity -= downhill * alongSlope;
         }
+        // Horizontal-only input outruns the fixed downward bias on a descent.
+        // Follow the surface tangent so running doesn't repeatedly walk off the slope.
+        if (HasGroundSupport && inputVelocity.sqrMagnitude > .0001f)
+            inputVelocity = Vector3.ProjectOnPlane(inputVelocity, surfaceNormal).normalized * inputVelocity.magnitude;
         return inputVelocity;
     }
 
@@ -752,11 +758,7 @@ public class PlayerScript : MonoBehaviour
         {
             if (CC.enabled)
             {
-                CollisionFlags collisionFlags = CC.Move(velocity * Time.deltaTime);
-                // A ceiling hit must cancel upward velocity; otherwise the player can
-                // remain in a jump pose until gravity slowly reverses the full impulse.
-                if ((collisionFlags & CollisionFlags.Above) != 0 && fallingSpeed > 0f)
-                    fallingSpeed = 0f;
+                MoveCharacter(velocity * Time.deltaTime);
             }
 
             if (movementAmount > 0 && moveDir.magnitude > 0.2f)
@@ -766,6 +768,28 @@ public class PlayerScript : MonoBehaviour
             moveDir = requiredMoveDir;
             transform.rotation = Quaternion.RotateTowards(transform.rotation, requiredRotation, rotspeed * Time.deltaTime);
         }
+    }
+
+    private CollisionFlags MoveCharacter(Vector3 displacement)
+    {
+        bool followGround = HasGroundSupport && fallingSpeed <= 0f && !isClimbingLadder && !playerHanging && !playerInAction;
+        CollisionFlags flags = CC.Move(displacement);
+        if ((flags & CollisionFlags.Above) != 0 && fallingSpeed > 0f) fallingSpeed = 0f;
+        if (!followGround || groundSnapDistance <= 0f) return flags;
+
+        Vector3 scale = transform.lossyScale;
+        float radius = CC.radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z));
+        float halfHeight = Mathf.Max(radius, CC.height * Mathf.Abs(scale.y) * .5f);
+        Vector3 bottomCenter = transform.TransformPoint(CC.center) - Vector3.up * (halfHeight - radius);
+        float lift = Mathf.Max(.05f, CC.skinWidth * 2f);
+        float probeRadius = Mathf.Max(.01f, radius - CC.skinWidth * .5f);
+        if (Physics.SphereCast(bottomCenter + Vector3.up * lift, probeRadius, Vector3.down, out var hit,
+                lift + groundSnapDistance, surfaceLayer, QueryTriggerInteraction.Ignore) && hit.normal.y >= .2f)
+        {
+            float drop = hit.distance - lift;
+            if (drop > .001f) flags |= CC.Move(Vector3.down * Mathf.Min(drop, groundSnapDistance));
+        }
+        return flags;
     }
 
     void SurfaceCheck()

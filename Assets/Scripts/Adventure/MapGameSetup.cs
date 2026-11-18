@@ -35,6 +35,7 @@ public class MapGameSetup : MonoBehaviour
         }
         if (createStarterInteractions) CreateStarterPoints(origin);
         session.RefreshWorld();
+        player.MCC?.SnapCameraTarget();
         StartupReady = true;
     }
     void CreateStarterPoints(Vector3 origin)

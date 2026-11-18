@@ -27,6 +27,7 @@ public class LoadingScreen : MonoBehaviour
         view.Click("Retry", () => Load(CampaignSession.Instance?.CurrentMapScene ?? "mapgame"));
         view.Active("Retry", false);
         view.Fill("Progress/Fill", 0);
+        SceneTransitionCover.Hide();
     }
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetState() { destination = null; IsLoading = false; Error = null; }
@@ -36,6 +37,7 @@ public class LoadingScreen : MonoBehaviour
         if (string.IsNullOrEmpty(scene) || scene == SceneName || !Application.CanStreamedLevelBeLoaded(scene) || !Application.CanStreamedLevelBeLoaded(SceneName))
         { Error = "Không tìm thấy scene đích hoặc scene Loading trong Build Settings."; Debug.LogError(Error); return false; }
         Error = null; destination = scene; IsLoading = true;
+        SceneTransitionCover.Show();
         ScreenSpaceCut.StopActive();
         Time.timeScale = 1;
         if (MapChunkStreamer.Instance != null) MapChunkStreamer.Instance.TransitionTo(SceneName);
@@ -162,6 +164,14 @@ public class LoadingScreen : MonoBehaviour
 
         progress = 1f;
         destination = null;
+        var combat = battle.IsValid() ? battle.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<CombatManager>()).FirstOrDefault() : null;
+        float readyDeadline = Time.realtimeSinceStartup + 30f;
+        while (combat != null && !combat.PresentationReady)
+        {
+            if (Time.realtimeSinceStartup > readyDeadline) { Fail("Combat chưa khởi tạo xong camera và nhân vật. Xem Console."); yield break; }
+            yield return null;
+        }
+        // Let Cinemachine evaluate the final combat placement behind Loading.
         yield return null;
         SceneManager.UnloadSceneAsync(gameObject.scene);
     }
@@ -395,6 +405,7 @@ public class LoadingScreen : MonoBehaviour
     {
         failed = true;
         Error = message;
+        SceneTransitionCover.Hide();
         IsLoading = false;
         Cursor.visible = true;
         RestoreLoadingEventSystem();

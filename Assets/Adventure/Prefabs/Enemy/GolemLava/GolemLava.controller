@@ -389,7 +389,7 @@ AnimatorStateMachine:
     m_Position: {x: 40, y: -20, z: 0}
   - serializedVersion: 1
     m_State: {fileID: -1656289600520294390}
-    m_Position: {x: 80, y: -300, z: 0}
+    m_Position: {x: -150, y: -380, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 8367980305342270856}
     m_Position: {x: 710, y: -40, z: 0}
@@ -398,16 +398,16 @@ AnimatorStateMachine:
     m_Position: {x: -20, y: -90, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 8951323361449183540}
-    m_Position: {x: 80, y: -300, z: 0}
+    m_Position: {x: 580, y: -480, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 2566656676970736117}
     m_Position: {x: 30, y: 70, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 4966597963796431715}
-    m_Position: {x: 80, y: -300, z: 0}
+    m_Position: {x: -90, y: -290, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 1807532795150451305}
-    m_Position: {x: 80, y: -300, z: 0}
+    m_Position: {x: -50, y: -440, z: 0}
   - serializedVersion: 1
     m_State: {fileID: -8316793235932590597}
     m_Position: {x: 80, y: -300, z: 0}
@@ -416,7 +416,7 @@ AnimatorStateMachine:
     m_Position: {x: 0, y: -170, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 1921973139757434613}
-    m_Position: {x: 420, y: -190, z: 0}
+    m_Position: {x: 590, y: -250, z: 0}
   - serializedVersion: 1
     m_State: {fileID: -6770044987352925140}
     m_Position: {x: 290, y: -340, z: 0}
@@ -425,7 +425,7 @@ AnimatorStateMachine:
     m_Position: {x: 290, y: -340, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 8297773715017371317}
-    m_Position: {x: 360, y: 80, z: 0}
+    m_Position: {x: 190, y: -480, z: 0}
   m_ChildStateMachines: []
   m_AnyStateTransitions: []
   m_EntryTransitions: []
@@ -1108,10 +1108,10 @@ AnimatorStateTransition:
   m_Mute: 0
   m_IsExit: 0
   serializedVersion: 3
-  m_TransitionDuration: 0.25
+  m_TransitionDuration: 0
   m_TransitionOffset: 0
   m_ExitTime: 0.75
-  m_HasExitTime: 1
+  m_HasExitTime: 0
   m_HasFixedDuration: 1
   m_InterruptionSource: 0
   m_OrderedInterruption: 1

@@ -115,6 +115,19 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
             nextGrowl = Time.time + Random.Range(Mathf.Max(1f, soundProfile.growlInterval.x), Mathf.Max(1f, soundProfile.growlInterval.y));
     }
 
+    public void ResetForRespawn()
+    {
+        if (!initialized) return; // Start will initialize a not-yet-shown model normally.
+        if (agent != null) agent.enabled = false;
+        transform.SetPositionAndRotation(combatOrigin.SpawnPosition, combatOrigin.SpawnRotation);
+        if (mapAnimator != null)
+        {
+            mapAnimator.speed = 1; mapAnimator.Rebind(); mapAnimator.Update(0);
+            mapAnimator.applyRootMotion = false; mapAnimator.fireEvents = false;
+        }
+        InitializePatrolAtSpawn();
+    }
+
     void InitializePatrolAtSpawn()
     {
         home = combatOrigin.SpawnPosition;

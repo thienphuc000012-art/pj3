@@ -11,6 +11,7 @@ public class CampaignConfig : ScriptableObject
     public List<string> additionalMapScenes = new List<string>();
     public string battleScene = "combattest";
     [SerializeField, HideInInspector] private string guidedTutorialEncounterKey;
+    public string GuidedTutorialSelectionKey => guidedTutorialEncounterKey;
     public bool HasGuidedTutorialEncounter => !string.IsNullOrEmpty(guidedTutorialEncounterKey);
 
     public bool IsGuidedTutorialEncounter(WorldInteraction point) =>
@@ -19,6 +20,7 @@ public class CampaignConfig : ScriptableObject
 
     public void SetGuidedTutorialEncounter(WorldInteraction point)
     {
+        if (point != null && point.kind == WorldInteractionKind.Encounter) point.EnsureGuidedTutorialEncounterId();
         guidedTutorialEncounterKey = point != null && point.kind == WorldInteractionKind.Encounter
             ? point.GuidedTutorialEncounterKey
             : string.Empty;
@@ -211,6 +213,9 @@ public class CampaignSave
     // Separate from real play time. Optional fields preserve compatibility with older saves.
     public bool hasWorldTime;
     public double worldTimeHours;
+    [Tooltip("0 uses the project's day duration; positive values are a per-save cheat override.")]
+    public float dayLengthMinutesOverride;
+    public List<EnemyRespawnProgress> enemyRespawns = new List<EnemyRespawnProgress>();
     public string savedAtUtc;
     public string saveLocationName;
     public string currentMapScene;

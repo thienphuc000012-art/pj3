@@ -31,6 +31,7 @@ public static class TerrainJumpValidation
     {
         if (!File.Exists(Request) || EditorApplication.isCompiling || EditorApplication.isUpdating || EditorApplication.isPlayingOrWillChangePlaymode) return;
         if (File.GetLastWriteTimeUtc("Library/ScriptAssemblies/Assembly-CSharp-Editor.dll") < File.GetLastWriteTimeUtc("Assets/Editor/TerrainJumpValidation.cs")) return;
+        if (File.GetLastWriteTimeUtc("Library/ScriptAssemblies/Assembly-CSharp.dll") < File.GetLastWriteTimeUtc("Assets/Scripts/PlayerController/PlayerScript.cs")) return;
         try
         {
             string command = File.ReadAllText(Request).Trim(); File.Delete(Request);
@@ -188,7 +189,8 @@ public static class TerrainJumpValidation
             if (i > fps / 5 && grounded && speed <= 0) { result.landed = true; break; }
             if (legacy) { if (grounded && speed <= 0) speed = -2; else if (!grounded) speed += Physics.gravity.y * dt; Speed.SetValue(player, speed); }
             else { Vertical.Invoke(player, new object[] { dt }); speed = (float)Speed.GetValue(player); }
-            var flags = player.CC.Move((direction * (grounded ? player.walkSpeed : player.walkSpeed / 2) + Vector3.up * speed) * dt);
+            var flags = legacy ? player.CC.Move((direction * (grounded ? player.walkSpeed : player.walkSpeed / 2) + Vector3.up * speed) * dt)
+                : Move(player, (direction * (grounded ? player.walkSpeed : player.walkSpeed / 2) + Vector3.up * speed) * dt);
             if ((flags & CollisionFlags.Above) != 0 && speed > 0) Speed.SetValue(player, 0f);
             Physics.SyncTransforms();
             result.rise = Mathf.Max(result.rise, player.transform.position.y - position.y);
@@ -266,7 +268,7 @@ public static class TerrainJumpValidation
             }
             else Check(slide.sqrMagnitude == 0, label + ": steep sliding must stop once support changes.");
             var velocity = (Vector3)Horizontal.Invoke(player, null) + Vector3.up * (float)Speed.GetValue(player) + slide;
-            player.CC.Move(velocity / fps); Physics.SyncTransforms();
+            Move(player, velocity / fps); Physics.SyncTransforms();
         }
         Vector3 displacement = player.transform.position - start;
         Check(slidingFrames > 0 && displacement.y < -.03f && Vector3.Dot(displacement, initialDownhill) > .03f,
@@ -341,7 +343,7 @@ public static class TerrainJumpValidation
                 Vertical.Invoke(player, new object[] { dt });
                 Vector3 slide = (Vector3)Sliding.Invoke(player, new object[] { dt });
                 sawSlide |= slide.sqrMagnitude > .0001f;
-                var flags = player.CC.Move((horizontal + Vector3.up * (float)Speed.GetValue(player) + slide) * dt);
+                var flags = Move(player, (horizontal + Vector3.up * (float)Speed.GetValue(player) + slide) * dt);
                 if ((flags & CollisionFlags.Above) != 0 && (float)Speed.GetValue(player) > 0f) Speed.SetValue(player, 0f);
                 Physics.SyncTransforms();
                 Animation.Invoke(player, null); animator.Update(dt);
@@ -366,6 +368,7 @@ public static class TerrainJumpValidation
         finally { UnityEngine.Object.DestroyImmediate(staging); physicsPlayer.CC.enabled = previousControllerState; Physics.SyncTransforms(); }
     }
     static void Set(PlayerScript player, string field, object value) => typeof(PlayerScript).GetField(field, Private).SetValue(player, value);
+    static CollisionFlags Move(PlayerScript player, Vector3 displacement) => (CollisionFlags)typeof(PlayerScript).GetMethod("MoveCharacter", Private).Invoke(player, new object[] { displacement });
     static object Get(PlayerScript player, string field) => typeof(PlayerScript).GetField(field, Private).GetValue(player);
     static BoxCollider Box(GameObject root, string name, Vector3 position, Vector3 size)
     {

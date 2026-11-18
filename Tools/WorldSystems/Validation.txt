@@ -1,0 +1,22 @@
+Save point: mapgame | world:1be70ea988114fed8be8c6e9a6205585 | Lưu game / Hồi máu | (-21.46, 280.84, -97.57)
+Save point: mapgame | world:5858142c3e5545dc9520f89c912033de | Lưu game / Hồi máu | (-18.46, 272.58, -124.39)
+Save point: m | world:974ac5d29a2b4784a6691a0e43f95ead | Lotte | (-55.75, -47.29, -144.50)
+Save point: m | world:6a35fa0faeef4726ba42658ae88a5e0e | Vạn Hạnh Mall | (174.30, -85.80, -31.88)
+Save point: m | world:ea37e73ca9f94a559c30ef94aa604ad8 | Cirk | (-60.89, -85.83, -28.96)
+Save point: m | world:b566ad61e34840d0bda9777ad0da18ed | Bách Hóa Xanh | (69.30, -95.92, -18.29)
+Enemy m: Enemy Encounter | Vampire | Regular, 300s, Always
+Enemy m: Enemy Encounter | OakTreeEnt | Regular, 300s, Always
+Enemy m: Enemy Encounter | DarknessSpider | Regular, 300s, Always
+Enemy m: DemonLord | DemonLord | Permanent/boss/tutorial
+Enemy m: GolemLava | GolemLava | Permanent/boss/tutorial
+Enemy m: Enemy Encounter | FantasyWolfKing | Regular, 300s, Always
+PASS: five-minute timer, no early/double respawn, save/load continuation, fresh loot eligibility, and day/night boundaries (06:00, 18:00).
+PASS: old saves without respawn/time override fields remain compatible.
+PASS: normal enemies are managed; bosses, tutorial and Main Quest targets remain permanent.
+PASS: stat edit/clamping, source assets untouched, levels, all skills, skill loadout, save points, deduplication and per-save day speed survive JSON save/load.
+PASS: native panel construction, pause/input ownership, close/reopen and cursor/time restore; preview rendered without Play Mode.
+PASS: camera target snaps directly to the player and retains requested pitch/yaw.
+PASS: cursor/focus/cutscene handoff suppresses initial mouse-look frames.
+PASS: native encounter registration, day/night hiding, reactivation, defeat hiding and timer-driven return.
+PASS: opaque transition cover stays active while native map scenery is staged, then releases cleanly.
+PASS: no Play Mode entered, no real campaign save written, live scene edits preserved.

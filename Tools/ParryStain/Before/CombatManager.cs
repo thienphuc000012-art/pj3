@@ -1,0 +1,3334 @@
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+
+public enum CombatState { Start, PlayerTurn, EnemyTurn, Executing, Won, Lost, BattleStartAnim }
+public enum OpenMenuType { None, Skills, Items }
+
+[System.Serializable]
+public class ElementCounterRule
+{
+    [Tooltip("Hệ gây sát thương mạnh hơn.")]
+    public ActionData.ElementType strongerElement = ActionData.ElementType.Fire;
+    [Tooltip("Hệ bị khắc chế.")]
+    public ActionData.ElementType weakerElement = ActionData.ElementType.Nature;
+}
+
+public class CombatManager : MonoBehaviour
+{
+    public static CombatManager Instance;
+    private int screenSlashHitIndex;
+    [Header("Turn VFX Cleanup")]
+    [Min(0f)] public float turnVfxCleanupDelay = 1.5f;
+    [Header("Visual VFX Performance")]
+    [Tooltip("Reuse visual-only particle prefabs. Scripted/physics projectiles retain their existing lifecycle.")]
+    public bool poolVisualVfx = true;
+    [Min(0)] public int cachedVisualVfxPerPrefab = 4;
+    [Min(0)] public int cachedVisualVfxTotal = 24;
+    private CombatVisualVfxPool visualVfxPool;
+
+    private GameObject CreateVisualVfx(GameObject prefab, Vector3 position, Quaternion rotation, Transform parent = null, bool allowPooling = true)
+    {
+        if (!poolVisualVfx || !allowPooling)
+        {
+            var created = Instantiate(prefab, position, rotation, parent); GameAudioSourceBus.Bind(created); return created;
+        }
+        if (visualVfxPool == null)
+            visualVfxPool = new CombatVisualVfxPool(transform, cachedVisualVfxPerPrefab, cachedVisualVfxTotal, ForgetVisualVfx);
+        var instance = visualVfxPool.Create(prefab, position, rotation, parent); GameAudioSourceBus.Bind(instance); return instance;
+    }
+    private void ForgetVisualVfx(GameObject instance)
+    {
+        combatVfxInstances.Remove(instance);
+        foreach (var list in castInstances.Values) list.Remove(instance);
+    }
+    private void ReleaseVisualVfx(GameObject instance)
+    {
+        if (instance == null || visualVfxPool != null && visualVfxPool.Release(instance)) return;
+        Destroy(instance);
+    }
+    private void ScheduleVisualVfx(GameObject instance, float lifetime)
+    {
+        if (visualVfxPool != null && visualVfxPool.Schedule(instance, lifetime, Time.timeAsDouble)) return;
+        Destroy(instance, lifetime);
+    }
+    private void LateUpdate() => visualVfxPool?.Tick(Time.timeAsDouble);
+    private void OnDestroy() { visualVfxPool?.Dispose(); visualVfxPool = null; }
+    private Coroutine turnTransitionRoutine;
+    private readonly List<CombatBeamVfx> activeBeams = new List<CombatBeamVfx>();
+    private readonly List<GameObject> pendingVfxImpacts = new List<GameObject>();
+    private readonly Dictionary<BattleUnit, List<GameObject>> castInstances = new Dictionary<BattleUnit, List<GameObject>>();
+    private readonly Dictionary<BattleUnit, List<GameObject>> ultimateAuraInstances = new Dictionary<BattleUnit, List<GameObject>>();
+    private readonly HashSet<BattleUnit> castStarted = new HashSet<BattleUnit>();
+    private readonly HashSet<BattleUnit> ultimateAuraStarted = new HashSet<BattleUnit>();
+    private readonly HashSet<BattleUnit> vfxLaunched = new HashSet<BattleUnit>();
+    private sealed class VfxActionState
+    {
+        public bool parried;
+        public bool impactDamagePrepared;
+        public int impactRawDamage;
+        public bool impactIsCrit;
+        public bool energyAwarded;
+
+        // VFX Parry state cho Shoot / Beam.
+        public bool parryWindowOpened;
+        public bool parryWindowFinished;
+    }
+    private VfxActionState vfxActionState = new VfxActionState();
+    private readonly HashSet<GameObject> combatVfxInstances = new HashSet<GameObject>();
+
+    private void TrackCombatVFX(GameObject vfx)
+    {
+        combatVfxInstances.RemoveWhere(item => item == null);
+        if (vfx == null || !combatVfxInstances.Add(vfx)) return;
+        CombatShadowBudget.Active?.RegisterHierarchy(vfx, true);
+        // Impacts created by RFX4 can live outside the original effect hierarchy.
+        foreach (var motion in vfx.GetComponentsInChildren<RFX4_PhysicsMotion>(true))
+            motion.EffectCreated += TrackCombatVFX;
+        foreach (var ray in vfx.GetComponentsInChildren<RFX4_RaycastCollision>(true))
+        {
+            ray.EffectCreated += TrackCombatVFX;
+            foreach (GameObject impact in ray.CollidedInstances)
+                TrackCombatVFX(impact);
+        }
+        foreach (var collision in vfx.GetComponentsInChildren<RFX4_ParticleCollisionGameObject>(true))
+            collision.EffectCreated += TrackCombatVFX;
+    }
+
+    private void ClearCombatVFX()
+    {
+        GameObject[] instances = combatVfxInstances.ToArray();
+        combatVfxInstances.Clear();
+        foreach (GameObject vfx in instances)
+        {
+            if (vfx == null) continue;
+            // Hide particles, lights and audio immediately; Destroy completes
+            // at frame end, before the enemy's new effects are created.
+            vfx.SetActive(false);
+            ReleaseVisualVfx(vfx);
+        }
+        foreach (List<GameObject> auras in ultimateAuraInstances.Values)
+        {
+            foreach (GameObject aura in auras)
+            {
+                if (aura == null) continue;
+                aura.SetActive(false);
+                Destroy(aura);
+            }
+        }
+        activeBeams.Clear();
+        pendingVfxImpacts.Clear();
+        castInstances.Clear();
+        ultimateAuraInstances.Clear();
+        castStarted.Clear();
+        ultimateAuraStarted.Clear();
+        vfxLaunched.Clear();
+    }
+
+    public void StopBeamVFX(BattleUnit caster)
+    {
+        for (int i = activeBeams.Count - 1; i >= 0; i--)
+        {
+            CombatBeamVfx beam = activeBeams[i];
+            if (beam == null || beam.Caster == caster)
+            {
+                if (beam != null) beam.FinishAttack();
+                if (beam == null || beam.HasEmitted) activeBeams.RemoveAt(i);
+            }
+        }
+    }
+
+    private void OnDisable()
+    {
+        guidedTutorial?.Close();
+        CameraManager.Instance?.ResetCombatCameraPresentation();
+        if (battleStartRoutine != null)
+        {
+            StopCoroutine(battleStartRoutine);
+            battleStartRoutine = null;
+        }
+        FinishBattleEntryWalks();
+        acceptingActionAnimationEvents = false;
+        if (battleCompletionRoutine != null)
+        {
+            StopCoroutine(battleCompletionRoutine);
+            battleCompletionRoutine = null;
+        }
+        GetComponent<UltimateCinematic>()?.End();
+        if (turnTransitionRoutine != null)
+        {
+            StopCoroutine(turnTransitionRoutine);
+            turnTransitionRoutine = null;
+            isTransitioningTurn = false;
+        }
+        ClearCombatVFX();
+    }
+
+    [Header("Game State")]
+    public CombatState state;
+
+    [Header("Party & Enemy Lists")]
+    public List<BattleUnit> playerParty = new List<BattleUnit>();
+    public List<BattleUnit> enemyParty = new List<BattleUnit>();
+    public List<BattleUnit> allUnitsTimeline = new List<BattleUnit>();
+
+    [Header("Battle Positions (Slots)")]
+    public Transform[] playerSlots;
+    public Transform[] enemySlots;
+
+    [Header("Battle Start — Player Walk In")]
+    [Tooltip("Player xuất hiện phía sau slot rồi đi bộ vào. Enemy vẫn dùng trigger BattleStart như cũ.")]
+    public bool playersWalkIn = true;
+    [Min(0f), Tooltip("Khoảng cách player xuất hiện phía sau vị trí chiến đấu, tính theo hướng của slot.")]
+    public float playerEntryDistance = 3f;
+    [Min(.01f), Tooltip("Tốc độ đi tới slot, đơn vị Unity/giây.")]
+    public float playerEntryMoveSpeed = 1.8f;
+    [Min(0f), Tooltip("Thời gian tối thiểu giữ camera mở đầu. Luôn đợi tất cả player đi tới slot trước khi bắt đầu lượt.")]
+    public float battleStartMinimumDuration = 2.5f;
+    [Min(0f), Tooltip("Chờ blend từ walk về idle sau khi mọi player đã vào vị trí.")]
+    public float playerEntryIdleSettleTime = .1f;
+    internal Vector3[][] arenaPlayerEntryPaths;
+    readonly List<BattleEntryWalk> battleEntryWalks = new List<BattleEntryWalk>();
+    Coroutine battleStartRoutine;
+
+    [Header("Inventory & Resources")]
+    public List<ActionData> inventoryItems = new List<ActionData>();
+    public int currentStains = 0;
+    public int maxStains = 4;
+
+    [Header("Elemental Damage / Tương khắc nguyên tố")]
+    [Tooltip("Bật/tắt nhân sát thương theo hệ của đòn đánh và mục tiêu.")]
+    public bool useElementalDamage = true;
+    [Min(0f), Tooltip("Damage multiplier khi hệ của đòn đánh khắc hệ mục tiêu.")]
+    public float elementalAdvantageMultiplier = 2f;
+    [Min(0f), Tooltip("Damage multiplier khi đòn đánh và mục tiêu cùng hệ (không áp dụng cho Neutral/None).")]
+    public float elementalSameTypeMultiplier = 1.5f;
+    [Min(0f), Tooltip("Damage multiplier khi hệ mục tiêu khắc hệ của đòn đánh.")]
+    public float elementalDisadvantageMultiplier = 0.5f;
+    [Tooltip("Quy tắc khắc hệ. Mặc định: Lửa > Tự nhiên > Nước > Lửa. Thêm các cặp khác tại đây.")]
+    public List<ElementCounterRule> elementalCounterRules = new List<ElementCounterRule>
+    {
+        new ElementCounterRule { strongerElement = ActionData.ElementType.Fire, weakerElement = ActionData.ElementType.Nature },
+        new ElementCounterRule { strongerElement = ActionData.ElementType.Nature, weakerElement = ActionData.ElementType.Water },
+        new ElementCounterRule { strongerElement = ActionData.ElementType.Water, weakerElement = ActionData.ElementType.Fire }
+    };
+
+    [Header("Current Turn Info")]
+    public BattleUnit currentActiveUnit;
+    public BattleUnit currentTarget;
+    private int currentTimelineIndex = 0;
+    private ActionData selectedAction;
+    private bool targetSelectionConfirmed;
+    private bool HasPendingTargetSelection => isActiveAndEnabled && state == CombatState.PlayerTurn &&
+        !targetSelectionConfirmed && selectedAction != null && currentActiveUnit != null &&
+        !currentActiveUnit.IsDead;
+    public bool IsChoosingTarget => HasPendingTargetSelection && IsEligibleTarget(currentTarget);
+
+    [Header("Melee Approach Position")]
+    [Min(0f), Tooltip("Khoảng cách dùng chung để Player dừng trước Enemy khi áp sát đánh.")]
+    public float meleeApproachDistance = 1.6f;
+    [Tooltip("Offset Player so với vị trí áp sát tự tính: X lệch ngang, Y độ cao, Z tiến/lùi theo hướng nhìn mục tiêu.")]
+    public Vector3 playerMeleePositionOffset;
+
+    [HideInInspector] public BattleEncounterSetup activeEncounterSetup;
+    private GuidedCombatTutorial guidedTutorial;
+    public bool IsGuidedTutorialBlockingInput => guidedTutorial != null && guidedTutorial.BlocksInput;
+    public bool IsRunAwayLockedByTutorial => guidedTutorial != null ||
+        (CampaignSession.Instance != null && CampaignSession.Instance.IsGuidedTutorialEncounter);
+    private bool IsGuidedTutorialPracticeLocked =>
+        guidedTutorial != null && guidedTutorial.PendingPractice != GuidedCombatPractice.None;
+
+    [HideInInspector] public bool isSelectingBuffTarget = false;
+    [HideInInspector] public bool isSelectingSelfOnly = false;
+
+    private bool isTransitioningTurn = false;
+    private bool runAwayAttemptInProgress;
+    [HideInInspector] public bool isAttackAnimationFinished = false;
+
+    private OpenMenuType currentOpenMenu = OpenMenuType.None;
+    public bool CanShowBattleCommands => isActiveAndEnabled && state == CombatState.PlayerTurn &&
+        currentActiveUnit != null && !currentActiveUnit.IsDead && selectedAction == null && currentOpenMenu == OpenMenuType.None &&
+        !IsGuidedTutorialBlockingInput && !IsGuidedTutorialPracticeLocked;
+
+    // Dùng cho ParrySystem:
+    // true khi Enemy hiện tại đang thực hiện một đòn AoE gây damage.
+    public bool IsCurrentEnemyAoEAttack()
+    {
+        return currentActiveUnit != null &&
+               !currentActiveUnit.isPlayer &&
+               selectedAction != null &&
+               selectedAction.isAoE &&
+               !selectedAction.isFriendlyAction &&
+               !selectedAction.isHeal;
+    }
+
+    void Awake() { Instance = this; CombatShadowBudget.Ensure(gameObject.scene); }
+
+    IEnumerator Start()
+    {
+        var session = CampaignSession.Instance;
+        while (session != null && session.CombatArenaPending) yield return null;
+        if (GetComponent<BattleResultPanel>() == null) gameObject.AddComponent<BattleResultPanel>();
+        if (session != null && session.InEncounter)
+        {
+            session.PrepareBattle(this);
+            if (session.IsGuidedTutorialEncounter)
+                guidedTutorial = GuidedCombatTutorial.Create(AdvancedUIManager.Instance);
+        }
+        state = CombatState.Start;
+        GameAudio.BeginBattle(this, activeEncounterSetup);
+        SetupPositions();
+        CombatShadowBudget.Active?.RegisterScene(gameObject.scene);
+        if (playerParty.Count > 0 && playerParty[0] != null)
+            CombatShadowBudget.Active?.SetCenter(playerParty[0].transform.position);
+
+        foreach (var unit in playerParty.Concat(enemyParty).Where(unit => unit != null))
+        {
+            unit.ResetEnemyActionCooldowns();
+            unit.ApplyStartingBattleEffects();
+        }
+
+        currentStains = maxStains;
+        AdvancedUIManager.Instance.UpdateStainsUI(currentStains, 0);
+
+        if (enemyParty.Count > 0 && enemyParty[0] != null)
+        {
+            AdvancedUIManager.Instance.RegisterEnemyHP(enemyParty[0]);
+        }
+        AdvancedUIManager.Instance.RegisterPartyHP(playerParty);
+
+        battleStartRoutine = StartCoroutine(BattleStartRoutine());
+    }
+
+    private IEnumerator BattleStartRoutine()
+    {
+        state = CombatState.BattleStartAnim;
+
+        // Bật Camera tổng thể đầu trận
+        CameraManager.Instance.SwitchToBattleStartCam();
+
+        AdvancedUIManager.Instance.ToggleAllUI(false);
+
+        FinishBattleEntryWalks();
+        for (int i = 0; i < playerParty.Count; i++)
+        {
+            BattleUnit p = playerParty[i];
+            if (p == null || p.IsDead) continue;
+            if (playersWalkIn)
+            {
+                Vector3[] entryPath = arenaPlayerEntryPaths?[i];
+                battleEntryWalks.Add(new BattleEntryWalk(p, playerEntryDistance, playerEntryMoveSpeed, entryPath));
+            }
+            else if (p.animator != null) p.animator.SetTrigger("BattleStart");
+        }
+        foreach (var e in enemyParty.Where(u => u != null && u.animator != null))
+        {
+            e.animator.SetTrigger("BattleStart");
+        }
+
+        // Spawn offsets are set before the first rendered frame. Do not consume
+        // the scene-loading frame's delta as the first step of the walk.
+        float elapsed = 0f;
+        yield return null;
+        while (elapsed < battleStartMinimumDuration || battleEntryWalks.Any(walk => !walk.IsComplete))
+        {
+            float step = Time.deltaTime;
+            foreach (var walk in battleEntryWalks) walk.Tick(step);
+            elapsed += step;
+            yield return null;
+        }
+        FinishBattleEntryWalks();
+        if (playersWalkIn && playerEntryIdleSettleTime > 0f)
+            yield return new WaitForSeconds(playerEntryIdleSettleTime);
+
+        AdvancedUIManager.Instance.ToggleAllUI(true);
+
+        battleStartRoutine = null;
+        DetermineTurnOrder();
+    }
+
+    void FinishBattleEntryWalks()
+    {
+        foreach (var walk in battleEntryWalks) walk.Finish();
+        battleEntryWalks.Clear();
+    }
+
+    void Update()
+    {
+        if (IsGuidedTutorialBlockingInput) return;
+        if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
+
+        if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Escape))
+        {
+            CancelCurrentAction();
+            return;
+        }
+
+        if (HasPendingTargetSelection && RefreshTargetSelection())
+        {
+            if (!isSelectingSelfOnly)
+            {
+                if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow))
+                {
+                    SelectPreviousTarget();
+                }
+                else if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow))
+                {
+                    SelectNextTarget();
+                }
+            }
+
+            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Space))
+            {
+                ConfirmSelectedTarget();
+            }
+        }
+    }
+
+    private List<BattleUnit> TargetParty => isSelectingBuffTarget ? playerParty : enemyParty;
+
+    private bool IsEligibleTarget(BattleUnit unit)
+    {
+        return unit != null && unit.isActiveAndEnabled && !unit.IsDead &&
+               (isSelectingSelfOnly ? unit == currentActiveUnit : TargetParty.Contains(unit));
+    }
+
+    public void EnterTargetSelection()
+    {
+        if (!HasPendingTargetSelection || IsGuidedTutorialBlockingInput) return;
+        if (IsEligibleTarget(currentTarget)) PresentSelectedTarget(currentTarget);
+        else RefreshTargetSelection();
+    }
+
+    public void SelectNextTarget() => CycleTarget(1);
+
+    public void SelectPreviousTarget() => CycleTarget(-1);
+
+    private void CycleTarget(int direction)
+    {
+        if (!HasPendingTargetSelection || IsGuidedTutorialBlockingInput || isSelectingSelfOnly) return;
+        if (!IsEligibleTarget(currentTarget))
+        {
+            RefreshTargetSelection();
+            return;
+        }
+
+        var party = TargetParty;
+        int currentIndex = party.IndexOf(currentTarget);
+        for (int i = 1; i < party.Count; ++i)
+        {
+            int index = (currentIndex + direction * i + party.Count) % party.Count;
+            if (!IsEligibleTarget(party[index])) continue;
+            PresentSelectedTarget(party[index]);
+            return;
+        }
+    }
+
+    public void SetSelectedTarget(Transform target)
+    {
+        if (!HasPendingTargetSelection || IsGuidedTutorialBlockingInput || target == null) return;
+        var unit = target.GetComponentInParent<BattleUnit>();
+        if (unit != currentTarget && IsEligibleTarget(unit)) PresentSelectedTarget(unit);
+    }
+
+    private bool RefreshTargetSelection()
+    {
+        if (IsEligibleTarget(currentTarget)) return true;
+        var fallback = TargetParty.FirstOrDefault(IsEligibleTarget);
+        if (fallback != null)
+        {
+            PresentSelectedTarget(fallback);
+            return true;
+        }
+
+        // This is an automatic recovery, so an impossible tutorial practice
+        // cannot leave the player locked in a selection with no valid units.
+        guidedTutorial?.AbandonPractice();
+        LeaveTargetSelection();
+        return false;
+    }
+
+    private void PresentSelectedTarget(BattleUnit unit)
+    {
+        currentTarget = unit;
+        AdvancedUIManager.Instance?.UpdateTargetUI(unit.unitName);
+        AdvancedUIManager.Instance?.ToggleChangeTargetHint(true);
+        CameraManager.Instance?.SwitchToTargetCam(unit);
+    }
+
+    public void ConfirmTarget() => ConfirmSelectedTarget();
+
+    public void ConfirmSelectedTarget()
+    {
+        if (IsGuidedTutorialBlockingInput || !HasPendingTargetSelection) return;
+        if (!IsEligibleTarget(currentTarget))
+        {
+            RefreshTargetSelection();
+            return;
+        }
+        OnActionSelected(selectedAction);
+    }
+
+    public void CancelTargetSelection()
+    {
+        if (IsGuidedTutorialBlockingInput || IsGuidedTutorialPracticeLocked || !HasPendingTargetSelection) return;
+        LeaveTargetSelection();
+    }
+
+    private void LeaveTargetSelection()
+    {
+        selectedAction = null;
+        targetSelectionConfirmed = false;
+        isSelectingBuffTarget = false;
+        isSelectingSelfOnly = false;
+        currentTarget = enemyParty.FirstOrDefault(IsEligibleTarget);
+        currentOpenMenu = OpenMenuType.None;
+        ResetMenuAnimations();
+
+        var ui = AdvancedUIManager.Instance;
+        if (ui != null)
+        {
+            ui.UpdateStainsUI(currentStains, 0);
+            ui.UpdateTargetUI(currentTarget != null ? currentTarget.unitName : "");
+            ui.ToggleChangeTargetHint(false);
+            ui.ShowActionMenu(true);
+        }
+        CameraManager.Instance?.ResetTargetCam();
+    }
+
+    public void CancelCurrentAction()
+    {
+        if (IsGuidedTutorialBlockingInput || IsGuidedTutorialPracticeLocked) return;
+        if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
+
+        // 1. Trường hợp đang ở bước Chọn Mục Tiêu (Sau khi bấm Attack hoặc chọn Skill/Item)
+        if (HasPendingTargetSelection)
+        {
+            CancelTargetSelection();
+            return;
+        }
+
+        // 2. Trường hợp đang mở Menu con (Skills / Items) mà chưa chọn kỹ năng nào
+        if (currentOpenMenu != OpenMenuType.None)
+        {
+            currentOpenMenu = OpenMenuType.None;
+            ResetMenuAnimations();
+
+            if (!AdvancedUIManager.Instance.CloseSubMenuImmediately())
+                AdvancedUIManager.Instance.ShowActionMenu(true);
+
+            CameraManager.Instance?.ResetTargetCam();
+        }
+    }
+    void SetupPositions()
+    {
+        for (int i = 0; i < playerParty.Count; i++)
+        {
+            if (i < playerSlots.Length && playerSlots[i] != null && playerParty[i] != null)
+            {
+                playerParty[i].transform.position = playerSlots[i].position;
+                playerParty[i].transform.rotation = playerSlots[i].rotation;
+            }
+        }
+        for (int i = 0; i < enemyParty.Count; i++)
+        {
+            if (i < enemySlots.Length && enemySlots[i] != null && enemyParty[i] != null)
+            {
+                enemyParty[i].transform.position = enemySlots[i].position;
+                enemyParty[i].transform.rotation = enemySlots[i].rotation;
+            }
+        }
+    }
+
+    public void DetermineTurnOrder()
+    {
+        if (state != CombatState.Start && state != CombatState.BattleStartAnim)
+        {
+            foreach (var unit in playerParty.Concat(enemyParty).Where(u => u != null && !u.IsDead))
+            {
+                unit.TickBuffs();
+            }
+        }
+
+        allUnitsTimeline.Clear();
+
+        // Gom tất cả unit còn sống
+        var aliveUnits = playerParty.Where(u => u != null && !u.IsDead)
+            .Concat(enemyParty.Where(u => u != null && !u.IsDead))
+            .ToList();
+
+        BattleUnit phase2IntroBoss = null;
+
+        // Safety check for any phase transition queued by external damage.
+        // Normal lethal-hit transitions are applied after the turn's HP trail drains.
+        foreach (var unit in aliveUnits)
+        {
+            if (unit.isPlayer) continue;
+
+            int enteredPhase = unit.CheckPhase();
+
+            if (enteredPhase == 2 && !unit.phase2IntroPlayed)
+            {
+                unit.phase2IntroPlayed = true;
+                phase2IntroBoss = unit;
+            }
+        }
+
+        // Sắp xếp theo tốc độ
+        aliveUnits = aliveUnits.OrderByDescending(u => u.speed).ToList();
+
+        // Đẩy Unit vào Timeline NHIỀU LẦN dựa theo Actions Per Turn
+        foreach (var unit in aliveUnits)
+        {
+            int actionsCount = unit.isPlayer ? 1 : (unit.actionsPerTurn > 0 ? unit.actionsPerTurn : 1);
+            for (int i = 0; i < actionsCount; i++)
+            {
+                allUnitsTimeline.Add(unit);
+            }
+        }
+
+        AdvancedUIManager.Instance.UpdateTurnOrderUI(allUnitsTimeline);
+
+        currentTimelineIndex = 0;
+
+        if (phase2IntroBoss != null)
+        {
+            StartCoroutine(BossPhase2IntroRoutine(phase2IntroBoss));
+        }
+        else
+        {
+            StartNextUnitTurn();
+        }
+    }
+
+    private IEnumerator BossPhase2IntroRoutine(BattleUnit boss, bool continueTurn = true)
+    {
+        if (boss == null)
+        {
+            if (continueTurn) StartNextUnitTurn();
+            yield break;
+        }
+
+        state = CombatState.Executing;
+        isTransitioningTurn = true;
+
+        // Cinematic Phase 2: ẩn UI để không che animation/camera.
+        if (AdvancedUIManager.Instance != null)
+        {
+            AdvancedUIManager.Instance.ToggleAllUI(false);
+        }
+
+        if (CameraManager.Instance != null)
+        {
+            CameraManager.Instance.SwitchToEnemyPhase2Cam(boss);
+        }
+
+        // Trigger animation chỉ chạy đúng 1 lần vì phase2IntroPlayed đã được đánh dấu.
+        // Override before the intro exits, so its automatic Idle transition cannot
+        // briefly show the Phase 1 idle while the cinematic timer is still running.
+        boss.PreparePhase2Idle();
+        if (boss.animator != null && !string.IsNullOrEmpty(boss.phase2AnimationTriggerName))
+        {
+            boss.animator.SetTrigger(boss.phase2AnimationTriggerName);
+        }
+
+        yield return new WaitForSeconds(Mathf.Max(0f, boss.phase2IntroDuration));
+
+        if (boss != null && !boss.IsDead) boss.EnterPhase2Idle();
+
+        if (AdvancedUIManager.Instance != null)
+        {
+            AdvancedUIManager.Instance.ToggleAllUI(true);
+        }
+
+        isTransitioningTurn = false;
+        if (continueTurn) StartNextUnitTurn();
+    }
+    private void ResetMenuAnimations()
+    {
+        if (currentActiveUnit != null && currentActiveUnit.animator != null)
+        {
+            currentActiveUnit.animator.SetBool("IsSkillIdle", false);
+            currentActiveUnit.animator.SetBool("IsItemIdle", false);
+        }
+    }
+
+    private Coroutine battleCompletionRoutine;
+    private bool battleCompletionStarted;
+
+    private void CompleteBattle(bool victory)
+    {
+        if (battleCompletionStarted) return;
+        battleCompletionStarted = true;
+        guidedTutorial?.Close();
+        CameraManager.Instance?.ResetCombatCameraPresentation();
+        acceptingActionAnimationEvents = false;
+        isTransitioningTurn = true;
+        GetComponent<UltimateCinematic>()?.End();
+        state = victory ? CombatState.Won : CombatState.Lost;
+        AdvancedUIManager.Instance.ShowActionMenu(false);
+        AdvancedUIManager.Instance.ToggleChangeTargetHint(false);
+        battleCompletionRoutine = StartCoroutine(CompleteBattleAfterDeath(victory));
+    }
+
+    private IEnumerator CompleteBattleAfterDeath(bool victory)
+    {
+        // Keep the HUD visible through the HP drain and death animation.
+        foreach (var unit in playerParty.Concat(enemyParty).Where(u => u != null && u.IsDead).Distinct().ToArray())
+        {
+            if (unit == null) continue;
+            if (AdvancedUIManager.Instance != null)
+                yield return AdvancedUIManager.Instance.WaitForDamageDrain(unit);
+            else
+                unit.PlayPendingDeathAnimation();
+            yield return unit.WaitForDeathAnimation();
+        }
+        if (AdvancedUIManager.Instance != null)
+            AdvancedUIManager.Instance.ToggleAllUI(false);
+        ClearCombatVFX();
+        if (CampaignSession.Instance != null && CampaignSession.Instance.InEncounter)
+            CampaignSession.Instance.FinishBattle(this, victory);
+        else Debug.Log(victory ? "WIN!" : "LOSE!");
+        GetComponent<BattleResultPanel>().Show(victory);
+        battleCompletionRoutine = null;
+    }
+
+    void StartNextUnitTurn()
+    {
+        isTransitioningTurn = false;
+        selectedAction = null;
+        isSelectingBuffTarget = false;
+        isSelectingSelfOnly = false;
+        currentTarget = null;
+        currentOpenMenu = OpenMenuType.None;
+
+        AdvancedUIManager.Instance.UpdateTargetUI("");
+        AdvancedUIManager.Instance.ToggleChangeTargetHint(false);
+
+        AdvancedUIManager.Instance.UpdateStainsUI(currentStains, 0);
+
+        if (enemyParty.All(e => e == null || e.IsDead)) { CompleteBattle(true); return; }
+        if (playerParty.All(p => p == null || p.IsDead)) { CompleteBattle(false); return; }
+
+        currentActiveUnit = allUnitsTimeline[currentTimelineIndex];
+
+        if (currentActiveUnit == null || currentActiveUnit.IsDead)
+        {
+            EndCurrentTurn();
+            return;
+        }
+
+        if (!currentActiveUnit.isPlayer) currentActiveUnit.BeginEnemyTurn();
+
+        if (currentActiveUnit.HasParalysis)
+        {
+            state = CombatState.Executing;
+            AdvancedUIManager.Instance.ShowActionMenu(false);
+            turnTransitionRoutine = StartCoroutine(PresentParalysisTurn(currentActiveUnit));
+            return;
+        }
+        BeginActiveUnitTurn();
+    }
+
+    private void BeginActiveUnitTurn()
+    {
+        ResetMenuAnimations();
+
+        if (currentActiveUnit.isPlayer)
+        {
+            state = CombatState.PlayerTurn;
+            int playerIndex = playerParty.IndexOf(currentActiveUnit);
+
+            // 1. Ép ẩn Action Menu trước
+            AdvancedUIManager.Instance.ShowActionMenu(false);
+
+            // 2. Chuyển Camera
+            CameraManager.Instance.SwitchToPlayerTurnCam(playerIndex);
+            AdvancedUIManager.Instance.PositionActionMenu(currentActiveUnit.transform);
+
+            // 3. Gọi Coroutine chờ Camera lia xong rồi mới bật UI lên
+            StartCoroutine(ShowActionMenuAfterCamera(CameraManager.Instance.TurnCameraDelay));
+
+            currentTarget = enemyParty.FirstOrDefault(e => e != null && !e.IsDead);
+        }
+        else
+        {
+            state = CombatState.EnemyTurn;
+            AdvancedUIManager.Instance.ShowActionMenu(false);
+            StartCoroutine(EnemyAICore());
+        }
+    }
+
+    private IEnumerator FocusDebuffCamera(BattleUnit unit)
+    {
+        if (CameraManager.Instance == null) yield break;
+        CameraManager.Instance.SwitchToDebuffCam(unit);
+        yield return new WaitForSeconds(Mathf.Max(0f, CameraManager.Instance.transitionSpeed));
+    }
+
+    private IEnumerator PresentParalysisTurn(BattleUnit unit)
+    {
+        yield return FocusDebuffCamera(unit);
+        if (unit == null || currentActiveUnit != unit) yield break;
+        bool skip = unit.RollParalysisAtTurnStart();
+        yield return unit.WaitForDebuffPresentation(false);
+        turnTransitionRoutine = null;
+        if (unit == null || currentActiveUnit != unit || state == CombatState.Won || state == CombatState.Lost) yield break;
+        if (skip || unit.IsDead) EndCurrentTurn();
+        else BeginActiveUnitTurn();
+    }
+
+    // --- THÊM MỚI: Coroutine đợi camera lia xong ---
+    private IEnumerator ShowActionMenuAfterCamera(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+
+        // Kiểm tra an toàn: Chỉ bật UI nếu vẫn đang ở lượt Player và chưa mở Menu/chọn mục tiêu
+        if (state == CombatState.PlayerTurn && selectedAction == null && currentOpenMenu == OpenMenuType.None &&
+            !AdvancedUIManager.Instance.SkillTransitionBusy)
+        {
+            var ui = AdvancedUIManager.Instance;
+            ui.ShowActionMenu(true);
+            if (guidedTutorial != null)
+                yield return guidedTutorial.ShowPlayerLessons(ui,
+                    CanPracticeBasicAttack(currentActiveUnit), HasUsableTutorialSkill(currentActiveUnit));
+        }
+    }
+
+    internal bool HasStartedGuidedPractice(GuidedCombatPractice practice)
+    {
+        if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead)
+            return false;
+
+        if (practice == GuidedCombatPractice.Attack)
+            return currentActiveUnit.defaultAttack != null && selectedAction == currentActiveUnit.defaultAttack && IsChoosingTarget;
+
+        if (practice == GuidedCombatPractice.Skill)
+            return currentOpenMenu == OpenMenuType.Skills && selectedAction == null;
+
+        return false;
+    }
+
+    private bool CanPracticeBasicAttack(BattleUnit unit)
+    {
+        ActionData attack = unit != null ? unit.defaultAttack : null;
+        return unit != null && !unit.IsDead && attack != null && unit.CanUseAction(attack) &&
+               currentStains + attack.stainChange >= 0 && enemyParty.Any(enemy => enemy != null && !enemy.IsDead);
+    }
+
+    private bool HasUsableTutorialSkill(BattleUnit unit)
+    {
+        if (unit == null || unit.IsDead || unit.characterSkills == null) return false;
+        var visibleSkills = new ActionData[5];
+        int normalIndex = 0;
+        foreach (ActionData action in unit.characterSkills)
+        {
+            if (action == null) continue;
+            if (action.isUltimate)
+            {
+                if (visibleSkills[4] == null) visibleSkills[4] = action;
+            }
+            else if (normalIndex < 4)
+            {
+                visibleSkills[normalIndex++] = action;
+            }
+        }
+
+        foreach (ActionData skill in visibleSkills)
+        {
+            if (skill == null || skill.type != ActionData.ActionType.Skill || !unit.CanUseAction(skill) ||
+                currentStains + skill.stainChange < 0)
+                continue;
+            if (skill.isSummonSkill && !CanSummonUnits(unit, skill)) continue;
+            return true;
+        }
+        return false;
+    }
+
+    public void OnRunAwayClicked()
+    {
+        if (IsRunAwayLockedByTutorial) return;
+        if (IsGuidedTutorialBlockingInput || IsGuidedTutorialPracticeLocked) return;
+        if (AdvancedUIManager.Instance != null && AdvancedUIManager.Instance.SkillTransitionBusy) return;
+        if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead ||
+            isTransitioningTurn || runAwayAttemptInProgress)
+            return;
+
+        CampaignSession session = CampaignSession.Instance;
+        bool bossEncounter = enemyParty.Any(enemy => enemy != null && enemy.isBoss) ||
+                             (session != null && session.EncounterHasBoss);
+        if (bossEncounter)
+        {
+            AdvancedUIManager.Instance?.ShowCombatNotice("bạn không thể thoát vào lúc này");
+            return;
+        }
+
+        if (session == null || !session.InEncounter)
+        {
+            AdvancedUIManager.Instance?.ShowCombatNotice("Không thể thoát khỏi trận này.");
+            return;
+        }
+
+        // A failed escape uses the active character's turn, preventing the player
+        // from retrying repeatedly before the enemies can act.
+        if (UnityEngine.Random.value >= .8f)
+        {
+            runAwayAttemptInProgress = true;
+            state = CombatState.Executing;
+            selectedAction = null;
+            currentOpenMenu = OpenMenuType.None;
+            isSelectingBuffTarget = false;
+            isSelectingSelfOnly = false;
+            if (AdvancedUIManager.Instance != null)
+            {
+                AdvancedUIManager.Instance.ShowActionMenu(false);
+                AdvancedUIManager.Instance.ToggleChangeTargetHint(false);
+                AdvancedUIManager.Instance.subMenuPanel?.SetActive(false);
+                AdvancedUIManager.Instance.ShowCombatNotice("chạy trốn thất bại");
+            }
+            StartCoroutine(FinishFailedRunAwayAttempt());
+            return;
+        }
+
+        if (!session.TryEscapeBattle(this, out string error))
+        {
+            AdvancedUIManager.Instance?.ShowCombatNotice(error ?? "Không thể quay về map.");
+            return;
+        }
+
+        runAwayAttemptInProgress = true;
+        isTransitioningTurn = true;
+        state = CombatState.Executing;
+        selectedAction = null;
+        currentOpenMenu = OpenMenuType.None;
+        isSelectingBuffTarget = false;
+        isSelectingSelfOnly = false;
+        if (AdvancedUIManager.Instance != null)
+        {
+            AdvancedUIManager.Instance.ToggleAllUI(false);
+            AdvancedUIManager.Instance.subMenuPanel?.SetActive(false);
+        }
+        GetComponent<UltimateCinematic>()?.End();
+        ClearCombatVFX();
+    }
+
+    private IEnumerator FinishFailedRunAwayAttempt()
+    {
+        yield return new WaitForSecondsRealtime(1.25f);
+        runAwayAttemptInProgress = false;
+        if (this != null && !battleCompletionStarted && state == CombatState.Executing)
+            EndCurrentTurn();
+    }
+
+    public void OnAttackClicked()
+    {
+        if (IsGuidedTutorialBlockingInput || IsGuidedTutorialPracticeLocked) return;
+        if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
+        if (AdvancedUIManager.Instance.SkillTransitionBusy) return;
+
+        ActionData attackAction = currentActiveUnit.defaultAttack;
+        if (attackAction == null) return;
+
+        if (currentStains + attackAction.stainChange < 0)
+        {
+            Debug.LogWarning("[Hệ thống] Không đủ Stain để thực hiện Attack!");
+            return;
+        }
+
+        ResetMenuAnimations();
+        currentOpenMenu = OpenMenuType.None;
+        isSelectingBuffTarget = false;
+        isSelectingSelfOnly = false;
+        selectedAction = attackAction;
+        targetSelectionConfirmed = false;
+
+        EnterTargetSelection();
+        if (IsChoosingTarget)
+        {
+            AdvancedUIManager.Instance.ShowActionMenu(false);
+            AdvancedUIManager.Instance.HideSubMenu();
+            AdvancedUIManager.Instance.UpdateStainsUI(currentStains, attackAction.stainChange);
+        }
+    }
+
+    public void OnSkillsClicked()
+    {
+        if (IsGuidedTutorialBlockingInput || IsGuidedTutorialPracticeLocked) return;
+        if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
+
+        if (currentOpenMenu == OpenMenuType.Skills)
+        {
+            CancelCurrentAction();
+            return;
+        }
+        if (AdvancedUIManager.Instance.SkillTransitionBusy) return;
+
+        currentOpenMenu = OpenMenuType.Skills;
+        selectedAction = null;
+        isSelectingBuffTarget = false;
+        isSelectingSelfOnly = false;
+
+        ResetMenuAnimations();
+        if (currentActiveUnit != null && currentActiveUnit.animator != null)
+        {
+            currentActiveUnit.animator.SetBool("IsSkillIdle", true);
+        }
+
+        int activePlayerIdx = playerParty.IndexOf(currentActiveUnit);
+        if (activePlayerIdx >= 0)
+        {
+            CameraManager.Instance.SwitchToPlayerMenuCam(activePlayerIdx);
+        }
+
+        AdvancedUIManager.Instance.PopulateSkillSubMenu(currentActiveUnit.characterSkills);
+    }
+
+    public void OnItemsClicked()
+    {
+        if (IsGuidedTutorialBlockingInput || IsGuidedTutorialPracticeLocked) return;
+        if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
+        if (currentOpenMenu == OpenMenuType.Items)
+        {
+            CancelCurrentAction();
+            return;
+        }
+        if (AdvancedUIManager.Instance.SkillTransitionBusy) return;
+
+        currentOpenMenu = OpenMenuType.Items;
+        selectedAction = null;
+        isSelectingBuffTarget = false;
+        isSelectingSelfOnly = false;
+
+        ResetMenuAnimations();
+        if (currentActiveUnit != null && currentActiveUnit.animator != null)
+        {
+            currentActiveUnit.animator.SetBool("IsItemIdle", true);
+        }
+
+        int activePlayerIdx = playerParty.IndexOf(currentActiveUnit);
+        if (activePlayerIdx >= 0)
+        {
+            CameraManager.Instance.SwitchToPlayerMenuCam(activePlayerIdx);
+        }
+
+        AdvancedUIManager.Instance.PopulateSubMenu(inventoryItems);
+    }
+
+    public void OnSkillButtonClicked(ActionData skillAction)
+    {
+        if (IsGuidedTutorialBlockingInput) return;
+        if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
+        if (IsGuidedTutorialPracticeLocked &&
+            (guidedTutorial.PendingPractice != GuidedCombatPractice.Skill || currentOpenMenu != OpenMenuType.Skills ||
+             skillAction == null || skillAction.type != ActionData.ActionType.Skill ||
+             currentActiveUnit.characterSkills == null || !currentActiveUnit.characterSkills.Contains(skillAction)))
+            return;
+        if (AdvancedUIManager.Instance.SkillTransitionBusy) return;
+        if (!currentActiveUnit.CanUseAction(skillAction)) return;
+
+        if (skillAction.isSummonSkill && !CanSummonUnits(currentActiveUnit, skillAction))
+        {
+            Debug.LogWarning($"[Summon] {skillAction.actionName} cannot be used: assign a summon prefab and leave at least one battle slot empty.", skillAction);
+            return;
+        }
+
+        if (currentStains + skillAction.stainChange < 0)
+        {
+            Debug.LogWarning($"[Hệ thống] Không đủ Stain để sử dụng {skillAction.actionName}!");
+            return;
+        }
+
+        selectedAction = skillAction;
+        targetSelectionConfirmed = false;
+        isSelectingSelfOnly = skillAction.isSelfOnly || skillAction.isSummonSkill;
+        isSelectingBuffTarget = skillAction.isFriendlyAction || skillAction.isHeal || isSelectingSelfOnly;
+        currentOpenMenu = OpenMenuType.None;
+
+        AdvancedUIManager.Instance.HideSubMenu();
+
+        currentTarget = isSelectingBuffTarget ? currentActiveUnit : enemyParty.FirstOrDefault(IsEligibleTarget);
+        EnterTargetSelection();
+
+        if (IsChoosingTarget)
+        {
+            AdvancedUIManager.Instance.UpdateStainsUI(currentStains, skillAction.stainChange);
+            AdvancedUIManager.Instance.ShowActionMenu(false);
+        }
+    }
+
+    public void OnActionSelected(ActionData action)
+    {
+        if (IsGuidedTutorialBlockingInput) return;
+        if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead || action == null) return;
+        if (IsGuidedTutorialPracticeLocked)
+        {
+            if (guidedTutorial.PendingPractice == GuidedCombatPractice.Attack && action != currentActiveUnit.defaultAttack)
+                return;
+            if (guidedTutorial.PendingPractice == GuidedCombatPractice.Skill &&
+                (action.type != ActionData.ActionType.Skill || currentActiveUnit.characterSkills == null ||
+                 !currentActiveUnit.characterSkills.Contains(action)))
+                return;
+        }
+        if ((targetSelectionConfirmed && selectedAction != null) ||
+            !currentActiveUnit.CanUseAction(action) || !IsEligibleTarget(currentTarget)) return;
+        if (currentStains + action.stainChange < 0) return;
+        if (action.type == ActionData.ActionType.Item && CampaignSession.Instance != null && CampaignSession.Instance.InEncounter)
+        {
+            if (currentTarget == null || currentTarget.IsDead || !CampaignSession.Instance.ConsumeBattleItem(action)) return;
+            CampaignSession.Instance.RefreshBattleItems(this);
+        }
+        selectedAction = action;
+        targetSelectionConfirmed = true;
+        GetComponent<CombatTargetSelection>()?.ClearSelection(true);
+        currentOpenMenu = OpenMenuType.None;
+
+        ResetMenuAnimations();
+        AdvancedUIManager.Instance.ShowActionMenu(false);
+        AdvancedUIManager.Instance.ToggleChangeTargetHint(false);
+        AdvancedUIManager.Instance.UpdateTargetUI("");
+
+        // Truyền thêm cờ true để Player tự động kết thúc lượt sau khi đánh xong 1 hit
+        StartCoroutine(ExecuteActionRoutine(currentActiveUnit, currentTarget, selectedAction, true));
+    }
+
+    System.Collections.IEnumerator EnemyAICore()
+    {
+        yield return new WaitForSeconds(0.5f);
+
+        // An ambush can put the enemy first. Introduce the controls without changing turn order.
+        if (guidedTutorial?.NeedsOpeningLessons == true)
+        {
+            var ui = AdvancedUIManager.Instance;
+            ui.ShowActionMenu(true);
+            yield return guidedTutorial.ShowPlayerLessons(ui, false, false);
+            if (!isActiveAndEnabled || state != CombatState.EnemyTurn) yield break;
+            ui.ShowActionMenu(false);
+        }
+
+        // ĐÃ XÓA: currentActiveUnit.CheckPhase(); 
+        // -> Boss sẽ không đổi phase ngay giữa Turn Order nữa, 
+        // mà sẽ đợi hàm DetermineTurnOrder() chạy ở đầu Wave tiếp theo.
+
+        List<BattleUnit> livePlayers = playerParty.Where(p => p != null && !p.IsDead).ToList();
+        if (livePlayers.Count == 0) yield break;
+
+        // KHÔNG ĐÁNH 1 NGƯỜI 2 LẦN LIÊN TỤC (Chỉ áp dụng nếu party còn >1 người sống)
+        if (livePlayers.Count > 1 && currentActiveUnit.lastTarget != null && livePlayers.Contains(currentActiveUnit.lastTarget))
+        {
+            livePlayers.Remove(currentActiveUnit.lastTarget);
+        }
+
+        currentTarget = livePlayers[Random.Range(0, livePlayers.Count)];
+        currentActiveUnit.lastTarget = currentTarget; // Lưu lại mục tiêu để né vào đòn sau
+
+        // Lấy chiêu theo Action Pattern (Không random)
+        selectedAction = currentActiveUnit.GetNextAction();
+        if (selectedAction != null && (selectedAction.isFriendlyAction || selectedAction.isHeal || selectedAction.isSummonSkill))
+            currentTarget = selectedAction.isSelfOnly || selectedAction.isSummonSkill
+                ? currentActiveUnit
+                : enemyParty.FirstOrDefault(u => u != null && !u.IsDead);
+
+        if (selectedAction != null && selectedAction.isSummonSkill && !CanSummonUnits(currentActiveUnit, selectedAction))
+        {
+            selectedAction = currentActiveUnit.defaultAttack;
+            currentTarget = livePlayers[Random.Range(0, livePlayers.Count)];
+            if (selectedAction == null || selectedAction.isSummonSkill || !currentActiveUnit.IsEnemyActionReady(selectedAction))
+            {
+                EndCurrentTurn();
+                yield break;
+            }
+        }
+
+
+        CameraManager.Instance?.PrepareEnemyAttack(currentActiveUnit, currentTarget, selectedAction);
+
+        yield return new WaitForSeconds(0.5f);
+
+        if (guidedTutorial != null && selectedAction != null && currentTarget != null &&
+            currentTarget.isPlayer && !currentTarget.IsDead && !selectedAction.isFriendlyAction &&
+            !selectedAction.isHeal && !selectedAction.isSummonSkill)
+        {
+            yield return guidedTutorial.ShowParryLesson(AdvancedUIManager.Instance, playerParty.IndexOf(currentTarget));
+            if (!isActiveAndEnabled || state != CombatState.EnemyTurn) yield break;
+        }
+
+        // Do Timeline đã nhân bản sẵn các lượt đánh, ta chỉ việc đánh 1 đòn rồi kết thúc
+        // EndCurrentTurn() sẽ lo việc chuyển sang đòn thứ 2 tự động nếu còn lượt
+        StartCoroutine(ExecuteActionRoutine(currentActiveUnit, currentTarget, selectedAction, true));
+    }
+    private IEnumerator ExecuteActionRoutine(BattleUnit attacker, BattleUnit target, ActionData action, bool endTurnAfter = true)
+    {
+        if (attacker == null || attacker.IsDead)
+        {
+            if (endTurnAfter) EndCurrentTurn();
+            yield break;
+        }
+        if (action == null || target == null || target.IsDead || !attacker.CommitActionEnergy(action))
+        {
+            if (endTurnAfter) EndCurrentTurn();
+            yield break;
+        }
+        if (!attacker.isPlayer) attacker.RecordEnemyActionUse(action);
+        UltimateCinematic cinematic = null;
+        int cinematicTicket = 0;
+        if (action.isUltimate)
+        {
+            cinematic = GetComponent<UltimateCinematic>();
+            if (cinematic == null) cinematic = gameObject.AddComponent<UltimateCinematic>();
+            cinematicTicket = cinematic.Begin(attacker, target, playerParty.Concat(enemyParty));
+        }
+        animationActionOwner = attacker;
+        animationActionData = action;
+        acceptingActionAnimationEvents = false;
+        try
+        {
+            yield return ExecuteActionBody(attacker, target, action);
+            if (attacker.isPlayer && attacker == currentActiveUnit && guidedTutorial != null)
+            {
+                if (action == attacker.defaultAttack)
+                    guidedTutorial.CompletePractice(GuidedCombatPractice.Attack);
+                else if (action.type == ActionData.ActionType.Skill && attacker.characterSkills != null &&
+                         attacker.characterSkills.Contains(action))
+                    guidedTutorial.CompletePractice(GuidedCombatPractice.Skill);
+            }
+            if (cinematic != null && state != CombatState.Won && state != CombatState.Lost)
+                yield return cinematic.Transition(false);
+        }
+        finally
+        {
+            CameraManager.Instance?.StopSkillCinematic();
+            CameraManager.Instance?.RecoverCombatAction(attacker, target);
+            FinishUltimateAuraVFX(attacker);
+            StopClawAttackTrail(attacker);
+            acceptingActionAnimationEvents = false;
+            animationActionOwner = null;
+            animationActionData = null;
+            if (cinematic != null) cinematic.End(cinematicTicket);
+        }
+        if (endTurnAfter && isActiveAndEnabled && state != CombatState.Won && state != CombatState.Lost)
+            EndCurrentTurn();
+    }
+
+    private BattleUnit animationActionOwner;
+    private ActionData animationActionData;
+    private bool acceptingActionAnimationEvents;
+    private bool summonSpawnVfxEventReceived;
+    private float summonSpawnVfxEventTime;
+    private readonly List<Transform> summonSpawnVfxSlots = new List<Transform>();
+
+    private static void StartClawAttackTrail(BattleUnit attacker, ActionData action)
+    {
+        if (attacker == null || action == null || attacker.isPlayer || !action.useClawAttackTrailVfx) return;
+        var trail = attacker.GetComponent<ClawAttackTrailController>();
+        if (trail == null) trail = attacker.gameObject.AddComponent<ClawAttackTrailController>();
+        trail.Begin(action);
+    }
+
+    private static void StopClawAttackTrail(BattleUnit attacker)
+    {
+        if (attacker == null) return;
+        attacker.GetComponent<ClawAttackTrailController>()?.StopTrail();
+    }
+
+    public bool CanAcceptActionAnimationEvent(BattleUnit unit)
+    {
+        return acceptingActionAnimationEvents && isActiveAndEnabled &&
+            state == CombatState.Executing && unit != null && !unit.IsDead &&
+            unit == animationActionOwner && unit == currentActiveUnit && animationActionData != null;
+    }
+
+    public void PlaySummonSpawnVFXFromAnimation(BattleUnit unit)
+    {
+        if (!CanAcceptActionAnimationEvent(unit) || !animationActionData.isSummonSkill || summonSpawnVfxEventReceived)
+            return;
+
+        summonSpawnVfxSlots.Clear();
+        summonSpawnVfxSlots.AddRange(GetAvailableSummonSlots(unit, animationActionData));
+        if (summonSpawnVfxSlots.Count == 0) return;
+
+        summonSpawnVfxEventReceived = true;
+        summonSpawnVfxEventTime = Time.time;
+        foreach (Transform slot in summonSpawnVfxSlots)
+            SpawnSummonVFX(animationActionData, slot);
+    }
+
+    private readonly HashSet<BattleUnit> statusTargetsThisAction = new HashSet<BattleUnit>();
+    private void ApplyActionStatus(BattleUnit target, ActionData action)
+    {
+        if (target != null && !target.IsDead && !target.HasPendingBossPhaseTransition && statusTargetsThisAction.Add(target))
+            target.ApplyStatusAction(action);
+    }
+
+    private float GetCasterConditionalDamageMultiplier(ActionData action, BattleUnit attacker)
+    {
+        if (action == null || attacker == null || action.isFriendlyAction || action.isHeal ||
+            action.damageCondition != ActionData.DamageCondition.CasterHasBurn)
+            return 1f;
+
+        return attacker.HasDebuff(ActionData.DebuffType.Burn)
+            ? Mathf.Max(0f, action.damageMultiplierWhenCasterBurned)
+            : Mathf.Max(0f, action.damageMultiplierWhenCasterNotBurned);
+    }
+
+    private float GetTargetConditionalDamageMultiplier(ActionData action, BattleUnit target)
+    {
+        if (action == null || target == null || action.isFriendlyAction || action.isHeal ||
+            action.damageCondition != ActionData.DamageCondition.TargetHasPoison)
+            return 1f;
+
+        return target.HasDebuff(ActionData.DebuffType.Poison)
+            ? Mathf.Max(0f, action.damageMultiplierWhenTargetPoisoned)
+            : Mathf.Max(0f, action.damageMultiplierWhenTargetNotPoisoned);
+    }
+
+    private float GetElementalDamageMultiplier(BattleUnit attacker, BattleUnit target, ActionData action)
+    {
+        if (!useElementalDamage || attacker == null || target == null || action == null ||
+            action.isFriendlyAction || action.isHeal)
+            return 1f;
+
+        // Skill element is independent from the caster's element. The unit's
+        // element is only read as the defending target's affinity.
+        ActionData.ElementType attackElement = action.element;
+        ActionData.ElementType targetElement = target.element;
+        if (attackElement == ActionData.ElementType.None || targetElement == ActionData.ElementType.None)
+            return 1f;
+
+        if (attackElement == targetElement)
+            return Mathf.Max(0f, elementalSameTypeMultiplier);
+
+        if (elementalCounterRules == null) return 1f;
+        foreach (ElementCounterRule rule in elementalCounterRules)
+        {
+            if (rule == null || rule.strongerElement == ActionData.ElementType.None ||
+                rule.weakerElement == ActionData.ElementType.None || rule.strongerElement == rule.weakerElement)
+                continue;
+
+            if (rule.strongerElement == attackElement && rule.weakerElement == targetElement)
+                return Mathf.Max(0f, elementalAdvantageMultiplier);
+
+            if (rule.strongerElement == targetElement && rule.weakerElement == attackElement)
+                return Mathf.Max(0f, elementalDisadvantageMultiplier);
+        }
+
+        return 1f;
+    }
+
+    private float GetTargetDamageMultiplier(BattleUnit attacker, BattleUnit target, ActionData action)
+    {
+        return GetTargetConditionalDamageMultiplier(action, target) *
+               GetElementalDamageMultiplier(attacker, target, action);
+    }
+
+    private int CalculateBaseActionDamage(BattleUnit attacker, ActionData action, bool isCrit)
+    {
+        if (attacker == null || action == null) return 0;
+
+        bool burnSynergyActive = !action.isFriendlyAction && !action.isHeal &&
+                                 action.damageCondition == ActionData.DamageCondition.CasterHasBurn &&
+                                 attacker.HasDebuff(ActionData.DebuffType.Burn);
+        bool ignoreBurnReduction = burnSynergyActive && action.ignoreBurnAttackReductionWhenEmpowered;
+        int totalAttack = attacker.GetTotalAttack(ignoreBurnReduction);
+        float calculatedDamage = ((totalAttack * action.damageMultiplier) + action.power) *
+                                 GetCasterConditionalDamageMultiplier(action, attacker);
+        if (isCrit && !action.isFriendlyAction && !action.isHeal)
+            calculatedDamage *= attacker.GetCritDamageMultiplier();
+        return Mathf.RoundToInt(calculatedDamage);
+    }
+
+    private int CalculateActionDamage(BattleUnit attacker, BattleUnit target, ActionData action, bool isCrit)
+    {
+        int baseDamage = CalculateBaseActionDamage(attacker, action, isCrit);
+        if (action == null || action.isFriendlyAction || action.isHeal) return baseDamage;
+        return Mathf.RoundToInt(baseDamage * GetTargetDamageMultiplier(attacker, target, action));
+    }
+
+    private void ApplyActionLifeSteal(BattleUnit attacker, ActionData action, int actualHpDamage)
+    {
+        if (attacker == null || attacker.IsDead || action == null || !action.useLifeSteal || actualHpDamage <= 0)
+            return;
+
+        int healAmount = Mathf.RoundToInt(actualHpDamage * Mathf.Max(0f, action.lifeStealPercent) / 100f);
+        if (healAmount <= 0) return;
+
+        int hpBeforeHeal = attacker.currentHP;
+        attacker.Heal(healAmount);
+        int actualHealing = attacker.currentHP - hpBeforeHeal;
+        if (actualHealing > 0)
+            AdvancedUIManager.Instance?.ShowDamageText(attacker.transform, actualHealing, false, true);
+    }
+
+    private IEnumerator SummonUnits(BattleUnit summoner, ActionData action)
+    {
+        if (summoner == null || action == null || !action.isSummonSkill) yield break;
+        if (action.summonPrefab == null)
+        {
+            Debug.LogWarning($"[Summon] {action.actionName} has no Summon Prefab assigned.", action);
+            yield break;
+        }
+
+        List<BattleUnit> team = summoner.isPlayer ? playerParty : enemyParty;
+        int requestedCount = Mathf.Clamp(action.summonCount, 1, 2);
+        List<Transform> summonSlots = summonSpawnVfxEventReceived
+            ? new List<Transform>(summonSpawnVfxSlots)
+            : GetAvailableSummonSlots(summoner, action);
+        int spawnedCount = 0;
+
+        if (!summonSpawnVfxEventReceived)
+        {
+            // If the clip has no summon event, keep a safe fallback after its
+            // animation finishes so the skill never becomes stuck.
+            foreach (Transform slot in summonSlots)
+                SpawnSummonVFX(action, slot);
+            summonSpawnVfxEventTime = Time.time;
+            summonSpawnVfxEventReceived = true;
+        }
+
+        // The event time is the anchor, so the VFX-to-summon delay is not
+        // restarted when the animation later reaches its end event.
+        float remainingDelay = action.summonSpawnDelay - (Time.time - summonSpawnVfxEventTime);
+        if (summonSlots.Count > 0 && action.summonSpawnVfxPrefab != null && remainingDelay > 0f)
+            yield return new WaitForSeconds(remainingDelay);
+        if (summoner == null || summoner.IsDead) yield break;
+
+        foreach (Transform slot in summonSlots)
+        {
+            BattleUnit summon = Instantiate(action.summonPrefab, slot.position, slot.rotation);
+            CombatShadowBudget.Active?.RegisterHierarchy(summon.gameObject);
+            summon.gameObject.SetActive(true);
+            summon.isPlayer = summoner.isPlayer;
+            summon.isSummonedUnit = true;
+            summon.summonOwner = summoner;
+            summon.summonDeathOwnerMaxHpCostPercent = action.summonDeathOwnerMaxHpCostPercent;
+            summon.SetPersistentHP(summon.maxHP);
+            summon.ResetEnemyActionCooldowns();
+            summon.ApplyStartingBattleEffects();
+            team.Add(summon);
+            spawnedCount++;
+        }
+
+        if (spawnedCount < requestedCount)
+            Debug.Log($"[Summon] {action.actionName} filled {spawnedCount}/{requestedCount} available battle slots.", summoner);
+
+        if (spawnedCount > 0 && AdvancedUIManager.Instance != null)
+        {
+            if (summoner.isPlayer)
+                AdvancedUIManager.Instance.RegisterPartyHP(playerParty);
+        }
+    }
+
+    private List<Transform> GetAvailableSummonSlots(BattleUnit summoner, ActionData action)
+    {
+        List<Transform> result = new List<Transform>();
+        if (summoner == null || action == null) return result;
+
+        List<BattleUnit> team = summoner.isPlayer ? playerParty : enemyParty;
+        Transform[] slots = summoner.isPlayer ? playerSlots : enemySlots;
+        int requestedCount = Mathf.Clamp(action.summonCount, 1, 2);
+        if (slots == null) return result;
+
+        for (int i = team.Count; i < slots.Length && result.Count < requestedCount; i++)
+            if (slots[i] != null) result.Add(slots[i]);
+        return result;
+    }
+
+    private void SpawnSummonVFX(ActionData action, Transform slot)
+    {
+        if (action == null || action.summonSpawnVfxPrefab == null || slot == null) return;
+
+        Vector3 position = slot.TransformPoint(action.summonSpawnVfxLocalOffset);
+        GameObject vfx = CreateVisualVfx(action.summonSpawnVfxPrefab, position, slot.rotation);
+        TrackCombatVFX(vfx);
+        ScheduleVisualVfx(vfx, GetVfxLifeTime(vfx, action.summonSpawnVfxLifetime));
+    }
+
+    public void KillSummonsOwnedBy(BattleUnit owner)
+    {
+        if (owner == null) return;
+
+        BattleUnit[] ownedSummons = playerParty.Concat(enemyParty)
+            .Where(unit => unit != null && unit.isSummonedUnit && unit.summonOwner == owner && !unit.IsDead)
+            .Distinct()
+            .ToArray();
+
+        foreach (BattleUnit summon in ownedSummons)
+            summon.TakeDamage(Mathf.Max(1, summon.maxHP), false, false, true);
+    }
+
+    private bool CanSummonUnits(BattleUnit summoner, ActionData action)
+    {
+        if (summoner == null || action == null || !action.isSummonSkill || action.summonPrefab == null)
+            return false;
+
+        List<BattleUnit> team = summoner.isPlayer ? playerParty : enemyParty;
+        Transform[] slots = summoner.isPlayer ? playerSlots : enemySlots;
+        if (slots == null) return false;
+
+        int availableSlots = 0;
+        for (int i = team.Count; i < slots.Length && slots[i] != null; i++)
+            availableSlots++;
+
+        return availableSlots > 0;
+    }
+
+    private IEnumerator ExecuteActionBody(BattleUnit attacker, BattleUnit target, ActionData action)
+    {
+        statusTargetsThisAction.Clear();
+        state = CombatState.Executing;
+        summonSpawnVfxEventReceived = false;
+        summonSpawnVfxEventTime = 0f;
+        summonSpawnVfxSlots.Clear();
+        castStarted.Clear();
+        ultimateAuraStarted.Clear();
+        vfxLaunched.Clear();
+        vfxActionState = new VfxActionState();
+
+        // Enemy action mới bắt đầu -> xóa kết quả Parry còn sót lại từ action trước.
+        if (!attacker.isPlayer && ParrySystem.Instance != null)
+        {
+            ParrySystem.Instance?.ResetParryState();
+        }
+
+        CameraManager.Instance?.BeginCombatAction(attacker, target, action);
+
+        if (action.isUltimate)
+        {
+            var cinematic = GetComponent<UltimateCinematic>();
+            if (cinematic != null)
+                yield return cinematic.Transition(true, attacker.isPlayer && CameraManager.Instance != null
+                    ? CameraManager.Instance.ultimateTransitionDuration : 0f);
+            if (attacker == null || attacker.IsDead) yield break;
+            SpawnUltimateAuraVFX(attacker, action);
+        }
+
+        if (target != null)
+            CameraManager.Instance?.PlaySkillCinematic(attacker, target, action);
+
+        if (action != null && attacker.isPlayer)
+        {
+            AddStain(action.stainChange);
+        }
+
+        Vector3 originalPosition = attacker.transform.position;
+        Quaternion originalRotation = attacker.transform.rotation;
+        isAttackAnimationFinished = false;
+        screenSlashHitIndex = 0;
+
+        if (action != null && action.isMelee && !action.isSummonSkill && target != null && !action.isFriendlyAction && !action.isHeal)
+        {
+            Vector3 attackPosition = GetMeleeAttackPosition(attacker, target);
+            FaceMeleeAttackTarget(attacker, target, attackPosition);
+            attacker.animator.Play("JumpForward");
+            yield return StartCoroutine(MoveToPosition(attacker.transform, attackPosition, 0.35f));
+
+            string animTrigger = !string.IsNullOrEmpty(action.animationTriggerName) ? action.animationTriggerName : "Attack";
+            acceptingActionAnimationEvents = true;
+            StartClawAttackTrail(attacker, action);
+            ActorAudio.For(attacker.gameObject).PlaySkillSound(action);
+            attacker.animator.SetTrigger(animTrigger);
+            yield return new WaitUntil(() => isAttackAnimationFinished || attacker == null || attacker.IsDead);
+            StopClawAttackTrail(attacker);
+            acceptingActionAnimationEvents = false;
+            if (attacker == null || attacker.IsDead)
+            {
+                yield break;
+            }
+
+            attacker.animator.Play("JumpBack");
+            CameraManager.Instance?.RecoverCombatAction(attacker, target);
+            yield return StartCoroutine(MoveToPosition(attacker.transform, originalPosition, 0.35f));
+            attacker.transform.rotation = originalRotation;
+        }
+        else
+        {
+            string animTrigger = action != null ? action.animationTriggerName : "Attack";
+            acceptingActionAnimationEvents = true;
+            StartClawAttackTrail(attacker, action);
+            ActorAudio.For(attacker.gameObject).PlaySkillSound(action);
+            if (action != null && action.isSummonSkill)
+                TryPlaySummonAnimation(attacker, animTrigger);
+            else if (attacker.animator != null)
+                attacker.animator.SetTrigger(animTrigger);
+
+            if (action != null && action.isSummonSkill)
+            {
+                // Give Animator one frame to enter the selected attack state
+                // before measuring its actual clip duration for the fallback.
+                yield return null;
+                float fallbackDeadline = Time.unscaledTime + GetSummonAnimationFallback(attacker);
+                while (!isAttackAnimationFinished && attacker != null && !attacker.IsDead &&
+                       Time.unscaledTime < fallbackDeadline)
+                    yield return null;
+                if (!isAttackAnimationFinished && attacker != null && !attacker.IsDead)
+                    Debug.LogWarning($"[Summon] {action.actionName}: animation end event was not received; continuing to summon after the fallback wait.", action);
+            }
+            else
+            {
+                yield return new WaitUntil(() => isAttackAnimationFinished || attacker == null || attacker.IsDead);
+            }
+            StopClawAttackTrail(attacker);
+            acceptingActionAnimationEvents = false;
+            if (attacker == null || attacker.IsDead)
+            {
+                yield break;
+            }
+        }
+
+        // A long flight/charge must resolve before the next action changes the
+        // selected target. Expired or destroyed effects cannot stall the turn.
+        yield return new WaitUntil(() =>
+        {
+            pendingVfxImpacts.RemoveAll(vfx => vfx == null);
+            return pendingVfxImpacts.Count == 0;
+        });
+
+        // Shoot/Beam của Enemy giữ Parry state cho tới khi toàn bộ impact
+        // của action (kể cả AoE) đã resolve xong rồi mới reset.
+        if (UsesVfxImpactDamage(action) &&
+            attacker != null &&
+            !attacker.isPlayer &&
+            ParrySystem.Instance != null)
+        {
+            ParrySystem.Instance?.ResetParryState();
+        }
+
+        if (action.isSummonSkill && attacker != null && !attacker.IsDead)
+            yield return StartCoroutine(SummonUnits(attacker, action));
+
+        StopBeamVFX(attacker);
+        FinishCastVFX(attacker);
+        attacker.transform.position = originalPosition;
+        if (!attacker.isPlayer)
+            attacker.transform.rotation = originalRotation;
+
+        if (!attacker.IsDead && attacker.animator != null)
+        {
+            attacker.ReturnToCombatIdle();
+        }
+
+    }
+
+    private static float GetSummonAnimationFallback(BattleUnit attacker)
+    {
+        if (attacker == null || attacker.animator == null) return 1.5f;
+
+        float longestClip = 0f;
+        foreach (AnimatorClipInfo clipInfo in attacker.animator.GetCurrentAnimatorClipInfo(0))
+            if (clipInfo.clip != null) longestClip = Mathf.Max(longestClip, clipInfo.clip.length);
+
+        float playbackSpeed = Mathf.Max(.1f, Mathf.Abs(attacker.animator.speed));
+        return Mathf.Clamp(longestClip / playbackSpeed + .35f, 1.25f, 4f);
+    }
+
+    private static bool TryPlaySummonAnimation(BattleUnit attacker, string requestedTrigger)
+    {
+        if (attacker == null || attacker.animator == null) return false;
+
+        Animator animator = attacker.animator;
+        AnimatorControllerParameter[] parameters = animator.parameters;
+        AnimatorControllerParameter trigger = parameters.FirstOrDefault(p =>
+            p.type == AnimatorControllerParameterType.Trigger &&
+            string.Equals(p.name, requestedTrigger, System.StringComparison.OrdinalIgnoreCase));
+
+        // ActionData can use a generic name while the unit's controller exposes
+        // a specific attack trigger, such as clawsAttackLeft.
+        if (trigger == null)
+            trigger = parameters.FirstOrDefault(p => p.type == AnimatorControllerParameterType.Trigger &&
+                p.name.IndexOf("attack", System.StringComparison.OrdinalIgnoreCase) >= 0 &&
+                p.name.IndexOf("jump", System.StringComparison.OrdinalIgnoreCase) < 0);
+
+        if (trigger != null)
+        {
+            animator.ResetTrigger(trigger.nameHash);
+            animator.SetTrigger(trigger.nameHash);
+            return true;
+        }
+
+        // Some controllers expose an attack state without a matching trigger.
+        string stateName = string.IsNullOrWhiteSpace(requestedTrigger) ? "Attack" : requestedTrigger;
+        int stateHash = Animator.StringToHash(stateName);
+        for (int layer = 0; layer < animator.layerCount; layer++)
+        {
+            int fullPathHash = Animator.StringToHash(animator.GetLayerName(layer) + "." + stateName);
+            if (animator.HasState(layer, stateHash))
+            {
+                animator.CrossFade(stateHash, .08f, layer, 0f);
+                return true;
+            }
+            if (animator.HasState(layer, fullPathHash))
+            {
+                animator.CrossFade(fullPathHash, .08f, layer, 0f);
+                return true;
+            }
+        }
+
+        Debug.LogWarning($"[Summon] {attacker.unitName}: no matching attack trigger or state was found for '{requestedTrigger}'. The summon will still resolve after its fallback delay.", attacker);
+        return false;
+    }
+
+    public Vector3 GetMeleeAttackPosition(BattleUnit attacker, BattleUnit target)
+    {
+        if (attacker == null || target == null)
+            return Vector3.zero;
+
+        Vector3 directionToTarget = target.transform.position - attacker.transform.position;
+        directionToTarget.y = 0f;
+        if (directionToTarget.sqrMagnitude < .0001f)
+            directionToTarget = attacker.transform.forward;
+        directionToTarget.Normalize();
+
+        float approachDistance = meleeApproachDistance;
+        Vector3 offset = playerMeleePositionOffset;
+        if (!attacker.isPlayer)
+        {
+            offset = Vector3.zero;
+            int enemyIndex = enemyParty.IndexOf(attacker);
+            EnemyCombatSetup enemySetup = activeEncounterSetup != null
+                ? activeEncounterSetup.GetEnemySetup(enemyIndex)
+                : null;
+            if (enemySetup != null)
+            {
+                approachDistance = enemySetup.meleeApproachDistance;
+                offset = enemySetup.meleePositionOffset;
+            }
+        }
+
+        Vector3 approachPosition = target.transform.position - directionToTarget * approachDistance;
+        approachPosition.y = attacker.transform.position.y;
+        Quaternion facing = Quaternion.LookRotation(directionToTarget, Vector3.up);
+        return approachPosition + facing * offset;
+    }
+
+    private void FaceMeleeAttackTarget(BattleUnit attacker, BattleUnit target, Vector3 attackPosition)
+    {
+        if (attacker == null || target == null)
+            return;
+
+        Vector3 direction = target.transform.position - attackPosition;
+
+        // Chỉ xoay trên mặt phẳng ngang để nhân vật không bị cúi/ngửa
+        // khi pivot của target cao hoặc thấp hơn.
+        direction.y = 0f;
+
+        if (direction.sqrMagnitude < 0.0001f)
+            return;
+
+        attacker.transform.rotation =
+            Quaternion.LookRotation(direction.normalized, Vector3.up);
+    }
+
+    private IEnumerator MoveToPosition(Transform unitTransform, Vector3 targetPos, float duration)
+    {
+        Vector3 startPos = unitTransform.position;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            unitTransform.position = Vector3.Lerp(startPos, targetPos, elapsed / duration);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        unitTransform.position = targetPos;
+    }
+
+    public void ApplyDamageFromAnimation(BattleUnit attacker)
+    {
+        if (!CanAcceptActionAnimationEvent(attacker)) return;
+        ActionData actionToUse = animationActionData;
+        if (actionToUse == null) return;
+        if (actionToUse.isSummonSkill) return;
+        // ============================================================
+        // SHOOT / BEAM:
+        // Damage KHÔNG còn chạy từ Animation Event.
+        // Projectile/Beam phải thật sự impact target rồi callback mới gây damage.
+        // ============================================================
+        if (UsesVfxImpactDamage(actionToUse))
+        {
+            // A sword-only projectile still uses the sword hit event as its
+            // release signal. Each combo hit launches once; arrival owns damage.
+            if (UsesSwordSlashImpactDamage(actionToUse))
+            {
+                IEnumerable<BattleUnit> slashTargets = actionToUse.isAoE
+                    ? (attacker.isPlayer ? enemyParty : playerParty)
+                    : new[] { currentTarget };
+                foreach (var slashTarget in slashTargets.Where(u => u != null && !u.IsDead && !u.HasPendingBossPhaseTransition))
+                    SpawnSwordSlashVFX(attacker, slashTarget, actionToUse);
+            }
+            // Nếu đây là skill của Enemy, giữ lại kết quả Parry tại timing
+            // của animation event (nếu clip vẫn còn AnimEvent_DealDamage).
+            // Nếu clip không có event này thì callback impact vẫn đọc trực tiếp
+            // trạng thái Parry hiện tại.
+            if (!attacker.isPlayer && ParrySystem.Instance != null)
+            {
+                vfxActionState.parried =
+                    vfxActionState.parried ||
+                    ParrySystem.Instance.parrySuccessful;
+            }
+
+            return;
+        }
+
+        if (!actionToUse.isAoE && currentTarget != null && currentTarget.HasPendingBossPhaseTransition)
+            return;
+
+        // Sword slash VFX is synchronized to the same animation event that
+        // resolves a melee hit. Each event in a multi-hit combo gets one slash.
+        if (!actionToUse.isFriendlyAction && !actionToUse.isHeal && currentTarget != null &&
+            !currentTarget.HasPendingBossPhaseTransition)
+            SpawnSwordSlashVFX(attacker, currentTarget, actionToUse);
+
+        bool isCrit = !actionToUse.isFriendlyAction && !actionToUse.isHeal &&
+            UnityEngine.Random.Range(0, 100) < attacker.GetCritChance();
+        int rawDamage = CalculateActionDamage(attacker, currentTarget, actionToUse, isCrit);
+
+        if (actionToUse.isFriendlyAction || actionToUse.isHeal)
+        {
+            var team = attacker.isPlayer ? playerParty : enemyParty;
+            var targets = actionToUse.isSelfOnly ? new List<BattleUnit> { attacker } :
+                actionToUse.isAoE ? team.Where(u => u != null && !u.IsDead).ToList() : new List<BattleUnit> { currentTarget };
+            bool resolved = false;
+            foreach (var ally in targets)
+            {
+                if (ally == null || ally.IsDead || ally.HasPendingBossPhaseTransition) continue;
+                ApplyActionStatus(ally, actionToUse);
+                if (actionToUse.isHeal)
+                {
+                    int before = ally.currentHP;
+                    ally.Heal(Mathf.Max(0, rawDamage));
+                    AdvancedUIManager.Instance.ShowDamageText(ally.transform, ally.currentHP - before, false, true);
+                }
+                if (actionToUse.buffStat != ActionData.BuffStat.None)
+                    ally.AddBuff(actionToUse.buffStat, actionToUse.buffAmount, actionToUse.buffDuration);
+                resolved = true;
+            }
+            if (resolved) attacker.GainUltimateFromHit(actionToUse);
+            return;
+        }
+
+        if (attacker.isPlayer)
+        {
+            if (currentTarget == null) return;
+            bool resolvedHit = false;
+            if (actionToUse.screenSlash && !actionToUse.isHeal && !actionToUse.isFriendlyAction)
+            {
+                var slash = GetComponent<ScreenSlashVfx>();
+                if (slash == null) slash = gameObject.AddComponent<ScreenSlashVfx>();
+                slash.Play(actionToUse, screenSlashHitIndex++);
+            }
+
+            {
+                List<BattleUnit> targets = actionToUse.isAoE ? enemyParty.Where(u => u != null && !u.IsDead).ToList() : new List<BattleUnit> { currentTarget };
+
+                foreach (var enemy in targets)
+                {
+                    if (enemy == null || enemy.IsDead || enemy.HasPendingBossPhaseTransition) continue;
+                    resolvedHit = true;
+                    // Melee/explicit animation timing uses this event. Ranged
+                    // impact-timed VFX is emitted by the visual arrival callback.
+                    if (!UsesVfxImpact(actionToUse)) SpawnActionHitVFX(actionToUse, enemy);
+
+                    int hpBefore = enemy.currentHP;
+                    int targetRawDamage = CalculateActionDamage(attacker, enemy, actionToUse, isCrit);
+                    if (!actionToUse.statusOnly) enemy.TakeDamage(targetRawDamage, false, isCrit);
+                    if (!actionToUse.statusOnly && targetRawDamage > 0)
+                        CameraManager.Instance?.PlayCombatImpact(actionToUse, attacker, enemy, isCrit, false, true);
+                    ApplyActionStatus(enemy, actionToUse);
+                    int actualDamageTaken = hpBefore - enemy.currentHP;
+                    GetComponent<BattleResultPanel>()?.RecordDamage(true, actualDamageTaken);
+                    ApplyActionLifeSteal(attacker, actionToUse, actualDamageTaken);
+
+                    AdvancedUIManager.Instance.ShowDamageText(enemy.transform, actualDamageTaken, isCrit, false,
+                        GetElementalDamageMultiplier(attacker, enemy, actionToUse));
+                }
+            }
+            if (resolvedHit) attacker.GainUltimateFromHit(actionToUse);
+        }
+        else
+        {
+            bool priorParryResult = ParrySystem.Instance != null && ParrySystem.Instance.parrySuccessful;
+            vfxActionState.parried = priorParryResult;
+            List<BattleUnit> targets = actionToUse.isAoE ? playerParty.Where(u => u != null && !u.IsDead).ToList() : new List<BattleUnit> { currentTarget };
+
+            foreach (var ally in targets)
+            {
+                if (ally == null || ally.IsDead || ally.HasPendingBossPhaseTransition) continue;
+                bool parried = priorParryResult;
+                if (!parried && actionToUse.isMelee && actionToUse.useMeleeHitboxParry && ParrySystem.Instance != null)
+                    parried = ParrySystem.Instance.TryResolveMeleeHitboxParry(attacker, ally, out _);
+                int hpBefore = ally.currentHP;
+                int targetRawDamage = CalculateActionDamage(attacker, ally, actionToUse, isCrit);
+                if (!actionToUse.statusOnly) ally.TakeDamage(targetRawDamage, parried, isCrit);
+                if (!actionToUse.statusOnly && (targetRawDamage > 0 || parried))
+                    CameraManager.Instance?.PlayCombatImpact(actionToUse, attacker, ally, isCrit, parried, false);
+                if (!parried) ApplyActionStatus(ally, actionToUse);
+                int actualDamageTaken = hpBefore - ally.currentHP;
+                GetComponent<BattleResultPanel>()?.RecordDamage(false, actualDamageTaken);
+                if (!parried) ApplyActionLifeSteal(attacker, actionToUse, actualDamageTaken);
+
+                if (!parried)
+                {
+                    // Parry thành công thì không hiện hiệu ứng trúng đòn.
+                    if (!UsesVfxImpact(actionToUse)) SpawnActionHitVFX(actionToUse, ally);
+                    AdvancedUIManager.Instance.ShowDamageText(ally.transform, actualDamageTaken, isCrit, false,
+                        GetElementalDamageMultiplier(attacker, ally, actionToUse));
+                }
+            }
+            ParrySystem.Instance?.ResetParryState();
+        }
+    }
+
+    private void PlayVFX(BattleUnit attacker, BattleUnit target, ActionData action)
+    {
+        if (attacker == null || attacker.IsDead || action == null || target == null) return;
+
+        List<BattleUnit> targetList = new List<BattleUnit>();
+
+        if (action.isAoE)
+        {
+            // Xác định AoE đánh phe nào dựa trên NGƯỜI CAST.
+            // Player tấn công -> Enemy
+            // Enemy tấn công -> Player
+            // Heal/Friendly -> phe của chính người cast
+            bool targetsOwnTeam = action.isFriendlyAction || action.isHeal || action.isSummonSkill;
+
+            if (attacker.isPlayer)
+            {
+                targetList = targetsOwnTeam
+                    ? playerParty.Where(u => u != null && !u.IsDead).ToList()
+                    : enemyParty.Where(u => u != null && !u.IsDead).ToList();
+            }
+            else
+            {
+                targetList = targetsOwnTeam
+                    ? enemyParty.Where(u => u != null && !u.IsDead).ToList()
+                    : playerParty.Where(u => u != null && !u.IsDead).ToList();
+            }
+        }
+        else
+        {
+            targetList.Add(target);
+        }
+
+        // A Shoot/Beam action's optional sword slash is a separate projectile.
+        // Launch it from the current sword pose at cast time; the regular VFX
+        // callback still owns damage timing and hit effects.
+        if (HasTravelingSwordSlash(action) && !UsesSwordSlashImpactDamage(action) &&
+            !action.isFriendlyAction && !action.isHeal)
+        {
+            foreach (BattleUnit u in targetList.Where(u => u != null && !u.IsDead))
+                SpawnSwordSlashVFX(attacker, u, action);
+        }
+
+        if (action.vfxPrefab == null) return;
+
+        // =========================================================
+        // VFX SINH TRỰC TIẾP TẠI TARGET
+        // =========================================================
+        if (action.vfxType == ActionData.VfxType.SpawnAtTarget)
+        {
+            foreach (BattleUnit u in targetList.Where(u => u != null && !u.IsDead))
+            {
+                // Configure while inactive so Play On Awake particles start at
+                // the ActionData runtime speed on their first frame.
+                GameObject staging = new GameObject("Combat VFX Setup");
+                staging.SetActive(false);
+                GameObject vfx = CreateVisualVfx(
+                    action.vfxPrefab,
+                    u.transform.position,
+                    u.transform.rotation,
+                    staging.transform);
+                vfx.SetActive(false);
+                SetVfxPlaybackSpeed(vfx, action.vfxPlaybackSpeed);
+                TrackCombatVFX(vfx);
+                vfx.transform.SetParent(null, true);
+                GameAudioSourceBus.Bind(vfx);
+                vfx.SetActive(true);
+                Destroy(staging);
+                ScheduleVisualVfx(vfx, GetVfxLifeTime(vfx, 2f));
+            }
+
+            return;
+        }
+
+        // =========================================================
+        // PROJECTILE
+        // =========================================================
+        if (action.vfxType != ActionData.VfxType.Shoot &&
+            action.vfxType != ActionData.VfxType.Beam) return;
+
+        Transform spawnTransform = attacker.VfxOrigin;
+
+        Vector3 startPos = spawnTransform.TransformPoint(action.projectileStartOffset);
+
+        foreach (BattleUnit u in targetList.Where(u => u != null && !u.IsDead))
+        {
+            Vector3 targetPos = u.GetVfxTargetPosition(action.projectileTargetOffset);
+            Vector3 directionToTarget = targetPos - startPos;
+
+            Quaternion rotation = directionToTarget.sqrMagnitude > 0.0001f
+                ? Quaternion.LookRotation(directionToTarget.normalized, Vector3.up)
+                : spawnTransform.rotation;
+
+            // Configure while inactive: RFX4 raycasts run in OnEnable and can
+            // otherwise hit the caster or create an unwanted impact immediately.
+            GameObject staging = new GameObject("Combat VFX Setup");
+            staging.SetActive(false);
+            GameObject vfx = Instantiate(action.vfxPrefab, startPos, rotation, staging.transform);
+            vfx.SetActive(false);
+            SetVfxPlaybackSpeed(vfx, action.vfxPlaybackSpeed);
+
+            if (action.vfxType == ActionData.VfxType.Beam)
+            {
+                DisableRFX4Movement(vfx);
+
+                System.Action beamImpact =
+                    CreateImpactCallback(vfx, attacker, u, action);
+
+                CombatBeamVfx beam =
+                    vfx.AddComponent<CombatBeamVfx>();
+
+                beam.Initialize(
+                    attacker,
+                    u,
+                    action,
+                    beamImpact
+                );
+
+                activeBeams.RemoveAll(item => item == null);
+                activeBeams.Add(beam);
+
+                ActivateCombatVfx(
+                    vfx,
+                    staging,
+                    action.vfxLifeTime
+                );
+
+                // Beam không có thời gian bay như projectile.
+                // Dùng beamParryDelay để căn thời điểm mở Parry.
+                if (ShouldStartVfxParry(attacker, action))
+                {
+                    StartCoroutine(
+                        OpenVfxParryWindow(
+                            attacker,
+                            action,
+                            vfxActionState,
+                            action.beamParryDelay
+                        )
+                    );
+                }
+
+                continue;
+            }
+
+            if (action.projectileMoveMode != ActionData.ProjectileMoveMode.RFX4Prefab)
+                DisableRFX4Movement(vfx);
+            else
+                SetupRFX4Projectile(vfx, action);
+
+            System.Action impact = CreateImpactCallback(vfx, attacker, u, action);
+            if (action.projectileMoveMode == ActionData.ProjectileMoveMode.RFX4Prefab)
+                BindRFX4Impact(vfx, u, action, impact);
+
+            ActivateCombatVfx(vfx, staging, action.vfxLifeTime);
+
+            // Shoot: theo dõi vị trí thật của projectile.
+            // Khi projectile còn gần parryOpenBeforeImpact giây nữa tới target,
+            // hệ thống tự mở cửa sổ Parry.
+            if (ShouldStartVfxParry(attacker, action))
+            {
+                StartCoroutine(
+                    MonitorProjectileParry(
+                        vfx,
+                        attacker,
+                        u,
+                        action,
+                        vfxActionState
+                    )
+                );
+            }
+
+            switch (action.projectileMoveMode)
+            {
+                // -------------------------------------------------
+                // 1. BAY THẲNG - game tự điều khiển transform
+                // -------------------------------------------------
+                case ActionData.ProjectileMoveMode.Straight:
+                    {
+                        StartCoroutine(MoveVFXRoutine(
+                            vfx,
+                            targetPos,
+                            action.vfxSpeed,
+                            impact, u, action.projectileTargetOffset));
+                        break;
+                    }
+
+                // -------------------------------------------------
+                // 2. GIỮ NGUYÊN CHUYỂN ĐỘNG CỦA PREFAB RFX4
+                // -------------------------------------------------
+                case ActionData.ProjectileMoveMode.RFX4Prefab:
+                    {
+                        break;
+                    }
+
+                // -------------------------------------------------
+                // 3. BAY THEO ĐƯỜNG CONG BEZIER
+                // -------------------------------------------------
+                case ActionData.ProjectileMoveMode.BezierCurve:
+                    {
+                        StartCoroutine(MoveVFXBezierRoutine(
+                            vfx,
+                            targetPos,
+                            action.vfxSpeed,
+                            action.curveHeight,
+                            action.curveSideOffset,
+                            impact, u, action.projectileTargetOffset));
+                        break;
+                    }
+            }
+        }
+    }
+
+    private void ActivateCombatVfx(GameObject vfx, GameObject staging, float lifetime)
+    {
+        TrackCombatVFX(vfx);
+        vfx.transform.SetParent(null, true);
+        GameAudioSourceBus.Bind(vfx);
+        vfx.SetActive(true);
+        Destroy(staging);
+        Destroy(vfx, Mathf.Max(0.1f, lifetime));
+    }
+
+    private static void SetVfxPlaybackSpeed(GameObject vfx, float speed)
+    {
+        if (vfx == null) return;
+        float playbackSpeed = Mathf.Max(0.01f, speed);
+        foreach (ParticleSystem particles in vfx.GetComponentsInChildren<ParticleSystem>(true))
+        {
+            var main = particles.main;
+            main.simulationSpeed = playbackSpeed;
+        }
+    }
+
+    private static bool HasMainImpactVfx(ActionData action) => action != null && action.vfxPrefab != null &&
+        (action.vfxType == ActionData.VfxType.Shoot || action.vfxType == ActionData.VfxType.Beam);
+
+    private static bool HasTravelingSwordSlash(ActionData action) => action != null &&
+        action.swordSlashTravelsToTarget && action.swordSlashVfxPrefab != null &&
+        (action.vfxType == ActionData.VfxType.Shoot || action.vfxType == ActionData.VfxType.Beam ||
+         CombatSwordSlashProjectile.IsPackageProjectile(action.swordSlashVfxPrefab));
+
+    private static bool UsesSwordSlashImpactDamage(ActionData action) => HasTravelingSwordSlash(action) &&
+        CombatSwordSlashProjectile.IsPackageProjectile(action.swordSlashVfxPrefab) && !HasMainImpactVfx(action) &&
+        !action.isFriendlyAction && !action.isHeal && !action.isSummonSkill;
+
+    private static bool UsesVfxImpactDamage(ActionData action)
+    {
+        return action != null &&
+               !action.isFriendlyAction &&
+               !action.isHeal &&
+               (HasMainImpactVfx(action) || UsesSwordSlashImpactDamage(action));
+    }
+
+    private ActionData GetCurrentActionForUnit(BattleUnit unit)
+    {
+        if (unit == null)
+            return null;
+
+        if (unit == currentActiveUnit && selectedAction != null)
+            return selectedAction;
+
+        return unit.defaultAttack;
+    }
+
+    /// <summary>
+    /// Dùng bởi Animation Event:
+    /// Shoot / Beam offensive gây damage bằng VFX impact, không phải DealDamage event.
+    /// </summary>
+    public bool IsVfxImpactDamageAction(BattleUnit unit)
+    {
+        return UsesVfxImpactDamage(GetCurrentActionForUnit(unit));
+    }
+
+    /// <summary>
+    /// Dùng bởi Animation Event để biết OpenParry / CloseParry cũ có phải bỏ qua không.
+    /// </summary>
+    public bool ShouldUseVfxParryTiming(BattleUnit unit)
+    {
+        if (unit == null || unit.isPlayer)
+            return false;
+
+        ActionData action = GetCurrentActionForUnit(unit);
+
+        return action != null &&
+               action.useVfxParry &&
+               UsesVfxImpactDamage(action);
+    }
+
+    public bool ShouldUseMeleeHitboxParry(BattleUnit unit)
+    {
+        if (unit == null || unit.isPlayer || animationActionOwner != unit) return false;
+        ActionData action = animationActionData ?? GetCurrentActionForUnit(unit);
+        return action != null && action.isMelee && action.useMeleeHitboxParry &&
+               !action.isFriendlyAction && !action.isHeal && !action.isSummonSkill &&
+               !UsesVfxImpactDamage(action);
+    }
+
+    // Giữ tên hàm cũ cho các đoạn code kiểm tra Hit VFX.
+    // Với Shoot/Beam tấn công, Hit VFX luôn đi theo impact thật của VFX.
+    private static bool UsesVfxImpact(ActionData action)
+    {
+        return UsesVfxImpactDamage(action);
+    }
+
+    private System.Action CreateImpactCallback(
+        GameObject vfx,
+        BattleUnit attacker,
+        BattleUnit target,
+        ActionData action)
+    {
+        pendingVfxImpacts.Add(vfx);
+
+        // Mỗi action/routine có một VfxActionState riêng.
+        // AoE có nhiều projectile vẫn dùng chung raw damage / crit / parry.
+        VfxActionState actionState = vfxActionState;
+
+        bool completed = false;
+
+        return () =>
+        {
+            // Một projectile có thể báo collision nhiều lần.
+            // Chỉ được resolve impact đúng 1 lần.
+            if (completed)
+                return;
+
+            completed = true;
+            pendingVfxImpacts.Remove(vfx);
+
+            if (attacker == null ||
+                target == null ||
+                action == null ||
+                target.IsDead)
+            {
+                return;
+            }
+
+            // Main Shoot/Beam or a standalone sword projectile owns this impact.
+            if (!UsesVfxImpactDamage(action))
+                return;
+
+            // VFX đã chạm mục tiêu -> cửa sổ Parry kết thúc ngay tại impact.
+            // Lưu kết quả trước khi đóng window.
+            if (!attacker.isPlayer && ParrySystem.Instance != null)
+            {
+                actionState.parried =
+                    actionState.parried ||
+                    ParrySystem.Instance.parrySuccessful;
+
+                ParrySystem.Instance.CloseWindow();
+            }
+
+            actionState.parryWindowFinished = true;
+
+            ResolveVfxImpactDamage(
+                attacker,
+                target,
+                action,
+                actionState
+            );
+        };
+    }
+
+    private void PrepareVfxImpactDamage(
+        BattleUnit attacker,
+        ActionData action,
+        VfxActionState actionState)
+    {
+        if (attacker == null ||
+            action == null ||
+            actionState == null ||
+            actionState.impactDamagePrepared)
+        {
+            return;
+        }
+
+        bool isCrit =
+            !action.isFriendlyAction &&
+            !action.isHeal &&
+            UnityEngine.Random.Range(0, 100) <
+            attacker.GetCritChance();
+
+        // Cache attack/caster conditions and the crit once per action. Target
+        // Poison is applied separately for each impact, including AoE hits.
+        actionState.impactRawDamage = CalculateBaseActionDamage(attacker, action, isCrit);
+        actionState.impactIsCrit = isCrit;
+        actionState.impactDamagePrepared = true;
+    }
+
+    private void ResolveVfxImpactDamage(
+        BattleUnit attacker,
+        BattleUnit target,
+        ActionData action,
+        VfxActionState actionState)
+    {
+        if (attacker == null ||
+            target == null ||
+            action == null ||
+            actionState == null ||
+            target.IsDead ||
+            target.HasPendingBossPhaseTransition ||
+            action.isSummonSkill)
+        {
+            return;
+        }
+
+        // For projectile/beam actions, wait until the visual impact confirms
+        // the hit before showing an explicitly configured sword slash.
+        if (!action.isFriendlyAction && !action.isHeal && !HasTravelingSwordSlash(action))
+            SpawnSwordSlashVFX(attacker, target, action);
+
+        PrepareVfxImpactDamage(
+            attacker,
+            action,
+            actionState
+        );
+
+        int rawDamage = Mathf.RoundToInt(
+            actionState.impactRawDamage * GetTargetDamageMultiplier(attacker, target, action));
+
+        bool isCrit =
+            actionState.impactIsCrit;
+
+        // ============================================================
+        // PLAYER PROJECTILE / BEAM -> ENEMY
+        // ============================================================
+        if (attacker.isPlayer)
+        {
+            int hpBefore =
+                target.currentHP;
+
+            // DAMAGE xảy ra đúng lúc VFX impact.
+            if (!action.statusOnly) target.TakeDamage(rawDamage, false, isCrit);
+            if (!action.statusOnly && rawDamage > 0)
+                CameraManager.Instance?.PlayCombatImpact(action, attacker, target, isCrit, false, false);
+            ApplyActionStatus(target, action);
+            // AoE projectiles are one volley; each callback is already guarded
+            // against duplicate impacts. A normal projectile awards on arrival.
+            if (!action.isAoE || !actionState.energyAwarded)
+            {
+                attacker.GainUltimateFromHit(action);
+                actionState.energyAwarded = true;
+            }
+
+            int actualDamageTaken =
+                hpBefore -
+                target.currentHP;
+            ApplyActionLifeSteal(attacker, action, actualDamageTaken);
+
+            GetComponent<BattleResultPanel>()?
+                .RecordDamage(
+                    true,
+                    actualDamageTaken
+                );
+
+            if (AdvancedUIManager.Instance != null)
+            {
+                AdvancedUIManager.Instance.ShowDamageText(
+                    target.transform,
+                    actualDamageTaken,
+                    isCrit,
+                    false,
+                    GetElementalDamageMultiplier(attacker, target, action)
+                );
+            }
+
+            // Thứ tự yêu cầu:
+            // 1. Damage
+            // 2. Hit VFX
+            SpawnActionHitVFX(
+                action,
+                target
+            );
+
+            return;
+        }
+
+        // ============================================================
+        // ENEMY PROJECTILE / BEAM -> PLAYER
+        // ============================================================
+        bool parried =
+            actionState.parried ||
+            (ParrySystem.Instance != null &&
+             ParrySystem.Instance.parrySuccessful);
+
+        // Giữ kết quả parry cho toàn bộ projectile của cùng một action/AoE.
+        actionState.parried = parried;
+
+        int playerHpBefore =
+            target.currentHP;
+
+        if (!action.statusOnly) target.TakeDamage(rawDamage, parried, isCrit);
+        if (!action.statusOnly && (rawDamage > 0 || parried))
+            CameraManager.Instance?.PlayCombatImpact(action, attacker, target, isCrit, parried, false);
+        if (!parried) ApplyActionStatus(target, action);
+
+        int playerDamageTaken =
+            playerHpBefore -
+            target.currentHP;
+        if (!parried) ApplyActionLifeSteal(attacker, action, playerDamageTaken);
+
+        GetComponent<BattleResultPanel>()?
+            .RecordDamage(
+                false,
+                playerDamageTaken
+            );
+
+        if (!parried)
+        {
+            if (AdvancedUIManager.Instance != null)
+            {
+                AdvancedUIManager.Instance.ShowDamageText(
+                    target.transform,
+                    playerDamageTaken,
+                    isCrit,
+                    false,
+                    GetElementalDamageMultiplier(attacker, target, action)
+                );
+            }
+
+            // Chỉ chạy Hit VFX khi đòn thật sự trúng và không bị Parry.
+            SpawnActionHitVFX(
+                action,
+                target
+            );
+        }
+    }
+
+    private bool ShouldStartVfxParry(
+        BattleUnit attacker,
+        ActionData action)
+    {
+        return attacker != null &&
+               !attacker.isPlayer &&
+               action != null &&
+               action.useVfxParry &&
+               UsesVfxImpactDamage(action) &&
+               ParrySystem.Instance != null;
+    }
+
+    private IEnumerator OpenVfxParryWindow(
+        BattleUnit attacker,
+        ActionData action,
+        VfxActionState actionState,
+        float delay = 0f)
+    {
+        if (!ShouldStartVfxParry(attacker, action) ||
+            actionState == null ||
+            actionState.parryWindowFinished)
+        {
+            yield break;
+        }
+
+        if (delay > 0f)
+        {
+            yield return new WaitForSeconds(delay);
+        }
+
+        // Nhiều projectile / AoE có thể cùng gọi coroutine.
+        // Chỉ coroutine đầu tiên được mở window.
+        if (actionState.parryWindowOpened ||
+            actionState.parryWindowFinished ||
+            ParrySystem.Instance == null)
+        {
+            yield break;
+        }
+
+        actionState.parryWindowOpened = true;
+
+        // Xóa input Parry bấm quá sớm trước khi window thật sự mở.
+        ParrySystem.Instance.ResetParryState();
+        ParrySystem.Instance.OpenWindow();
+
+        float timer = 0f;
+        float duration = Mathf.Max(
+            0.01f,
+            action.parryWindowDuration
+        );
+
+        while (!actionState.parryWindowFinished &&
+               timer < duration)
+        {
+            timer += Time.deltaTime;
+            yield return null;
+        }
+
+        if (!actionState.parryWindowFinished &&
+            ParrySystem.Instance != null)
+        {
+            // Hết cửa sổ nhưng không xóa parrySuccessful:
+            // nếu người chơi vừa Parry thành công thì kết quả phải được giữ
+            // cho tới lúc projectile/beam impact.
+            ParrySystem.Instance.CloseWindow();
+        }
+    }
+
+    private IEnumerator MonitorProjectileParry(
+        GameObject projectile,
+        BattleUnit attacker,
+        BattleUnit target,
+        ActionData action,
+        VfxActionState actionState)
+    {
+        if (projectile == null ||
+            target == null ||
+            !ShouldStartVfxParry(attacker, action) ||
+            actionState == null)
+        {
+            yield break;
+        }
+
+        Transform travelTransform =
+            GetProjectileTravelTransform(
+                projectile,
+                action
+            );
+
+        if (travelTransform == null)
+            yield break;
+
+        Vector3 previousPosition =
+            travelTransform.position;
+
+        float measuredSpeed = Mathf.Max(0.01f,
+            UsesSwordSlashImpactDamage(action) ? action.swordSlashTravelSpeed : action.vfxSpeed);
+
+        while (projectile != null &&
+               travelTransform != null &&
+               target != null &&
+               !target.IsDead &&
+               !actionState.parryWindowOpened &&
+               !actionState.parryWindowFinished)
+        {
+            Vector3 currentPosition =
+                travelTransform.position;
+
+            if (Time.deltaTime > 0.00001f)
+            {
+                float frameSpeed =
+                    Vector3.Distance(
+                        currentPosition,
+                        previousPosition
+                    ) / Time.deltaTime;
+
+                // RFX4 có thể có 1 vài frame đầu chưa di chuyển.
+                // Chỉ nhận tốc độ đo được khi thật sự có movement.
+                if (frameSpeed > 0.01f)
+                {
+                    measuredSpeed = frameSpeed;
+                }
+            }
+
+            Vector3 targetPosition =
+                target.GetVfxTargetPosition(
+                    action.projectileTargetOffset
+                );
+
+            float distance =
+                Vector3.Distance(
+                    currentPosition,
+                    targetPosition
+                );
+
+            float estimatedTimeToImpact =
+                distance /
+                Mathf.Max(0.01f, measuredSpeed);
+
+            if (estimatedTimeToImpact <=
+                Mathf.Max(
+                    0.01f,
+                    action.parryOpenBeforeImpact
+                ))
+            {
+                StartCoroutine(
+                    OpenVfxParryWindow(
+                        attacker,
+                        action,
+                        actionState
+                    )
+                );
+
+                yield break;
+            }
+
+            previousPosition = currentPosition;
+            yield return null;
+        }
+    }
+
+    private Transform GetProjectileTravelTransform(
+        GameObject projectile,
+        ActionData action)
+    {
+        if (projectile == null)
+            return null;
+
+        // Straight / Bezier do CombatManager kéo root object.
+        if (action == null ||
+            action.projectileMoveMode !=
+            ActionData.ProjectileMoveMode.RFX4Prefab)
+        {
+            return projectile.transform;
+        }
+
+        // RFX4 thường di chuyển Transform chứa RFX4_PhysicsMotion,
+        // không nhất thiết là root prefab.
+        RFX4_PhysicsMotion motion =
+            projectile.GetComponentInChildren<
+                RFX4_PhysicsMotion>(true);
+
+        if (motion != null)
+            return motion.transform;
+
+        return projectile.transform;
+    }
+
+    private void BindRFX4Impact(GameObject vfx, BattleUnit target, ActionData action, System.Action impact)
+    {
+        System.EventHandler<RFX4_PhysicsMotion.RFX4_CollisionInfo> onCollision = (sender, info) =>
+        {
+            BattleUnit hitUnit = info.HitCollider != null
+                ? info.HitCollider.GetComponentInParent<BattleUnit>() : null;
+            if (hitUnit == target) impact();
+        };
+        foreach (RFX4_PhysicsMotion motion in vfx.GetComponentsInChildren<RFX4_PhysicsMotion>(true))
+        {
+            motion.CollisionEnter += onCollision;
+            // Combat owns the configured hit effect: do not spawn a second
+            // copy from the vendor's collision handler.
+            if (action.hitVfxPrefab != null) motion.EffectOnCollision = null;
+        }
+        foreach (RFX4_RaycastCollision ray in vfx.GetComponentsInChildren<RFX4_RaycastCollision>(true))
+        {
+            ray.CollisionEnter += onCollision;
+            if (action.hitVfxPrefab != null) ray.Effects = new GameObject[0];
+        }
+    }
+
+    /// <summary>
+    /// Tắt CHỈ phần movement/collision tự động của RFX4 khi CombatManager
+    /// cần tự điều khiển projectile. ParticleTrail, LightCurves, shader... vẫn chạy.
+    /// </summary>
+    private void DisableRFX4Movement(GameObject vfx)
+    {
+        if (vfx == null) return;
+
+        RFX4_PhysicsMotion[] motions = vfx.GetComponentsInChildren<RFX4_PhysicsMotion>(true);
+
+        foreach (RFX4_PhysicsMotion motion in motions)
+        {
+            if (motion == null) continue;
+
+            // RFX4_PhysicsMotion.OnDisable() reset local transform,
+            // nên lưu lại và phục hồi ngay sau khi disable.
+            Transform motionTransform = motion.transform;
+            Vector3 savedLocalPosition = motionTransform.localPosition;
+            Quaternion savedLocalRotation = motionTransform.localRotation;
+            Vector3 savedLocalScale = motionTransform.localScale;
+
+            motion.enabled = false;
+
+            motionTransform.localPosition = savedLocalPosition;
+            motionTransform.localRotation = savedLocalRotation;
+            motionTransform.localScale = savedLocalScale;
+        }
+
+        // Không tham chiếu trực tiếp type để đoạn này vẫn dùng được với
+        // các phiên bản RFX4 khác nhau. Chỉ disable script đúng tên.
+        MonoBehaviour[] scripts = vfx.GetComponentsInChildren<MonoBehaviour>(true);
+        foreach (MonoBehaviour script in scripts)
+        {
+            if (script == null) continue;
+
+            if (script.GetType().Name == "RFX4_RaycastCollision")
+            {
+                script.enabled = false;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Cho prefab RFX4 tự bay bằng RFX4_PhysicsMotion.
+    /// CombatManager chỉ truyền Speed/Gravity và lifetime.
+    /// </summary>
+    private void SetupRFX4Projectile(GameObject vfx, ActionData action)
+    {
+        if (vfx == null || action == null) return;
+
+        RFX4_EffectSettings settings = vfx.GetComponentInChildren<RFX4_EffectSettings>(true);
+
+        if (settings != null)
+        {
+            settings.Speed = action.vfxSpeed;
+            settings.UseGravity = action.rfxUseGravity;
+        }
+
+        // BindRFX4Impact owns collision callbacks and prevents duplicate hits.
+
+        // RFX4_PhysicsMotion không tự Destroy root projectile sau collision.
+        Destroy(vfx, action.vfxLifeTime);
+    }
+
+    public void PlayCastVFXFromAnimation(BattleUnit attacker)
+    {
+        if (!CanAcceptActionAnimationEvent(attacker) || castStarted.Contains(attacker) || vfxLaunched.Contains(attacker)) return;
+        ActionData currentAction = animationActionData;
+
+        SpawnUltimateAuraVFX(attacker, currentAction);
+
+        if (currentAction != null && currentAction.castVfxPrefab != null)
+        {
+            castStarted.Add(attacker);
+            var instances = new List<GameObject>(2);
+            castInstances[attacker] = instances;
+            if (attacker.handTransform != null)
+                instances.Add(SpawnCastVFXAtPoint(attacker.handTransform, currentAction));
+            if (attacker.leftHandTransform != null && attacker.leftHandTransform != attacker.handTransform)
+                instances.Add(SpawnCastVFXAtPoint(attacker.leftHandTransform, currentAction));
+            if (instances.Count == 0)
+                instances.Add(SpawnCastVFXAtPoint(attacker.transform, currentAction));
+        }
+    }
+
+    private void SpawnUltimateAuraVFX(BattleUnit attacker, ActionData action)
+    {
+        if (attacker == null || action == null || !action.isUltimate ||
+            action.ultimateAuraVfxPrefab == null || !ultimateAuraStarted.Add(attacker))
+            return;
+
+        GameObject staging = new GameObject("Ultimate Aura Setup");
+        staging.SetActive(false);
+        GameObject aura = Instantiate(
+            action.ultimateAuraVfxPrefab,
+            attacker.transform.position,
+            attacker.transform.rotation,
+            staging.transform);
+        aura.SetActive(false);
+        SetVfxPlaybackSpeed(aura, action.ultimateAuraVfxPlaybackSpeed);
+        aura.transform.SetParent(attacker.transform, true);
+        aura.transform.localPosition = action.ultimateAuraVfxLocalOffset;
+        if (!ultimateAuraInstances.TryGetValue(attacker, out List<GameObject> instances))
+        {
+            instances = new List<GameObject>(1);
+            ultimateAuraInstances[attacker] = instances;
+        }
+        instances.Add(aura);
+
+        CombatShadowBudget.Active?.RegisterHierarchy(aura, true);
+        GameAudioSourceBus.Bind(aura);
+        aura.SetActive(true);
+        Destroy(staging);
+    }
+
+    private void FinishUltimateAuraVFX(BattleUnit attacker)
+    {
+        if (attacker == null || !ultimateAuraInstances.TryGetValue(attacker, out List<GameObject> instances))
+            return;
+
+        foreach (GameObject aura in instances)
+        {
+            if (aura == null) continue;
+            foreach (ParticleSystem particles in aura.GetComponentsInChildren<ParticleSystem>(true))
+                if (particles.main.loop)
+                    particles.Stop(false, ParticleSystemStopBehavior.StopEmitting);
+
+            Destroy(aura, GetVfxLifeTime(aura, 2f));
+        }
+        ultimateAuraInstances.Remove(attacker);
+    }
+
+    private GameObject SpawnCastVFXAtPoint(Transform spawnPoint, ActionData currentAction)
+    {
+        GameObject staging = new GameObject("Combat Cast Setup");
+        staging.SetActive(false);
+
+        GameObject castVfx = CreateVisualVfx(
+            currentAction.castVfxPrefab,
+            spawnPoint.position,
+            spawnPoint.rotation,
+            staging.transform, currentAction.vfxType != ActionData.VfxType.Beam);
+
+        castVfx.SetActive(false);
+        if (currentAction.vfxType == ActionData.VfxType.Beam)
+        {
+            RFX4_PlaybackSpeed playback = castVfx.GetComponent<RFX4_PlaybackSpeed>();
+            if (playback == null) playback = castVfx.AddComponent<RFX4_PlaybackSpeed>();
+            playback.playbackSpeed = Mathf.Max(0.01f, currentAction.beamPlaybackSpeed);
+        }
+        castVfx.transform.SetParent(spawnPoint, true);
+        TrackCombatVFX(castVfx);
+        GameAudioSourceBus.Bind(castVfx);
+        castVfx.SetActive(true);
+        Destroy(staging);
+
+        ScheduleVisualVfx(castVfx, GetVfxLifeTime(castVfx, currentAction.castVfxLifeTime));
+        return castVfx;
+    }
+
+    private void FinishCastVFX(BattleUnit attacker)
+    {
+        if (!castInstances.TryGetValue(attacker, out List<GameObject> instances)) return;
+        // Stop ongoing charging, allowing one-shot flashes and existing
+        // particles to finish instead of cutting them at an arbitrary 1.5 s.
+        foreach (GameObject cast in instances)
+        {
+            if (cast == null) continue;
+            foreach (ParticleSystem particles in cast.GetComponentsInChildren<ParticleSystem>(true))
+                if (particles.main.loop) particles.Stop(false, ParticleSystemStopBehavior.StopEmitting);
+        }
+        castInstances.Remove(attacker);
+    }
+
+    public void PlayVFXFromAnimation(BattleUnit attacker)
+    {
+        if (!CanAcceptActionAnimationEvent(attacker)) return;
+        ActionData currentAction = animationActionData;
+
+        if (currentAction != null &&
+            (currentAction.vfxPrefab != null ||
+             ((currentAction.vfxType == ActionData.VfxType.Shoot || currentAction.vfxType == ActionData.VfxType.Beam) &&
+              currentAction.swordSlashTravelsToTarget &&
+              currentAction.swordSlashVfxPrefab != null)))
+        {
+            // Handle clips with a missing or later cast event without playing
+            // the cast again after the projectile has already launched.
+            PlayCastVFXFromAnimation(attacker);
+            vfxLaunched.Add(attacker);
+            FinishCastVFX(attacker);
+            PlayVFX(attacker, currentTarget, currentAction);
+        }
+    }
+
+    /// <summary>
+    /// Projectile bay thẳng. Dùng cho prefab không cần RFX4_PhysicsMotion.
+    /// </summary>
+    private IEnumerator MoveVFXRoutine(
+        GameObject vfx,
+        Vector3 targetPos,
+        float speed,
+        System.Action onImpact, BattleUnit target, Vector3 targetOffset)
+    {
+        if (vfx == null) yield break;
+
+        speed = Mathf.Max(0.01f, speed);
+
+        while (vfx != null)
+        {
+            if (target != null) targetPos = target.GetVfxTargetPosition(targetOffset);
+            if (Vector3.Distance(vfx.transform.position, targetPos) <= 0.1f) break;
+            Vector3 oldPosition = vfx.transform.position;
+            Vector3 newPosition = Vector3.MoveTowards(
+                oldPosition,
+                targetPos,
+                speed * Time.deltaTime);
+
+            vfx.transform.position = newPosition;
+
+            Vector3 moveDirection = newPosition - oldPosition;
+            if (moveDirection.sqrMagnitude > 0.000001f)
+            {
+                vfx.transform.rotation = Quaternion.LookRotation(moveDirection.normalized, Vector3.up);
+            }
+
+            if (Vector3.Distance(newPosition, targetPos) <= 0.1f) break;
+            yield return null;
+        }
+
+        if (vfx != null)
+        {
+            vfx.transform.position = targetPos;
+            onImpact?.Invoke();
+            Destroy(vfx);
+        }
+
+    }
+
+    /// <summary>
+    /// Projectile bay theo Quadratic Bezier:
+    /// start -> control point -> target.
+    /// </summary>
+    private IEnumerator MoveVFXBezierRoutine(
+        GameObject vfx,
+        Vector3 targetPos,
+        float speed,
+        float curveHeight,
+        float curveSideOffset,
+        System.Action onImpact, BattleUnit target, Vector3 targetOffset)
+    {
+        if (vfx == null) yield break;
+
+        Vector3 startPos = vfx.transform.position;
+        float distance = Vector3.Distance(startPos, targetPos);
+        float duration = distance / Mathf.Max(speed, 0.01f);
+        duration = Mathf.Max(duration, 0.05f);
+
+        Vector3 forward = targetPos - startPos;
+        Vector3 side = Vector3.Cross(Vector3.up, forward.normalized);
+
+        if (side.sqrMagnitude < 0.0001f)
+        {
+            side = vfx.transform.right;
+        }
+
+        side.Normalize();
+
+        Vector3 controlPoint =
+            (startPos + targetPos) * 0.5f
+            + Vector3.up * curveHeight
+            + side * curveSideOffset;
+
+        float elapsed = 0f;
+
+        while (vfx != null && elapsed < duration)
+        {
+            if (target != null) targetPos = target.GetVfxTargetPosition(targetOffset);
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+
+            Vector3 position = EvaluateQuadraticBezier(
+                startPos,
+                controlPoint,
+                targetPos,
+                t);
+
+            // Đạo hàm Bezier để projectile luôn nhìn đúng hướng đường cong.
+            Vector3 tangent =
+                2f * (1f - t) * (controlPoint - startPos)
+                + 2f * t * (targetPos - controlPoint);
+
+            vfx.transform.position = position;
+
+            if (tangent.sqrMagnitude > 0.000001f)
+            {
+                vfx.transform.rotation = Quaternion.LookRotation(tangent.normalized, Vector3.up);
+            }
+
+            if (t >= 1f) break;
+            yield return null;
+        }
+
+        if (vfx != null)
+        {
+            vfx.transform.position = targetPos;
+            onImpact?.Invoke();
+            Destroy(vfx);
+        }
+
+    }
+
+    private Vector3 EvaluateQuadraticBezier(
+        Vector3 start,
+        Vector3 control,
+        Vector3 end,
+        float t)
+    {
+        float oneMinusT = 1f - t;
+
+        return
+            oneMinusT * oneMinusT * start
+            + 2f * oneMinusT * t * control
+            + t * t * end;
+    }
+
+    private void SpawnActionHitVFX(ActionData action, BattleUnit target)
+    {
+        if (action == null || target == null || action.hitVfxPrefab == null) return;
+
+        // Full-body hit effects can start at the feet while the beam aims at the torso.
+        Vector3 hitOffset = action.useCustomHitVfxOffset ? action.hitVfxOffset : action.projectileTargetOffset;
+        Vector3 hitPosition = target.transform.position + hitOffset;
+        SpawnHitVFX(action.hitVfxPrefab, hitPosition, action.hitVfxLifeTime);
+    }
+
+    private void SpawnSwordSlashVFX(BattleUnit attacker, BattleUnit target, ActionData action)
+    {
+        if (attacker == null || action == null || action.swordSlashVfxPrefab == null) return;
+
+        SwordBladeTrail swordTrail = null;
+        if (attacker.animator != null)
+        {
+            BattleUnit_AnimationEvents animationEvents =
+                attacker.animator.GetComponent<BattleUnit_AnimationEvents>();
+            if (animationEvents != null)
+                swordTrail = animationEvents.swordTrail;
+        }
+
+        if (swordTrail == null)
+        {
+            // Ignore trails under hidden/stowed weapons. Their points remain
+            // readable in Unity but do not represent the sword used by this hit.
+            swordTrail = attacker.GetComponentInChildren<SwordBladeTrail>();
+        }
+
+        Vector3 position = attacker.transform.position;
+        Vector3 bladeAxis = attacker.transform.up;
+        Vector3 swingDirection = Vector3.zero;
+        bool hasSwordPose = swordTrail != null &&
+            swordTrail.TryGetSlashPose(out position, out bladeAxis, out swingDirection);
+
+        if (!hasSwordPose)
+        {
+            // An animation-event reference can point to a disabled weapon trail.
+            // Try the active weapon hierarchy before falling back to the hand.
+            SwordBladeTrail[] activeTrails = attacker.GetComponentsInChildren<SwordBladeTrail>();
+            for (int i = 0; i < activeTrails.Length; i++)
+            {
+                if (activeTrails[i] != swordTrail &&
+                    activeTrails[i].TryGetSlashPose(out position, out bladeAxis, out swingDirection))
+                {
+                    swordTrail = activeTrails[i];
+                    hasSwordPose = true;
+                    break;
+                }
+            }
+        }
+
+        if (!hasSwordPose)
+        {
+            Transform anchor = attacker.VfxOrigin != null ? attacker.VfxOrigin : attacker.transform;
+            position = anchor.position;
+            bladeAxis = anchor.up;
+            swingDirection = Vector3.zero;
+        }
+
+        float swordLength = hasSwordPose
+            ? Vector3.Distance(swordTrail.pointBase.position, swordTrail.pointTip.position)
+            : 0.75f;
+        // The package effect is authored at a much larger scale than the game
+        // sword. Fit its roughly three-unit arc to the current blade length.
+        float swordFitScale = Mathf.Clamp(swordLength * 0.5f, 0.25f, 1f);
+
+        bool travelingSlash = HasTravelingSwordSlash(action) && target != null;
+        bool packageProjectile = travelingSlash && CombatSwordSlashProjectile.IsPackageProjectile(action.swordSlashVfxPrefab);
+        Vector3 targetPosition = target != null
+            ? target.GetVfxTargetPosition(action.projectileTargetOffset)
+            : position + attacker.transform.forward;
+        Vector3 towardTarget = targetPosition - position;
+        if (towardTarget.sqrMagnitude < 0.0001f)
+            towardTarget = attacker.transform.forward;
+        towardTarget.Normalize();
+
+        // The prefab is a planar slash: its local Y follows the sword, while
+        // its local X follows the blade's recent sweep. Their cross product
+        // gives the slash plane normal and keeps the arc in the animation plane.
+        swingDirection = Vector3.ProjectOnPlane(swingDirection, bladeAxis);
+        if (swingDirection.sqrMagnitude < 0.0004f)
+            swingDirection = Vector3.Cross(bladeAxis, towardTarget);
+        if (swingDirection.sqrMagnitude < 0.0004f)
+            swingDirection = Vector3.ProjectOnPlane(attacker.transform.right, bladeAxis);
+        if (swingDirection.sqrMagnitude < 0.0004f)
+            swingDirection = Vector3.Cross(bladeAxis, Vector3.up);
+        swingDirection.Normalize();
+
+        Vector3 slashNormal = Vector3.Cross(swingDirection, bladeAxis).normalized;
+        if (slashNormal.sqrMagnitude < 0.0004f)
+            slashNormal = towardTarget;
+        if (Vector3.Dot(slashNormal, towardTarget) < 0f)
+            slashNormal = -slashNormal;
+
+        Vector3 releaseBladeAxis = bladeAxis;
+        Quaternion rotation = packageProjectile
+            ? CombatSwordSlashProjectile.FlightRotation(towardTarget, releaseBladeAxis, action.swordSlashVfxLocalEuler)
+            : GetSwordSlashRotation(
+            action.swordSlashVfxPrefab,
+            swingDirection,
+            bladeAxis,
+            slashNormal) * Quaternion.Euler(action.swordSlashVfxLocalEuler);
+        position += rotation * action.swordSlashVfxLocalOffset;
+        // Configure offscreen/inactive before any particle or demo movement can
+        // run. Keep the instance in the combat scene (also supports preview tests).
+        GameObject slashStaging = new GameObject("Sword Slash Setup");
+        slashStaging.SetActive(false);
+        UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(slashStaging, gameObject.scene);
+        GameObject slashVfx = Instantiate(action.swordSlashVfxPrefab, position, rotation, slashStaging.transform);
+        slashVfx.SetActive(false);
+        slashVfx.transform.SetParent(null, true);
+        if (Application.isPlaying) Destroy(slashStaging); else DestroyImmediate(slashStaging);
+        float slashScale = travelingSlash ? 1f : swordFitScale;
+        slashVfx.transform.localScale = Vector3.Scale(
+            slashVfx.transform.localScale,
+            action.swordSlashVfxScale * slashScale);
+        SetVfxPlaybackSpeed(slashVfx, action.vfxPlaybackSpeed);
+
+        TrackCombatVFX(slashVfx);
+        if (packageProjectile)
+        {
+            var flight = slashVfx.AddComponent<CombatSwordSlashProjectile>();
+            System.Action impact = UsesSwordSlashImpactDamage(action)
+                ? CreateImpactCallback(slashVfx, attacker, target, action) : null;
+            if (impact != null) flight.Cancelled += () => pendingVfxImpacts.Remove(slashVfx);
+            flight.ConfigureGrounding(action.swordSlashGroundLayers,
+                action.swordSlashGroundProbeDistance, action.swordSlashGroundHeightOffset);
+            flight.Initialize(target, targetPosition, action.projectileTargetOffset,
+                action.swordSlashTravelSpeed, action.swordSlashVfxLifetime,
+                releaseBladeAxis, action.swordSlashVfxLocalEuler, impact);
+            if (impact != null && ShouldStartVfxParry(attacker, action))
+                StartCoroutine(MonitorProjectileParry(slashVfx, attacker, target, action, vfxActionState));
+            return;
+        }
+
+        // Free Slash VFX keeps Play On Awake disabled so it can be placed in
+        // the demo selector. Start its root system here; child systems follow.
+        GameAudioSourceBus.Bind(slashVfx);
+        slashVfx.SetActive(true);
+        ParticleSystem rootParticles = slashVfx.GetComponent<ParticleSystem>();
+        if (rootParticles != null)
+        {
+            rootParticles.Play(true);
+        }
+        else
+        {
+            foreach (ParticleSystem particles in slashVfx.GetComponentsInChildren<ParticleSystem>(true))
+                particles.Play(false);
+        }
+
+        if (travelingSlash)
+        {
+            StartCoroutine(MoveSwordSlashVFXRoutine(
+                slashVfx,
+                target,
+                targetPosition,
+                Mathf.Max(0.1f, action.swordSlashTravelSpeed),
+                action.projectileTargetOffset,
+                action.swordSlashVfxLifetime));
+        }
+        else
+        {
+            if (Application.isPlaying) Destroy(slashVfx, GetVfxLifeTime(slashVfx, action.swordSlashVfxLifetime));
+        }
+    }
+
+    private static Quaternion GetSwordSlashRotation(
+        GameObject slashPrefab,
+        Vector3 worldLongAxis,
+        Vector3 worldShortAxis,
+        Vector3 worldNormal)
+    {
+        return CombatSlashOrientation.Rotation(slashPrefab, worldLongAxis, worldShortAxis, worldNormal);
+    }
+
+    private IEnumerator MoveSwordSlashVFXRoutine(
+        GameObject slashVfx,
+        BattleUnit target,
+        Vector3 targetPosition,
+        float speed,
+        Vector3 targetOffset,
+        float lifetime)
+    {
+        if (slashVfx == null) yield break;
+
+        speed = Mathf.Max(0.1f, speed);
+        while (slashVfx != null)
+        {
+            if (target != null && !target.IsDead)
+                targetPosition = target.GetVfxTargetPosition(targetOffset);
+
+            Vector3 currentPosition = slashVfx.transform.position;
+            Vector3 direction = targetPosition - currentPosition;
+            if (direction.sqrMagnitude <= 0.01f) break;
+
+            Vector3 nextPosition = Vector3.MoveTowards(
+                currentPosition,
+                targetPosition,
+                speed * Time.deltaTime);
+            slashVfx.transform.position = nextPosition;
+            // Preserve the release sword plane and artist correction while translating.
+            // Rebuilding a world-up frame here would erase diagonal/horizontal sword cuts.
+
+            if ((targetPosition - nextPosition).sqrMagnitude <= 0.01f) break;
+            yield return null;
+        }
+
+        if (slashVfx != null)
+        {
+            slashVfx.transform.position = targetPosition;
+            bool hasParticles = slashVfx.GetComponentInChildren<ParticleSystem>(true) != null;
+            Destroy(slashVfx, hasParticles ? GetVfxLifeTime(slashVfx, lifetime) : 0.05f);
+        }
+    }
+
+    private void SpawnHitVFX(GameObject hitPrefab, Vector3 position, float lifetime)
+    {
+        if (hitPrefab == null) return;
+
+        GameObject hitVfx = CreateVisualVfx(hitPrefab, position, Quaternion.identity);
+        TrackCombatVFX(hitVfx);
+        ScheduleVisualVfx(hitVfx, GetVfxLifeTime(hitVfx, lifetime));
+    }
+
+    private static float GetVfxLifeTime(GameObject vfx, float minimumLifetime)
+    {
+        float lifetime = Mathf.Max(0.1f, minimumLifetime);
+        foreach (ParticleSystem particles in vfx.GetComponentsInChildren<ParticleSystem>(true))
+        {
+            var main = particles.main;
+            if (main.loop) continue; // Looping effects use the configured timeout.
+            float duration = main.startDelay.constantMax + main.duration + main.startLifetime.constantMax;
+            lifetime = Mathf.Max(lifetime, duration / Mathf.Max(0.01f, main.simulationSpeed));
+        }
+        return lifetime;
+    }
+
+    public void EndCurrentTurn()
+    {
+        if (isTransitioningTurn || IsGuidedTutorialBlockingInput || IsGuidedTutorialPracticeLocked) return;
+        isTransitioningTurn = true;
+        state = CombatState.Executing;
+        turnTransitionRoutine = StartCoroutine(FinishTurnAfterVfx());
+    }
+
+    private IEnumerator FinishTurnAfterVfx()
+    {
+        // Keep the outgoing turn's effects visible before clearing them.
+        // The next unit cannot create new effects until this cleanup finishes.
+        yield return new WaitForSeconds(Mathf.Max(0f, turnVfxCleanupDelay));
+        ClearCombatVFX();
+        if (currentActiveUnit != null && !currentActiveUnit.IsDead)
+        {
+            var affected = currentActiveUnit;
+            bool hasDamage = affected.HasDamagingDebuff;
+            if (hasDamage) yield return FocusDebuffCamera(affected);
+            if (affected != null)
+            {
+                affected.TickDebuffsAtTurnEnd();
+                // Include lethal ticks: finish their VFX before the result camera/panel.
+                if (hasDamage) yield return affected.WaitForDebuffPresentation(true);
+            }
+        }
+        turnTransitionRoutine = null;
+        if (AdvancedUIManager.Instance != null)
+        {
+            AdvancedUIManager.Instance.DrainDamageAtTurnEnd();
+        }
+
+        // Keep a boss alive through the lethal HP drain, then refill its HP
+        // for the next phase before continuing the current turn timeline.
+        BattleUnit[] phaseTransitions = enemyParty
+            .Where(unit => unit != null && unit.HasPendingBossPhaseTransition)
+            .ToArray();
+        bool bossPhaseChanged = false;
+        foreach (BattleUnit boss in phaseTransitions)
+        {
+            if (AdvancedUIManager.Instance != null)
+                yield return AdvancedUIManager.Instance.WaitForDamageDrain(boss);
+
+            int enteredPhase = boss.CheckPhase();
+            bossPhaseChanged |= enteredPhase > 0;
+            if (enteredPhase == 2 && !boss.phase2IntroPlayed)
+            {
+                boss.phase2IntroPlayed = true;
+                yield return BossPhase2IntroRoutine(boss, false);
+            }
+        }
+
+        // A truly defeated unit only enters Die after its own HP trail reaches
+        // zero. Bosses with another phase were already refilled above.
+        var deadUnits = playerParty.Concat(enemyParty)
+            .Where(unit => unit != null && unit.IsDead)
+            .Distinct()
+            .ToArray();
+        foreach (var unit in deadUnits)
+        {
+            if (AdvancedUIManager.Instance != null)
+                yield return AdvancedUIManager.Instance.WaitForDamageDrain(unit);
+            else
+                unit.PlayPendingDeathAnimation();
+        }
+
+        if (enemyParty.All(e => e == null || e.IsDead)) { CompleteBattle(true); yield break; }
+        if (playerParty.All(p => p == null || p.IsDead)) { CompleteBattle(false); yield break; }
+        SetupPositions();
+
+        if (bossPhaseChanged)
+        {
+            // The wave was built using the old phase's actionsPerTurn. Rebuild
+            // only its future portion so the new phase uses its own action count.
+            RebuildRemainingTimelineAfterPhaseChange(currentTimelineIndex + 1);
+            currentTimelineIndex++;
+            if (AdvancedUIManager.Instance != null)
+            {
+                var remainingTimeline = allUnitsTimeline.Skip(currentTimelineIndex).ToList();
+                AdvancedUIManager.Instance.UpdateTurnOrderUI(remainingTimeline);
+            }
+        }
+        else
+        {
+            if (AdvancedUIManager.Instance != null)
+                AdvancedUIManager.Instance.RemoveFirstPortrait();
+            currentTimelineIndex++;
+        }
+
+        if (currentTimelineIndex >= allUnitsTimeline.Count)
+        {
+            DetermineTurnOrder();
+        }
+        else
+        {
+            StartNextUnitTurn();
+        }
+    }
+
+    private void RebuildRemainingTimelineAfterPhaseChange(int completedTimelineCount)
+    {
+        int completedCount = Mathf.Clamp(completedTimelineCount, 0, allUnitsTimeline.Count);
+        var rebuiltTimeline = allUnitsTimeline.Take(completedCount).ToList();
+        var completedActions = new Dictionary<BattleUnit, int>();
+        foreach (BattleUnit unit in rebuiltTimeline)
+        {
+            if (unit == null) continue;
+            completedActions.TryGetValue(unit, out int count);
+            completedActions[unit] = count + 1;
+        }
+
+        var liveUnits = playerParty.Concat(enemyParty)
+            .Where(unit => unit != null && !unit.IsDead)
+            .Distinct()
+            .OrderByDescending(unit => unit.speed);
+
+        foreach (BattleUnit unit in liveUnits)
+        {
+            completedActions.TryGetValue(unit, out int alreadyActed);
+            int configuredActions = unit.isPlayer ? 1 : Mathf.Max(1, unit.actionsPerTurn);
+            int remainingActions = Mathf.Max(0, configuredActions - alreadyActed);
+            for (int i = 0; i < remainingActions; i++)
+                rebuiltTimeline.Add(unit);
+        }
+
+        allUnitsTimeline.Clear();
+        allUnitsTimeline.AddRange(rebuiltTimeline);
+    }
+
+    public void SetTargetUnit(BattleUnit newTarget)
+    {
+        if (IsGuidedTutorialBlockingInput) return;
+        if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
+        if ((targetSelectionConfirmed && selectedAction != null) || !IsEligibleTarget(newTarget)) return;
+
+        if (HasPendingTargetSelection)
+        {
+            if (newTarget != currentTarget) PresentSelectedTarget(newTarget);
+            ConfirmSelectedTarget();
+            return;
+        }
+
+        // A click before an action is chosen stores the preferred enemy for Attack.
+        currentTarget = newTarget;
+        AdvancedUIManager.Instance?.UpdateTargetUI(currentTarget.unitName);
+    }
+
+    public void AddStain(int amount)
+    {
+        currentStains = Mathf.Clamp(currentStains + amount, 0, maxStains);
+        AdvancedUIManager.Instance.UpdateStainsUI(currentStains, 0);
+    }
+}

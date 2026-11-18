@@ -92,8 +92,8 @@ public sealed class CombatVisualVfxPool : IDisposable
                 var main = entry.particles[i].main; entry.speeds[i] = main.simulationSpeed;
                 // The pool owns return timing; a particle's Destroy/Disable stop action must not invalidate a later lease.
                 main.stopAction = ParticleSystemStopAction.None;
-                var renderer = entry.particles[i].GetComponent<ParticleSystemRenderer>();
-                if (renderer != null && renderer.supportsMeshInstancing) renderer.enableGPUInstancing = true;
+                // Keep the prefab's rendering/instancing settings. The support query
+                // is Editor-only in this Unity version and cannot be used by a Player.
             }
             instances.Add(instance, entry); CreatedCount++;
         }

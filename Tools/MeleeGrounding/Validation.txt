@@ -1,0 +1,24 @@
+PASS: flat destination, authored approach distance, large enemy body collider and VFX triggers ignored.
+PASS: 20 degree slope, old height error=1.237m; grounded destination keeps horizontal approach.
+PASS: -20 degree slope, old height error=-1.237m; grounded destination keeps horizontal approach.
+PASS: 35 degree slope, old height error=2.381m; grounded destination keeps horizontal approach.
+PASS: -35 degree slope, old height error=-2.381m; grounded destination keeps horizontal approach.
+PASS: elevated caster pivot, player XYZ offset and per-enemy approach distance/offset preserved.
+PASS: unsupported destination does not leave the attacker standing over a hole.
+Encounter: (-40.672, -85.881, -27.360) | Assets/Adventure/Prefabs/Enemy/VampireEnemy/Vampire.prefab
+Encounter: (56.820, -96.955, -32.550) | Assets/Adventure/Prefabs/Enemy/DemonLord/DemonLord.prefab
+Encounter: (69.300, -98.334, -28.066) | Assets/Adventure/Prefabs/Enemy/GolemLava/GolemLava.prefab
+Encounter: (-76.880, -47.348, -192.110) | Assets/Adventure/Prefabs/Enemy/DemonLord/DemonLord.prefab
+Encounter: (81.790, -94.558, -1.170) | Assets/Adventure/Prefabs/Enemy/GolemLava/GolemLava.prefab
+Encounter: (58.070, -95.300, -20.174) | Assets/Adventure/Prefabs/Enemy/DarknessSpider/DarknessSpider.prefab
+Encounter: (61.070, -95.550, -20.174) | Assets/Adventure/Prefabs/Enemy/OakTreeEnt/OakTreeEnt.prefab
+PASS: actual OakTreeEnt terrain heading 0, encounter=(61.070, -95.550, -20.174), old hover/bury error=0.555m; landed=(61.070, -95.242, -18.574); exact return slot.
+PASS: actual OakTreeEnt terrain heading 45, encounter=(61.070, -95.550, -20.174), old hover/bury error=0.244m; landed=(62.202, -95.419, -19.042); exact return slot.
+PASS: actual OakTreeEnt terrain heading 90, encounter=(61.070, -95.550, -20.174), old hover/bury error=-0.314m; landed=(62.670, -95.678, -20.174); exact return slot.
+PASS: actual OakTreeEnt terrain heading 135, encounter=(61.070, -95.550, -20.174), old hover/bury error=-0.678m; landed=(62.202, -95.835, -21.306); exact return slot.
+PASS: actual OakTreeEnt terrain heading 180, encounter=(61.070, -95.550, -20.174), old hover/bury error=-0.500m; landed=(61.070, -95.806, -21.773); exact return slot.
+PASS: actual OakTreeEnt terrain heading 225, encounter=(61.070, -95.550, -20.174), old hover/bury error=-0.096m; landed=(59.938, -95.603, -21.305); exact return slot.
+PASS: actual OakTreeEnt terrain heading 270, encounter=(61.070, -95.550, -20.174), old hover/bury error=0.207m; landed=(59.471, -95.390, -20.174); exact return slot.
+PASS: actual OakTreeEnt terrain heading 315, encounter=(61.070, -95.550, -20.174), old hover/bury error=0.467m; landed=(59.938, -95.233, -19.043); exact return slot.
+PASS: Sword Attack 3 melee branch; grounded real terrain paths=8, unsafe points held at original slot=0. Action asset and animation trigger unchanged.
+PASS: isolated Edit Mode queries only; no Play Mode, campaign writes, live player movement or scene/prefab saves.

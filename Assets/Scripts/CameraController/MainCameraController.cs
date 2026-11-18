@@ -117,6 +117,9 @@ public class MainCameraController : MonoBehaviour
     private float pitch;
 
     private bool cursorLocked;
+    private bool mouseLookWasReady;
+    private int ignoreMouseUntilFrame;
+    private CursorLockMode observedCursorLock;
 
     private Vector3 horizontalVelocity;
     private float verticalVelocity;
@@ -248,18 +251,38 @@ public class MainCameraController : MonoBehaviour
 
     private void Update()
     {
-        if (CampaignSession.InputBlocked) return;
+        if (CampaignSession.InputBlocked || !Application.isFocused)
+        {
+            SuppressMouseLook();
+            return;
+        }
         HandleCursor();
 
 
-        if (!cursorLocked)
+        if (!cursorLocked || Cursor.lockState != CursorLockMode.Locked)
         {
+            SuppressMouseLook();
             return;
         }
-
-
+        if (!mouseLookWasReady || observedCursorLock != Cursor.lockState)
+        {
+            SuppressMouseLook();
+            mouseLookWasReady = true;
+            observedCursorLock = Cursor.lockState;
+        }
+        // Discard cursor-warp deltas when returning from loading, a menu or a cutscene.
+        if (Time.frameCount <= ignoreMouseUntilFrame) return;
         HandleMouseInput();
     }
+
+    public void SuppressMouseLook()
+    {
+        mouseLookWasReady = false;
+        ignoreMouseUntilFrame = Time.frameCount + 2;
+        observedCursorLock = Cursor.lockState;
+    }
+
+    private void OnApplicationFocus(bool focused) => SuppressMouseLook();
 
 
     // ============================================================
@@ -598,6 +621,7 @@ public class MainCameraController : MonoBehaviour
 
     private void LockCursor()
     {
+        SuppressMouseLook();
         Cursor.lockState =
             CursorLockMode.Locked;
 
@@ -736,5 +760,12 @@ public class MainCameraController : MonoBehaviour
                 yaw,
                 0f
             );
+        SuppressMouseLook();
+        if (vcam != null)
+        {
+            // Clear Cinemachine damping history as well as our own follow velocities.
+            vcam.PreviousStateIsValid = false;
+            vcam.UpdateCameraState(Vector3.up, -1f);
+        }
     }
 }

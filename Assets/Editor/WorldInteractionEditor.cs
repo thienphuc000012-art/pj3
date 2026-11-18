@@ -362,6 +362,8 @@ public class WorldInteractionEditor : Editor
                 new GUIContent("Enemy trong trận"),
                 true
             );
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("enemySpawn"), new GUIContent("Enemy Spawn"), true);
+            EditorGUILayout.HelpBox("Enemy thường: hồi sinh mặc định 300 giây chơi. Day Only: 06:00–18:00; Night Only: 18:00–06:00. Boss, enemy tutorial và chuỗi cổng Main Quest bỏ qua các thiết lập này, không hồi sinh.", MessageType.Info);
 
 
             EditorGUILayout.HelpBox(
@@ -738,6 +740,7 @@ public class WorldInteractionEditor : Editor
             return;
         }
 
+        GuidedTutorialEncounterAuthoring.Synchronize(config, scene);
         bool selected = config.IsGuidedTutorialEncounter(point);
         EditorGUILayout.HelpBox(selected
             ? "Encounter này đang được chọn để hiện Guided Tutorial."
@@ -747,10 +750,7 @@ public class WorldInteractionEditor : Editor
         using (new EditorGUI.DisabledScope(EditorApplication.isPlayingOrWillChangePlaymode))
         {
             if (!GUILayout.Button(selected ? "Bỏ chọn Guided Tutorial" : "Chọn encounter cho Guided Tutorial")) return;
-            Undo.RecordObject(config, "Set Guided Tutorial Encounter");
-            config.SetGuidedTutorialEncounter(selected ? null : point);
-            EditorUtility.SetDirty(config);
-            AssetDatabase.SaveAssetIfDirty(config);
+            GuidedTutorialEncounterAuthoring.Select(config, selected ? null : point);
         }
     }
 

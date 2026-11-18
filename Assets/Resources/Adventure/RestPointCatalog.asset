@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6d96a8b728c8ca34e81b442286320fcc, type: 3}
+  m_Name: RestPointCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::AdventureRestPointCatalog
+  points:
+  - id: world:1be70ea988114fed8be8c6e9a6205585
+    displayName: "L\u01B0u game / H\u1ED3i m\xE1u"
+    sceneName: mapgame
+    position: {x: -21.464, y: 280.84235, z: -97.56957}
+    rotation: {x: 0, y: 0, z: 0, w: 1}
+  - id: world:5858142c3e5545dc9520f89c912033de
+    displayName: "L\u01B0u game / H\u1ED3i m\xE1u"
+    sceneName: mapgame
+    position: {x: -18.464, y: 272.57642, z: -124.391}
+    rotation: {x: 0, y: 0, z: 0, w: 1}
+  - id: world:974ac5d29a2b4784a6691a0e43f95ead
+    displayName: Lotte
+    sceneName: m
+    position: {x: -55.75, y: -47.28764, z: -144.5}
+    rotation: {x: -0, y: -0, z: -0, w: 1}
+  - id: world:6a35fa0faeef4726ba42658ae88a5e0e
+    displayName: "V\u1EA1n H\u1EA1nh Mall"
+    sceneName: m
+    position: {x: 174.3, y: -85.79876, z: -31.879974}
+    rotation: {x: -0, y: -0, z: -0, w: 1}
+  - id: world:ea37e73ca9f94a559c30ef94aa604ad8
+    displayName: Cirk
+    sceneName: m
+    position: {x: -60.89, y: -85.82567, z: -28.95996}
+    rotation: {x: -0, y: -0, z: -0, w: 1}
+  - id: world:b566ad61e34840d0bda9777ad0da18ed
+    displayName: "B\xE1ch H\xF3a Xanh"
+    sceneName: m
+    position: {x: 69.3, y: -95.922104, z: -18.289703}
+    rotation: {x: -0, y: -0, z: -0, w: 1}

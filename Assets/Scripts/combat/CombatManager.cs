@@ -230,6 +230,9 @@ public class CombatManager : MonoBehaviour
     public float meleeApproachDistance = 1.6f;
     [Tooltip("Offset Player so với vị trí áp sát tự tính: X lệch ngang, Y độ cao, Z tiến/lùi theo hướng nhìn mục tiêu.")]
     public Vector3 playerMeleePositionOffset;
+    [Tooltip("Layer mặt đất dùng để tìm điểm đáp khi áp sát melee. Bỏ qua trigger và collider của nhân vật. Khoảng tìm lấy từ Battle Encounter Setup > Arena Spawn.")]
+    public LayerMask meleeGroundLayers = Physics.DefaultRaycastLayers;
+    readonly RaycastHit[] meleeFloorHits = new RaycastHit[64];
 
     [HideInInspector] public BattleEncounterSetup activeEncounterSetup;
     private GuidedCombatTutorial guidedTutorial;
@@ -264,6 +267,8 @@ public class CombatManager : MonoBehaviour
     }
 
     void Awake() { Instance = this; CombatShadowBudget.Ensure(gameObject.scene); }
+
+    public bool PresentationReady { get; private set; }
 
     IEnumerator Start()
     {
@@ -307,6 +312,7 @@ public class CombatManager : MonoBehaviour
 
         // Bật Camera tổng thể đầu trận
         CameraManager.Instance.SwitchToBattleStartCam();
+        PresentationReady = true;
 
         AdvancedUIManager.Instance.ToggleAllUI(false);
 
@@ -356,6 +362,7 @@ public class CombatManager : MonoBehaviour
 
     void Update()
     {
+        if (AdventureCheatPanel.IsOpen) return;
         if (IsGuidedTutorialBlockingInput) return;
         if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
 
@@ -1695,9 +1702,49 @@ public class CombatManager : MonoBehaviour
         }
 
         Vector3 approachPosition = target.transform.position - directionToTarget * approachDistance;
-        approachPosition.y = attacker.transform.position.y;
         Quaternion facing = Quaternion.LookRotation(directionToTarget, Vector3.up);
-        return approachPosition + facing * offset;
+        approachPosition += facing * offset;
+
+        var floorSettings = activeEncounterSetup != null ? activeEncounterSetup.arenaSpawn : null;
+        float top = Mathf.Max(attacker.transform.position.y, target.transform.position.y) + Mathf.Max(.5f, floorSettings != null ? floorSettings.floorSearchHeight : 2.5f);
+        float bottom = Mathf.Min(attacker.transform.position.y, target.transform.position.y) - Mathf.Max(.5f, floorSettings != null ? floorSettings.floorSearchDepth : 3f);
+        var scene = attacker.gameObject.scene;
+        bool hasStartFloor = TryGetMeleeFloor(attacker.transform.position, scene, top, bottom, attacker.transform.position.y, out var startFloor);
+        bool hasTargetFloor = TryGetMeleeFloor(target.transform.position, scene, top, bottom, target.transform.position.y, out var targetFloor);
+        float referenceY = hasTargetFloor ? targetFloor.point.y : target.transform.position.y;
+        if (hasStartFloor && hasTargetFloor)
+        {
+            float distance = Vector3.Distance(new Vector3(attacker.transform.position.x, 0, attacker.transform.position.z), new Vector3(target.transform.position.x, 0, target.transform.position.z));
+            float along = Vector3.Dot(approachPosition - attacker.transform.position, directionToTarget);
+            referenceY = Mathf.Lerp(startFloor.point.y, targetFloor.point.y, distance > .001f ? Mathf.Clamp01(along / distance) : 1f);
+        }
+        if (TryGetMeleeFloor(approachPosition, scene, top, bottom, referenceY, out var floor))
+        {
+            // Retain the caster's authored pivot/foot clearance, not its old world height.
+            float clearance = hasStartFloor ? attacker.transform.position.y - startFloor.point.y : 0f;
+            approachPosition.y = floor.point.y + clearance + offset.y;
+            return approachPosition;
+        }
+        // A hole or missing arena floor is not a valid place to leave the caster standing.
+        return attacker.transform.position;
+    }
+
+    bool TryGetMeleeFloor(Vector3 desired, UnityEngine.SceneManagement.Scene scene, float top, float bottom, float referenceY, out RaycastHit floor)
+    {
+        floor = default; float closest = float.PositiveInfinity;
+        int count = Physics.RaycastNonAlloc(new Vector3(desired.x, top, desired.z), Vector3.down, meleeFloorHits,
+            Mathf.Max(.01f, top - bottom), meleeGroundLayers, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < count; i++)
+        {
+            var hit = meleeFloorHits[i]; var collider = hit.collider;
+            if (collider == null || collider.gameObject.scene != scene || hit.normal.y < .5f || collider is CharacterController ||
+                collider.GetComponentInParent<BattleUnit>() != null || collider.GetComponentInParent<PlayerScript>() != null ||
+                collider.GetComponentInParent<WorldInteraction>() != null) continue;
+            float delta = Mathf.Abs(hit.point.y - referenceY);
+            if (delta >= closest) continue;
+            closest = delta; floor = hit;
+        }
+        return !float.IsPositiveInfinity(closest);
     }
 
     private void FaceMeleeAttackTarget(BattleUnit attacker, BattleUnit target, Vector3 attackPosition)
@@ -3329,6 +3376,6 @@ public class CombatManager : MonoBehaviour
     public void AddStain(int amount)
     {
         currentStains = Mathf.Clamp(currentStains + amount, 0, maxStains);
-        AdvancedUIManager.Instance.UpdateStainsUI(currentStains, 0);
+        AdvancedUIManager.Instance?.UpdateStainsUI(currentStains, 0);
     }
 }

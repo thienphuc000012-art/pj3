@@ -1,0 +1,5 @@
+PASS: timing success +1 and immediate UI, wrong/duplicate presses +0, max cap, configurable gain/disable, missing-UI safety and existing Ultimate gain.
+PASS: SpawnAtTarget/Shoot/Beam windows, repeated projectile/beam impacts, party AoE awards one shared Stain, living members retain Ultimate gain.
+PASS: real melee overlap +1, absent guard/contact +0, duplicate overlap +0, multiple AoE contacts +1 total, next combo guard +1.
+Scene binding: GameManagers/ParrySystem > Parry Stain Gain = 1
+PASS: isolated Edit Mode checks; no Play Mode, campaign writes or source scene/prefab changes.

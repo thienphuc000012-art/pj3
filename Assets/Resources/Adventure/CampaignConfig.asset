@@ -16,8 +16,7 @@ MonoBehaviour:
   additionalMapScenes:
   - m
   battleScene: combattest
-  guidedTutorialEncounterKey: Assets/Scenes/m.unity|world:44cd1e5190324008a912494b91992674|Enemy
-    Tutorial#20
+  guidedTutorialEncounterKey: guided-tutorial:v2:GlobalObjectId_V1-2-13b0cbd29f805104796f9d9580b2766e-1550172918-0
   saveSlotCount: 10
   interactionVfx:
     healPrefab: {fileID: 5992701628586220299, guid: f8d7fbe4c97263e4188baf45282515ab, type: 3}
@@ -36,7 +35,7 @@ MonoBehaviour:
   mapPlayerHitTrigger: HIt
   mapPlayerHitState: HIt
   mapEnemyHitTrigger: Hit
-  mapEnemyHitState: hit
+  mapEnemyHitState: Hit
   startingParty:
   - {fileID: 7229521429613955948, guid: a5b3fe05ee26e4b419eaeab72c77c4b0, type: 3}
   - {fileID: 3750319964840296008, guid: 6420f2b6c7cb7f141a78467b70d2f49a, type: 3}
@@ -49,7 +48,7 @@ MonoBehaviour:
   items:
   - id: herb
     displayName: "Th\u1EA3o d\u01B0\u1EE3c"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: 82361fa11de5cc34386d1b5565ad8f5a, type: 3}
     description: "Nguy\xEAn li\u1EC7u ch\u1EBF t\u1EA1o thu\u1ED1c h\u1ED3i m\xE1u."
     mapHeal: 0
     combatAction: {fileID: 0}

@@ -11,7 +11,7 @@ using Unity.Profiling;
 public class CampaignSession : MonoBehaviour
 {
     public static CampaignSession Instance { get; private set; }
-    public static bool InputBlocked => LoadingScreen.IsLoading || MapChunkStreamer.MovementBlocked || (Instance != null && (Instance.Busy || Instance.PresentationActive || Instance.Menu != AdventureMenu.None));
+    public static bool InputBlocked => AdventureCheatPanel.IsOpen || LoadingScreen.IsLoading || MapChunkStreamer.MovementBlocked || (Instance != null && (Instance.Busy || Instance.PresentationActive || Instance.Menu != AdventureMenu.None));
     UnityEngine.Object presentationOwner;
     bool nextMapIsFreshArrival;
     public bool PresentationActive => presentationOwner != null;
@@ -249,6 +249,8 @@ public class CampaignSession : MonoBehaviour
         public string combatSetupId;
         public bool playerInitiated;
         public bool guidedTutorial;
+        public bool respawn;
+        public float respawnSeconds;
         public CombatAreaScan arenaScan;
         public CombatArenaLayout arenaLayout;
         public BattleEncounterSetup arenaSetup;
@@ -317,6 +319,8 @@ public class CampaignSession : MonoBehaviour
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
         DontDestroyOnLoad(gameObject);
+        gameObject.AddComponent<WorldEnemySpawns>();
+        gameObject.AddComponent<AdventureCheatPanel>();
     }
     void OnDestroy() { sceneArenaTransfer?.Dispose(); sceneArenaTransfer = null; if (Instance == this) { StopDialogueSpeakerPresentation(); Instance = null; Time.timeScale = previousTimeScale; } }
     void OnApplicationFocus(bool focused) { playTimeSample = Time.realtimeSinceStartupAsDouble; }
@@ -467,6 +471,8 @@ public class CampaignSession : MonoBehaviour
 
     bool PrepareWorldPoint(WorldInteraction point)
     {
+        if (point != null && point.kind == WorldInteractionKind.Encounter)
+            GetComponent<WorldEnemySpawns>()?.Register(point);
         if (point == null || !point.isActiveAndEnabled) return false;
         if (point.kind == WorldInteractionKind.Discovery) return true;
         if (point.kind == WorldInteractionKind.Cryptex)
@@ -1243,7 +1249,7 @@ public class CampaignSession : MonoBehaviour
         UpdatePlayTime();
         if (OnMap && MapPlayer != null && !InputBlocked)
             AdventureWorldTime.Advance(Data, Time.deltaTime);
-        if (!OnMap || MapPlayer == null || Busy || PresentationActive || LoadingScreen.IsLoading || MapChunkStreamer.MovementBlocked) return;
+        if (!OnMap || MapPlayer == null || Busy || PresentationActive || AdventureCheatPanel.IsOpen || LoadingScreen.IsLoading || MapChunkStreamer.MovementBlocked) return;
         UpdateArrivalRestExits(MapPlayer.transform.position);
         // Dialogue owns input until its final node. Esc/P must not consume a
         // one-time conversation or release its camera/player controls early.
@@ -1358,6 +1364,11 @@ public class CampaignSession : MonoBehaviour
         if (controller != null) controller.enabled = false;
         MapPlayer.transform.SetPositionAndRotation(position, rotation);
         if (controller != null) controller.enabled = enabledBefore;
+        if (MapPlayer.MCC != null)
+        {
+            MapPlayer.MCC.SetCameraRotation(rotation.eulerAngles.y, 12f);
+            MapPlayer.MCC.SnapCameraTarget();
+        }
     }
     public bool Save(bool capturePosition = true)
     {
@@ -1732,7 +1743,9 @@ public class CampaignSession : MonoBehaviour
             enemies = new List<BattleUnit>(point.enemyPrefabs),
             combatSetupId = point.combatSetupId,
             playerInitiated = playerInitiated,
-            guidedTutorial = Config.IsGuidedTutorialEncounter(point)
+            guidedTutorial = Config.IsGuidedTutorialEncounter(point),
+            respawn = !EnemySpawnRules.IsPermanent(point, Config) && (point.enemySpawn?.respawn ?? true),
+            respawnSeconds = point.enemySpawn?.respawnSeconds ?? 300f
         };
         Busy = true;
         EncounterStarted?.Invoke(point);
@@ -1857,6 +1870,8 @@ public class CampaignSession : MonoBehaviour
                 yield break;
             }
             encounter.arenaScan = scan;
+            // Preparing the transfer immediately hides map scenery under its staging root.
+            SceneTransitionCover.Show();
             if (scan.UsesSceneEnvironment && !CombatSceneEnvironment.TryPrepare(scan, out sceneArenaTransfer, out scanError))
             { Debug.LogWarning("[Combat Arena] " + scanError, point); Notify(scanError); yield break; }
 
@@ -1874,6 +1889,7 @@ public class CampaignSession : MonoBehaviour
         {
             if (!loadingStarted)
             {
+                SceneTransitionCover.Hide();
                 sceneArenaTransfer?.Dispose(); sceneArenaTransfer = null;
                 if (blackHole != null) Destroy(blackHole);
                 if (playerTransform != null)
@@ -2338,6 +2354,7 @@ public class CampaignSession : MonoBehaviour
             if (!Data.collected.Contains(encounter.id))
             {
                 Data.collected.Add(encounter.id);
+                if (encounter.respawn) EnemySpawnRules.Schedule(Data, encounter.id, encounter.respawnSeconds);
                 GainXP(encounter.xp);
                 foreach (var reward in encounter.rewards) AddItem(reward.id, reward.count);
             }
@@ -2397,7 +2414,10 @@ public class CampaignSession : MonoBehaviour
         bool encounterWasConsumed = Data.collected.Contains(encounter.id);
         CaptureBattlePartyHealth(manager);
         if (!encounterWasConsumed && !string.IsNullOrEmpty(encounter.id))
+        {
             Data.collected.Add(encounter.id);
+            if (encounter.respawn) EnemySpawnRules.Schedule(Data, encounter.id, encounter.respawnSeconds);
+        }
 
         Busy = true;
         if (!Save(capturePosition: false))
@@ -2444,7 +2464,10 @@ public class CampaignSession : MonoBehaviour
         for (int i = 0; i < Data.party.Count && i < previousPartyHp.Length; i++)
             Data.party[i].hp = previousPartyHp[i];
         if (!encounterWasConsumed && !string.IsNullOrEmpty(encounterId))
+        {
             Data.collected.Remove(encounterId);
+            Data.enemyRespawns?.RemoveAll(timer => timer != null && timer.worldId == encounterId);
+        }
     }
 
     public bool ContinueAfterBattle()

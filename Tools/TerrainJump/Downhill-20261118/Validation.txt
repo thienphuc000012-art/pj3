@@ -1,0 +1,34 @@
+PASS: downhill 35 degrees, 30 FPS, run=4m/s; unsupported=0, Fall frames=0, Land frames=0, longest Fall=0.000s, gap=0.097m; delta=(0.000, -13.707, -19.670)
+PASS: downhill 35 degrees, 60 FPS, run=4m/s; unsupported=0, Fall frames=0, Land frames=0, longest Fall=0.000s, gap=0.097m; delta=(0.000, -13.707, -19.669)
+PASS: downhill 35 degrees, 120 FPS, run=4m/s; unsupported=0, Fall frames=0, Land frames=0, longest Fall=0.000s, gap=0.097m; delta=(0.000, -13.706, -19.669)
+PASS: downhill 45 degrees, 30 FPS, run=4m/s; unsupported=0, Fall frames=0, Land frames=0, longest Fall=0.000s, gap=0.154m; delta=(0.000, -16.847, -16.971)
+PASS: downhill 45 degrees, 60 FPS, run=4m/s; unsupported=0, Fall frames=0, Land frames=0, longest Fall=0.000s, gap=0.154m; delta=(0.000, -16.847, -16.971)
+PASS: downhill 45 degrees, 120 FPS, run=4m/s; unsupported=0, Fall frames=0, Land frames=0, longest Fall=0.000s, gap=0.154m; delta=(0.000, -16.847, -16.971)
+PASS: downhill 49 degrees, 30 FPS, run=4m/s; unsupported=0, Fall frames=0, Land frames=0, longest Fall=0.000s, gap=0.188m; delta=(0.000, -17.951, -15.741)
+PASS: downhill 49 degrees, 60 FPS, run=4m/s; unsupported=0, Fall frames=0, Land frames=0, longest Fall=0.000s, gap=0.188m; delta=(0.000, -17.950, -15.740)
+PASS: downhill 49 degrees, 120 FPS, run=4m/s; unsupported=0, Fall frames=0, Land frames=0, longest Fall=0.000s, gap=0.188m; delta=(0.000, -17.950, -15.740)
+PASS: downhill 55 degrees, 30 FPS, run=4m/s; unsupported=0, Fall frames=0, Land frames=0, longest Fall=0.000s, gap=0.254m; delta=(0.000, -33.808, -23.828)
+PASS: downhill 55 degrees, 60 FPS, run=4m/s; unsupported=0, Fall frames=0, Land frames=0, longest Fall=0.000s, gap=0.254m; delta=(0.000, -33.825, -23.840)
+PASS: downhill 55 degrees, 120 FPS, run=4m/s; unsupported=0, Fall frames=0, Land frames=0, longest Fall=0.000s, gap=0.254m; delta=(0.000, -33.838, -23.850)
+PASS: downhill 70 degrees, 30 FPS, run=4m/s; unsupported=0, Fall frames=0, Land frames=0, longest Fall=0.000s, gap=0.608m; delta=(0.000, -38.792, -14.329)
+PASS: downhill 70 degrees, 60 FPS, run=4m/s; unsupported=0, Fall frames=0, Land frames=0, longest Fall=0.000s, gap=0.607m; delta=(0.000, -38.829, -14.343)
+PASS: downhill 70 degrees, 120 FPS, run=4m/s; unsupported=0, Fall frames=0, Land frames=0, longest Fall=0.000s, gap=0.608m; delta=(0.000, -38.846, -14.349)
+PASS: actual m terrain at (-81.843, -90.130, -17.531), 30 FPS, angle=44.3; unsupported=0, Fall=0, Land=0
+PASS: actual m terrain at (-81.843, -90.130, -17.531), 60 FPS, angle=44.3; unsupported=0, Fall=0, Land=0
+PASS: actual m terrain at (-81.843, -90.130, -17.531), 120 FPS, angle=44.3; unsupported=0, Fall=0, Land=0
+PASS: actual m terrain at (-91.218, -86.104, -17.531), 30 FPS, angle=28.1; unsupported=0, Fall=0, Land=0
+PASS: actual m terrain at (-91.218, -86.104, -17.531), 60 FPS, angle=28.1; unsupported=0, Fall=0, Land=0
+PASS: actual m terrain at (-91.218, -86.104, -17.531), 120 FPS, angle=28.1; unsupported=0, Fall=0, Land=0
+PASS: actual m terrain at (-72.468, -87.243, -8.156), 30 FPS, angle=42.8; unsupported=0, Fall=0, Land=0
+PASS: actual m terrain at (-72.468, -87.243, -8.156), 60 FPS, angle=42.8; unsupported=0, Fall=0, Land=0
+PASS: actual m terrain at (-72.468, -87.243, -8.156), 120 FPS, angle=42.8; unsupported=0, Fall=0, Land=0
+PASS: actual m terrain at (-63.093, -87.243, -8.156), 30 FPS, angle=29.2; unsupported=0, Fall=0, Land=0
+PASS: actual m terrain at (-63.093, -87.243, -8.156), 60 FPS, angle=29.2; unsupported=0, Fall=0, Land=0
+PASS: actual m terrain at (-63.093, -87.243, -8.156), 120 FPS, angle=29.2; unsupported=0, Fall=0, Land=0
+PASS: 0.15m downward step, 30 FPS; Fall=False, Land=False, supported=True. Small step adheres; high ledge preserves genuine fall/landing.
+PASS: 0.15m downward step, 60 FPS; Fall=False, Land=False, supported=True. Small step adheres; high ledge preserves genuine fall/landing.
+PASS: 0.15m downward step, 120 FPS; Fall=False, Land=False, supported=True. Small step adheres; high ledge preserves genuine fall/landing.
+PASS: 2m downward step, 30 FPS; Fall=True, Land=True, supported=True. Small step adheres; high ledge preserves genuine fall/landing.
+PASS: 2m downward step, 60 FPS; Fall=True, Land=True, supported=True. Small step adheres; high ledge preserves genuine fall/landing.
+PASS: 2m downward step, 120 FPS; Fall=True, Land=True, supported=True. Small step adheres; high ledge preserves genuine fall/landing.
+Failures: 0. Native isolated CharacterController + actual player Animator; no Play Mode, saves or map edits.

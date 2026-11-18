@@ -1616,7 +1616,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleUnit
   unitName: kakaka
-  maxHP: 1000
+  maxHP: 100
   isSummonedUnit: 0
   summonOwner: {fileID: 0}
   summonDeathOwnerMaxHpCostPercent: 0
@@ -1624,17 +1624,20 @@ MonoBehaviour:
   partyHudTurnPortrait: {fileID: 503092623, guid: 8241ed81923d19947aa8a4425643688a, type: 3}
   parryUltimateGain: 15
   damageUltimateGain: 50
-  baseAtk: 1500
+  baseAtk: 15
   baseDef: 5
   baseCrit: 10
   baseCritDamage: 150
   element: 1
   defaultAttack: {fileID: 11400000, guid: fcb0cc7c27be4104a89d579861c52117, type: 2}
   characterSkills:
-  - {fileID: 11400000, guid: 1eb254b917932f24ab84165e603ea5ef, type: 2}
   - {fileID: 11400000, guid: 6de9ab5777c744e44b2765fd39d350a3, type: 2}
+  - {fileID: 11400000, guid: 865de14f15018634e8aca8aa0f8cb3a6, type: 2}
+  - {fileID: 11400000, guid: 90e6b83af6a96c24ca011999f75b4375, type: 2}
   - {fileID: 11400000, guid: 2f2152f98c14c3d46a4e74b095d13736, type: 2}
-  - {fileID: 11400000, guid: 1eb254b917932f24ab84165e603ea5ef, type: 2}
+  - {fileID: 11400000, guid: 9c2d4533a27c9f542afeed2d9c8c4450, type: 2}
+  - {fileID: 11400000, guid: 33022203843e92e4abf48d874edd3a86, type: 2}
+  - {fileID: 11400000, guid: 48e3c62249d02184a81587ede334f145, type: 2}
   - {fileID: 11400000, guid: 0d35c71ebbc4e1444a787ed6badd0fdd, type: 2}
   battleEntryWalkStateName: Base Layer.BattleEntryWalk
   battleEntryAnimationSpeed: 1

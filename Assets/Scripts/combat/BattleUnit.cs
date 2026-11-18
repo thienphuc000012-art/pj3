@@ -644,6 +644,13 @@ public class BattleUnit : MonoBehaviour
             if (deathAnimator != null) deathAnimator.cullingMode = originalCulling;
         }
     }
+    public void SetCheatHP(int hp)
+    {
+        if (IsDead || hp <= 0) { SetPersistentHP(hp); return; }
+        currentHP = Mathf.Clamp(hp, 0, maxHP);
+        UpdateUI();
+    }
+
     public void SetPersistentHP(int hp)
     {
         RestoreDeathPresentation();

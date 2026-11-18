@@ -13,6 +13,9 @@ public class ParrySystem : MonoBehaviour
     public float parryCooldown = 0.5f; // Thời gian nghỉ giữa 2 lần bấm Parry (giây)
     [Min(0.01f), Tooltip("Thời gian vùng đỡ của player hoạt động sau khi nhấn parry.")]
     public float meleeGuardDuration = 0.35f;
+    [Header("Successful Parry Rewards")]
+    [Min(0), Tooltip("Stain hồi cho cả đội khi parry thành công. Một lần đỡ AoE chỉ cộng một lần, không nhân theo số thành viên. Đặt 0 để tắt.")]
+    public int parryStainGain = 1;
     [Header("Successful Parry VFX")]
     [Tooltip("Prefab hiệu ứng phát khi parry đúng thời điểm. Gán prefab tại đây.")]
     public GameObject parrySuccessVfxPrefab;
@@ -44,6 +47,7 @@ public class ParrySystem : MonoBehaviour
     private Coroutine parryFeedbackRoutine;
     private float timeScaleBeforeParryFeedback = 1f;
     private readonly HashSet<BattleUnit> activeMeleeGuards = new HashSet<BattleUnit>();
+    private bool meleeStainRewarded;
 
     void Awake()
     {
@@ -66,6 +70,7 @@ public class ParrySystem : MonoBehaviour
 
     void Update()
     {
+        if (AdventureCheatPanel.IsOpen) return;
         if (CombatManager.Instance == null) return;
 
         // 1. Chỉ cho phép bấm Parry khi Địch đang hành động
@@ -87,6 +92,7 @@ public class ParrySystem : MonoBehaviour
     {
         if (combat == null) return;
         parrySuccessful = false;
+        meleeStainRewarded = false;
 
         IEnumerable<BattleUnit> targets;
         if (combat.IsCurrentEnemyAoEAttack())
@@ -136,6 +142,7 @@ public class ParrySystem : MonoBehaviour
                     activeMeleeGuards.Remove(player);
                     parrySuccessful = true;
                     isParryWindowOpen = false;
+                    if (!meleeStainRewarded) { AwardParryStain(); meleeStainRewarded = true; }
                     player.AddUltimateEnergy(player.parryUltimateGain);
                     SpawnParrySuccessVFX(player, attacker, true, contactPoint);
                     PlayParryImpactFeedback();
@@ -184,6 +191,7 @@ public class ParrySystem : MonoBehaviour
                 // CombatManager đang dùng cùng một parrySuccessful cho toàn bộ
                 // targets của AoE, nên true = cả Party chặn đòn.
                 parrySuccessful = true;
+                AwardParryStain();
                 bool impactSoundPlayed = false;
                 foreach (var member in combat.playerParty)
                 {
@@ -236,6 +244,7 @@ public class ParrySystem : MonoBehaviour
         if (isParryWindowOpen)
         {
             parrySuccessful = true;
+            AwardParryStain();
             targetPlayer.AddUltimateEnergy(targetPlayer.parryUltimateGain);
             SpawnParrySuccessVFX(targetPlayer, combat.currentActiveUnit);
             PlayParryImpactFeedback();
@@ -251,6 +260,11 @@ public class ParrySystem : MonoBehaviour
         {
             parrySuccessful = false;
         }
+    }
+
+    private void AwardParryStain()
+    {
+        if (parryStainGain > 0) CombatManager.Instance?.AddStain(parryStainGain);
     }
 
     private void SpawnParrySuccessVFX(BattleUnit player, BattleUnit attacker, bool playImpactSound = true, Vector3? contactPosition = null)
@@ -376,5 +390,6 @@ public class ParrySystem : MonoBehaviour
         isParryWindowOpen = false;
         parrySuccessful = false;
         activeMeleeGuards.Clear();
+        meleeStainRewarded = false;
     }
 }

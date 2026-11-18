@@ -284,7 +284,7 @@ public class AdvancedUIManager : MonoBehaviour
     [Header("Buff UI Settings")]
     public GameObject buffIconPrefab; // Prefab Image dùng làm Icon Buff
     public List<BuffSpriteMapping> buffSprites; // Map loại Buff với hình ảnh
-    [Min(1f), Tooltip("Kích thước tối đa của icon buff/debuff. Icon Party được giới hạn theo chiều cao và chiều rộng của hàng.")]
+    [Min(1f), Tooltip("Kích thước tối đa của icon buff/debuff. Icon Player và Enemy đều vừa chiều cao/rộng của container đã đặt; không tự tăng kích thước container.")]
     public float buffDebuffIconSize = 36f;
     [Min(0f), Tooltip("Khoảng cách giữa các icon buff/debuff (đơn vị UI). Thay đổi được áp dụng ngay khi đang chạy.")]
     public float buffDebuffIconSpacing = 8f;
@@ -989,7 +989,8 @@ public class AdvancedUIManager : MonoBehaviour
         enemy.OnStatsChanged += UpdateEnemyHPUISafe;
         UpdateEnemyHPUISafe(enemy.currentHP, enemy.maxHP, enemy.GetTotalShield());
 
-        if (enemyNameText != null) enemyNameText.text = enemy.unitName;
+        // Update the localized source too, otherwise opening the HUD restores "Tên/Name".
+        GameLocalization.SetText(enemyNameText, enemy.unitName);
 
         bool isStartingGame = CombatManager.Instance != null &&
                              (CombatManager.Instance.state == CombatState.Start ||
@@ -1304,7 +1305,8 @@ public class AdvancedUIManager : MonoBehaviour
         // Keep it synchronized with the battle HUD visibility state.
         enemyBuffContainer.gameObject.SetActive(battleUIVisible);
         // Icons flow left-to-right, starting at the left edge of the container.
-        layout.childAlignment = TextAnchor.MiddleLeft;
+        // Start at the authored top edge, immediately below the HP border.
+        layout.childAlignment = TextAnchor.UpperLeft;
         layout.spacing = buffDebuffIconSpacing;
         layout.childControlWidth = layout.childControlHeight = true;
         layout.childForceExpandWidth = layout.childForceExpandHeight = false;
@@ -1315,7 +1317,6 @@ public class AdvancedUIManager : MonoBehaviour
     public void ConfigureBuffIconContainer(Transform container)
     {
         if (!(container is RectTransform rect) || rect == null) return;
-        bool isPartyRow = container != enemyBuffContainer;
         var layout = container.GetComponent<HorizontalLayoutGroup>();
         if (layout != null)
         {
@@ -1342,15 +1343,10 @@ public class AdvancedUIManager : MonoBehaviour
                 spacing = Mathf.Min(spacing, Mathf.Max(0f, (availableWidth - activeIcons.Count) / gapCount));
             iconSize = Mathf.Min(iconSize, (availableWidth - spacing * gapCount) / activeIcons.Count);
 
-            if (isPartyRow)
-            {
-                float availableHeight = Mathf.Max(0f, rect.rect.height - (padding?.vertical ?? 0));
-                iconSize = Mathf.Min(iconSize, availableHeight);
-            }
-            else
-            {
-                rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, Mathf.Max(rect.rect.height, iconSize + 2f));
-            }
+            // Both HUDs fit icons inside the rectangle authored in the scene.
+            // Growing the enemy row used to pull its centered icons away from HP.
+            float availableHeight = Mathf.Max(0f, rect.rect.height - (padding?.vertical ?? 0));
+            iconSize = Mathf.Min(iconSize, availableHeight);
         }
 
         if (layout != null) layout.spacing = spacing;
@@ -1359,8 +1355,9 @@ public class AdvancedUIManager : MonoBehaviour
         foreach (Image icon in activeIcons)
         {
             // Match the drawn icon to its layout cell. The shared prefab is scaled to 25%.
-            if (isPartyRow) icon.rectTransform.localScale = Vector3.one;
-            ApplyBuffIconSize(icon.gameObject, iconSize);
+            icon.rectTransform.localScale = Vector3.one;
+            float size = container == enemyBuffContainer && enemyDebuffIcon.IsIcon(icon.gameObject) ? iconSize * .5f : iconSize;
+            ApplyBuffIconSize(icon.gameObject, size);
         }
         if (layout != null) LayoutRebuilder.MarkLayoutForRebuild(rect);
     }
@@ -2052,6 +2049,7 @@ public class PartyHUDUnit
 // Separate from buff stack icons: debuffs have one slot and display remaining turns.
 public sealed class DebuffIconUI
 {
+    public bool IsIcon(GameObject candidate) => image != null && image.gameObject == candidate;
     private Image image;
     private TextMeshProUGUI label;
     private int turns;

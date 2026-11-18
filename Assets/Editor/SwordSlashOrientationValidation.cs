@@ -61,7 +61,7 @@ public static class SwordSlashOrientationValidation
                         foreach (float time in new[] { .08f, .18f, .28f, .4f, .6f })
                         {
                             system.Play(false); system.Simulate(time, false, true, false);
-                            renderer.BakeMesh(baked, camera, true);
+                            renderer.BakeMesh(baked, camera, ParticleSystemBakeMeshOptions.BakeRotationAndScale);
                             if (baked.vertexCount > 0 && system.particleCount > 0) break;
                         }
                         Check(baked.vertexCount > 0, "Slash emitted no bakeable mesh: " + path);
