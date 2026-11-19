@@ -70,6 +70,8 @@ public class CombatManager : MonoBehaviour
         public int impactRawDamage;
         public bool impactIsCrit;
         public bool energyAwarded;
+        public bool casterBuffApplied;
+        public readonly HashSet<BattleUnit> statusTargets = new HashSet<BattleUnit>();
 
         // VFX Parry state cho Shoot / Beam.
         public bool parryWindowOpened;
@@ -459,6 +461,7 @@ public class CombatManager : MonoBehaviour
     private void PresentSelectedTarget(BattleUnit unit)
     {
         currentTarget = unit;
+        GetComponent<CombatTargetSelection>()?.SelectTarget(unit);
         AdvancedUIManager.Instance?.UpdateTargetUI(unit.unitName);
         AdvancedUIManager.Instance?.ToggleChangeTargetHint(true);
         CameraManager.Instance?.SwitchToTargetCam(unit);
@@ -1263,8 +1266,23 @@ public class CombatManager : MonoBehaviour
     private readonly HashSet<BattleUnit> statusTargetsThisAction = new HashSet<BattleUnit>();
     private void ApplyActionStatus(BattleUnit target, ActionData action)
     {
-        if (target != null && !target.IsDead && !target.HasPendingBossPhaseTransition && statusTargetsThisAction.Add(target))
+        ApplyActionStatusOnce(target, action, statusTargetsThisAction);
+    }
+
+    private static void ApplyActionStatusOnce(BattleUnit target, ActionData action, HashSet<BattleUnit> targets)
+    {
+        if (target != null && action != null && !target.IsDead && !target.HasPendingBossPhaseTransition && targets.Add(target))
             target.ApplyStatusAction(action);
+    }
+
+    private static void ApplyCasterBuffOnce(BattleUnit attacker, ActionData action, VfxActionState actionState)
+    {
+        if (attacker == null || attacker.IsDead || attacker.HasPendingBossPhaseTransition || action == null ||
+            !action.buffToCaster || action.buffStat == ActionData.BuffStat.None || action.buffDuration <= 0 ||
+            actionState == null || actionState.casterBuffApplied) return;
+        // State belongs to this cast, including delayed projectile callbacks.
+        actionState.casterBuffApplied = true;
+        attacker.AddBuff(action.buffStat, action.buffAmount, action.buffDuration);
     }
 
     private float GetCasterConditionalDamageMultiplier(ActionData action, BattleUnit attacker)
@@ -1846,11 +1864,15 @@ public class CombatManager : MonoBehaviour
                     ally.Heal(Mathf.Max(0, rawDamage));
                     AdvancedUIManager.Instance.ShowDamageText(ally.transform, ally.currentHP - before, false, true);
                 }
-                if (actionToUse.buffStat != ActionData.BuffStat.None)
+                if (actionToUse.buffStat != ActionData.BuffStat.None && !actionToUse.buffToCaster)
                     ally.AddBuff(actionToUse.buffStat, actionToUse.buffAmount, actionToUse.buffDuration);
                 resolved = true;
             }
-            if (resolved) attacker.GainUltimateFromHit(actionToUse);
+            if (resolved)
+            {
+                ApplyCasterBuffOnce(attacker, actionToUse, vfxActionState);
+                attacker.GainUltimateFromHit(actionToUse);
+            }
             return;
         }
 
@@ -1890,13 +1912,19 @@ public class CombatManager : MonoBehaviour
                         GetElementalDamageMultiplier(attacker, enemy, actionToUse));
                 }
             }
-            if (resolvedHit) attacker.GainUltimateFromHit(actionToUse);
+            if (resolvedHit)
+            {
+                // Finish the whole first AoE hit before adding ATK/crit buffs.
+                ApplyCasterBuffOnce(attacker, actionToUse, vfxActionState);
+                attacker.GainUltimateFromHit(actionToUse);
+            }
         }
         else
         {
             bool priorParryResult = ParrySystem.Instance != null && ParrySystem.Instance.parrySuccessful;
             vfxActionState.parried = priorParryResult;
             List<BattleUnit> targets = actionToUse.isAoE ? playerParty.Where(u => u != null && !u.IsDead).ToList() : new List<BattleUnit> { currentTarget };
+            bool resolvedHit = false;
 
             foreach (var ally in targets)
             {
@@ -1916,12 +1944,14 @@ public class CombatManager : MonoBehaviour
 
                 if (!parried)
                 {
+                    resolvedHit = true;
                     // Parry thành công thì không hiện hiệu ứng trúng đòn.
                     if (!UsesVfxImpact(actionToUse)) SpawnActionHitVFX(actionToUse, ally);
                     AdvancedUIManager.Instance.ShowDamageText(ally.transform, actualDamageTaken, isCrit, false,
                         GetElementalDamageMultiplier(attacker, ally, actionToUse));
                 }
             }
+            if (resolvedHit) ApplyCasterBuffOnce(attacker, actionToUse, vfxActionState);
             ParrySystem.Instance?.ResetParryState();
         }
     }
@@ -2359,7 +2389,7 @@ public class CombatManager : MonoBehaviour
             if (!action.statusOnly) target.TakeDamage(rawDamage, false, isCrit);
             if (!action.statusOnly && rawDamage > 0)
                 CameraManager.Instance?.PlayCombatImpact(action, attacker, target, isCrit, false, false);
-            ApplyActionStatus(target, action);
+            ApplyActionStatusOnce(target, action, actionState.statusTargets);
             // AoE projectiles are one volley; each callback is already guarded
             // against duplicate impacts. A normal projectile awards on arrival.
             if (!action.isAoE || !actionState.energyAwarded)
@@ -2372,6 +2402,7 @@ public class CombatManager : MonoBehaviour
                 hpBefore -
                 target.currentHP;
             ApplyActionLifeSteal(attacker, action, actualDamageTaken);
+            ApplyCasterBuffOnce(attacker, action, actionState);
 
             GetComponent<BattleResultPanel>()?
                 .RecordDamage(
@@ -2418,12 +2449,13 @@ public class CombatManager : MonoBehaviour
         if (!action.statusOnly) target.TakeDamage(rawDamage, parried, isCrit);
         if (!action.statusOnly && (rawDamage > 0 || parried))
             CameraManager.Instance?.PlayCombatImpact(action, attacker, target, isCrit, parried, false);
-        if (!parried) ApplyActionStatus(target, action);
+        if (!parried) ApplyActionStatusOnce(target, action, actionState.statusTargets);
 
         int playerDamageTaken =
             playerHpBefore -
             target.currentHP;
         if (!parried) ApplyActionLifeSteal(attacker, action, playerDamageTaken);
+        if (!parried) ApplyCasterBuffOnce(attacker, action, actionState);
 
         GetComponent<BattleResultPanel>()?
             .RecordDamage(
@@ -3363,7 +3395,9 @@ public class CombatManager : MonoBehaviour
 
         if (HasPendingTargetSelection)
         {
-            if (newTarget != currentTarget) PresentSelectedTarget(newTarget);
+            // A world click confirms the highlighted target; it must not silently
+            // switch recipients and execute a skill on a different unit.
+            if (newTarget != currentTarget) return;
             ConfirmSelectedTarget();
             return;
         }

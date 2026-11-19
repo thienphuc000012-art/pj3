@@ -399,6 +399,18 @@ MonoBehaviour:
     vietnamese: "H\u1EA5p th\u1EE5 t\u1ED1i \u0111a {0} s\xE1t th\u01B0\u01A1ng.
       C\xF2n {1} l\u01B0\u1EE3t."
     english: Absorbs up to {0} damage. {1} turns remaining.
+  - key: stat.debuff.attack
+    vietnamese: "Giảm sức tấn công"
+    english: Attack Down
+  - key: stat.debuff.defense
+    vietnamese: "Giảm phòng thủ"
+    english: Defense Down
+  - key: stat.debuff.critical
+    vietnamese: "Giảm tỷ lệ chí mạng"
+    english: Critical Chance Down
+  - key: stat.debuff.critical.damage
+    vietnamese: "Giảm sát thương chí mạng"
+    english: Critical Damage Down
   - key: buff.detail
     vietnamese: "{0}: {1}. C\xF2n {2} l\u01B0\u1EE3t."
     english: '{0}: {1}. {2} turns remaining.'

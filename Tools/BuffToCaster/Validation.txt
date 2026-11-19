@@ -1,0 +1,8 @@
+PASS: melee damage, buff goes to caster, first hit uses pre-buff ATK, later combo hits do not reapply, next cast gets a new buff.
+PASS: first AoE hit is consistent across targets; disabled option preserves existing assets.
+PASS: projectile impacts, duplicate collision callback, AoE volley and delayed callbacks retain per-cast ownership.
+PASS: enemy caster support and parry gate.
+PASS: heal + self buff, friendly AoE and legacy ally-buff behavior.
+PASS: self shield, Vietnamese/English generated descriptions, cache invalidation and serialization.
+Compiling Windows64 Player scripts...
+PASS: Windows64 Player scripts compiled. No Play Mode, original ActionData assets, scene data or campaign saves changed.

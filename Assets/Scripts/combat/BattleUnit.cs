@@ -869,8 +869,15 @@ public class BattleUnit : MonoBehaviour
     public void ApplyStatusAction(ActionData action)
     {
         if (IsDead || action == null) return;
-        if (action.cleanse == ActionData.CleanseType.RemoveDebuffs) activeDebuffs.Clear();
-        if (action.cleanse == ActionData.CleanseType.RemoveBuffs) activeBuffs.Clear();
+        if (action.cleanse == ActionData.CleanseType.RemoveDebuffs)
+        {
+            activeDebuffs.Clear();
+            activeBuffs.RemoveAll(buff => buff != null && buff.amount < 0);
+        }
+        if (action.cleanse == ActionData.CleanseType.RemoveBuffs)
+            activeBuffs.RemoveAll(buff => buff != null && buff.amount >= 0);
+        if (action.AppliesStatDebuffToTarget)
+            activeBuffs.Add(new ActiveBuff { stat = action.buffStat, amount = action.buffAmount, duration = action.buffDuration });
         // An occupied debuff slot blocks both replacement and duration refresh.
         // Explicit cleansing above can free the slot before applying a new effect.
         if (activeDebuffs.Count == 0 && action.debuffs != null)

@@ -93,10 +93,16 @@ public class ActionData : ScriptableObject
     public enum BuffStat { None = 0, Atk = 1, Def = 2, Crit = 3, Shield = 4, CritDamage = 5 }
     [Header("Buff & Shield Settings")]
     public BuffStat buffStat = BuffStat.None;
-    [Tooltip("Crit: bonus percentage points to crit chance. CritDamage: bonus percentage points to crit damage (150 + 50 = 200%). Other stats: flat bonus.")]
+    [Tooltip("Áp dụng buff bên dưới cho người dùng một lần mỗi lần dùng skill, sau hit đầu tiên không bị parry. Combo/AoE không cộng buff nhiều lần. Với hành động hồi máu/đồng minh, buff chuyển sang người dùng.")]
+    public bool buffToCaster;
+    [Tooltip("Atk/Def: điểm chỉ số. Crit/CritDamage: điểm phần trăm. Giá trị âm là giảm chỉ số: với skill tấn công và Buff To Caster tắt, áp dụng cho từng mục tiêu sau hit đầu tiên không bị parry, một lần mỗi lần dùng skill. Shield chỉ dùng số dương.")]
     public int buffAmount;
     [Tooltip("Number of rounds the buff lasts. Buffs of the same stat stack additively.")]
     [Min(1)] public int buffDuration = 1;
+
+    public bool AppliesStatDebuffToTarget => !buffToCaster && !isFriendlyAction && !isHeal &&
+        !isSelfOnly && !isSummonSkill && buffAmount < 0 && buffDuration > 0 &&
+        buffStat != BuffStat.None && buffStat != BuffStat.Shield;
 
     public enum DebuffType { Burn, Paralysis, Poison }
     public enum CleanseType { None, RemoveDebuffs, RemoveBuffs }
@@ -119,8 +125,9 @@ public class ActionData : ScriptableObject
         [Min(0.1f)] public float turnVfxLifetime = 2;
     }
     [Header("Debuffs & Cleanse")]
-    [Tooltip("Tối đa 1 debuff mỗi nhân vật. Đang có debuff thì không nhận debuff mới, không làm mới thời gian. Khi trống, lấy debuff đầu tiên dính theo thứ tự danh sách. Parry chặn debuff.")]
+    [Tooltip("Tối đa 1 trạng thái Burn/Paralysis/Poison mỗi nhân vật; độc lập với giảm chỉ số từ Buff Amount âm. Đang có trạng thái thì không nhận trạng thái mới hay làm mới thời gian. Khi trống, lấy trạng thái đầu tiên dính theo thứ tự danh sách. Parry chặn debuff.")]
     public DebuffSettings[] debuffs = new DebuffSettings[0];
+    [Tooltip("Remove Debuffs: xóa Burn/Paralysis/Poison và các Buff Amount âm, giữ buff dương. Remove Buffs: chỉ xóa buff dương, giữ debuff âm.")]
     public CleanseType cleanse;
     [Tooltip("Bật cho skill chỉ gây trạng thái/xóa hiệu ứng, không gây damage trực tiếp. Friendly Action chọn đồng minh.")]
     public bool statusOnly;

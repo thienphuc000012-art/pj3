@@ -371,10 +371,11 @@ public class AdvancedUIManager : MonoBehaviour
 
     public void BindBuffTooltip(GameObject icon, ActionData.BuffStat stat, int amount, int stacks, int turns)
     {
-        string name = GetBuffDisplayName(stat);
+        string name = GameLocalization.Translate(GetBuffDisplayName(stat, amount < 0));
+        string signedAmount = (amount >= 0 ? "+" : "") + amount;
         string value = stat == ActionData.BuffStat.Crit || stat == ActionData.BuffStat.CritDamage
-            ? $"+{amount}%"
-            : $"+{amount}";
+            ? signedAmount + "%"
+            : signedAmount;
         string detail = stat == ActionData.BuffStat.Shield
             ? $"Hấp thụ tối đa {amount} sát thương. Còn {turns} lượt."
             : $"{name}: {value}. Còn {turns} lượt.";
@@ -392,8 +393,19 @@ public class AdvancedUIManager : MonoBehaviour
         BindStatusTooltip(icon, name, detail);
     }
 
-    private static string GetBuffDisplayName(ActionData.BuffStat stat)
+    private static string GetBuffDisplayName(ActionData.BuffStat stat, bool negative)
     {
+        if (negative)
+        {
+            switch (stat)
+            {
+                case ActionData.BuffStat.Atk: return "Giảm sức tấn công";
+                case ActionData.BuffStat.Def: return "Giảm phòng thủ";
+                case ActionData.BuffStat.Crit: return "Giảm tỷ lệ chí mạng";
+                case ActionData.BuffStat.CritDamage: return "Giảm sát thương chí mạng";
+                default: return "Hiệu ứng bất lợi";
+            }
+        }
         switch (stat)
         {
             case ActionData.BuffStat.Atk: return "Tăng sức tấn công";
@@ -404,6 +416,8 @@ public class AdvancedUIManager : MonoBehaviour
             default: return "Hiệu ứng tăng cường";
         }
     }
+
+    public static Color GetStatModifierColor(int amount) => amount < 0 ? new Color(1f, .45f, .4f) : Color.white;
 
     private void BindStatusTooltip(GameObject icon, string title, string detail)
     {
@@ -1349,6 +1363,8 @@ public class AdvancedUIManager : MonoBehaviour
             iconSize = Mathf.Min(iconSize, availableHeight);
         }
 
+        // Keep every enemy effect at the smaller size used by its debuff slot.
+        if (container == enemyBuffContainer) iconSize *= .5f;
         if (layout != null) layout.spacing = spacing;
         var sizeLayout = container.GetComponent<PartyHUDBuffLayout>();
         if (sizeLayout != null) sizeLayout.iconSize = iconSize;
@@ -1356,8 +1372,7 @@ public class AdvancedUIManager : MonoBehaviour
         {
             // Match the drawn icon to its layout cell. The shared prefab is scaled to 25%.
             icon.rectTransform.localScale = Vector3.one;
-            float size = container == enemyBuffContainer && enemyDebuffIcon.IsIcon(icon.gameObject) ? iconSize * .5f : iconSize;
-            ApplyBuffIconSize(icon.gameObject, size);
+            ApplyBuffIconSize(icon.gameObject, iconSize);
         }
         if (layout != null) LayoutRebuilder.MarkLayoutForRebuild(rect);
     }
@@ -1420,7 +1435,7 @@ public class AdvancedUIManager : MonoBehaviour
             if (buff == null || buff.stat == ActionData.BuffStat.None) continue;
             EnemyBuffDisplay group = null;
             foreach (var existing in groups)
-                if (existing.stat == buff.stat) { group = existing; break; }
+                if (existing.stat == buff.stat && (existing.amount < 0) == (buff.amount < 0)) { group = existing; break; }
             if (group == null)
             {
                 group = new EnemyBuffDisplay { stat = buff.stat };
@@ -1434,12 +1449,13 @@ public class AdvancedUIManager : MonoBehaviour
         foreach (var group in groups)
         {
             GameObject icon = Instantiate(buffIconPrefab, enemyBuffContainer);
-            icon.name = "Enemy Buff " + group.stat;
+            icon.name = (group.amount < 0 ? "Enemy Stat Debuff " : "Enemy Buff ") + group.stat;
             ConfigureBuffIcon(icon);
             Image image = icon.GetComponent<Image>();
             if (image == null) { Destroy(icon); continue; }
             Sprite sprite = GetBuffSprite(group.stat);
             if (sprite != null) image.sprite = sprite;
+            image.color = GetStatModifierColor(group.amount);
             image.raycastTarget = true;
             var stackText = icon.GetComponentInChildren<TextMeshProUGUI>(true);
             if (stackText != null) stackText.text = group.stacks > 1 ? "x" + group.stacks : "";
@@ -1752,7 +1768,7 @@ public class PartyHUDUnit
     public Transform buffContainer; // Gắn Object chứa Layout Group để xếp Icon buff
     private List<Image> spawnedBuffIcons = new List<Image>();
 
-    // UI chỉ giữ 1 entry cho mỗi loại BuffStat.
+    // UI tách riêng buff dương và giảm chỉ số âm của cùng BuffStat.
     // Gameplay vẫn giữ từng ActiveBuff riêng để duration và amount hoạt động như cũ.
     private List<GroupedBuffUI> groupedBuffs = new List<GroupedBuffUI>();
 
@@ -1836,7 +1852,7 @@ public class PartyHUDUnit
 
                 for (int i = 0; i < groupedBuffs.Count; i++)
                 {
-                    if (groupedBuffs[i].stat == buff.stat)
+                    if (groupedBuffs[i].stat == buff.stat && (groupedBuffs[i].totalAmount < 0) == (buff.amount < 0))
                     {
                         group = groupedBuffs[i];
                         break;
@@ -1935,6 +1951,7 @@ public class PartyHUDUnit
                 }
 
                 img.raycastTarget = true;
+                img.color = AdvancedUIManager.GetStatModifierColor(group.totalAmount);
                 AdvancedUIManager.Instance.BindBuffTooltip(
                     newIcon,
                     group.stat,
@@ -2027,21 +2044,9 @@ public class PartyHUDUnit
                 i < groupedBuffs.Count &&
                 groupedBuffs[i].maxDuration <= 1;
 
-            if (aboutToExpire)
-            {
-                spawnedBuffIcons[i].color =
-                    new Color(
-                        1f,
-                        1f,
-                        1f,
-                        currentAlpha
-                    );
-            }
-            else
-            {
-                spawnedBuffIcons[i].color =
-                    Color.white;
-            }
+            Color color = AdvancedUIManager.GetStatModifierColor(i < groupedBuffs.Count ? groupedBuffs[i].totalAmount : 0);
+            color.a = aboutToExpire ? currentAlpha : 1f;
+            spawnedBuffIcons[i].color = color;
         }
     }
 }

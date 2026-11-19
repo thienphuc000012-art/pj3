@@ -117,22 +117,31 @@ public static class CombatActionDescription
                     $"Điều kiện: mục tiêu Nhiễm độc → sát thương ×{Number(Mathf.Max(0, action.damageMultiplierWhenTargetPoisoned), language)}; chưa Nhiễm độc → ×{Number(Mathf.Max(0, action.damageMultiplierWhenTargetNotPoisoned), language)}.",
                     $"Condition: target has Poison → damage ×{Number(Mathf.Max(0, action.damageMultiplierWhenTargetPoisoned), language)}; without Poison → ×{Number(Mathf.Max(0, action.damageMultiplierWhenTargetNotPoisoned), language)}."));
 
-            if (friendly && action.buffStat != ActionData.BuffStat.None && action.buffDuration > 0)
+            if ((friendly || action.buffToCaster || action.AppliesStatDebuffToTarget) && action.buffStat != ActionData.BuffStat.None && action.buffDuration > 0)
             {
                 bool percent = action.buffStat == ActionData.BuffStat.Crit || action.buffStat == ActionData.BuffStat.CritDamage;
                 string value = (action.buffAmount >= 0 ? "+" : "") + action.buffAmount;
                 if (percent) value += Pick(language, " điểm %", " percentage points");
                 string label = action.buffAmount < 0 ? "Debuff" : "Buff";
+                string recipient = action.buffToCaster ? Pick(language, " cho bản thân", " to the caster") :
+                    action.AppliesStatDebuffToTarget ? Pick(language, " cho mục tiêu", " to the target") : string.Empty;
                 if (action.buffStat == ActionData.BuffStat.Shield && action.buffAmount >= 0)
-                    lines.Add(Pick(language, $"Buff: lá chắn hấp thụ tối đa {action.buffAmount} sát thương, trong {action.buffDuration} lượt.",
-                        $"Buff: shield absorbs up to {action.buffAmount} damage for {action.buffDuration} turns."));
-                else lines.Add(Pick(language, $"{label}: {BuffName(action.buffStat, language)} {value}, trong {action.buffDuration} lượt.",
-                    $"{label}: {value} {BuffName(action.buffStat, language)} for {action.buffDuration} turns."));
+                    lines.Add(Pick(language, $"Buff{recipient}: lá chắn hấp thụ tối đa {action.buffAmount} sát thương, trong {action.buffDuration} lượt.",
+                        $"Buff{recipient}: shield absorbs up to {action.buffAmount} damage for {action.buffDuration} turns."));
+                else lines.Add(Pick(language, $"{label}{recipient}: {BuffName(action.buffStat, language)} {value}, trong {action.buffDuration} lượt.",
+                    $"{label}{recipient}: {value} {BuffName(action.buffStat, language)} for {action.buffDuration} turns."));
+                if (action.buffToCaster)
+                    lines.Add(friendly
+                        ? Pick(language, "Áp dụng một lần mỗi lần dùng, sau khi xử lý hiệu ứng đầu tiên.", "Applies once per use after resolving the first effect.")
+                        : Pick(language, "Áp dụng một lần mỗi lần dùng, sau hit đầu tiên không bị parry.", "Applies once per use after the first hit that is not parried."));
+                if (action.AppliesStatDebuffToTarget)
+                    lines.Add(Pick(language, "Mỗi mục tiêu nhận giảm chỉ số một lần mỗi lần dùng skill, sau hit đầu tiên không bị parry.",
+                        "Each target receives the stat reduction once per use, after the first hit that is not parried."));
             }
             if (action.cleanse != ActionData.CleanseType.None)
                 lines.Add(action.cleanse == ActionData.CleanseType.RemoveDebuffs ?
-                    Pick(language, "Xóa toàn bộ debuff của mục tiêu trước khi áp dụng hiệu ứng mới.", "Remove all target debuffs before applying new effects.") :
-                    Pick(language, "Xóa toàn bộ buff của mục tiêu trước khi áp dụng hiệu ứng mới.", "Remove all target buffs before applying new effects."));
+                    Pick(language, "Xóa Burn, Paralysis, Poison và toàn bộ giảm chỉ số của mục tiêu; giữ buff dương. Xử lý trước hiệu ứng mới.", "Remove Burn, Paralysis, Poison and all negative stat modifiers from the target; keep positive buffs. Resolves before new effects.") :
+                    Pick(language, "Xóa toàn bộ buff dương của mục tiêu; giữ debuff và giảm chỉ số. Xử lý trước hiệu ứng mới.", "Remove all positive target buffs; keep debuffs and negative stat modifiers. Resolves before new effects."));
 
             int effects = 0;
             if (action.debuffs != null)
@@ -145,8 +154,8 @@ public static class CombatActionDescription
                         $"Debuff: {Number(Mathf.Clamp(effect.applyChance, 0, 100), language)}% chance to apply {DebuffName(effect.type, language)} for {effect.turns} turns. {DebuffBody(effect, language)}"));
                 }
             if (effects > 0)
-                lines.Add(Pick(language, "Chỉ nhận khi chưa có debuff; không cộng dồn hay làm mới thời gian." + (effects > 1 ? " Lấy hiệu ứng đầu tiên áp dụng thành công theo thứ tự trên." : ""),
-                    "Only applies to targets without a debuff; no stacking or duration refresh." + (effects > 1 ? " Apply the first successful effect in the order above." : "")));
+                lines.Add(Pick(language, "Chỉ nhận khi chưa có trạng thái Burn/Paralysis/Poison; không cộng dồn hay làm mới thời gian. Độc lập với giảm chỉ số." + (effects > 1 ? " Lấy hiệu ứng đầu tiên áp dụng thành công theo thứ tự trên." : ""),
+                    "Only applies without an existing Burn/Paralysis/Poison; no stacking or duration refresh. Independent of stat reductions." + (effects > 1 ? " Apply the first successful effect in the order above." : "")));
             if (dealsDamage && action.useLifeSteal && action.lifeStealPercent > 0)
                 lines.Add(Pick(language, $"Hút máu: hồi {Number(action.lifeStealPercent, language)}% lượng HP thực sự gây mất cho người dùng.",
                     $"Life steal: restore {Number(action.lifeStealPercent, language)}% of actual HP damage dealt to the caster."));
@@ -175,6 +184,7 @@ public static class CombatActionDescription
             h = h * 31 + a.statusOnly.GetHashCode(); h = h * 31 + a.isSummonSkill.GetHashCode(); h = h * 31 + a.summonCount; h = h * 31 + a.summonDeathOwnerMaxHpCostPercent.GetHashCode();
             h = h * 31 + (a.summonPrefab != null ? (a.summonPrefab.unitName ?? "").GetHashCode() : 0);
             h = h * 31 + a.buffStat.GetHashCode(); h = h * 31 + a.buffAmount; h = h * 31 + a.buffDuration; h = h * 31 + a.cleanse.GetHashCode();
+            h = h * 31 + a.buffToCaster.GetHashCode();
             h = h * 31 + a.isUltimate.GetHashCode(); h = h * 31 + a.stainChange; h = h * 31 + (a.description ?? "").GetHashCode();
             if (a.debuffs != null) foreach (var e in a.debuffs)
             {

@@ -1,0 +1,8 @@
+PASS: melee damage ordering, combo once per target, new cast stacking and all AoE targets.
+PASS: actual projectile callbacks, AoE, duplicate collisions and delayed old-cast status ownership.
+PASS: enemy beam, parry gating and status-only target reduction.
+PASS: ATK/DEF/Crit/CritDamage, duration expiry, safe Shield exclusion and existing positive/self/friendly behavior.
+PASS: cleanse both debuff kinds, preserve buffs/shields, dispel preserves penalties and cleanse-before-new-effect ordering.
+PASS: Vietnamese/English descriptions and tooltip names; enemy/party HUD sign grouping, signed tooltip and red expiry blink.
+Compiling Windows64 Player scripts...
+PASS: Windows64 Player script compilation. No Play Mode, source ActionData, user scene or campaign save changes.
