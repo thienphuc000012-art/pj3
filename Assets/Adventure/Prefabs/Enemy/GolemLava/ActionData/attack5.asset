@@ -51,13 +51,25 @@ MonoBehaviour:
   stainChange: 0
   enemyCooldownTurns: 0
   buffStat: 0
+  buffToCaster: 0
   buffAmount: 0
   buffDuration: 0
-  debuffs: []
+  debuffs:
+  - type: 0
+    icon: {fileID: 21300000, guid: 106801f2cfd75bc41af053078a3ada07, type: 3}
+    applyChance: 36
+    turns: 5
+    burnDamage: 10
+    burnAttackReductionPercent: 10
+    paralysisSkipChance: 0
+    poisonMaxHpPercent: 0
+    turnVfxPrefab: {fileID: 7963070265621199737, guid: d8b3feef50c293240b1ef25d86eb2da7, type: 3}
+    turnVfxLocalOffset: {x: 0, y: 0, z: 0}
+    turnVfxLifetime: 0.5
   cleanse: 0
   statusOnly: 0
   skillCinematic: {fileID: 0}
-  isMelee: 1
+  isMelee: 0
   screenSlash: 0
   screenSlashColor: {r: 0.25, g: 0.8, b: 1, a: 1}
   screenSlashDuration: 0.42
@@ -79,13 +91,13 @@ MonoBehaviour:
   ultimateAuraVfxLocalOffset: {x: 0, y: 1, z: 0}
   ultimateAuraVfxPlaybackSpeed: 1
   castVfxPrefab: {fileID: 0}
-  hitVfxPrefab: {fileID: 6140006693554785414, guid: ea2fcc3ac0f24bd44b38d40118cd05dc, type: 3}
+  hitVfxPrefab: {fileID: 7963070265621199737, guid: d8b3feef50c293240b1ef25d86eb2da7, type: 3}
   useCustomHitVfxOffset: 0
   hitVfxOffset: {x: 0, y: 0, z: 0}
   hitVfxTiming: 0
   castVfxLifeTime: 5
   hitVfxLifeTime: 3
-  useVfxParry: 0
+  useVfxParry: 1
   parryOpenBeforeImpact: 0.25
   parryWindowDuration: 0.3
   beamParryDelay: 0.1

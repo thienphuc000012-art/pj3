@@ -263660,6 +263660,13 @@ AnimationClip:
   m_HasGenericRootTransform: 0
   m_HasMotionFloatCurves: 0
   m_Events:
+  - time: 0
+    functionName: AnimEvent_PlayCastVFX
+    data: 
+    objectReferenceParameter: {fileID: 0}
+    floatParameter: 0
+    intParameter: 0
+    messageOptions: 0
   - time: 0.7
     functionName: AnimEvent_OpenParry
     data: 
@@ -263668,14 +263675,14 @@ AnimationClip:
     intParameter: 0
     messageOptions: 0
   - time: 1
-    functionName: AnimEvent_PlayVFX
+    functionName: AnimEvent_DealDamage
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 0
     messageOptions: 0
   - time: 1
-    functionName: AnimEvent_DealDamage
+    functionName: AnimEvent_PlayVFX
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0

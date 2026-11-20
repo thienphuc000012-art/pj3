@@ -52,6 +52,7 @@ public class BattleUnit : MonoBehaviour
     public int maxHP = 100;
     [HideInInspector] public bool isSummonedUnit;
     [HideInInspector] public BattleUnit summonOwner;
+    [NonSerialized] internal Transform combatSlot;
     [HideInInspector] public float summonDeathOwnerMaxHpCostPercent;
     private bool summonDeathCostApplied;
 
@@ -330,6 +331,7 @@ public class BattleUnit : MonoBehaviour
     private bool deathAnimationFinished;
     private bool deathAnimationPending;
     private bool deathAnimationTriggered;
+    private bool summonCleanupStarted;
     private static readonly int DeathDissolveAmountId = Shader.PropertyToID("_DissolveAmount");
     private Renderer[] deathDissolveRenderers;
     private Material[][] originalDeathMaterials;
@@ -680,13 +682,32 @@ public class BattleUnit : MonoBehaviour
         ActorAudio.For(gameObject).PlayDeathSound();
         deathStateSeen = false;
         deathAnimationFinished = false;
-        if (animator == null) return;
+        if (animator == null)
+        {
+            StartSummonCleanup();
+            return;
+        }
 
         // Discard queued attack/Hit/Parry triggers before entering the death state.
         foreach (AnimatorControllerParameter parameter in animator.parameters)
             if (parameter.type == AnimatorControllerParameterType.Trigger)
                 animator.ResetTrigger(parameter.nameHash);
         animator.SetTrigger("Die");
+        StartSummonCleanup();
+    }
+
+    private void StartSummonCleanup()
+    {
+        if (!isSummonedUnit || summonCleanupStarted) return;
+        summonCleanupStarted = true;
+        StartCoroutine(DestroySummonAfterDeathAnimation());
+    }
+
+    private System.Collections.IEnumerator DestroySummonAfterDeathAnimation()
+    {
+        yield return WaitForDeathAnimation();
+        if (this != null && isSummonedUnit && IsDead)
+            Destroy(gameObject);
     }
     public bool isPlayer;
     [Header("Audio")]

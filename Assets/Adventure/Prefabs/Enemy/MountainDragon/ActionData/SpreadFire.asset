@@ -13,6 +13,12 @@ MonoBehaviour:
   m_Name: SpreadFire
   m_EditorClassIdentifier: Assembly-CSharp::ActionData
   actionName: SpreadFire
+  useSound:
+    clips: []
+    volume: 0.8
+    pitch: {x: 1, y: 1}
+    spatialBlend: 1
+    maxDistance: 24
   description: 
   icon: {fileID: 21300000, guid: 779ff2d03c859954d928e76c8725151c, type: 3}
   type: 1
@@ -45,11 +51,13 @@ MonoBehaviour:
   stainChange: 0
   enemyCooldownTurns: 0
   buffStat: 0
+  buffToCaster: 0
   buffAmount: 0
   buffDuration: 0
   debuffs: []
   cleanse: 0
   statusOnly: 0
+  skillCinematic: {fileID: 0}
   isMelee: 0
   screenSlash: 0
   screenSlashColor: {r: 0.25, g: 0.8, b: 1, a: 1}
@@ -96,6 +104,7 @@ MonoBehaviour:
   curveHeight: 2
   curveSideOffset: 0
   rfxUseGravity: 0
+  cameraImpactProfile: {fileID: 0}
   swordSlashVfxPrefab: {fileID: 0}
   swordSlashVfxLocalOffset: {x: 0, y: 0, z: 0}
   swordSlashVfxLocalEuler: {x: 0, y: 0, z: 0}
@@ -103,6 +112,11 @@ MonoBehaviour:
   swordSlashVfxLifetime: 2
   swordSlashTravelsToTarget: 1
   swordSlashTravelSpeed: 24
+  swordSlashGroundLayers:
+    serializedVersion: 2
+    m_Bits: 4294967291
+  swordSlashGroundProbeDistance: 20
+  swordSlashGroundHeightOffset: 0.02
   useClawAttackTrailVfx: 0
   clawAttackTrailColor: {r: 0.88, g: 0.92, b: 0.96, a: 1}
   clawAttackTrailLifetime: 0.14

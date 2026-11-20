@@ -285,7 +285,7 @@ public class CombatManager : MonoBehaviour
         }
         state = CombatState.Start;
         GameAudio.BeginBattle(this, activeEncounterSetup);
-        SetupPositions();
+        SetupPositions(true);
         CombatShadowBudget.Active?.RegisterScene(gameObject.scene);
         if (playerParty.Count > 0 && playerParty[0] != null)
             CombatShadowBudget.Active?.SetCenter(playerParty[0].transform.position);
@@ -531,23 +531,27 @@ public class CombatManager : MonoBehaviour
             CameraManager.Instance?.ResetTargetCam();
         }
     }
-    void SetupPositions()
+    void SetupPositions(bool assignInitialSlots = false)
     {
-        for (int i = 0; i < playerParty.Count; i++)
+        PositionPartyInSlots(playerParty, playerSlots, assignInitialSlots);
+        PositionPartyInSlots(enemyParty, enemySlots, assignInitialSlots);
+    }
+
+    private static void PositionPartyInSlots(List<BattleUnit> team, Transform[] slots, bool assignInitialSlots)
+    {
+        if (team == null || slots == null) return;
+
+        for (int i = 0; i < team.Count; i++)
         {
-            if (i < playerSlots.Length && playerSlots[i] != null && playerParty[i] != null)
-            {
-                playerParty[i].transform.position = playerSlots[i].position;
-                playerParty[i].transform.rotation = playerSlots[i].rotation;
-            }
-        }
-        for (int i = 0; i < enemyParty.Count; i++)
-        {
-            if (i < enemySlots.Length && enemySlots[i] != null && enemyParty[i] != null)
-            {
-                enemyParty[i].transform.position = enemySlots[i].position;
-                enemyParty[i].transform.rotation = enemySlots[i].rotation;
-            }
+            BattleUnit unit = team[i];
+            if (unit == null || unit.IsDead) continue;
+
+            if (assignInitialSlots || unit.combatSlot == null)
+                unit.combatSlot = i < slots.Length ? slots[i] : null;
+
+            if (unit.combatSlot == null) continue;
+            unit.transform.position = unit.combatSlot.position;
+            unit.transform.rotation = unit.combatSlot.rotation;
         }
     }
 
@@ -1425,6 +1429,7 @@ public class CombatManager : MonoBehaviour
             summon.isPlayer = summoner.isPlayer;
             summon.isSummonedUnit = true;
             summon.summonOwner = summoner;
+            summon.combatSlot = slot;
             summon.summonDeathOwnerMaxHpCostPercent = action.summonDeathOwnerMaxHpCostPercent;
             summon.SetPersistentHP(summon.maxHP);
             summon.ResetEnemyActionCooldowns();
@@ -1453,8 +1458,27 @@ public class CombatManager : MonoBehaviour
         int requestedCount = Mathf.Clamp(action.summonCount, 1, 2);
         if (slots == null) return result;
 
-        for (int i = team.Count; i < slots.Length && result.Count < requestedCount; i++)
-            if (slots[i] != null) result.Add(slots[i]);
+        HashSet<Transform> occupiedSlots = new HashSet<Transform>();
+        if (team != null)
+        {
+            for (int i = 0; i < team.Count; i++)
+            {
+                BattleUnit member = team[i];
+                if (member == null || member.IsDead) continue;
+
+                if (member.combatSlot == null && i < slots.Length)
+                    member.combatSlot = slots[i];
+                if (member.combatSlot != null)
+                    occupiedSlots.Add(member.combatSlot);
+            }
+        }
+
+        for (int i = 0; i < slots.Length && result.Count < requestedCount; i++)
+        {
+            Transform slot = slots[i];
+            if (slot == null || !occupiedSlots.Add(slot)) continue;
+            result.Add(slot);
+        }
         return result;
     }
 
@@ -1486,15 +1510,7 @@ public class CombatManager : MonoBehaviour
         if (summoner == null || action == null || !action.isSummonSkill || action.summonPrefab == null)
             return false;
 
-        List<BattleUnit> team = summoner.isPlayer ? playerParty : enemyParty;
-        Transform[] slots = summoner.isPlayer ? playerSlots : enemySlots;
-        if (slots == null) return false;
-
-        int availableSlots = 0;
-        for (int i = team.Count; i < slots.Length && slots[i] != null; i++)
-            availableSlots++;
-
-        return availableSlots > 0;
+        return GetAvailableSummonSlots(summoner, action).Count > 0;
     }
 
     private IEnumerator ExecuteActionBody(BattleUnit attacker, BattleUnit target, ActionData action)

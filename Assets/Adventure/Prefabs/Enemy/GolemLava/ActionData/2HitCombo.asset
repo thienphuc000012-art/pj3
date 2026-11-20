@@ -51,9 +51,21 @@ MonoBehaviour:
   stainChange: 0
   enemyCooldownTurns: 0
   buffStat: 0
+  buffToCaster: 0
   buffAmount: 0
   buffDuration: 0
-  debuffs: []
+  debuffs:
+  - type: 0
+    icon: {fileID: 21300000, guid: 1af0c29339b09c441b936366cc94ef00, type: 3}
+    applyChance: 36
+    turns: 5
+    burnDamage: 10
+    burnAttackReductionPercent: 10
+    paralysisSkipChance: 0
+    poisonMaxHpPercent: 0
+    turnVfxPrefab: {fileID: 7963070265621199737, guid: d8b3feef50c293240b1ef25d86eb2da7, type: 3}
+    turnVfxLocalOffset: {x: 0, y: 0, z: 0}
+    turnVfxLifetime: 0.5
   cleanse: 0
   statusOnly: 0
   skillCinematic: {fileID: 0}
@@ -78,7 +90,7 @@ MonoBehaviour:
   ultimateAuraVfxPrefab: {fileID: 0}
   ultimateAuraVfxLocalOffset: {x: 0, y: 1, z: 0}
   ultimateAuraVfxPlaybackSpeed: 1
-  castVfxPrefab: {fileID: 0}
+  castVfxPrefab: {fileID: 160412, guid: 0716ff45e57149d489f0f1947875edbe, type: 3}
   hitVfxPrefab: {fileID: 168890, guid: 2c936a8ea5b0042458c44a79a667c645, type: 3}
   useCustomHitVfxOffset: 0
   hitVfxOffset: {x: 0, y: 0, z: 0}
