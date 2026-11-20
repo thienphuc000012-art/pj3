@@ -51,6 +51,7 @@ MonoBehaviour:
   stainChange: 0
   enemyCooldownTurns: 0
   buffStat: 0
+  buffToCaster: 0
   buffAmount: 0
   buffDuration: 0
   debuffs: []
@@ -109,7 +110,7 @@ MonoBehaviour:
   swordSlashVfxLocalEuler: {x: 0, y: 0, z: 0}
   swordSlashVfxScale: {x: 1, y: 1, z: 1}
   swordSlashVfxLifetime: 2
-  swordSlashTravelsToTarget: 1
+  swordSlashTravelsToTarget: 0
   swordSlashTravelSpeed: 24
   swordSlashGroundLayers:
     serializedVersion: 2
