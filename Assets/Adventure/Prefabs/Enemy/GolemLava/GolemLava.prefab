@@ -1,67 +1,5 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &3039431257643265674
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 8711691971803223154}
-  m_Layer: 7
-  m_Name: GameObject
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &8711691971803223154
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3039431257643265674}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1.51, z: -2.18}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 2909611041862031060}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &4635565856514465768
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 6627956954710401842}
-  m_Layer: 7
-  m_Name: GameObject (1)
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &6627956954710401842
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4635565856514465768}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.06, y: 3.07, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 2909611041862031060}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6499118940882443605
 GameObject:
   m_ObjectHideFlags: 0
@@ -97,8 +35,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 3281663640010843689}
-  - {fileID: 8711691971803223154}
-  - {fileID: 6627956954710401842}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!95 &9100597884992245286
@@ -136,7 +72,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleUnit
   unitName: GolemLava
-  maxHP: 15000
+  maxHP: 150
   isSummonedUnit: 0
   summonOwner: {fileID: 0}
   summonDeathOwnerMaxHpCostPercent: 0
@@ -156,13 +92,15 @@ MonoBehaviour:
   isBoss: 0
   actionsPerTurn: 2
   baseActionPattern:
-  - {fileID: 11400000, guid: 86ad46979818c1140a30d661d3bf9e7f, type: 2}
+  - {fileID: 11400000, guid: fe900e32f1011d34ebe1efc47c2e5826, type: 2}
+  - {fileID: 11400000, guid: 01f9c7e889856bb4996a40fb3b76923a, type: 2}
+  - {fileID: 11400000, guid: dcb427af88938a04a959c6f11d5aaf26, type: 2}
+  - {fileID: 11400000, guid: 4c9a04949905001499c86d45a231a235, type: 2}
   - {fileID: 11400000, guid: bf80a43fe1b8f8c4da9ddb2e8e15ad50, type: 2}
+  - {fileID: 11400000, guid: 86ad46979818c1140a30d661d3bf9e7f, type: 2}
   - {fileID: 11400000, guid: 075c0f14d1468944582f5b646611e5a5, type: 2}
   - {fileID: 11400000, guid: d8c6d5ef810643846b51a060f08c694b, type: 2}
   - {fileID: 11400000, guid: 241c6d5afdac7d446a328de2f37629c7, type: 2}
-  - {fileID: 11400000, guid: 4c9a04949905001499c86d45a231a235, type: 2}
-  - {fileID: 11400000, guid: dcb427af88938a04a959c6f11d5aaf26, type: 2}
   startingBattleEffects: []
   bossPhases:
   - phaseIcon: {fileID: 0}
@@ -172,8 +110,8 @@ MonoBehaviour:
   phase2AnimationTriggerName: Phase2
   phase2IntroDuration: 2.5
   phase2IntroPlayed: 0
-  baseIdleClip: {fileID: 0}
-  phase2IdleClip: {fileID: 0}
+  baseIdleClip: {fileID: 7400000, guid: 5db1d3d6ec0ac3246a2d1e19d480b3d8, type: 2}
+  phase2IdleClip: {fileID: 7400000, guid: 3385bbc33b029b4478f8958768eac4c0, type: 2}
   idleStateName: Base Layer.Idle
   idleVfx: []
   phase2IdleVfx: []
@@ -216,8 +154,8 @@ MonoBehaviour:
     m_RotationOrder: 4
   isPlayer: 0
   audioProfile: {fileID: 0}
-  handTransform: {fileID: 0}
-  leftHandTransform: {fileID: 0}
+  handTransform: {fileID: 3281663640010843735}
+  leftHandTransform: {fileID: 3281663640010843767}
   animator: {fileID: 9100597884992245286}
   activeBuffs: []
 --- !u!114 &8526993561422812389
@@ -330,5 +268,15 @@ PrefabInstance:
 --- !u!4 &3281663640010843689 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3142305762834286300, guid: 162e5cb847b737f4d982971d67a629a3, type: 3}
+  m_PrefabInstance: {fileID: 437264508102107381}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &3281663640010843735 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3142305762834286242, guid: 162e5cb847b737f4d982971d67a629a3, type: 3}
+  m_PrefabInstance: {fileID: 437264508102107381}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &3281663640010843767 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3142305762834286210, guid: 162e5cb847b737f4d982971d67a629a3, type: 3}
   m_PrefabInstance: {fileID: 437264508102107381}
   m_PrefabAsset: {fileID: 0}

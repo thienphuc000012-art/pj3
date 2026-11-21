@@ -552,6 +552,8 @@ public class WorldInteraction : MonoBehaviour
         pickupModelInstance.transform.localScale = pickupModelScale;
     }
     public List<BattleUnit> enemyPrefabs = new List<BattleUnit>();
+    [Tooltip("Optional action forced as this encounter's first enemy action. Used by scripted story encounters.")]
+    public ActionData openingEnemyAction;
     public EnemySpawnSettings enemySpawn = new EnemySpawnSettings();
     [Header("Combat Scene Setup")]
     [Tooltip("ID của BattleEncounterSetup trong scene combat. Ví dụ: goblin_01, boss_dragon_01.")]

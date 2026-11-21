@@ -54,6 +54,17 @@ public class LoadingScreen : MonoBehaviour
         Cursor.lockState = CursorLockMode.None; Cursor.visible = false;
         // Present at least one loading frame before beginning the expensive scene load.
         yield return null;
+        // A streamed map may have just been replaced by this loading scene. Its
+        // chunk objects are gone, but Unity can keep their textures and meshes
+        // resident until unused assets are collected. Release them before the
+        // destination map or combat arena loads its own chunk set.
+        progress = .04f;
+        AsyncOperation unloadUnused = Resources.UnloadUnusedAssets();
+        while (unloadUnused != null && !unloadUnused.isDone)
+        {
+            progress = Mathf.Lerp(.04f, .12f, unloadUnused.progress);
+            yield return null;
+        }
         CampaignConfig config = Resources.Load<CampaignConfig>("Adventure/CampaignConfig");
         string targetName = Path.GetFileNameWithoutExtension(target);
         loadingMapScene = config != null && (config.IsMapScene(target) || config.IsMapScene(targetName));
@@ -81,6 +92,7 @@ public class LoadingScreen : MonoBehaviour
         var shadowBudget = CombatShadowBudget.Ensure(gameObject.scene);
         shadowBudget.PrepareArena(scan);
         var chunks = new List<Scene>(scan.ChunkPaths.Count);
+        var seenChunkPaths = new HashSet<string>();
         Scene battle = default;
         string error = null;
         loadingChunks = true;
@@ -92,6 +104,7 @@ public class LoadingScreen : MonoBehaviour
         }
         foreach (string path in scan.ChunkPaths)
         {
+            if (string.IsNullOrWhiteSpace(path) || !seenChunkPaths.Add(path)) continue;
             Scene chunk = SceneManager.GetSceneByPath(path);
             if (!chunk.isLoaded)
             {

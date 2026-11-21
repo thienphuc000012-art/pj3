@@ -231,6 +231,7 @@ public class CampaignSave
         if (collectedItemTotals == null) collectedItemTotals = new List<ItemStack>();
         if (explorationTutorials == null) explorationTutorials = new List<ExplorationTutorialProgress>();
         if (heardRestPointVoices == null) heardRestPointVoices = new List<string>();
+        if (storyFlags == null) storyFlags = new List<string>();
         if (version < 4)
             foreach (var progress in quests)
                 if (progress != null && progress.completed) progress.rewardsClaimed = true;
@@ -240,6 +241,8 @@ public class CampaignSave
     public List<PartyMemberProgress> party = new List<PartyMemberProgress>();
     public List<ItemStack> inventory = new List<ItemStack>();
     public List<string> collected = new List<string>();
+    [Tooltip("Persistent story presentation flags used to resume map cutscenes after combat or reload.")]
+    public List<string> storyFlags = new List<string>();
     public List<UnlockedRestPoint> unlockedRestPoints = new List<UnlockedRestPoint>();
     public List<string> heardRestPointVoices = new List<string>();
     public List<AdventureQuestProgress> quests = new List<AdventureQuestProgress>();
@@ -273,6 +276,13 @@ public class CampaignSave
     public bool hasCheckpoint;
 
     public int Count(string id) => inventory.Find(x => x.id == id)?.count ?? 0;
+    public bool HasStoryFlag(string id) => !string.IsNullOrWhiteSpace(id) && storyFlags != null && storyFlags.Contains(id);
+    public void SetStoryFlag(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id)) return;
+        storyFlags ??= new List<string>();
+        if (!storyFlags.Contains(id)) storyFlags.Add(id);
+    }
     public int CollectedItemCount(string id) => collectedItemTotals?.Find(x => x != null && x.id == id)?.count ?? 0;
     public void RecordItemAcquired(string id, int amount)
     {

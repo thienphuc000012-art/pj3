@@ -246,6 +246,7 @@ public class CampaignSession : MonoBehaviour
         public int xp;
         public List<ItemStack> rewards;
         public List<BattleUnit> enemies;
+        public ActionData openingEnemyAction;
         public string combatSetupId;
         public bool playerInitiated;
         public bool guidedTutorial;
@@ -1724,9 +1725,19 @@ public class CampaignSession : MonoBehaviour
     public void BeginEncounter(WorldInteraction point) => BeginEncounter(point, true);
 
     public void BeginEncounter(WorldInteraction point, bool playerInitiated)
+        => BeginEncounterInternal(point, playerInitiated, true, true);
+
+    // The story trigger already gates availability, so its cutscene can start
+    // combat without normal interaction distance or tutorial input gating.
+    public void BeginStoryEncounter(WorldInteraction point)
+        => BeginEncounterInternal(point, false, false, false, true);
+
+    void BeginEncounterInternal(WorldInteraction point, bool playerInitiated, bool requireInteractionRange,
+        bool requireTutorialPermission, bool startEncounterVfxImmediately = false)
     {
-        if (!MExplorationTutorial.Allows(ExplorationTutorialAction.Encounter, MapPlayer)) return;
-        if (Busy || PresentationActive || Menu != AdventureMenu.None || !IsNear(point) || Time.unscaledTime < encounterAllowedAt || point.IsConsumed) return;
+        if (requireTutorialPermission && !MExplorationTutorial.Allows(ExplorationTutorialAction.Encounter, MapPlayer)) return;
+        if (Busy || PresentationActive || Menu != AdventureMenu.None ||
+            (requireInteractionRange && !IsNear(point)) || Time.unscaledTime < encounterAllowedAt || point.IsConsumed) return;
         if (point.enemyPrefabs.Count == 0 || point.enemyPrefabs.Any(x => x == null) || !Data.party.Any(p => p.hp > 0))
         { Notify("Cần party còn sống và prefab quái hợp lệ."); return; }
         if (!Application.CanStreamedLevelBeLoaded(Config.battleScene)) { Notify("Chưa thêm combattest vào Build Settings."); return; }
@@ -1741,6 +1752,7 @@ public class CampaignSession : MonoBehaviour
             xp = point.experience,
             rewards = point.rewards.Select(x => new ItemStack(x.id, x.count)).ToList(),
             enemies = new List<BattleUnit>(point.enemyPrefabs),
+            openingEnemyAction = point.openingEnemyAction,
             combatSetupId = point.combatSetupId,
             playerInitiated = playerInitiated,
             guidedTutorial = Config.IsGuidedTutorialEncounter(point),
@@ -1749,10 +1761,10 @@ public class CampaignSession : MonoBehaviour
         };
         Busy = true;
         EncounterStarted?.Invoke(point);
-        StartCoroutine(PlayEncounterTransition(point, playerInitiated));
+        StartCoroutine(PlayEncounterTransition(point, playerInitiated, startEncounterVfxImmediately));
     }
 
-    private IEnumerator PlayEncounterTransition(WorldInteraction point, bool playerInitiated)
+    private IEnumerator PlayEncounterTransition(WorldInteraction point, bool playerInitiated, bool startEncounterVfxImmediately = false)
     {
         PlayerScript player = MapPlayer;
         Animator playerAnimator = player != null ? player.animator : null;
@@ -1787,7 +1799,7 @@ public class CampaignSession : MonoBehaviour
         try
         {
             patrol?.PauseForEncounter();
-            if (playerTransform != null && enemyTransform != null)
+            if (!startEncounterVfxImmediately && playerTransform != null && enemyTransform != null)
             {
                 FaceMapActor(playerTransform, enemyTransform.position);
                 FaceMapActor(enemyTransform, playerTransform.position);
@@ -1795,7 +1807,17 @@ public class CampaignSession : MonoBehaviour
             if (playerAnimator != null) playerAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
             if (enemyAnimator != null) enemyAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
 
-            if (playerInitiated)
+            if (startEncounterVfxImmediately)
+            {
+                if (playerTransform == null || enemyTransform == null)
+                    yield break;
+
+                // Story cutscenes already played the hit and the camera is
+                // framed on the impact point. Start the encounter transition
+                // VFX here without another attack animation or camera reset.
+                StartHitVfx();
+            }
+            else if (playerInitiated)
             {
                 playerAction = StartEncounterAnimation(playerAnimator, Config.mapPlayerAttackTrigger, Config.mapPlayerAttackState, .7f);
                 enemyAction = StartEncounterAnimation(enemyAnimator, Config.mapEnemyHitTrigger, Config.mapEnemyHitState, .7f);
@@ -2173,6 +2195,7 @@ public class CampaignSession : MonoBehaviour
         {
             var unit = Instantiate(encounter.enemies[i], manager.enemySlots[i].position, manager.enemySlots[i].rotation);
             unit.gameObject.SetActive(true); unit.isPlayer = false; unit.SetPersistentHP(unit.maxHP);
+            if (i == 0 && encounter.openingEnemyAction != null) unit.SetOpeningActionOverride(encounter.openingEnemyAction);
             if (battleSetup != null) battleSetup.ApplyStartingEffects(unit, false, i);
             manager.enemyParty.Add(unit);
         }

@@ -20,6 +20,8 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
     public string takeOffState = "TakeOffToGlide";
     public string landingState = "GlideToLanding";
     public bool IsAirborne => airborne;
+    /// <summary>Sets the attack animation variant for a scripted encounter without starting patrol AI.</summary>
+    public void SetEncounterAirborne(bool value) => airborne = value;
     bool airborne;
     float modeUntil, transitionProgress;
     Vector3 transitionStart, transitionEnd;
@@ -77,6 +79,7 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
     Vector3 home, destination, lastPosition;
     float idleUntil, nextPath, stuckTime, nextAttack;
     int waypointIndex, animationHash;
+    int warnedMissingAnimationHash = int.MinValue;
     Vector3[] patrolPoints;
     bool initialized, warnedNavMesh;
 
@@ -436,10 +439,63 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
         string state = airborne ? flying : ground;
         int layer = mapAnimator.GetLayerIndex(movementLayer);
         if (layer < 0) layer = 0;
-        int hash = Animator.StringToHash(mapAnimator.GetLayerName(layer) + "." + state);
-        if (!mapAnimator.HasState(layer, hash)) return;
-        if (animationHash == hash) return;
+        if (!TryResolveAnimationState(layer, state, out int hash))
+        {
+            int requestedHash = Animator.StringToHash(mapAnimator.GetLayerName(layer) + "." + state);
+            if (warnedMissingAnimationHash != requestedHash)
+            {
+                warnedMissingAnimationHash = requestedHash;
+                Debug.LogWarning($"[{name}] Không tìm thấy animation state '{state}' trong layer '{mapAnimator.GetLayerName(layer)}'.", this);
+            }
+            return;
+        }
+        if (animationHash == hash)
+        {
+            // The scene object can be disabled by the day/night spawn rule. Unity may
+            // reset the Animator while disabled, so the cached request alone cannot
+            // prove that this state is still playing after the object is enabled.
+            AnimatorStateInfo activeState = mapAnimator.IsInTransition(layer)
+                ? mapAnimator.GetNextAnimatorStateInfo(layer)
+                : mapAnimator.GetCurrentAnimatorStateInfo(layer);
+            if (activeState.fullPathHash == hash) return;
+        }
         animationHash = hash; mapAnimator.CrossFadeInFixedTime(hash, .15f, layer);
+    }
+
+    private bool TryResolveAnimationState(int layer, string requestedState, out int resolvedHash)
+    {
+        string layerPath = mapAnimator.GetLayerName(layer) + ".";
+        resolvedHash = Animator.StringToHash(layerPath + requestedState);
+        if (mapAnimator.HasState(layer, resolvedHash)) return true;
+
+        // Griffin's map controller uses "idleBreathe" and lowercase "run".
+        // Accept common capitalization/idle naming variants while preserving
+        // an explicitly assigned state whenever it exists.
+        string[] aliases = null;
+        if (string.Equals(requestedState, "Idle", System.StringComparison.OrdinalIgnoreCase))
+            aliases = new[] { "idleBreathe", "IdleBreathe", "idle", "Idle" };
+        else if (string.Equals(requestedState, "Run", System.StringComparison.OrdinalIgnoreCase))
+            aliases = new[] { "run", "Run" };
+        else if (string.Equals(requestedState, "Walk", System.StringComparison.OrdinalIgnoreCase))
+            aliases = new[] { "walk", "Walk" };
+        else if (!string.IsNullOrEmpty(requestedState))
+        {
+            char first = requestedState[0];
+            string lowerFirst = char.ToLowerInvariant(first) + requestedState.Substring(1);
+            string upperFirst = char.ToUpperInvariant(first) + requestedState.Substring(1);
+            aliases = new[] { lowerFirst, upperFirst };
+        }
+
+        if (aliases == null) return false;
+        foreach (string alias in aliases)
+        {
+            if (string.IsNullOrEmpty(alias) || alias == requestedState) continue;
+            int candidateHash = Animator.StringToHash(layerPath + alias);
+            if (!mapAnimator.HasState(layer, candidateHash)) continue;
+            resolvedHash = candidateHash;
+            return true;
+        }
+        return false;
     }
     public void RestartEncounterAttack()
     {
@@ -450,7 +506,12 @@ public sealed class EnemyEncounterBehaviour : MonoBehaviour
     void Idle() { CurrentActivity = Activity.Idle; idleUntil = Time.time + idleSeconds; StopMovement(); Play(idleState, flyIdleState); }
     public void PauseForEncounter() => StopMovement();
     void StopMovement() { if (agent != null && agent.enabled && agent.isOnNavMesh) agent.isStopped = true; }
-    void OnDisable() { StopMovement(); lastSeenTime = float.NegativeInfinity; }
+    void OnDisable()
+    {
+        StopMovement();
+        lastSeenTime = float.NegativeInfinity;
+        animationHash = 0;
+    }
     void OnDrawGizmosSelected()
     {
         Vector3 center = Application.isPlaying && initialized ? home : transform.position;

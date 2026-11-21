@@ -138,6 +138,8 @@ public class BattleUnit : MonoBehaviour
     private int currentPatternIndex = 0; // Đếm số thứ tự chiêu thức trong chuỗi
     private int enemyTurnNumber;
     private readonly Dictionary<ActionData, int> enemyActionReadyTurns = new Dictionary<ActionData, int>();
+    [System.NonSerialized] private ActionData openingActionOverride;
+    [System.NonSerialized] private bool openingActionOverridePending;
 
     [Header("Phase 2 Intro")]
     [Tooltip("Tên Trigger trong Animator chạy đúng 1 lần khi Boss bắt đầu Phase 2.")]
@@ -774,6 +776,12 @@ public class BattleUnit : MonoBehaviour
     // --- CẬP NHẬT: Lấy kỹ năng tiếp theo trong chuỗi thay vì Random ---
     public ActionData GetNextAction()
     {
+        if (openingActionOverridePending)
+        {
+            openingActionOverridePending = false;
+            if (IsEnemyActionReady(openingActionOverride)) return openingActionOverride;
+        }
+
         List<ActionData> currentPattern = baseActionPattern;
 
         if (isBoss && currentPhaseIndex >= 0 && currentPhaseIndex < bossPhases.Count)
@@ -799,6 +807,12 @@ public class BattleUnit : MonoBehaviour
         }
 
         return IsEnemyActionReady(defaultAttack) ? defaultAttack : null;
+    }
+
+    public void SetOpeningActionOverride(ActionData action)
+    {
+        openingActionOverride = action;
+        openingActionOverridePending = action != null;
     }
 
     public void BeginEnemyTurn() => enemyTurnNumber++;
