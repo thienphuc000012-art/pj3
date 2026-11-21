@@ -30,13 +30,17 @@ public class DynamicButtonUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
     private bool hasInitialized = false;
     private bool isFullyAppeared = false;
     private UIHoverOutline hoverOutline;
+    private SmoothButtonHoverScale smoothHover;
 
     void Awake()
     {
         rectTransform = GetComponent<RectTransform>();
         canvasGroup = GetComponent<CanvasGroup>();
+        TryGetComponent(out smoothHover);
         RefreshHoverGraphic();
     }
+
+    public void SetHoverScale(SmoothButtonHoverScale effect) => smoothHover = effect;
 
     public void RefreshHoverGraphic()
     {
@@ -118,10 +122,10 @@ public class DynamicButtonUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
         }
         else
         {
-            // Giai đoạn 2: Tương tác (Đã loại bỏ hoàn toàn hiệu ứng nhịp thở/pulse ở đây)
-            // Hover feedback is an edge outline only; keep the skill tile fixed in place.
             rectTransform.anchoredPosition = Vector2.Lerp(rectTransform.anchoredPosition, originalPos, Time.deltaTime * smoothSpeed);
-            rectTransform.localScale = Vector3.Lerp(rectTransform.localScale, originalScale, Time.deltaTime * smoothSpeed);
+            rectTransform.localScale = smoothHover != null && smoothHover.isActiveAndEnabled
+                ? originalScale * smoothHover.Multiplier
+                : Vector3.Lerp(rectTransform.localScale, originalScale, Time.deltaTime * smoothSpeed);
         }
     }
 

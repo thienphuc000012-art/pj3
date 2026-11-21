@@ -425,14 +425,7 @@ public sealed class AdventureSaveSlotsView : MonoBehaviour
     public static void ConfigureTextHover(Button button)
     {
         if (button == null) return;
-        var scale = button.GetComponent<SmoothButtonHoverScale>();
-        if (scale != null)
-        {
-            scale.enabled = false;
-            if (Application.isPlaying) Destroy(scale);
-            else DestroyImmediate(scale);
-        }
-        // Keep the background still; only text responds to pointer hover.
+        if (Application.isPlaying) SmoothButtonHoverScale.Ensure(button);
         button.transition = Selectable.Transition.None;
         if (button.targetGraphic != null) button.targetGraphic.CrossFadeColor(Color.white, 0f, true, true);
         var hover = button.GetComponent<DialogueChoiceTextHover>();

@@ -9,5 +9,6 @@ public sealed class GameUIThemeSettings : ScriptableObject
     public Sprite npcChatIcon;
     public Sprite combatActionBackground;
     public Sprite combatSubMenuBackground;
+    public Sprite pauseBackground;
     public AudioClip combatButtonPressSound;
 }

@@ -166,6 +166,10 @@ public static class GameUITheme
         {
             if (button == null) continue;
             if (Application.isPlaying) GameButtonSound.Ensure(button);
+            if (button.GetComponentInParent<AdventureCanvasRoot>(true)?.kind == AdventureCanvasKind.Adventure ||
+                button.GetComponentInParent<AdventureTitleMenu>(true) != null)
+                SmoothButtonHoverScale.Ensure(button);
+            if (IsTitleSelectionButton(button.transform)) continue;
             if (button.GetComponentInParent<PreserveAuthoredUI>(true) != null) continue;
             if (button.GetComponent<CombatSkillRowUI>() != null) continue;
             if (IsSaveSlotsElement(button.transform) || IsQuestElement(button.transform)) continue;
@@ -214,13 +218,6 @@ public static class GameUITheme
             if (IsPartySkillAction(button.transform))
             {
                 RemoveButtonDecorations(button, true);
-                if (button.transform.parent.name == "SkillContext")
-                {
-                    button.transition = Selectable.Transition.None;
-                    var highlight = button.GetComponent<QuestButtonHighlight>();
-                    if (highlight == null) highlight = button.gameObject.AddComponent<QuestButtonHighlight>();
-                    highlight.Configure(true, true, 100f / 255f);
-                }
                 continue;
             }
 
@@ -253,7 +250,7 @@ public static class GameUITheme
                 else if (useHoverScale)
                 {
                     RemoveDynamicButtonUI(button);
-                    AddHoverScale(button);
+                    SmoothButtonHoverScale.Ensure(button);
                     FitButtonLabelsInsideBackground(button);
                 }
                 else
@@ -280,7 +277,7 @@ public static class GameUITheme
             if (wipe == null) wipe = button.gameObject.AddComponent<UIButtonWipeReveal>();
             wipe.Configure(background, buttonSprite, useSkillBackground ? Color.white : new Color(.70f, .58f, .34f, .96f));
             if (emphasizeHover)
-                AddHoverScale(button);
+                SmoothButtonHoverScale.Ensure(button);
         }
 
         RefreshMenuButtonHover(root);
@@ -300,6 +297,10 @@ public static class GameUITheme
             if (parent.name == "Quest Scroll" || parent.name == "Quest Track Confirmation") return true;
         return false;
     }
+
+    static bool IsTitleSelectionButton(Transform target) =>
+        target.parent != null && target.parent.name == "Selection Screen" &&
+        target.GetComponentInParent<AdventureTitleMenu>(true) != null;
 
     static bool IsSkillPresentationElement(Transform target)
     {
@@ -588,7 +589,8 @@ public static class GameUITheme
         }
 
         var scale = button.GetComponent<SmoothButtonHoverScale>();
-        if (scale != null && !keepHoverScale)
+        if (scale != null && !keepHoverScale &&
+            button.GetComponentInParent<AdventureCanvasRoot>(true)?.kind != AdventureCanvasKind.Adventure)
         {
             scale.enabled = false;
             Object.Destroy(scale);
@@ -643,15 +645,6 @@ public static class GameUITheme
         }
     }
 
-    static void AddHoverScale(Button button)
-    {
-        if (button == null) return;
-        var scale = button.GetComponent<SmoothButtonHoverScale>();
-        if (scale == null) scale = button.gameObject.AddComponent<SmoothButtonHoverScale>();
-        scale.enabled = true;
-        scale.Configure(1.045f, 0.12f);
-    }
-
     static void FitButtonLabelsInsideBackground(Button button)
     {
         if (button == null) return;
@@ -681,8 +674,7 @@ public static class GameUITheme
         var canvas = root.GetComponent<AdventureCanvasRoot>();
         if (canvas == null) return;
 
-        // Resolve the actual menu scopes directly. This keeps Party/Inventory and
-        // every Rest action covered even when buttons are nested or rebuilt later.
+        // Keep these buttons styled even when they are nested or rebuilt later.
         foreach (string path in new[] { "Menu/Party/Overview", "Menu/Rest", "Menu/FastTravelList", "Menu/FastTravelConfirmation", "Menu/Attributes/Confirm" })
         {
             Transform scope = canvas.transform.Find(path);
@@ -691,7 +683,7 @@ public static class GameUITheme
             {
                 if (button == null || IsFastTravelDestination(button.transform)) continue;
                 RemoveDynamicButtonUI(button);
-                AddHoverScale(button);
+                SmoothButtonHoverScale.Ensure(button);
                 FitButtonLabelsInsideBackground(button);
             }
         }

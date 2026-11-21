@@ -16,7 +16,7 @@ public class ClickableUnit : MonoBehaviour
 
     void OnMouseDown()
     {
-        if (battleUnit == null || battleUnit.IsDead) return;
+        if (CombatPauseMenu.BlocksInput || battleUnit == null || battleUnit.IsDead) return;
         // Chỉ cho phép chọn mục tiêu nếu đang trong lượt của Player
         if (CombatManager.Instance != null && CombatManager.Instance.state == CombatState.PlayerTurn)
         {

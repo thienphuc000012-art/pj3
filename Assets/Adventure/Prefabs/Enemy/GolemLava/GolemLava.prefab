@@ -72,7 +72,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleUnit
   unitName: GolemLava
-  maxHP: 150
+  maxHP: 500
   isSummonedUnit: 0
   summonOwner: {fileID: 0}
   summonDeathOwnerMaxHpCostPercent: 0
@@ -89,29 +89,30 @@ MonoBehaviour:
   characterSkills: []
   battleEntryWalkStateName: Base Layer.BattleEntryWalk
   battleEntryAnimationSpeed: 1
-  isBoss: 0
+  isBoss: 1
   actionsPerTurn: 2
   baseActionPattern:
-  - {fileID: 11400000, guid: fe900e32f1011d34ebe1efc47c2e5826, type: 2}
-  - {fileID: 11400000, guid: 01f9c7e889856bb4996a40fb3b76923a, type: 2}
-  - {fileID: 11400000, guid: dcb427af88938a04a959c6f11d5aaf26, type: 2}
-  - {fileID: 11400000, guid: 4c9a04949905001499c86d45a231a235, type: 2}
-  - {fileID: 11400000, guid: bf80a43fe1b8f8c4da9ddb2e8e15ad50, type: 2}
-  - {fileID: 11400000, guid: 86ad46979818c1140a30d661d3bf9e7f, type: 2}
   - {fileID: 11400000, guid: 075c0f14d1468944582f5b646611e5a5, type: 2}
   - {fileID: 11400000, guid: d8c6d5ef810643846b51a060f08c694b, type: 2}
   - {fileID: 11400000, guid: 241c6d5afdac7d446a328de2f37629c7, type: 2}
+  - {fileID: 11400000, guid: 4c9a04949905001499c86d45a231a235, type: 2}
+  - {fileID: 11400000, guid: dcb427af88938a04a959c6f11d5aaf26, type: 2}
   startingBattleEffects: []
   bossPhases:
   - phaseIcon: {fileID: 0}
-    actionsPerTurn: 2
-    phaseActionPattern: []
+    actionsPerTurn: 3
+    phaseActionPattern:
+    - {fileID: 11400000, guid: fe900e32f1011d34ebe1efc47c2e5826, type: 2}
+    - {fileID: 11400000, guid: 86ad46979818c1140a30d661d3bf9e7f, type: 2}
+    - {fileID: 11400000, guid: bf80a43fe1b8f8c4da9ddb2e8e15ad50, type: 2}
+    - {fileID: 11400000, guid: 4c9a04949905001499c86d45a231a235, type: 2}
+    - {fileID: 11400000, guid: 01f9c7e889856bb4996a40fb3b76923a, type: 2}
   phase1Icon: {fileID: 0}
   phase2AnimationTriggerName: Phase2
   phase2IntroDuration: 2.5
   phase2IntroPlayed: 0
   baseIdleClip: {fileID: 7400000, guid: 5db1d3d6ec0ac3246a2d1e19d480b3d8, type: 2}
-  phase2IdleClip: {fileID: 7400000, guid: 3385bbc33b029b4478f8958768eac4c0, type: 2}
+  phase2IdleClip: {fileID: 7400000, guid: 5db1d3d6ec0ac3246a2d1e19d480b3d8, type: 2}
   idleStateName: Base Layer.Idle
   idleVfx: []
   phase2IdleVfx: []

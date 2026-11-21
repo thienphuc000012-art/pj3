@@ -16,42 +16,73 @@ MonoBehaviour:
   playOnce: 1
   requiredCompletedQuestIds: []
   requiredCompletedDialogueIds: []
-  startNodeId: 12
+  startNodeId: 13
   playerSpeakerName: Player
   playerTalkAnimationState: Base Layer.Talking
   playerDialogueIdleAnimationState: Base Layer.Basic Movement
   charactersPerSecond: 32
   nodes:
-  - id: 12
-    speakerType: 0
-    speaker: okoko
-    text: "\xE2fafafa"
-    nextNodeId: 13
-    choices:
-    - text: "c\xF3"
-      nextNodeId: 13
-      questToOffer: {fileID: 0}
-    - text: "kh\xF4ng"
-      nextNodeId: khong
-      questToOffer: {fileID: 0}
   - id: 13
     speakerType: 0
-    speaker: okoko
-    text: "\xE0aaaaaaaaaaaaaaaaaaaaaaaaaa"
+    speaker: okok
+    text: "\u0110\xE3 l\xE2u l\u1EAFm r\u1ED3i t\xF4i m\u1EDBi th\u1EA5y l\u1EA1i
+      g\u1EB7p 1 ng\u01B0\u1EDDi c\xF2n s\u1ED1ng "
     nextNodeId: 14
     choices:
-    - text: ok
+    - text: "v\u1EADy l\xE0 b\u1EA1n \u0111\xE3 t\u1EEBng g\u1EB7p con ng\u01B0\u1EDDi
+        tr\u01B0\u1EDBc \u0111\xE2y"
       nextNodeId: 14
-      questToOffer: {fileID: 11400000, guid: 84f0d647190015646836c1ed7fbde30a, type: 2}
+      questToOffer: {fileID: 0}
   - id: 14
     speakerType: 0
-    speaker: okoko
-    text: bbbbbbbbbbbbbbbbbbbbbbbbbb
+    speaker: okok
+    text: "\u0111\xFAng v\u1EADy ch\u1EC9 l\xE0 \u0111\xE3 t\u1EEBng m\xE0 th\xF4i "
     nextNodeId: 15
     choices: []
-  - id: khong
+  - id: 15
     speakerType: 0
-    speaker: okoko
-    text: vay thoi
-    nextNodeId: 15
+    speaker: okok
+    text: "th\u1EBF t\xEAn c\u1EE7a b\u1EA1n l\xE0 g\xEC k\u1EBB th\xE1ch th\u1EE9c
+      l\u0103ng m\u1ED9"
+    nextNodeId: 
+    choices:
+    - text: OrpCup
+      nextNodeId: 16
+      questToOffer: {fileID: 0}
+  - id: 16
+    speakerType: 0
+    speaker: okok
+    text: "OrpCup!!! Ch\xE0o m\u1EEBng \u0111\u1EBFn v\u1EDBi l\u0103ng m\u1ED9 c\u1EE7a
+      r\u1ED3ng , b\u1EA1n \u0111\u1EBFn t\xECm s\u1EE9c m\u1EA1nh c\u1EE7a l\u0103ng
+      m\u1ED9 \u0111\xFAng kh\xF4ng "
+    nextNodeId: 
+    choices:
+    - text: "\u0110\xFAng v\u1EADy "
+      nextNodeId: 17
+      questToOffer: {fileID: 0}
+  - id: 17
+    speakerType: 0
+    speaker: okok
+    text: "mu\u1ED1n l\xEAn \u0111\u01B0\u1EE3c l\u0103ng m\u1ED9 th\xEC b\u1EA1n
+      ph\u1EA3i \u0111\xE1nh b\u1EA1i 2 k\u1EBB g\xE1c c\u1ED5ng \u0111\xE3 b\u1EA1n
+      c\xF3 ch\u1EADp nh\xE2n th\u1EED th\xE1ch n\xE0y kh\xF4ng "
+    nextNodeId: 
+    choices:
+    - text: "c\xF3"
+      nextNodeId: 18
+      questToOffer: {fileID: 11400000, guid: 84f0d647190015646836c1ed7fbde30a, type: 2}
+    - text: "kh\xF4ng "
+      nextNodeId: 19
+      questToOffer: {fileID: 0}
+  - id: 18
+    speakerType: 0
+    speaker: okok
+    text: "ch\xFAc b\u1EA1n may m\u1EAFn tr\xEAn h\xE0nh tr\xECnh n\xE0y "
+    nextNodeId: ""
+    choices: []
+  - id: 19
+    speakerType: 0
+    speaker: okok
+    text: "t\xF9y b\u1EA1n th\xF4i "
+    nextNodeId: 
     choices: []

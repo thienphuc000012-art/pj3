@@ -123,7 +123,7 @@ public sealed class AdventureCheatPanel : MonoBehaviour
     }
     public bool Open()
     {
-        if (opened != null || session?.Data?.party == null || session.Data.party.Count == 0 || session.Busy || session.PresentationActive ||
+        if (opened != null || CombatPauseMenu.BlocksInput || session?.Data?.party == null || session.Data.party.Count == 0 || session.Busy || session.PresentationActive ||
             session.Menu != AdventureMenu.None || LoadingScreen.IsLoading || MapChunkStreamer.MovementBlocked || (!session.OnMap && !session.InEncounter)) return false;
         previousTimeScale = Time.timeScale; previousLock = Cursor.lockState; previousVisible = Cursor.visible;
         previousSelection = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;

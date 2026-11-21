@@ -20,6 +20,7 @@ public sealed class UIButtonWipeReveal : MonoBehaviour,
     bool selected;
     bool forcedReveal;
     bool selectionOnly;
+    bool navigationFocusOnly;
 
     public void Configure(Image background, Sprite sprite)
         => Configure(background, sprite, new Color(.70f, .58f, .34f, .96f));
@@ -100,6 +101,8 @@ public sealed class UIButtonWipeReveal : MonoBehaviour,
 
     public void SetForcedReveal(bool value) => forcedReveal = value;
 
+    public void UseNavigationFocusOnly() => navigationFocusOnly = true;
+
     // Party loadout rows are driven by their selected slot, not transient pointer focus.
     public void SetSelectionOnly(bool value)
     {
@@ -136,7 +139,10 @@ public sealed class UIButtonWipeReveal : MonoBehaviour,
 
     public void OnPointerEnter(PointerEventData eventData) { if (!selectionOnly) hovered = true; }
     public void OnPointerExit(PointerEventData eventData) => hovered = false;
-    public void OnSelect(BaseEventData eventData) { if (!selectionOnly) selected = true; }
+    public void OnSelect(BaseEventData eventData)
+    {
+        if (!selectionOnly) selected = !navigationFocusOnly || eventData is AxisEventData;
+    }
     public void OnDeselect(BaseEventData eventData) { if (!selectionOnly) selected = false; }
 
     void OnDisable()

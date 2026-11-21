@@ -129,7 +129,8 @@ public class AdventureUI : MonoBehaviour
                 view.Fill("HUD/Leader/XP/Fill", (float)p.xp / p.RequiredXP);
             }
             view.Active("HUD/Interact", S.Nearest != null);
-            if (S.Nearest != null) view.Text("HUD/Interact/Label", S.Nearest.displayName);
+            if (S.Nearest != null)
+                view.Text("HUD/Interact/Label", "[E] " + GameLocalization.Translate(S.Nearest.displayName));
             return;
         }
         bool main = S.Menu == AdventureMenu.Main, party = S.Menu == AdventureMenu.Party, rest = S.Menu == AdventureMenu.Rest;
@@ -239,6 +240,7 @@ public class AdventureUI : MonoBehaviour
         view.Active("Menu/Skills/Detail/Upgrade", false);
         // Runtime-created menu buttons are added after AdventureCanvasRoot.Awake themes the prefab.
         GameUITheme.RefreshMenuButtonHover(view.gameObject);
+        foreach (var button in view.GetComponentsInChildren<Button>(true)) SmoothButtonHoverScale.Ensure(button);
     }
 
     void BuildSaveLoadUI()
@@ -514,7 +516,7 @@ public class AdventureUI : MonoBehaviour
             questContent = TravelRect(contentObject, viewport, new Vector2(0f, 1f), Vector2.one);
             questContent.pivot = new Vector2(.5f, 1f);
             var listLayout = contentObject.GetComponent<VerticalLayoutGroup>();
-            listLayout.spacing = 12f; listLayout.padding = new RectOffset(12, 12, 12, 12);
+            listLayout.spacing = 14f; listLayout.padding = new RectOffset(36, 36, 14, 14);
             listLayout.childControlWidth = true; listLayout.childForceExpandWidth = true;
             listLayout.childControlHeight = true; listLayout.childForceExpandHeight = false;
             contentObject.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
@@ -551,12 +553,13 @@ public class AdventureUI : MonoBehaviour
             questRowTemplate = row.GetComponent<Button>();
             questRowTemplate.targetGraphic = row.GetComponent<Image>();
             questRowTemplate.transition = Selectable.Transition.None;
-            row.GetComponent<Image>().color = new Color(0, 0, 0, 100f / 255f);
-            var border = row.AddComponent<Outline>();
-            border.effectColor = new Color(.65f, .67f, .7f, .6f);
-            border.effectDistance = Vector2.one;
+            row.GetComponent<Image>().color = new Color(.16f, .133f, .11f);
+            var border = new GameObject("Border", typeof(RectTransform), typeof(GameUIFrameGraphic));
+            TravelRect(border, row.transform, Vector2.zero, Vector2.one);
+            border.GetComponent<GameUIFrameGraphic>()
+                .Configure(new Color(.67f, .54f, .36f, .9f), false, continuousBorder: true);
             TravelText(row.transform, "Label", "Tên nhiệm vụ\n0 / 1", new Vector2(.025f, .1f), new Vector2(.975f, .9f));
-            row.GetComponent<LayoutElement>().preferredHeight = row.GetComponent<LayoutElement>().minHeight = 88f;
+            row.GetComponent<LayoutElement>().preferredHeight = row.GetComponent<LayoutElement>().minHeight = 96f;
         }
         questRowTemplate.gameObject.SetActive(false);
         yes.navigation = new Navigation { mode = Navigation.Mode.Explicit,
@@ -612,20 +615,23 @@ public class AdventureUI : MonoBehaviour
                 ? progress.rewardsClaimed ? "Hoàn thành" : "Hoàn thành • Báo cáo NPC để nhận thưởng"
                 : progress.objectiveCount + " / " + Mathf.Max(1, quest.requiredCount);
             status = GameLocalization.Translate(status);
-            if (S.Data.trackedQuestId == progress.questId) status += GameLocalization.Translate(" • Đang theo dõi");
-            // Quest entries own their appearance rather than inheriting the rest
-            // button's grunge plate, wipe, outline glow and hover scale.
+            bool tracked = S.Data.trackedQuestId == progress.questId;
+            if (tracked) status += GameLocalization.Translate(" • Đang theo dõi");
             var button = Instantiate(questRowTemplate, questContent);
             var row = button.gameObject;
             row.name = "Quest " + quest.Id;
+            var frame = row.transform.Find("Border")?.GetComponent<GameUIFrameGraphic>();
+            if (tracked && frame != null)
+                frame.Configure(new Color(.95f, .78f, .49f), false, continuousBorder: true);
             row.SetActive(true);
             button.onClick = new Button.ButtonClickedEvent();
             button.onClick.AddListener(() => OpenQuestDialog(quest));
             GameLocalization.SetText(row.transform.Find("Label").GetComponent<TMP_Text>(),
-                GameLocalization.Translate(quest.displayName) + "\n" + status);
+                GameLocalization.Translate(quest.displayName) + "\n<size=85%><color=#D8C6AD>" + status + "</color></size>");
             button.interactable = !progress.completed || !progress.rewardsClaimed;
-            (row.GetComponent<QuestButtonHighlight>() ?? row.AddComponent<QuestButtonHighlight>()).Configure(true, false, 100f / 255f,
-                normalBackgroundAlpha: 100f / 255f);
+            SmoothButtonHoverScale.Ensure(button);
+            if (!row.TryGetComponent<QuestButtonHighlight>(out var highlight)) highlight = row.AddComponent<QuestButtonHighlight>();
+            highlight.Configure(true, false, preserveBackgroundColor: true);
         }
     }
 
@@ -837,11 +843,7 @@ public class AdventureUI : MonoBehaviour
         button.onClick.AddListener(action);
         var label = button.GetComponentInChildren<TMPro.TMP_Text>(true);
         GameLocalization.SetText(label, choiceText ?? "");
-        foreach (var scale in button.GetComponentsInChildren<SmoothButtonHoverScale>(true))
-        {
-            scale.enabled = false;
-            Destroy(scale);
-        }
+        SmoothButtonHoverScale.Ensure(button);
         button.transition = Selectable.Transition.None;
         var hover = button.GetComponent<DialogueChoiceTextHover>();
         if (hover == null) hover = button.gameObject.AddComponent<DialogueChoiceTextHover>();

@@ -1,0 +1,84 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 853b08ac40e90a640ae1123d68d0a534, type: 3}
+  m_Name: CampaignConfig
+  m_EditorClassIdentifier: Assembly-CSharp::CampaignConfig
+  mapScene: mapgame
+  additionalMapScenes:
+  - m
+  battleScene: combattest
+  guidedTutorialEncounterKey: guided-tutorial:v2:GlobalObjectId_V1-2-13b0cbd29f805104796f9d9580b2766e-1550172918-0
+  saveSlotCount: 10
+  interactionVfx:
+    healPrefab: {fileID: 5992701628586220299, guid: f8d7fbe4c97263e4188baf45282515ab, type: 3}
+    healOffset: {x: 0, y: 0.03, z: 0}
+    healScale: 1
+    pickupPrefab: {fileID: 2159532520669609145, guid: 81dd40a4580977845874a761d4a1b166, type: 3}
+    pickupOffset: {x: 0, y: 0.03, z: 0}
+    pickupScale: 1
+    maximumLifetime: 12
+  encounterBlackHoleVfxPrefab: {fileID: 8016646600747896881, guid: 156ed5bf7d1fca448b8bf68959aef780, type: 3}
+  encounterVfxDuration: 1.5
+  encounterVfxScale: 1.5
+  initiativeSpeedBonus: 100
+  mapPlayerAttackTrigger: attack
+  mapPlayerAttackState: attack
+  mapPlayerHitTrigger: HIt
+  mapPlayerHitState: HIt
+  mapEnemyHitTrigger: Hit
+  mapEnemyHitState: Hit
+  startingParty:
+  - {fileID: 7229521429613955948, guid: a5b3fe05ee26e4b419eaeab72c77c4b0, type: 3}
+  - {fileID: 3750319964840296008, guid: 6420f2b6c7cb7f141a78467b70d2f49a, type: 3}
+  - {fileID: 1936721467794514096, guid: 7e035af35819b394f95891333b8edc45, type: 3}
+  partyPreviews:
+  - member: {fileID: 7229521429613955948, guid: a5b3fe05ee26e4b419eaeab72c77c4b0, type: 3}
+    image: {fileID: 21300000, guid: 9d68b9eb4ce699e47ab81303e8fa37aa, type: 3}
+  - member: {fileID: 3750319964840296008, guid: 6420f2b6c7cb7f141a78467b70d2f49a, type: 3}
+    image: {fileID: 21300000, guid: ac4e4cf39fa74964b9477acc828f1c66, type: 3}
+  - member: {fileID: 1936721467794514096, guid: 7e035af35819b394f95891333b8edc45, type: 3}
+    image: {fileID: 21300000, guid: d06e2ad1eb89c8e4fafa743ea2668d44, type: 3}
+  demoEnemy: {fileID: 0}
+  items:
+  - id: herb
+    displayName: "Th\u1EA3o d\u01B0\u1EE3c"
+    icon: {fileID: 21300000, guid: 82361fa11de5cc34386d1b5565ad8f5a, type: 3}
+    description: "Nguy\xEAn li\u1EC7u ch\u1EBF t\u1EA1o thu\u1ED1c h\u1ED3i m\xE1u."
+    mapHeal: 0
+    combatAction: {fileID: 0}
+  - id: ore
+    displayName: "Qu\u1EB7ng tinh th\u1EC3"
+    icon: {fileID: 0}
+    description: "Nguy\xEAn li\u1EC7u ch\u1EBF t\u1EA1o v\u1EADt ph\u1EA9m."
+    mapHeal: 0
+    combatAction: {fileID: 0}
+  - id: potion
+    displayName: "Thu\u1ED1c h\u1ED3i m\xE1u"
+    icon: {fileID: 0}
+    description: "H\u1ED3i 40 m\xE1u cho m\u1ED9t th\xE0nh vi\xEAn c\xF2n s\u1ED1ng."
+    mapHeal: 40
+    combatAction: {fileID: 11400000, guid: 146e9672b9924e76be740e0b535dac17, type: 2}
+  recipes:
+  - displayName: "Thu\u1ED1c h\u1ED3i m\xE1u"
+    ingredients:
+    - id: herb
+      count: 2
+    - id: ore
+      count: 1
+    output:
+      id: potion
+      count: 1
+  quests:
+  - {fileID: 11400000, guid: 84f0d647190015646836c1ed7fbde30a, type: 2}
+  defeatReturnsToCheckpoint: 1
+  equippedSkillSlots: 4
+  skillUnlocks: []

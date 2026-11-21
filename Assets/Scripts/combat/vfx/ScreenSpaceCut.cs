@@ -38,7 +38,7 @@ public sealed class ScreenSpaceCut : MonoBehaviour
         frames = Mathf.Clamp(action.screenSplitFrames, 1, 6);
         burst = count == 1 ? 0 : Mathf.Clamp(action.screenSlashBurstTime, 0, Mathf.Max(.1f, action.screenSlashDuration) * .75f);
         pixels = Mathf.Clamp(action.screenSplitPixels, 0, 40);
-        angle = degrees; beginTime = Time.unscaledTime; playing = true;
+        angle = degrees; beginTime = CombatPauseMenu.UnscaledTime; playing = true;
         duration = Mathf.Max(.1f, action.screenSlashDuration);
         restoreStart = Mathf.Clamp(action.screenSplitRestoreStart, .5f, .95f);
         hold = action.screenSplitHold;
@@ -80,8 +80,8 @@ public sealed class ScreenSpaceCut : MonoBehaviour
 
     private void Update()
     {
-        if (!playing) return;
-        float elapsed = Time.unscaledTime - beginTime;
+        if (!playing || CombatPauseMenu.IsPaused) return;
+        float elapsed = CombatPauseMenu.UnscaledTime - beginTime;
         if (elapsed >= duration) { Stop(); return; }
         if (ownsTime)
         {
@@ -94,7 +94,7 @@ public sealed class ScreenSpaceCut : MonoBehaviour
     {
         if (!playing || material == null || camera.cameraType != CameraType.Game || camera.targetTexture != null || camera != Camera.main) return;
         int active = 0, completed = 0;
-        float elapsed = Time.unscaledTime - beginTime;
+        float elapsed = CombatPauseMenu.UnscaledTime - beginTime;
         float scale = camera.pixelHeight / 1080f;
         for (int i = 0; i < count; i++)
         {

@@ -150,7 +150,7 @@ public sealed class GuidedCombatTutorialView : MonoBehaviour, IPointerClickHandl
 
     void Update()
     {
-        if (handsOn) return;
+        if (handsOn || CombatPauseMenu.BlocksInput) return;
         if (Time.frameCount <= openedFrame) return;
         if (allowCancel && CancelPressed())
         {
@@ -164,7 +164,7 @@ public sealed class GuidedCombatTutorialView : MonoBehaviour, IPointerClickHandl
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        if (handsOn) return;
+        if (handsOn || CombatPauseMenu.BlocksInput) return;
         if (eventData == null) return;
         if (eventData.button == PointerEventData.InputButton.Right)
         {
@@ -189,13 +189,13 @@ public sealed class GuidedCombatTutorialView : MonoBehaviour, IPointerClickHandl
 
     public void OnSubmit(BaseEventData eventData)
     {
-        if (handsOn) return;
+        if (handsOn || CombatPauseMenu.BlocksInput) return;
         if (!requiresAction || RequiredButtonAvailable()) Dismiss();
     }
 
     public void OnCancel(BaseEventData eventData)
     {
-        if (handsOn) return;
+        if (handsOn || CombatPauseMenu.BlocksInput) return;
         if (!allowCancel) return;
         Dismiss();
         eventData?.Use();

@@ -325,12 +325,16 @@ MonoBehaviour:
   characterSkills: []
   battleEntryWalkStateName: Base Layer.BattleEntryWalk
   battleEntryAnimationSpeed: 1
-  isBoss: 0
+  isBoss: 1
   actionsPerTurn: 2
   baseActionPattern:
-  - {fileID: 11400000, guid: fefdf69fde426184daa18e04db8ceda9, type: 2}
   - {fileID: 11400000, guid: 315a9f5a1a4d5754d921d2fb7d6f1bc5, type: 2}
   - {fileID: 11400000, guid: 2335f2783f6f3ba4bb0358ef61441e5f, type: 2}
+  - {fileID: 11400000, guid: 40f8b84c64fe44348bd039e9c2539f51, type: 2}
+  - {fileID: 11400000, guid: 05f9c5b549bd5654e882dcc3476db105, type: 2}
+  - {fileID: 11400000, guid: d9c0aba24b1e56044a9e938c4f167b2b, type: 2}
+  - {fileID: 11400000, guid: 2e8a97bd31a43d8448b9e30ace8298fb, type: 2}
+  - {fileID: 11400000, guid: fefdf69fde426184daa18e04db8ceda9, type: 2}
   - {fileID: 11400000, guid: 88e80c71ab9ae354ea9f14b991efb041, type: 2}
   - {fileID: 11400000, guid: 96c903e0ba0fa5545b7d6503e181f0d5, type: 2}
   startingBattleEffects: []

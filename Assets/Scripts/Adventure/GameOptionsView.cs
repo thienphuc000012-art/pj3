@@ -11,6 +11,11 @@ public sealed class GameVolumeRow
     public Slider slider;
     public TMP_Text percentage;
     public Button decrease, increase;
+
+    [NonSerialized] internal Image fillImage;
+    [NonSerialized] internal Color fillColor;
+    [NonSerialized] internal float targetVolume, velocity;
+    [NonSerialized] internal int targetPercentage = -1;
 }
 
 /// <summary>Shared, authored Options panel used by both Title and the exploration menu.</summary>
@@ -19,6 +24,7 @@ public sealed class GameOptionsView : MonoBehaviour
     public GameVolumeRow[] rows;
     public Button languageButton, backButton;
     public TMP_Text languageValue;
+    [SerializeField, Min(.01f)] float volumeAnimationSeconds = .12f;
     CanvasGroup blockedGroup;
     bool oldInteractable, oldRaycasts;
     GameObject returnFocus;
@@ -49,12 +55,24 @@ public sealed class GameOptionsView : MonoBehaviour
         {
             var captured = row;
             row.slider.minValue = 0; row.slider.maxValue = 1;
-            row.slider.onValueChanged.AddListener(value => GameAudio.SetVolume(captured.bus, value));
+            if (row.slider.fillRect != null)
+            {
+                row.fillImage = row.slider.fillRect.GetComponent<Image>();
+                if (row.fillImage != null) row.fillColor = row.fillImage.color;
+            }
+            row.slider.onValueChanged.AddListener(value =>
+            {
+                // Direct input has already moved both parts of the Slider.
+                captured.velocity = 0f;
+                if (captured.fillImage != null) captured.fillImage.color = captured.fillColor;
+                GameAudio.SetVolume(captured.bus, value);
+            });
             row.decrease.onClick.AddListener(() => GameAudio.SetVolume(captured.bus, GameAudio.Volume(captured.bus) - .05f));
             row.increase.onClick.AddListener(() => GameAudio.SetVolume(captured.bus, GameAudio.Volume(captured.bus) + .05f));
         }
         languageButton.onClick.AddListener(GameLocalization.ToggleLanguage);
         backButton.onClick.AddListener(Close);
+        foreach (var button in GetComponentsInChildren<Button>(true)) SmoothButtonHoverScale.Ensure(button);
     }
     public void Open(CanvasGroup background, GameObject focus, Action onClosed = null)
     {
@@ -73,6 +91,7 @@ public sealed class GameOptionsView : MonoBehaviour
         GameAudio.VolumesChanged += Refresh;
         GameLocalization.LanguageChanged += Refresh;
         Refresh();
+        foreach (var row in rows) ShowVolume(row, row.targetVolume);
     }
     void OnDisable()
     {
@@ -86,10 +105,40 @@ public sealed class GameOptionsView : MonoBehaviour
         foreach (var row in rows)
         {
             float value = GameAudio.Volume(row.bus);
-            row.slider.SetValueWithoutNotify(value);
-            GameLocalization.SetText(row.percentage, Mathf.RoundToInt(value * 100) + "%");
+            row.targetVolume = value;
+            if (!isActiveAndEnabled || !Application.isPlaying) ShowVolume(row, value);
+            int percent = Mathf.RoundToInt(value * 100f);
+            if (percent != row.targetPercentage)
+            {
+                row.targetPercentage = percent;
+                GameLocalization.SetText(row.percentage, percent + "%");
+            }
         }
         GameLocalization.SetText(languageValue, GameLocalization.IsEnglish ? "English" : "Tiếng Việt");
+    }
+
+    void Update()
+    {
+        foreach (var row in rows)
+        {
+            float displayedVolume = row.slider.value;
+            if (displayedVolume == row.targetVolume) continue;
+            float value = Mathf.SmoothDamp(displayedVolume, row.targetVolume, ref row.velocity,
+                volumeAnimationSeconds, Mathf.Infinity, Time.unscaledDeltaTime);
+            ShowVolume(row, Mathf.Abs(value - row.targetVolume) < .0005f ? row.targetVolume : value);
+        }
+    }
+
+    static void ShowVolume(GameVolumeRow row, float value)
+    {
+        // Use the Slider to update both the fill edge and the handle in one step.
+        row.slider.SetValueWithoutNotify(value);
+        if (value == row.targetVolume) row.velocity = 0f;
+        if (row.fillImage != null)
+        {
+            float accent = Mathf.Clamp01(Mathf.Abs(row.targetVolume - value) * 20f);
+            row.fillImage.color = Color.Lerp(row.fillColor, new Color(1f, .80f, .48f, row.fillColor.a), accent);
+        }
     }
     public void Close()
     {

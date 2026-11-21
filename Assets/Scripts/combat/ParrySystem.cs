@@ -70,7 +70,7 @@ public class ParrySystem : MonoBehaviour
 
     void Update()
     {
-        if (AdventureCheatPanel.IsOpen) return;
+        if (AdventureCheatPanel.IsOpen || CombatPauseMenu.BlocksInput) return;
         if (CombatManager.Instance == null) return;
 
         // 1. Chỉ cho phép bấm Parry khi Địch đang hành động
@@ -115,7 +115,7 @@ public class ParrySystem : MonoBehaviour
 
     private IEnumerator ExpireMeleeGuard(BattleUnit player)
     {
-        yield return new WaitForSecondsRealtime(Mathf.Max(0.01f, meleeGuardDuration));
+        yield return CombatPauseMenu.WaitForCombatSeconds(Mathf.Max(0.01f, meleeGuardDuration));
         activeMeleeGuards.Remove(player);
     }
 
@@ -339,10 +339,10 @@ public class ParrySystem : MonoBehaviour
     private IEnumerator ParryImpactFeedbackRoutine()
     {
         Time.timeScale = Mathf.Min(timeScaleBeforeParryFeedback, parryHitStopScale);
-        yield return new WaitForSecondsRealtime(parryHitStopDuration);
+        yield return CombatPauseMenu.WaitForCombatSeconds(parryHitStopDuration);
 
         Time.timeScale = Mathf.Min(timeScaleBeforeParryFeedback, parrySlowMotionScale);
-        yield return new WaitForSecondsRealtime(parrySlowMotionDuration);
+        yield return CombatPauseMenu.WaitForCombatSeconds(parrySlowMotionDuration);
 
         Time.timeScale = timeScaleBeforeParryFeedback;
         parryFeedbackRoutine = null;

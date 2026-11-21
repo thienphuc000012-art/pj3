@@ -626,7 +626,7 @@ public class BattleUnit : MonoBehaviour
         var deathAnimator = animator;
         var originalCulling = deathAnimator.cullingMode;
         deathAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
-        float deadline = Time.unscaledTime + Mathf.Max(1f, deathAnimationTimeout);
+        float deadline = CombatPauseMenu.UnscaledTime + Mathf.Max(1f, deathAnimationTimeout);
         try
         {
             // Give the queued Die trigger a chance to enter the death state.
@@ -635,7 +635,7 @@ public class BattleUnit : MonoBehaviour
             {
                 ObserveDeathAnimation();
                 if (deathAnimationFinished) yield break;
-                if (Time.unscaledTime >= deadline)
+                if (CombatPauseMenu.UnscaledTime >= deadline)
                 {
                     Debug.LogWarning($"[{unitName}] Không thấy animation chết kết thúc. Kiểm tra Death State Name / Animator speed.", this);
                     yield break;

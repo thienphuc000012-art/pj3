@@ -12,19 +12,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 81d47f53f6394f7b8732d9ad44c43019, type: 3}
   m_Name: StoryDialogue 3
   m_EditorClassIdentifier: Assembly-CSharp::AdventureStoryDialogue
-  dialogueId: 
-  playOnce: 0
+  dialogueId: 20
+  playOnce: 1
   requiredCompletedQuestIds: []
   requiredCompletedDialogueIds: []
-  startNodeId: 18
+  startNodeId: 20
   playerSpeakerName: "Ng\u01B0\u1EDDi ch\u01A1i"
   playerTalkAnimationState: Base Layer.Talking
   playerDialogueIdleAnimationState: Base Layer.Basic Movement
   charactersPerSecond: 32
   nodes:
-  - id: 18
+  - id: 20
     speakerType: 0
-    speaker: ad
-    text: chuc mung
+    speaker: okok
+    text: "ch\xFAc m\u1EEBng b\u1EA1n \u0111\xE3 l\xE2u l\u1EAFm r\u1ED3i m\u1EDBi
+      c\xF3 ng\u01B0\u1EDDi c\xF3 th\u1EC3 m\u1EDF c\xE1nh c\u1ED5ng n\xE0y , \u0111\xE2y
+      l\xE0 1 ph\u1EA7n qu\xE0 h\u1ED9 tr\u1EE3 b\u1EA1n cho cu\u1ED9c chi\u1EBFn
+      s\u1EAFp t\u1EDBi"
     nextNodeId: 
     choices: []

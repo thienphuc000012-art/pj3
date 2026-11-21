@@ -305,6 +305,13 @@ public class CampaignSession : MonoBehaviour
     {
         if (!OnMap || Busy || (Menu != AdventureMenu.Main && Menu != AdventureMenu.Party) || LoadingScreen.IsLoading)
             return false;
+        return LoadTitleAndEndSession();
+    }
+
+    internal bool ReturnToTitleFromBattle() => !OnMap && LoadTitleAndEndSession();
+
+    bool LoadTitleAndEndSession()
+    {
         if (!LoadingScreen.Load(AdventureTitleMenu.SceneName))
         {
             Notify("Không thể quay về Title.");
@@ -331,7 +338,7 @@ public class CampaignSession : MonoBehaviour
         double now = Time.realtimeSinceStartupAsDouble;
         double elapsed = playTimeSample < 0 ? 0 : Math.Max(0, now - playTimeSample);
         playTimeSample = now;
-        if (Data == null || playTimePaused || !Application.isFocused || LoadingScreen.IsLoading) return;
+        if (Data == null || playTimePaused || !Application.isFocused || LoadingScreen.IsLoading || CombatPauseMenu.IsPaused) return;
         if (double.IsNaN(Data.playTimeSeconds) || double.IsInfinity(Data.playTimeSeconds) || Data.playTimeSeconds < 0) Data.playTimeSeconds = 0;
         Data.playTimeSeconds += elapsed;
     }

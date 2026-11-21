@@ -38,8 +38,8 @@ public sealed class ImpactCameraController : MonoBehaviour
     ActionData lastAction;
 
     public bool IsActive => isActiveAndEnabled &&
-        (Time.unscaledTime < impulseEnd ||
-         (pushDuration > 0f && Time.unscaledTime < pushStart + pushDuration) || pausedAnimator != null);
+        (CombatPauseMenu.UnscaledTime < impulseEnd ||
+         (pushDuration > 0f && CombatPauseMenu.UnscaledTime < pushStart + pushDuration) || pausedAnimator != null);
 
     public void Attach(CinemachineCamera camera)
     {
@@ -77,7 +77,7 @@ public sealed class ImpactCameraController : MonoBehaviour
             impulse.ImpulseDuration = duration;
             currentImpulse = impulse.CreateAndReturnEvent(target.transform.position, direction * shake);
             currentSignal = currentImpulse?.SignalSource;
-            impulseEnd = Time.unscaledTime + duration + .06f;
+            impulseEnd = CombatPauseMenu.UnscaledTime + duration + .06f;
         }
 
         float zoom = (profile != null ? profile.pushInDegrees : 1.5f) * strength;
@@ -85,7 +85,7 @@ public sealed class ImpactCameraController : MonoBehaviour
         {
             startPush = GetFieldOfViewKick();
             peakPush = Mathf.Max(startPush, zoom);
-            pushStart = Time.unscaledTime;
+            pushStart = CombatPauseMenu.UnscaledTime;
             pushDuration = Mathf.Max(.01f, profile != null ? profile.pushInDuration : .19f);
         }
 
@@ -98,7 +98,7 @@ public sealed class ImpactCameraController : MonoBehaviour
     internal float GetFieldOfViewKick()
     {
         if (!isActiveAndEnabled || pushDuration <= 0f) return 0f;
-        float progress = Mathf.Clamp01((Time.unscaledTime - pushStart) / pushDuration);
+        float progress = Mathf.Clamp01((CombatPauseMenu.UnscaledTime - pushStart) / pushDuration);
         const float attackFraction = .19f;
         if (progress < attackFraction)
             return Mathf.SmoothStep(startPush, peakPush, progress / attackFraction);
@@ -109,7 +109,7 @@ public sealed class ImpactCameraController : MonoBehaviour
     {
         offset = Vector3.zero;
         rotation = Quaternion.identity;
-        return isActiveAndEnabled && Time.unscaledTime < impulseEnd &&
+        return isActiveAndEnabled && CombatPauseMenu.UnscaledTime < impulseEnd &&
                CinemachineImpulseManager.Instance.GetStrongestImpulseAt(cameraPosition, false, ImpulseChannel,
                    out offset, out rotation);
     }
@@ -145,7 +145,7 @@ public sealed class ImpactCameraController : MonoBehaviour
         if (animator == null || !animator.isActiveAndEnabled || animator.runtimeAnimatorController == null) return;
         if (pausedAnimator == animator && Mathf.Approximately(animator.speed, appliedSpeed))
         {
-            hitStopEnd = Mathf.Max(hitStopEnd, Time.unscaledTime + duration);
+            hitStopEnd = Mathf.Max(hitStopEnd, CombatPauseMenu.UnscaledTime + duration);
             return;
         }
 
@@ -154,7 +154,7 @@ public sealed class ImpactCameraController : MonoBehaviour
         speedBeforeHitStop = animator.speed;
         appliedSpeed = speedBeforeHitStop * Mathf.Clamp01(speedMultiplier);
         animator.speed = appliedSpeed;
-        hitStopEnd = Time.unscaledTime + duration;
+        hitStopEnd = CombatPauseMenu.UnscaledTime + duration;
     }
 
     void StopHitStop()
@@ -167,8 +167,9 @@ public sealed class ImpactCameraController : MonoBehaviour
 
     void Update()
     {
-        if (pausedAnimator != null && Time.unscaledTime >= hitStopEnd) StopHitStop();
-        if (currentImpulse != null && Time.unscaledTime >= impulseEnd) CancelImpulse();
+        if (CombatPauseMenu.IsPaused) return;
+        if (pausedAnimator != null && CombatPauseMenu.UnscaledTime >= hitStopEnd) StopHitStop();
+        if (currentImpulse != null && CombatPauseMenu.UnscaledTime >= impulseEnd) CancelImpulse();
     }
 
     void OnDisable() => ResetFeedback();

@@ -47,7 +47,7 @@ public sealed class UltimateCinematic : MonoBehaviour
         int highest = int.MinValue;
         foreach (var layer in SortingLayer.layers)
             if (layer.value >= highest) { highest = layer.value; letterbox.sortingLayerID = layer.id; }
-        letterbox.sortingOrder = short.MaxValue;
+        letterbox.sortingOrder = short.MaxValue - 1;
         var blocker = MakeImage(root.transform, "Block UI clicks", Color.clear);
         SetAnchors(blocker.rectTransform, Vector2.zero, Vector2.one);
         blocker.raycastTarget = true;
@@ -93,7 +93,7 @@ public sealed class UltimateCinematic : MonoBehaviour
         float elapsed = 0f;
         while (running && ticket == generation && elapsed < duration)
         {
-            elapsed += Time.unscaledDeltaTime;
+            elapsed += CombatPauseMenu.UnscaledDeltaTime;
             float t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / duration));
             SetBarProgress(Mathf.Lerp(from, entering ? 1f : 0f, t));
             yield return null;
@@ -107,7 +107,8 @@ public sealed class UltimateCinematic : MonoBehaviour
         // Also catches damage numbers and canvases created after the first hit.
         foreach (var canvas in FindObjectsByType<Canvas>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
         {
-            if (canvas == letterbox || canvas.GetComponentInChildren<ScreenSlashGraphic>(true) != null) continue;
+            if (canvas == letterbox || CombatPauseMenu.OwnsCanvas(canvas) ||
+                canvas.GetComponentInChildren<ScreenSlashGraphic>(true) != null) continue;
             if (!canvases.ContainsKey(canvas)) canvases.Add(canvas, canvas.enabled);
             canvas.enabled = false;
         }

@@ -33,6 +33,7 @@ public sealed class AdventureTitleMenu : MonoBehaviour
     [SerializeField] Button quitButton;
     [SerializeField] TMP_Text status;
     [SerializeField, Min(0f)] float menuFadeSeconds = .22f;
+    [SerializeField, Min(0f)] float buttonRevealStaggerSeconds = .055f;
 
     CampaignConfig config;
     AdventureSaveSlotsView saveSlotsView;
@@ -53,7 +54,18 @@ public sealed class AdventureTitleMenu : MonoBehaviour
         quitButton.onClick.AddListener(Quit);
         GameLocalization.BindHierarchy(gameObject);
         foreach (var button in selectionScreen.GetComponentsInChildren<Button>(true))
-            if (button.name == "Settings" || button.name == "Options") { optionsButton = button; break; }
+        {
+            SmoothButtonHoverScale.Ensure(button);
+            if (button.name == "Settings" || button.name == "Options") optionsButton = button;
+            if (!(button.targetGraphic is Image plate) || plate.sprite == null) continue;
+            button.transition = Selectable.Transition.None;
+            plate.CrossFadeColor(Color.white, 0f, true, true);
+            if (!button.TryGetComponent<UIButtonWipeReveal>(out var wipe))
+                wipe = button.gameObject.AddComponent<UIButtonWipeReveal>();
+            wipe.Configure(plate, plate.sprite, new Color(.92f, .79f, .58f, .95f));
+            wipe.SetBaseColor(new Color(.84f, .80f, .72f, .18f));
+            wipe.UseNavigationFocusOnly();
+        }
         if (optionsButton != null) optionsButton.onClick.AddListener(OpenOptions);
         if (!string.IsNullOrEmpty(startupError))
         {
@@ -91,16 +103,35 @@ public sealed class AdventureTitleMenu : MonoBehaviour
     IEnumerator RevealMenu()
     {
         selectionScreen.gameObject.SetActive(true);
-        selectionScreen.alpha = 0;
+        selectionScreen.alpha = 1;
+        selectionScreen.interactable = selectionScreen.blocksRaycasts = false;
+        var buttons = selectionScreen.GetComponentsInChildren<Button>(false);
+        var visibleButtons = new List<CanvasGroup>(buttons.Length);
+        foreach (var button in buttons)
+        {
+            if (!button.TryGetComponent<CanvasGroup>(out var group))
+                group = button.gameObject.AddComponent<CanvasGroup>();
+            group.alpha = 0;
+            visibleButtons.Add(group);
+        }
         // Never pass the opening button press through to a menu command.
         yield return null;
-        for (float elapsed = 0; elapsed < menuFadeSeconds; elapsed += Time.unscaledDeltaTime)
+        float duration = Mathf.Max(.01f, menuFadeSeconds);
+        float total = duration + Mathf.Max(0, visibleButtons.Count - 1) * buttonRevealStaggerSeconds;
+        for (float elapsed = 0; elapsed < total; elapsed += Time.unscaledDeltaTime)
         {
-            float progress = Mathf.SmoothStep(0, 1, elapsed / menuFadeSeconds);
-            pressScreen.alpha = 1 - progress;
-            selectionScreen.alpha = progress;
+            pressScreen.alpha = 1 - Mathf.SmoothStep(0, 1, Mathf.Clamp01(elapsed / duration));
+            for (int i = 0; i < visibleButtons.Count; i++)
+            {
+                var group = visibleButtons[i];
+                if (group == null) continue;
+                float progress = (elapsed - i * buttonRevealStaggerSeconds) / duration;
+                group.alpha = Mathf.SmoothStep(0, 1, Mathf.Clamp01(progress));
+            }
             yield return null;
         }
+        foreach (var group in visibleButtons)
+            if (group != null) group.alpha = 1;
         pressScreen.gameObject.SetActive(false);
         selectionScreen.alpha = 1;
         selectionScreen.interactable = selectionScreen.blocksRaycasts = true;

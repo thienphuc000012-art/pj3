@@ -109,9 +109,16 @@ public static class AdventureMenuNavigationValidation
             SetBacking(session, "Menu", AdventureMenu.Tasks);
             Call(controller, "RefreshQuestList");
             var row = menu.Find("Tasks/Quest List/Quest Scroll/Content/Quest " + quest.Id);
-            Check(Mathf.Abs(row.GetComponent<Image>().color.a - 100f / 255f) < .001f, "Normal quest alpha must be 100/255.");
+            var rowBackground = row.GetComponent<Image>();
+            var template = row.parent.Find("Template");
+            var authoredBackground = template.GetComponent<Image>();
+            var rowArt = row.Find("Artwork").GetComponent<Image>();
+            Check(rowArt.sprite != null && rowArt.sprite == template.Find("Artwork").GetComponent<Image>().sprite &&
+                rowBackground.color == authoredBackground.color &&
+                row.Find("Border").GetComponent<GameUIFrameGraphic>().enabled, "Quest rows must inherit the template art and frame.");
             row.GetComponent<QuestButtonHighlight>().OnPointerEnter(new PointerEventData(EventSystem.current));
-            Check(Mathf.Abs(row.GetComponent<Image>().color.a - 100f / 255f) < .001f, "Hovered quest alpha must be 100/255.");
+            Check(rowBackground.color.r > authoredBackground.color.r && rowBackground.color.a == authoredBackground.color.a,
+                "Hover must brighten the card while keeping it opaque.");
 
             row.GetComponent<Button>().onClick.Invoke();
             var modal = menu.Find("Quest Track Confirmation");

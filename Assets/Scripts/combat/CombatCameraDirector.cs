@@ -248,7 +248,8 @@ public sealed class CombatCameraDirector : MonoBehaviour
         if (skill != null && skill.IsPlaying &&
             (combat == null || combat.state != CombatState.Executing || actor == null || actor.IsDead))
             StopSkill();
-        if (hasShot && cameraRig != null) UpdateShot(Time.unscaledDeltaTime, false);
+        if (!CombatPauseMenu.IsPaused && hasShot && cameraRig != null)
+            UpdateShot(Time.unscaledDeltaTime, false);
     }
 
     void UpdateShot(float deltaTime, bool snap)
@@ -407,7 +408,7 @@ public sealed class CombatCameraDirector : MonoBehaviour
         Vector3 position = pivot + direction * distance;
         if (baseState == CombatCameraState.BattleIdle)
         {
-            float time = Time.unscaledTime * Settings.idleDriftSpeed;
+            float time = CombatPauseMenu.UnscaledTime * Settings.idleDriftSpeed;
             position += (right * Mathf.Sin(time) + up * (.4f * Mathf.Sin(time * 1.37f))) * Settings.idleDrift;
         }
         Vector2 screen = shot.primaryScreenPosition;

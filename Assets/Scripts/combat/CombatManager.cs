@@ -54,7 +54,12 @@ public class CombatManager : MonoBehaviour
         Destroy(instance, lifetime);
     }
     private void LateUpdate() => visualVfxPool?.Tick(Time.timeAsDouble);
-    private void OnDestroy() { visualVfxPool?.Dispose(); visualVfxPool = null; }
+    private void OnDestroy()
+    {
+        SetPlayerCollidersSuppressedForEnemyTargeting(false);
+        visualVfxPool?.Dispose();
+        visualVfxPool = null;
+    }
     private Coroutine turnTransitionRoutine;
     private readonly List<CombatBeamVfx> activeBeams = new List<CombatBeamVfx>();
     private readonly List<GameObject> pendingVfxImpacts = new List<GameObject>();
@@ -79,6 +84,48 @@ public class CombatManager : MonoBehaviour
     }
     private VfxActionState vfxActionState = new VfxActionState();
     private readonly HashSet<GameObject> combatVfxInstances = new HashSet<GameObject>();
+
+    private sealed class ColliderEnabledState
+    {
+        public Collider collider;
+        public bool wasEnabled;
+    }
+
+    private readonly List<ColliderEnabledState> suppressedPlayerColliders = new List<ColliderEnabledState>();
+    private bool playerCollidersSuppressedForTargeting;
+
+    private void SetPlayerCollidersSuppressedForEnemyTargeting(bool suppress)
+    {
+        if (!suppress)
+        {
+            foreach (ColliderEnabledState savedState in suppressedPlayerColliders)
+            {
+                if (savedState.collider != null)
+                    savedState.collider.enabled = savedState.wasEnabled;
+            }
+            suppressedPlayerColliders.Clear();
+            playerCollidersSuppressedForTargeting = false;
+            return;
+        }
+
+        if (playerCollidersSuppressedForTargeting) return;
+        suppressedPlayerColliders.Clear();
+        foreach (BattleUnit player in playerParty)
+        {
+            if (player == null) continue;
+            foreach (Collider playerCollider in player.GetComponentsInChildren<Collider>(true))
+            {
+                if (playerCollider == null) continue;
+                suppressedPlayerColliders.Add(new ColliderEnabledState
+                {
+                    collider = playerCollider,
+                    wasEnabled = playerCollider.enabled
+                });
+                playerCollider.enabled = false;
+            }
+        }
+        playerCollidersSuppressedForTargeting = true;
+    }
 
     private void TrackCombatVFX(GameObject vfx)
     {
@@ -143,6 +190,7 @@ public class CombatManager : MonoBehaviour
 
     private void OnDisable()
     {
+        SetPlayerCollidersSuppressedForEnemyTargeting(false);
         guidedTutorial?.Close();
         CameraManager.Instance?.ResetCombatCameraPresentation();
         if (battleStartRoutine != null)
@@ -268,7 +316,13 @@ public class CombatManager : MonoBehaviour
                !selectedAction.isHeal;
     }
 
-    void Awake() { Instance = this; CombatShadowBudget.Ensure(gameObject.scene); }
+    void Awake()
+    {
+        Instance = this;
+        CombatShadowBudget.Ensure(gameObject.scene);
+        if (gameObject.scene.name == "combattest" && !TryGetComponent<CombatPauseMenu>(out _))
+            gameObject.AddComponent<CombatPauseMenu>();
+    }
 
     public bool PresentationReady { get; private set; }
 
@@ -364,11 +418,11 @@ public class CombatManager : MonoBehaviour
 
     void Update()
     {
-        if (AdventureCheatPanel.IsOpen) return;
+        if (AdventureCheatPanel.IsOpen || CombatPauseMenu.BlocksInput) return;
         if (IsGuidedTutorialBlockingInput) return;
         if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead) return;
 
-        if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Escape))
+        if (Input.GetMouseButtonDown(1) || (gameObject.scene.name != "combattest" && Input.GetKeyDown(KeyCode.Escape)))
         {
             CancelCurrentAction();
             return;
@@ -406,6 +460,10 @@ public class CombatManager : MonoBehaviour
     public void EnterTargetSelection()
     {
         if (!HasPendingTargetSelection || IsGuidedTutorialBlockingInput) return;
+        // Party colliders can sit in front of an enemy from the camera's point
+        // of view. Temporarily remove them from the click ray while choosing an
+        // enemy, then restore each collider's original enabled state.
+        SetPlayerCollidersSuppressedForEnemyTargeting(!isSelectingBuffTarget && !isSelectingSelfOnly);
         if (IsEligibleTarget(currentTarget)) PresentSelectedTarget(currentTarget);
         else RefreshTargetSelection();
     }
@@ -488,6 +546,7 @@ public class CombatManager : MonoBehaviour
 
     private void LeaveTargetSelection()
     {
+        SetPlayerCollidersSuppressedForEnemyTargeting(false);
         selectedAction = null;
         targetSelectionConfirmed = false;
         isSelectingBuffTarget = false;
@@ -698,6 +757,7 @@ public class CombatManager : MonoBehaviour
                 unit.PlayPendingDeathAnimation();
             yield return unit.WaitForDeathAnimation();
         }
+        while (CombatPauseMenu.IsPaused) yield return null;
         if (AdvancedUIManager.Instance != null)
             AdvancedUIManager.Instance.ToggleAllUI(false);
         ClearCombatVFX();
@@ -710,6 +770,7 @@ public class CombatManager : MonoBehaviour
 
     void StartNextUnitTurn()
     {
+        SetPlayerCollidersSuppressedForEnemyTargeting(false);
         isTransitioningTurn = false;
         selectedAction = null;
         isSelectingBuffTarget = false;
@@ -888,6 +949,7 @@ public class CombatManager : MonoBehaviour
         // from retrying repeatedly before the enemies can act.
         if (UnityEngine.Random.value >= .8f)
         {
+            SetPlayerCollidersSuppressedForEnemyTargeting(false);
             runAwayAttemptInProgress = true;
             state = CombatState.Executing;
             selectedAction = null;
@@ -912,6 +974,7 @@ public class CombatManager : MonoBehaviour
         }
 
         runAwayAttemptInProgress = true;
+        SetPlayerCollidersSuppressedForEnemyTargeting(false);
         isTransitioningTurn = true;
         state = CombatState.Executing;
         selectedAction = null;
@@ -929,7 +992,7 @@ public class CombatManager : MonoBehaviour
 
     private IEnumerator FinishFailedRunAwayAttempt()
     {
-        yield return new WaitForSecondsRealtime(1.25f);
+        yield return CombatPauseMenu.WaitForCombatSeconds(1.25f);
         runAwayAttemptInProgress = false;
         if (this != null && !battleCompletionStarted && state == CombatState.Executing)
             EndCurrentTurn();
@@ -1094,6 +1157,7 @@ public class CombatManager : MonoBehaviour
         }
         selectedAction = action;
         targetSelectionConfirmed = true;
+        SetPlayerCollidersSuppressedForEnemyTargeting(false);
         GetComponent<CombatTargetSelection>()?.ClearSelection(true);
         currentOpenMenu = OpenMenuType.None;
 
@@ -1597,9 +1661,9 @@ public class CombatManager : MonoBehaviour
                 // Give Animator one frame to enter the selected attack state
                 // before measuring its actual clip duration for the fallback.
                 yield return null;
-                float fallbackDeadline = Time.unscaledTime + GetSummonAnimationFallback(attacker);
+                float fallbackDeadline = CombatPauseMenu.UnscaledTime + GetSummonAnimationFallback(attacker);
                 while (!isAttackAnimationFinished && attacker != null && !attacker.IsDead &&
-                       Time.unscaledTime < fallbackDeadline)
+                       CombatPauseMenu.UnscaledTime < fallbackDeadline)
                     yield return null;
                 if (!isAttackAnimationFinished && attacker != null && !attacker.IsDead)
                     Debug.LogWarning($"[Summon] {action.actionName}: animation end event was not received; continuing to summon after the fallback wait.", action);

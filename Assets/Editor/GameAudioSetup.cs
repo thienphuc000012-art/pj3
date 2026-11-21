@@ -131,7 +131,7 @@ public static class GameAudioSetup
                 var sliderRect = Rect(row, "Slider", new Vector2(.46f, .27f), new Vector2(.84f, .73f));
                 var slider = sliderRect.gameObject.AddComponent<Slider>();
                 var track = sliderRect.gameObject.AddComponent<Image>(); track.color = new Color(.17f, .18f, .20f, 1);
-                var fillArea = Rect(sliderRect, "Fill Area", new Vector2(.01f, .08f), new Vector2(.99f, .92f));
+                var fillArea = Rect(sliderRect, "Fill Area", new Vector2(.015f, .08f), new Vector2(.985f, .92f));
                 var fill = Rect(fillArea, "Fill", Vector2.zero, Vector2.one); var fillImage = fill.gameObject.AddComponent<Image>(); fillImage.color = new Color(.91f, .89f, .83f, 1); fillImage.raycastTarget = false;
                 var handles = Rect(sliderRect, "Handle Area", new Vector2(.015f, 0), new Vector2(.985f, 1));
                 var handle = Rect(handles, "Handle", new Vector2(.8f, -.15f), new Vector2(.8f, 1.15f)); handle.sizeDelta = new Vector2(6, 0);

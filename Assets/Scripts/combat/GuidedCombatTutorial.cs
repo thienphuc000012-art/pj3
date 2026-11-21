@@ -66,7 +66,7 @@ internal sealed class GuidedCombatTutorial
     IEnumerator ShowCommandLessons(AdvancedUIManager ui, bool teachAttack, bool teachSkills, bool teachPartyHud)
     {
         yield return null;
-        yield return new WaitForSecondsRealtime(CommandEntranceTime(ui.actionMenuPanel));
+        yield return CombatPauseMenu.WaitForCombatSeconds(CommandEntranceTime(ui.actionMenuPanel));
         if (closed || view == null) yield break;
 
         var menu = ui.actionMenuPanel;

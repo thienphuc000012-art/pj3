@@ -6,14 +6,16 @@ using UnityEngine.UI;
 public sealed class GameUIFrameGraphic : MaskableGraphic
 {
     [SerializeField] Color tint = new Color(.83f, .67f, .38f, .44f);
+    [SerializeField] bool continuous;
     bool ornate;
 
-    public void Configure(Color color, bool useOrnament)
+    public void Configure(Color color, bool useOrnament, bool continuousBorder = false)
     {
         raycastTarget = false;
-        if (tint == color && ornate == useOrnament) return;
+        if (tint == color && ornate == useOrnament && continuous == continuousBorder) return;
         tint = color;
         ornate = useOrnament;
+        continuous = continuousBorder;
         SetVerticesDirty();
     }
 
@@ -23,7 +25,23 @@ public sealed class GameUIFrameGraphic : MaskableGraphic
         Rect r = GetPixelAdjustedRect();
         float inset = Mathf.Clamp(Mathf.Min(r.width, r.height) * .035f, 3f, 7f);
         float length = Mathf.Clamp(Mathf.Min(r.width, r.height) * (ornate ? .11f : .14f), 6f, ornate ? 22f : 14f);
-        float thickness = ornate ? 1.25f : 1f;
+        float thickness = continuous ? 1.5f : (ornate ? 1.25f : 1f);
+
+        if (continuous)
+        {
+            float left = r.xMin + inset;
+            float right = r.xMax - inset;
+            float bottom = r.yMin + inset;
+            float top = r.yMax - inset;
+            if (left >= right || bottom >= top) return;
+            float half = thickness * .5f;
+            AddBar(vh, new Vector2(left - half, bottom), new Vector2(right + half, bottom), thickness, tint);
+            AddBar(vh, new Vector2(left - half, top), new Vector2(right + half, top), thickness, tint);
+            AddBar(vh, new Vector2(left, bottom + half), new Vector2(left, top - half), thickness, tint);
+            AddBar(vh, new Vector2(right, bottom + half), new Vector2(right, top - half), thickness, tint);
+            if (!ornate) return;
+            inset += 4f;
+        }
 
         DrawCorner(vh, r.xMin + inset, r.yMin + inset, 1, 1, length, thickness);
         DrawCorner(vh, r.xMax - inset, r.yMin + inset, -1, 1, length, thickness);
