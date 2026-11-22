@@ -35830,6 +35830,90 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d2e490e8a69041edb84f770a3e4a6201, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MapGameDragonStorySequence
+  ringShakeSeconds: 0.55
+  ringShakeAmplitude: 0.12
+  endingWalkSpeed: 1.05
+  endingGateLeadIn: 3.5
+  endingGateEnergyHeightMultiplier: 1.25
+  endingNpcRunSpeed: 3.2
+  chunkDissolveShader: {fileID: 4800000, guid: 57c55d539e4a4237a72c21ac08bfbb0f, type: 3}
+  chunkDissolveSeconds: 9
+  chunkDissolveKeepRadius: 12
+  captionAboveHead: 0.72
+  mainQuestCall: "Khoan \u0111\xE3, l\u1EEF kh\xE1ch! \u0110\u1EE3i t\xF4i v\u1EDBi!"
+  mainQuestCallVoice:
+    clips: []
+    volume: 1
+    pitch: {x: 1, y: 1}
+    spatialBlend: 0
+    maxDistance: 24
+  mainQuestGuest:
+    model: {fileID: 8603064644883837947, guid: d2d3d08afa80216409ebf3bd241ea899, type: 3}
+    speakerName: "Ng\u01B0\u1EDDi gi\u1EEF c\u1ED5ng"
+    runState: Base Layer.Run
+    idleState: Base Layer.IdleA
+    greetingState: Base Layer.Hi
+    scale: 1
+    captionHeight: 2.35
+    line: "Ch\xFAc m\u1EEBng b\u1EA1n, l\u1EEF kh\xE1ch! B\u1EA1n \u0111\xE3 \u0111i
+      xa h\u01A1n b\u1EA5t k\u1EF3 ai t\xF4i t\u1EEBng d\u1EABn t\u1EDBi c\u1ED5ng.
+      Chi\u1EBFc nh\u1EABn \u0111\xE3 ch\u1ECDn ng\u01B0\u1EDDi x\u1EE9ng \u0111\xE1ng.
+      H\xE3y mang n\xF3 theo, v\xE0 nh\u1EDB r\u1EB1ng \u1EDF \u0111\xE2y v\u1EABn
+      c\xF3 ng\u01B0\u1EDDi mong b\u1EA1n tr\u1EDF v\u1EC1."
+    voice:
+      clips: []
+      volume: 1
+      pitch: {x: 1, y: 1}
+      spatialBlend: 0
+      maxDistance: 24
+  shelterQuest: {fileID: 11400000, guid: 7410009bc00e4a24a68e5341ab9e4680, type: 2}
+  cookingQuest: {fileID: 11400000, guid: d968bb1e6a2e40ed9eaf3cade128c274, type: 2}
+  shelterGuest:
+    model: {fileID: 6745298229700992919, guid: 6e93fe53d0bb3334193697e3eab7dfa2, type: 3}
+    speakerName: "T\xED L\u1EEDa"
+    runState: Base Layer.Run
+    idleState: Base Layer.IdleA
+    greetingState: Base Layer.Hi
+    scale: 1.25
+    captionHeight: 2.35
+    line: "Ch\xFAc m\u1EEBng! T\u1ED1i nay b\u1ECDn t\xF4i \u0111\u01B0\u1EE3c ng\u1EE7
+      d\u01B0\u1EDBi m\xE1i l\xE1n m\u1ED9t l\u1EA7n n\u1EEFa. Khi n\xE0o quay l\u1EA1i,
+      ch\u1ED7 kh\xF4 nh\u1EA5t c\u1EA1nh \u0111\u1ED1ng than v\u1EABn l\xE0 c\u1EE7a
+      b\u1EA1n."
+    voice:
+      clips: []
+      volume: 1
+      pitch: {x: 1, y: 1}
+      spatialBlend: 0
+      maxDistance: 24
+  cookingGuest:
+    model: {fileID: 7901158209142021459, guid: d3331bd773bd4274e84e99dfdfe0be73, type: 3}
+    speakerName: "M\u1ED9c"
+    runState: Base Layer.Run
+    idleState: Base Layer.IdleA
+    greetingState: Base Layer.Hi
+    scale: 1.25
+    captionHeight: 2.35
+    line: "Ch\xFAc m\u1EEBng nh\xE9! Nh\u1EDD b\xF3 th\u1EA3o d\u01B0\u1EE3c c\u1EE7a
+      b\u1EA1n m\xE0 c\u1EA3 nh\xF3m c\xF3 m\u1ED9t b\u1EEFa canh n\xF3ng. L\u1EA7n
+      sau v\u1EC1 nh\u1EDB gh\xE9 b\u1EBFp, t\xF4i v\u1EABn d\xE0nh cho b\u1EA1n
+      b\xE1t \u0111\u1EA7u ti\xEAn."
+    voice:
+      clips: []
+      volume: 1
+      pitch: {x: 1, y: 1}
+      spatialBlend: 0
+      maxDistance: 24
+  outroTimeline: {fileID: 11400000, guid: 6d62dced1a044cf499a4bcfcc0f93800, type: 2}
+  finaleBossMusic:
+    clip: {fileID: 8300000, guid: 56cbd33e503bd274093b38e6236a446a, type: 3}
+    volume: 0.65
+  finaleVictoryMusic:
+    clip: {fileID: 0}
+    volume: 0.65
+  outroMusic:
+    clip: {fileID: 8300000, guid: 97ccc9f259ae6224d964d04f259d7e6b, type: 3}
+    volume: 0.65
   mapSetup: {fileID: 895000000000000003}
   triggerMarker: {fileID: 1573529258}
   requiredQuestId: 12
@@ -35873,10 +35957,9 @@ MonoBehaviour:
   ringGlowIntensity: 2.4
   ringPickupAnimationState: Base Layer.pickupitem
   ringPickupAnimationSeconds: 0.9
-  gatePositionOffset: {x: -19.483995, y: 284.84, z: -19.413885}
+  gatePositionOffset: {x: -0.149275, y: -3.96527, z: -0.505237}
   gateRotationEuler: {x: 0, y: 63.38729, z: 0}
   gateScale: {x: 3, y: 3, z: 3}
-  mapWipeSeconds: 1.8
   onOutroRequested:
     m_PersistentCalls:
       m_Calls: []
@@ -35917,8 +36000,8 @@ MonoBehaviour:
     pitch: {x: 1, y: 1}
     spatialBlend: 0
     maxDistance: 24
-  playerGateSubtitle: "\u0110\xE3 \u0111\u1EBFn l\xFAc r\u1EDDi kh\u1ECFi n\u01A1i
-    n\xE0y."
+  playerGateSubtitle: "C\u1EA3m \u01A1n v\xEC \u0111\xE3 \u0111\u1EBFn ti\u1EC5n
+    t\xF4i. T\xF4i s\u1EBD nh\u1EDB n\u01A1i n\xE0y. H\u1EB9n ng\xE0y g\u1EB7p l\u1EA1i."
   dialogueFallbackSeconds: 2.1
 --- !u!1001 &896000000000000000
 PrefabInstance:

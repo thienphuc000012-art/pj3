@@ -2778,7 +2778,7 @@ public class CombatManager : MonoBehaviour
     /// Tắt CHỈ phần movement/collision tự động của RFX4 khi CombatManager
     /// cần tự điều khiển projectile. ParticleTrail, LightCurves, shader... vẫn chạy.
     /// </summary>
-    private void DisableRFX4Movement(GameObject vfx)
+    internal static void DisableRFX4Movement(GameObject vfx)
     {
         if (vfx == null) return;
 

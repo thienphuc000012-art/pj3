@@ -1,0 +1,190 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bfda56da833e2384a9677cd3c976a436, type: 3}
+  m_Name: EndingOutro
+  m_EditorClassIdentifier: Unity.Timeline::UnityEngine.Timeline.TimelineAsset
+  m_Version: 0
+  m_Tracks:
+  - {fileID: 11400001}
+  m_FixedDuration: 0
+  m_EditorSettings:
+    m_Framerate: 60
+    m_ScenePreview: 0
+  m_DurationMode: 0
+  m_MarkerTrack: {fileID: 0}
+--- !u!114 &11400001
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b489fbd35b434f75bdb4bd80db3bfab5, type: 3}
+  m_Name: Ending Credits
+  m_EditorClassIdentifier: Assembly-CSharp::MapEndingCreditsTrack
+  m_Version: 3
+  m_AnimClip: {fileID: 0}
+  m_Locked: 0
+  m_Muted: 0
+  m_CustomPlayableFullTypename: 
+  m_Curves: {fileID: 0}
+  m_Parent: {fileID: 11400000}
+  m_Children: []
+  m_Clips:
+  - m_Version: 1
+    m_Start: 0
+    m_ClipIn: 0
+    m_Asset: {fileID: 11400002}
+    m_Duration: 4.5
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 11400001}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: -1
+    m_BlendOutDuration: -1
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: Thank You For Playing
+  - m_Version: 1
+    m_Start: 4.5
+    m_ClipIn: 0
+    m_Asset: {fileID: 11400003}
+    m_Duration: 23
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 11400001}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: -1
+    m_BlendOutDuration: -1
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: Game Credits
+  - m_Version: 1
+    m_Start: 27.5
+    m_ClipIn: 0
+    m_Asset: {fileID: 11400004}
+    m_Duration: 32
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 11400001}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: -1
+    m_BlendOutDuration: -1
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: Special Thanks
+  - m_Version: 1
+    m_Start: 59.5
+    m_ClipIn: 0
+    m_Asset: {fileID: 11400005}
+    m_Duration: 6
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 11400001}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: -1
+    m_BlendOutDuration: -1
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: The Journey Ends
+  m_Markers:
+    m_Objects: []
+--- !u!114 &11400002
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f799f04b32e6498e8678c5030e63d31e, type: 3}
+  m_Name: Thank You For Playing
+  m_EditorClassIdentifier: Assembly-CSharp::MapEndingCreditsClip
+  title: "THANK YOU FOR PLAYING"
+  body: "48 \u0110\u0102K N\u00d4NG"
+  scroll: 0
+--- !u!114 &11400003
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f799f04b32e6498e8678c5030e63d31e, type: 3}
+  m_Name: Game Credits
+  m_EditorClassIdentifier: Assembly-CSharp::MapEndingCreditsClip
+  title: ""
+  body: "<size=74%><color=#DEBD82>GAME CONCEPT</color></size>\nPHUC\n\n<size=74%><color=#DEBD82>STORY DEVELOPMENT</color></size>\nPHUC\n\n<size=74%><color=#DEBD82>PLAYER SYSTEM DEVELOPMENT</color></size>\nPHUC\n\n<size=74%><color=#DEBD82>ENEMY AI DEVELOPMENT</color></size>\nPHUC\n\n<size=74%><color=#DEBD82>COMBAT SYSTEM DEVELOPMENT</color></size>\nPHUC\n\n<size=74%><color=#DEBD82>GAMEPLAY SYSTEMS</color></size>\nPHUC\n\n<size=74%><color=#DEBD82>COMBAT SYSTEM</color></size>\nPHUC\n\n<size=74%><color=#DEBD82>PUZZLE SYSTEM</color></size>\nPHUC\n\n<size=74%><color=#DEBD82>UI / UX / VISUAL EFFECTS</color></size>\nPHUC\n\n<size=74%><color=#DEBD82>AUDIO</color></size>\nHOANG\n\n<size=74%><color=#DEBD82>TESTING & POLISH</color></size>\nHOANG"
+  scroll: 1
+--- !u!114 &11400004
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f799f04b32e6498e8678c5030e63d31e, type: 3}
+  m_Name: Special Thanks
+  m_EditorClassIdentifier: Assembly-CSharp::MapEndingCreditsClip
+  title: ""
+  body: "<size=140%><color=#DEBD82>SPECIAL THANKS</color></size>\n\n<size=74%><color=#DEBD82>Fantasy Castle Environment</color></size>\nLeartes Studios\n\n<size=74%><color=#DEBD82>Ruined Crypt</color></size>\nScansFactory\n\n<size=74%><color=#DEBD82>Rocky Hills Environment - Whitebark Pine / The Toby Foliage Engine</color></size>\nToby Fredson\n\n<size=74%><color=#DEBD82>Altar Ruins Free</color></size>\nUnderhill Labz\n\n<size=74%><color=#DEBD82>Heroic Fantasy Creatures Full Pack Vol. 1</color></size>\nPROTOFACTOR, INC.\n\n<size=74%><color=#DEBD82>Cyberpunk Ninja Girl Vex / Swordsman Girl / Succubus Sisters</color></size>\nIda Faber\n\n<size=74%><color=#DEBD82>Pspsps Monkey</color></size>\nSuriyun\n\n<size=74%><color=#DEBD82>Stylized VFX Bundle / Zap VFX / Easy Impact Frames / Easy Shockwaves</color></size>\nVefects\n\n<size=74%><color=#DEBD82>Realistic Effects Pack 4</color></size>\nkripto289\n\n<size=74%><color=#DEBD82>Spells Pack</color></size>\nZakhan\n\n<size=74%><color=#DEBD82>Free Treasure Chest</color></size>\nSat Productions\n\n<size=74%><color=#DEBD82>Free Slash VFX</color></size>\nMaykerStudio\n\n<size=74%><color=#DEBD82>Stylized Rock (Free Slash VFX)</color></size>\nJaspreet Singh \u2022 CC BY 4.0 \u2022 skfb.ly/ouBTP\n\n<size=74%><color=#DEBD82>Distortion Shockwaves VFX</color></size>\nMirza\n\n<size=74%><color=#DEBD82>Ambient Particles Essentials</color></size>\nObsidianForge\n\n<size=74%><color=#DEBD82>Free Quick Effects</color></size>\nGabriel Aguiar Productions\n\n<size=74%><color=#DEBD82>Free Dissolve Shader Pack - URP</color></size>\nEric VFX Studio\n\n<size=74%><color=#DEBD82>Magic Portal</color></size>\nchengzijieczj \u2022 Sketchfab \u2022 CC BY 4.0 \u2022 Adapted\n\n<size=74%><color=#DEBD82>Ancient Stone Door with Carved Dragon</color></size>\nOrazio Iaci \u2022 Sketchfab\n\n<size=74%><color=#DEBD82>Ring of Noobs</color></size>\nBlender3D \u2022 Sketchfab \u2022 CC BY 4.0\n\n<size=74%><color=#DEBD82>DOTween</color></size>\nDemigiant\n\n<size=74%><color=#DEBD82>Cinemachine / Timeline / Universal Render Pipeline</color></size>\nUnity Technologies"
+  scroll: 1
+--- !u!114 &11400005
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f799f04b32e6498e8678c5030e63d31e, type: 3}
+  m_Name: The Journey Ends
+  m_EditorClassIdentifier: Assembly-CSharp::MapEndingCreditsClip
+  title: "Thank you for playing"
+  body: "The journey ends here...\nBut another one may begin."
+  scroll: 0

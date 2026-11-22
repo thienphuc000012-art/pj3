@@ -38,7 +38,7 @@ public sealed class GameUITextColor : MonoBehaviour
     {
         if (label == null) label = GetComponent<TMP_Text>();
         if (label == null) return;
-        if (label.GetComponentInParent<PreserveAuthoredUI>(true) != null) return;
+        if (!colorOverride.HasValue && label.GetComponentInParent<PreserveAuthoredUI>(true) != null) return;
         // Party resources use the colors authored on their Canvas, including after theme/language refreshes.
         if (label.GetComponentInParent<PartyTurnHUDCard>(true) != null) return;
         Color color = colorOverride ?? (choiceHover != null ? choiceHover.TextColor : Color.white);

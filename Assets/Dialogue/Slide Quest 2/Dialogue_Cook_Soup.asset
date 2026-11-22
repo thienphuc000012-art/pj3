@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81d47f53f6394f7b8732d9ad44c43019, type: 3}
+  m_Name: Dialogue_Cook_Soup
+  m_EditorClassIdentifier: Assembly-CSharp::AdventureStoryDialogue
+  dialogueId: m_sidequest_cook_offer
+  playOnce: 1
+  requiredCompletedQuestIds: []
+  requiredCompletedDialogueIds: []
+  startNodeId: start
+  playerSpeakerName: "L\u1eef kh\u00e1ch"
+  playerTalkAnimationState: Base Layer.Talking
+  playerDialogueIdleAnimationState: Base Layer.Basic Movement
+  charactersPerSecond: 27
+  nodes:
+  - id: start
+    speakerType: 0
+    speaker: "M\u1ed9c"
+    text: "L\u1ea1i g\u1ea7n b\u1ebfp m\u1ed9t ch\u00fat nh\u00e9, t\u00f4i l\u00e0 M\u1ed9c. Chi\u1ebfc n\u1ed3i n\u00e0y c\u00f2n d\u00f9ng \u0111\u01b0\u1ee3c, nh\u01b0ng ch\u1ec9 c\u00f3 n\u01b0\u1edbc n\u00f3ng th\u00ec ch\u1eb3ng gi\u00fap ai l\u1ea5y l\u1ea1i s\u1ee9c sau m\u1ed9t ng\u00e0y lang thang."
+    nextNodeId: "plan"
+    choices: []
+  - id: plan
+    speakerType: 0
+    speaker: "M\u1ed9c"
+    text: "T\u00f4i mu\u1ed1n n\u1ea5u m\u1ed9t n\u1ed3i canh \u0111\u01a1n gi\u1ea3n cho c\u1ea3 nh\u00f3m: n\u01b0\u1edbc s\u1ea1ch, ch\u00fat mu\u1ed1i c\u00f2n s\u00f3t l\u1ea1i v\u00e0 m\u1ed9t b\u00f3 Th\u1ea3o d\u01b0\u1ee3c \u0111\u1ecf s\u1ebd t\u1ea1o \u0111\u01b0\u1ee3c m\u00f9i th\u01a1m, \u00e1t v\u1ecb kh\u00f3i b\u1ee5i trong c\u1ed5 h\u1ecdng."
+    nextNodeId: "request"
+    choices: []
+  - id: request
+    speakerType: 0
+    speaker: "M\u1ed9c"
+    text: "Th\u1ea3o d\u01b0\u1ee3c \u0111\u1ecf m\u1ecdc r\u1ea3i r\u00e1c quanh v\u00f9ng \u0111\u1ed5 n\u00e1t. B\u1ea1n nh\u1eb7t gi\u00fap t\u00f4i m\u1ed9t b\u00f3 r\u1ed3i mang v\u1ec1 \u0111\u00e2y nh\u00e9? T\u00f4i s\u1ebd \u0111\u1ec3 ph\u1ea7n \u0111\u1ea7u ti\u00ean cho b\u1ea1n, mi\u1ec5n l\u00e0 n\u1ed3i canh k\u1ecbp s\u00f4i tr\u01b0\u1edbc khi tr\u1eddi l\u1ea1nh."
+    nextNodeId: ""
+    choices:
+    - text: "T\u00f4i s\u1ebd t\u00ecm m\u1ed9t b\u00f3 Th\u1ea3o d\u01b0\u1ee3c \u0111\u1ecf r\u1ed3i mang v\u1ec1 cho b\u1ea1n."
+      nextNodeId: "accepted"
+      questToOffer: {fileID: 11400000, guid: d968bb1e6a2e40ed9eaf3cade128c274, type: 2}
+    - text: "B\u00e2y gi\u1edd t\u00f4i ch\u01b0a th\u1ec3 \u0111i t\u00ecm nguy\u00ean li\u1ec7u."
+      nextNodeId: "declined"
+      questToOffer: {fileID: 0}
+  - id: accepted
+    speakerType: 0
+    speaker: "M\u1ed9c"
+    text: "Tuy\u1ec7t. Ch\u1ec9 c\u1ea7n nh\u1eb7t nguy\u00ean li\u1ec7u v\u00e0o t\u00fai l\u00e0 \u0111\u01b0\u1ee3c; b\u1ea1n kh\u00f4ng c\u1ea7n t\u1ef1 ch\u1ebf bi\u1ebfn. Khi mang v\u1ec1, gh\u00e9 l\u1ea1i b\u1ebfp nh\u00e9, t\u00f4i s\u1ebd n\u1ea5u ngay v\u00e0 d\u00e0nh cho b\u1ea1n b\u00e1t \u0111\u1ea7u ti\u00ean."
+    nextNodeId: ""
+    choices: []
+  - id: declined
+    speakerType: 0
+    speaker: "M\u1ed9c"
+    text: "Kh\u00f4ng sao. N\u1ed3i s\u1ebd c\u00f2n \u0111\u00e2y th\u00eam m\u1ed9t l\u00fac. Khi s\u1eb5n s\u00e0ng \u0111i t\u00ecm nguy\u00ean li\u1ec7u, b\u1ea1n c\u1ee9 gh\u00e9 l\u1ea1i; \u0111\u1ed3 \u0103n n\u00f3ng lu\u00f4n \u0111\u00e1ng \u0111\u1ec3 ch\u1edd."
+    nextNodeId: ""
+    choices: []

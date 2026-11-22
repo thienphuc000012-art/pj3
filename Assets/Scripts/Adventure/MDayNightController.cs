@@ -62,6 +62,66 @@ public sealed class MDayNightController : MonoBehaviour
     static readonly int Tint = Shader.PropertyToID("_Tint");
 
     public bool OwnsActiveScene => gameObject.scene.name == "m" && gameObject.scene == SceneManager.GetActiveScene();
+    public sealed class CombatLighting
+    {
+        readonly Color sky, equator, ground, fog, sunColor, moonColor;
+        readonly Quaternion sunRotation, moonRotation;
+        readonly float fogDensity, reflection, sunIntensity, moonIntensity;
+        readonly Shader skyShader;
+        readonly Color topColor, horizonColor, groundColor, skySunColor;
+        readonly Vector4 skySunDirection;
+
+        public CombatLighting(MDayNightController source)
+        {
+            sky = RenderSettings.ambientSkyColor; equator = RenderSettings.ambientEquatorColor;
+            ground = RenderSettings.ambientGroundColor; fog = RenderSettings.fogColor;
+            fogDensity = RenderSettings.fogDensity; reflection = RenderSettings.reflectionIntensity;
+            sunRotation = source.sun.transform.rotation; sunColor = source.sun.color; sunIntensity = source.sun.intensity;
+            moonRotation = source.moonLight != null ? source.moonLight.transform.rotation : Quaternion.identity;
+            moonColor = source.moonLight != null ? source.moonLight.color : Color.white;
+            moonIntensity = source.moonLight != null ? source.moonLight.intensity : 0;
+            var material = RenderSettings.skybox;
+            if (material != null)
+            {
+                skyShader = material.shader;
+                topColor = material.GetColor("_TopColor"); horizonColor = material.GetColor("_HorizonColor");
+                groundColor = material.GetColor("_GroundColor"); skySunColor = material.GetColor("_SunColor");
+                skySunDirection = material.GetVector("_SunDirection");
+            }
+        }
+
+        public void Apply(Scene battle)
+        {
+            Light sun = null;
+            foreach (var root in battle.GetRootGameObjects())
+                foreach (var light in root.GetComponentsInChildren<Light>(true))
+                    if (light.type == LightType.Directional && light.gameObject.activeInHierarchy)
+                    { if (sun == null) sun = light; else light.enabled = false; }
+            if (sun == null)
+            {
+                var obj = new GameObject("Combat Sun");
+                SceneManager.MoveGameObjectToScene(obj, battle);
+                sun = obj.AddComponent<Light>(); sun.type = LightType.Directional;
+            }
+            sun.enabled = true; sun.transform.rotation = sunRotation; sun.color = sunColor; sun.intensity = sunIntensity;
+            var moonObject = new GameObject("Combat Moon Light");
+            SceneManager.MoveGameObjectToScene(moonObject, battle);
+            var moon = moonObject.AddComponent<Light>(); moon.type = LightType.Directional;
+            moon.transform.rotation = moonRotation; moon.color = moonColor; moon.intensity = moonIntensity;
+            RenderSettings.sun = sun; RenderSettings.ambientMode = AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = sky; RenderSettings.ambientEquatorColor = equator; RenderSettings.ambientGroundColor = ground;
+            RenderSettings.fogColor = fog; RenderSettings.fogDensity = fogDensity; RenderSettings.reflectionIntensity = reflection;
+            if (skyShader != null)
+            {
+                var material = new Material(skyShader) { hideFlags = HideFlags.DontSave };
+                material.SetColor("_TopColor", topColor); material.SetColor("_HorizonColor", horizonColor);
+                material.SetColor("_GroundColor", groundColor); material.SetColor("_SunColor", skySunColor);
+                material.SetVector("_SunDirection", skySunDirection);
+                RenderSettings.skybox = material;
+                moonObject.AddComponent<CombatSkyMaterialOwner>().material = material;
+            }
+        }
+    }
     public static float Daylight(float hour) => Mathf.SmoothStep(0, 1, Mathf.InverseLerp(5, 7.5f, hour)) * (1 - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(17, 19.5f, hour)));
     public static float Night(float hour) => 1 - Mathf.SmoothStep(0, 1, Daylight(hour) / .65f);
 
@@ -218,4 +278,10 @@ public sealed class MDayNightController : MonoBehaviour
     }
     [ContextMenu("Preview Time (m only)")] void Preview() { Apply(previewHour, viewCamera != null ? viewCamera.transform.position : player != null ? player.position : transform.position); }
     [ContextMenu("Restore Editor Lighting")] void RestorePreview() { RestoreEnvironment(); SetVisuals(false); }
+}
+
+public sealed class CombatSkyMaterialOwner : MonoBehaviour
+{
+    public Material material;
+    void OnDestroy() { if (material != null) Destroy(material); }
 }

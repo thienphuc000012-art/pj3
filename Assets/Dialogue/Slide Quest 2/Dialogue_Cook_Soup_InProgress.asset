@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81d47f53f6394f7b8732d9ad44c43019, type: 3}
+  m_Name: Dialogue_Cook_Soup_InProgress
+  m_EditorClassIdentifier: Assembly-CSharp::AdventureStoryDialogue
+  dialogueId: m_sidequest_cook_progress
+  playOnce: 0
+  requiredCompletedQuestIds: []
+  requiredCompletedDialogueIds: []
+  startNodeId: start
+  playerSpeakerName: "L\u1eef kh\u00e1ch"
+  playerTalkAnimationState: Base Layer.Talking
+  playerDialogueIdleAnimationState: Base Layer.Basic Movement
+  charactersPerSecond: 27
+  nodes:
+  - id: start
+    speakerType: 0
+    speaker: "M\u1ed9c"
+    text: "T\u00f4i v\u1eabn \u0111ang ch\u1edd b\u00f3 Th\u1ea3o d\u01b0\u1ee3c \u0111\u1ecf. H\u00e3y nh\u1eb7t n\u00f3 v\u00e0o t\u00fai r\u1ed3i quay l\u1ea1i \u0111\u00e2y; n\u1ed3i \u0111\u00e3 c\u00f3 n\u01b0\u1edbc v\u00e0 t\u00f4i kh\u00f4ng mu\u1ed1n \u0111\u1ec3 b\u1eefa \u0103n ngu\u1ed9i m\u1ea5t."
+    nextNodeId: ""
+    choices: []

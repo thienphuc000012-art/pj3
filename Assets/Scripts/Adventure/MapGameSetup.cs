@@ -25,18 +25,36 @@ public class MapGameSetup : MonoBehaviour
         }
         // Use the original spawn for sample placement, even after loading a save.
         Vector3 origin = player.transform.position;
-        var session = CampaignSession.Ensure(config, startNewGame);
-        session.BindMap(player);
+        CampaignSession session;
+        try
+        {
+            session = CampaignSession.Ensure(config, startNewGame);
+            session.BindMap(player);
+        }
+        catch (System.Exception exception)
+        {
+            StartupError = "Không thể khôi phục vị trí người chơi trên bản đồ.";
+            Debug.LogException(exception, this);
+            yield break;
+        }
         var streaming = GetComponent<MapChunkStreamer>();
         if (streaming != null)
         {
             yield return streaming.Initialize(player);
             if (!streaming.Ready) { StartupError = streaming.Error ?? "Map streaming initialization failed."; yield break; }
         }
-        if (createStarterInteractions) CreateStarterPoints(origin);
-        session.RefreshWorld();
-        player.MCC?.SnapCameraTarget();
-        StartupReady = true;
+        try
+        {
+            if (createStarterInteractions) CreateStarterPoints(origin);
+            session.RefreshWorld();
+            player.MCC?.SnapCameraTarget();
+            StartupReady = true;
+        }
+        catch (System.Exception exception)
+        {
+            StartupError = "Không thể hoàn tất khởi tạo bản đồ.";
+            Debug.LogException(exception, this);
+        }
     }
     void CreateStarterPoints(Vector3 origin)
     {

@@ -554,7 +554,7 @@ public class AdventureUI : MonoBehaviour
             questRowTemplate.targetGraphic = row.GetComponent<Image>();
             questRowTemplate.transition = Selectable.Transition.None;
             row.GetComponent<Image>().color = new Color(.16f, .133f, .11f);
-            var border = new GameObject("Border", typeof(RectTransform), typeof(GameUIFrameGraphic));
+            var border = new GameObject("Border", typeof(RectTransform), typeof(CanvasRenderer), typeof(GameUIFrameGraphic));
             TravelRect(border, row.transform, Vector2.zero, Vector2.one);
             border.GetComponent<GameUIFrameGraphic>()
                 .Configure(new Color(.67f, .54f, .36f, .9f), false, continuousBorder: true);
@@ -994,14 +994,25 @@ public class AdventureUI : MonoBehaviour
         for (int i = 0; i < learned.Length; i++) {
             bool selected = pendingSkill == learned[i];
             Color frame = selected ? new Color(1f, .83f, .51f) : new Color(.77f, .61f, .34f, .82f);
-            rows[i].GetComponent<GameUIFrameGraphic>().Configure(frame, false);
+            rows[i].GetComponent<GameUIFrameGraphic>().Configure(frame, false, continuousBorder: true);
             AdventureCanvasRoot.RowText(rows[i], "Select/Label", VietnameseGameUIText.ActionName(learned[i]));
             var label = rows[i].transform.Find("Select/Label").GetComponent<TMP_Text>();
             Color textColor = selected ? Color.white : new Color(.55f, .55f, .55f);
             var labelStyle = label.GetComponent<GameUITextColor>();
             if (labelStyle != null) labelStyle.SetColorOverride(textColor);
             else label.color = textColor;
-            GameLocalization.SetActionDescription(rows[i].transform.Find("Description").GetComponentInChildren<TMP_Text>(true), learned[i]);
+            var description = rows[i].transform.Find("Description").GetComponentInChildren<TMP_Text>(true);
+            GameLocalization.SetActionDescription(description, learned[i], allowScrolling: false);
+            var descriptionStyle = description.GetComponent<GameUITextColor>();
+            if (descriptionStyle != null) descriptionStyle.SetColorOverride(textColor);
+            else description.color = textColor;
+            var rowLayout = rows[i].GetComponent<LayoutElement>();
+            float descriptionWidth = description.rectTransform.rect.width;
+            if (rowLayout != null && descriptionWidth > 0f)
+            {
+                float height = Mathf.Max(126f, description.GetPreferredValues(description.text, descriptionWidth, Mathf.Infinity).y + 58f);
+                if (Mathf.Abs(rowLayout.preferredHeight - height) > .5f) rowLayout.preferredHeight = height;
+            }
         }
         view.Text(prefix + "/SkillDialog/Title", "Đổi kỹ năng ô " + (selectedSlot + 1));
         view.Active(prefix + "/SkillDialog/Empty", learned.Length == 0);
@@ -1018,6 +1029,12 @@ public class AdventureUI : MonoBehaviour
         for (int i = 0; i < cells; i++)
         {
             var row = rows[i]; var stack = i < stacks.Count ? stacks[i] : null;
+            if (row.transform.Find("Item Border") == null)
+            {
+                var border = new GameObject("Item Border", typeof(RectTransform), typeof(CanvasRenderer), typeof(GameUIFrameGraphic));
+                TravelRect(border, row.transform, Vector2.zero, Vector2.one);
+                border.GetComponent<GameUIFrameGraphic>().Configure(new Color(.67f, .54f, .36f, .9f), false, true);
+            }
             var item = stack != null ? S.Config.FindItem(stack.id) : null;
             AdventureCanvasRoot.RowText(row, "Name", stack != null ? item?.displayName ?? stack.id : "");
             AdventureCanvasRoot.RowText(row, "Count", stack != null ? "x" + stack.count : "");

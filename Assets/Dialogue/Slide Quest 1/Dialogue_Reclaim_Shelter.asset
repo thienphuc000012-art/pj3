@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81d47f53f6394f7b8732d9ad44c43019, type: 3}
+  m_Name: Dialogue_Reclaim_Shelter
+  m_EditorClassIdentifier: Assembly-CSharp::AdventureStoryDialogue
+  dialogueId: m_sidequest_shelter_offer
+  playOnce: 1
+  requiredCompletedQuestIds: []
+  requiredCompletedDialogueIds: []
+  startNodeId: start
+  playerSpeakerName: "L\u1eef kh\u00e1ch"
+  playerTalkAnimationState: Base Layer.Talking
+  playerDialogueIdleAnimationState: Base Layer.Basic Movement
+  charactersPerSecond: 27
+  nodes:
+  - id: start
+    speakerType: 0
+    speaker: "T\u00ed L\u1eeda"
+    text: "T\u00f4i l\u00e0 T\u00ed L\u1eeda. M\u1ea5y \u0111\u00eam nay t\u00f4i ch\u1ec9 d\u00e1m ch\u1ee3p m\u1eaft d\u01b0\u1edbi g\u1ea7m chi\u1ebfc xe g\u00e3y kia; c\u0103n l\u00e1n v\u1ed1n l\u00e0 ch\u1ed7 tr\u00fa c\u1ee7a c\u1ea3 nh\u00f3m \u0111\u00e3 b\u1ecb qu\u00e1i v\u1eadt chi\u1ebfm m\u1ea5t."
+    nextNodeId: "memory"
+    choices: []
+  - id: memory
+    speakerType: 0
+    speaker: "T\u00ed L\u1eeda"
+    text: "N\u01a1i \u0111\u00f3 c\u00f3 m\u00e1i che, m\u1ed9t t\u1ea5m n\u1ec7m kh\u00f4 v\u00e0 \u0111\u1ed1ng than v\u1eabn c\u00f2n gi\u1eef \u0111\u01b0\u1ee3c h\u01a1i \u1ea5m. T\u00f4i \u0111\u00e3 d\u1ef1ng n\u00f3 b\u1eb1ng \u0111\u00f4i tay m\u00ecnh, nh\u01b0ng gi\u1edd c\u1ee9 \u0111\u1ebfn g\u1ea7n l\u00e0 ch\u00fang l\u1ea1i lao ra."
+    nextNodeId: "request"
+    choices: []
+  - id: request
+    speakerType: 0
+    speaker: "T\u00ed L\u1eeda"
+    text: "T\u00f4i kh\u00f4ng c\u1ea7n b\u1ea1n d\u1ecdn s\u1ea1ch c\u1ea3 v\u00f9ng. Ch\u1ec9 c\u1ea7n h\u1ea1 hai con \u0111ang canh l\u1ed1i v\u00e0o, \u0111\u1ec3 ch\u00fang t\u00f4i c\u00f3 th\u1ec3 quay v\u1ec1 ng\u1ee7 m\u00e0 kh\u00f4ng ph\u1ea3i n\u01a1m n\u1edbp nh\u00ecn quanh. B\u1ea1n gi\u00fap t\u00f4i \u0111\u01b0\u1ee3c ch\u1ee9?"
+    nextNodeId: ""
+    choices:
+    - text: "\u0110\u01b0\u1ee3c. T\u00f4i s\u1ebd \u0111\u00e1nh b\u1ea1i hai con qu\u00e1i v\u00e0 m\u1edf l\u1ea1i l\u1ed1i v\u00e0o c\u0103n l\u00e1n."
+      nextNodeId: "accepted"
+      questToOffer: {fileID: 11400000, guid: 7410009bc00e4a24a68e5341ab9e4680, type: 2}
+    - text: "Cho t\u00f4i th\u00eam ch\u00fat th\u1eddi gian chu\u1ea9n b\u1ecb."
+      nextNodeId: "declined"
+      questToOffer: {fileID: 0}
+  - id: accepted
+    speakerType: 0
+    speaker: "T\u00ed L\u1eeda"
+    text: "C\u1ea3m \u01a1n b\u1ea1n. T\u00f4i s\u1ebd d\u1ecdn ch\u1ed7 n\u1eb1m v\u00e0 nh\u00f3m l\u1ea1i \u0111\u1ed1ng than trong l\u00fac ch\u1edd. Khi hai con qu\u00e1i \u0111\u00e3 b\u1ecb h\u1ea1, h\u00e3y quay l\u1ea1i \u0111\u00e2y; t\u00f4i s\u1ebd chia cho b\u1ea1n ch\u00fat \u0111\u1ed3 d\u1ef1 tr\u1eef."
+    nextNodeId: ""
+    choices: []
+  - id: declined
+    speakerType: 0
+    speaker: "T\u00ed L\u1eeda"
+    text: "T\u00f4i hi\u1ec3u. \u0110\u01b0\u1eddng quanh \u0111\u00e2y kh\u00f4ng an to\u00e0n, c\u1ee9 chu\u1ea9n b\u1ecb k\u1ef9 r\u1ed3i quay l\u1ea1i. T\u00f4i s\u1ebd kh\u00f4ng r\u1eddi kh\u1ecfi chi\u1ebfc xe n\u00e0y \u0111\u00e2u."
+    nextNodeId: ""
+    choices: []

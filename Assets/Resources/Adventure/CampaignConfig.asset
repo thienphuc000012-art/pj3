@@ -50,7 +50,7 @@ MonoBehaviour:
   demoEnemy: {fileID: 0}
   items:
   - id: herb
-    displayName: "Th\u1EA3o d\u01B0\u1EE3c"
+    displayName: "Th\u1EA3o d\u01B0\u1EE3c \u0111\u1ECF"
     icon: {fileID: 21300000, guid: 82361fa11de5cc34386d1b5565ad8f5a, type: 3}
     description: "Nguy\xEAn li\u1EC7u ch\u1EBF t\u1EA1o thu\u1ED1c h\u1ED3i m\xE1u."
     mapHeal: 0
@@ -67,6 +67,20 @@ MonoBehaviour:
     description: "H\u1ED3i 40 m\xE1u cho m\u1ED9t th\xE0nh vi\xEAn c\xF2n s\u1ED1ng."
     mapHeal: 40
     combatAction: {fileID: 11400000, guid: 146e9672b9924e76be740e0b535dac17, type: 2}
+  - id: potionCryptex Lock
+    displayName: Cryptex Lock 1
+    icon: {fileID: 0}
+    description: pass canhga
+    mapHeal: 0
+    combatAction: {fileID: 0}
+  - id: potionCryptex Lock
+    displayName: Cryptex Lock 2
+    icon: {fileID: 0}
+    description: 'pass canhchua
+
+'
+    mapHeal: 0
+    combatAction: {fileID: 0}
   recipes:
   - displayName: "Thu\u1ED1c h\u1ED3i m\xE1u"
     ingredients:
@@ -79,6 +93,8 @@ MonoBehaviour:
       count: 1
   quests:
   - {fileID: 11400000, guid: 84f0d647190015646836c1ed7fbde30a, type: 2}
+  - {fileID: 11400000, guid: 7410009bc00e4a24a68e5341ab9e4680, type: 2}
+  - {fileID: 11400000, guid: d968bb1e6a2e40ed9eaf3cade128c274, type: 2}
   defeatReturnsToCheckpoint: 1
   equippedSkillSlots: 4
   skillUnlocks: []

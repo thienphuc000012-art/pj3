@@ -1941,8 +1941,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5b5f2d10865edc14abb6dde67d2891ce, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleUnit
-  unitName: kakaka
-  maxHP: 10000
+  unitName: knight
+  maxHP: 100
   isSummonedUnit: 0
   summonOwner: {fileID: 0}
   summonDeathOwnerMaxHpCostPercent: 0
@@ -1982,7 +1982,7 @@ MonoBehaviour:
   phase2HitClip: {fileID: 0}
   phase2CriticalHitClip: {fileID: 0}
   lastTarget: {fileID: 0}
-  speed: 2147483647
+  speed: 10
   unitPortrait: {fileID: 1312427765, guid: 5d1d796fba1ffb14ea63ee521b3d776e, type: 3}
   deathStateName: death
   deathAnimationTimeout: 30

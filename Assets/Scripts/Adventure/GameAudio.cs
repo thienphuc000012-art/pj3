@@ -52,6 +52,9 @@ public sealed class GameAudio : MonoBehaviour
     float nextDiscovery, nextBindings;
     CombatManager battleOwner;
     BattleEncounterSetup encounterSetup;
+    Component sceneMusicOwner;
+    GameMusic sceneMusic;
+    bool holdStoryMusicDuringLoad;
     AudioListener listener;
     Camera listenerCamera;
     bool preferencesDirty;
@@ -159,6 +162,24 @@ public sealed class GameAudio : MonoBehaviour
     }
     public static void BeginBattle(CombatManager owner, BattleEncounterSetup setup)
     { if (Instance != null) { Instance.battleOwner = owner; Instance.encounterSetup = setup; Instance.RefreshMusic(); } }
+
+    internal void SetSceneMusic(Component owner, GameMusic track)
+    {
+        if (owner == null || track?.clip == null) return;
+        sceneMusicOwner = owner;
+        sceneMusic = track;
+        RefreshMusic();
+    }
+
+    internal void ClearSceneMusic(Component owner)
+    {
+        if (sceneMusicOwner != owner) return;
+        sceneMusicOwner = null;
+        sceneMusic = null;
+        // Resolve on the next update so adjacent cutscene segments can hand off the same cue.
+        nextDiscovery = 0f;
+    }
+
     void OnActiveSceneChanged(Scene old, Scene current)
     {
         foreach (var voice in voices) if (voice.sceneBound) voice.source.Stop();
@@ -225,9 +246,22 @@ public sealed class GameAudio : MonoBehaviour
         if (outgoing != null) outgoing.volume = outgoingGain * Gain(GameAudioBus.Music);
         foreach (var voice in voices) voice.source.volume = voice.gain * Gain(voice.bus);
     }
-    void RefreshMusic()
+    internal void RefreshMusic()
     {
         var scene = SceneManager.GetActiveScene(); var session = CampaignSession.Instance;
+        if (scene.name != settings.titleScene && scene.name != settings.introScene)
+        {
+            var storyTrack = sceneMusicOwner != null && sceneMusicOwner.gameObject.scene == scene
+                ? sceneMusic : session?.StoryEncounterMusic;
+            if (storyTrack?.clip != null)
+            {
+                holdStoryMusicDuringLoad = true;
+                ChangeMusic(storyTrack);
+                return;
+            }
+            if (holdStoryMusicDuringLoad && LoadingScreen.IsLoading) return;
+        }
+        holdStoryMusicDuringLoad = false;
         GameMusic track = null;
         if (scene.name == settings.titleScene) track = settings.title;
         else if (scene.name == settings.introScene) track = settings.intro;

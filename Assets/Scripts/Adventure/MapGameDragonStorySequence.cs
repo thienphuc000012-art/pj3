@@ -8,7 +8,7 @@ using UnityEngine.Playables;
 using UnityEngine.UI;
 
 [DefaultExecutionOrder(-700)]
-public sealed class MapGameDragonStorySequence : MonoBehaviour
+public sealed partial class MapGameDragonStorySequence : MonoBehaviour
 {
     [Header("Quest and trigger")]
     public MapGameSetup mapSetup;
@@ -71,7 +71,6 @@ public sealed class MapGameDragonStorySequence : MonoBehaviour
     [Tooltip("World rotation matching the portal used in scene m.")]
     public Vector3 gateRotationEuler = new Vector3(0, 34.3f, 0);
     public Vector3 gateScale = Vector3.one * 3f;
-    public float mapWipeSeconds = 1.8f;
     public UnityEngine.Events.UnityEvent onOutroRequested = new UnityEngine.Events.UnityEvent();
     [Header("Dialogue audio and subtitles (clips can be added later)")]
     public GameSound playerArrivalVoice = new GameSound { spatialBlend = 0, volume = 1 };
@@ -99,9 +98,8 @@ public sealed class MapGameDragonStorySequence : MonoBehaviour
     float storyCameraDefaultFieldOfView;
     bool hasStoryCameraDefaultFieldOfView;
     Canvas canvas;
-    Image topBar, bottomBar, subtitlePanel, wipe;
+    Image topBar, bottomBar, subtitlePanel;
     TMP_Text subtitle;
-    Material wipeMaterial;
     GameObject ring, gate;
     StoryActor mountainActor, dragonideActor;
     bool ownsPresentation;
@@ -112,7 +110,6 @@ public sealed class MapGameDragonStorySequence : MonoBehaviour
     bool hasMountainCameraBack;
     PlayableGraph deathGraph;
     MapDeathDissolve dissolve;
-    static readonly int ProgressId = Shader.PropertyToID("_Progress");
 
     sealed class StoryActor
     {
@@ -120,6 +117,7 @@ public sealed class MapGameDragonStorySequence : MonoBehaviour
         public WorldInteraction point;
         public EnemyEncounterBehaviour encounter;
         public Animator animator;
+        public Transform vfxOrigin;
     }
 
     IEnumerator Start()
@@ -157,10 +155,8 @@ public sealed class MapGameDragonStorySequence : MonoBehaviour
             { yield return StartDragonideEncounter(); if (!session.OnMap) yield break; yield return null; continue; }
             if (!session.Data.HasStoryFlag(DDeath))
             { yield return PresentDragonideDeath(); if (!session.OnMap) yield break; continue; }
-            if (!session.Data.HasStoryFlag(RingTaken))
-            { yield return CollectRingAndOpenGate(); if (!session.OnMap) yield break; continue; }
             if (!session.Data.HasStoryFlag(Outro))
-            { yield return WalkThroughGate(); if (!session.OnMap) yield break; }
+                yield return PresentEnding();
             yield break;
         }
     }
@@ -177,7 +173,7 @@ public sealed class MapGameDragonStorySequence : MonoBehaviour
     {
         if (mountainDragon == null) { Debug.LogError("[MapGame story] Assign MountainDragon.", this); yield break; }
         CacheMountainCameraBack();
-        yield return AcquirePresentation();
+        yield return AcquirePresentation(finaleBossMusic);
         if (!ownsPresentation) yield break;
         bool first = !session.Data.HasStoryFlag(MIntro);
         mountainActor = EnsureActor(mountainDragon, "MountainDragon", MountainId,
@@ -228,16 +224,18 @@ public sealed class MapGameDragonStorySequence : MonoBehaviour
     IEnumerator PlayFireball()
     {
         if (mountainSpitFireBall == null || session.MapPlayer == null) yield break;
-        if (!PlayState(mountainActor.animator, mountainFlyAttackState))
+        if (PlayState(mountainActor.animator, mountainFlyAttackState))
+            yield return WaitForMountainFireballRelease(mountainActor.animator);
+        else
             Debug.LogWarning($"[MapGame story] Could not play MountainDragon flight attack state '{mountainFlyAttackState}'.", this);
-        Vector3 dragonPos = mountainActor.root.transform.position;
+
+        Transform mouth = mountainActor.vfxOrigin != null ? mountainActor.vfxOrigin : mountainActor.root.transform;
+        Vector3 start = mouth.TransformPoint(mountainSpitFireBall.projectileStartOffset);
         Vector3 playerPos = session.MapPlayer.transform.position + mountainSpitFireBall.projectileTargetOffset;
-        Quaternion face = Quaternion.LookRotation(playerPos - dragonPos);
-        SpawnEffect(mountainSpitFireBall.castVfxPrefab, dragonPos + Vector3.up * 1.5f, face, mountainSpitFireBall.castVfxLifeTime);
-        Vector3 start = mountainActor.root.transform.TransformPoint(mountainSpitFireBall.projectileStartOffset);
-        GameObject projectile = mountainSpitFireBall.vfxPrefab != null
-            ? Instantiate(mountainSpitFireBall.vfxPrefab, start, Quaternion.LookRotation(playerPos - start)) : null;
-        if (projectile != null) ConfigureEffect(projectile, mountainSpitFireBall.vfxPlaybackSpeed);
+        Vector3 toPlayer = playerPos - start;
+        Quaternion face = toPlayer.sqrMagnitude > .001f ? Quaternion.LookRotation(toPlayer) : mouth.rotation;
+        SpawnEffect(mountainSpitFireBall.castVfxPrefab, start, face, mountainSpitFireBall.castVfxLifeTime);
+        GameObject projectile = SpawnStoryFireball(start, face);
         float duration = Mathf.Clamp(Vector3.Distance(start, playerPos) / Mathf.Max(1, mountainSpitFireBall.vfxSpeed), .2f, 3f);
         for (float elapsed = 0; elapsed < duration; elapsed += Time.unscaledDeltaTime)
         {
@@ -245,7 +243,11 @@ public sealed class MapGameDragonStorySequence : MonoBehaviour
             Vector3 projectilePosition = Vector3.Lerp(start, playerPos, t);
             projectilePosition.y += Mathf.Sin(t * Mathf.PI) * mountainSpitFireBall.curveHeight;
             if (projectile != null)
-                projectile.transform.position = projectilePosition;
+            {
+                Vector3 flightDirection = toPlayer + Vector3.up * (Mathf.PI * Mathf.Cos(t * Mathf.PI) * mountainSpitFireBall.curveHeight);
+                Quaternion rotation = flightDirection.sqrMagnitude > .001f ? Quaternion.LookRotation(flightDirection) : face;
+                projectile.transform.SetPositionAndRotation(projectilePosition, rotation);
+            }
             FocusFireballPoint(projectilePosition);
             yield return null;
         }
@@ -255,11 +257,64 @@ public sealed class MapGameDragonStorySequence : MonoBehaviour
         PlayState(mountainActor.animator, mountainFlyIdleState);
     }
 
+    IEnumerator WaitForMountainFireballRelease(Animator animator)
+    {
+        int separator = mountainFlyAttackState.LastIndexOf('.');
+        int layer = separator >= 0 ? animator.GetLayerIndex(mountainFlyAttackState.Substring(0, separator)) : 0;
+        if (layer < 0) yield break;
+        int stateHash = Animator.StringToHash(StateLeafName(mountainFlyAttackState));
+        // Map actors suppress combat animation callbacks. Read the same launch
+        // marker that the combat controller uses, while evaluating the map pose.
+        float releaseTime = .42f;
+        bool readClip = false;
+        float timeout = Time.unscaledTime + 2f;
+        while (Time.unscaledTime < timeout)
+        {
+            AnimatorStateInfo next = animator.IsInTransition(layer) ? animator.GetNextAnimatorStateInfo(layer) : default;
+            bool useNext = next.shortNameHash == stateHash;
+            AnimatorStateInfo state = useNext ? next : animator.GetCurrentAnimatorStateInfo(layer);
+            if (state.shortNameHash == stateHash)
+            {
+                if (!readClip)
+                {
+                    var clips = useNext ? animator.GetNextAnimatorClipInfo(layer) : animator.GetCurrentAnimatorClipInfo(layer);
+                    if (clips.Length > 0 && clips[0].clip != null && clips[0].clip.length > 0f)
+                    {
+                        var clip = clips[0].clip;
+                        foreach (var marker in clip.events)
+                            if (marker.functionName == "AnimEvent_PlayVFX")
+                            {
+                                releaseTime = marker.time / clip.length;
+                                break;
+                            }
+                        readClip = true;
+                    }
+                }
+                if (state.normalizedTime >= releaseTime) yield break;
+            }
+            yield return null;
+        }
+    }
+
+    GameObject SpawnStoryFireball(Vector3 position, Quaternion rotation)
+    {
+        if (mountainSpitFireBall.vfxPrefab == null) return null;
+        var staging = new GameObject("Story Fireball Setup");
+        staging.SetActive(false);
+        var projectile = Instantiate(mountainSpitFireBall.vfxPrefab, position, rotation, staging.transform);
+        CombatManager.DisableRFX4Movement(projectile);
+        projectile.transform.SetParent(transform, true);
+        Destroy(staging);
+        projectile.SetActive(true);
+        ConfigureEffect(projectile, mountainSpitFireBall.vfxPlaybackSpeed);
+        return projectile;
+    }
+
     IEnumerator PresentMountainDeath()
     {
         if (mountainDragon == null || mountainDragonDeath == null)
         { Debug.LogError("[MapGame story] Assign MountainDragon death clip.", this); yield break; }
-        yield return AcquirePresentation();
+        yield return AcquirePresentation(finaleVictoryMusic);
         if (!ownsPresentation) yield break;
         mountainActor = EnsureActor(mountainDragon, "MountainDragon Death", MountainId, encounterPosition,
             null, mountainDragonCombatSetupId, mountainDragonRotationEuler, mountainActor);
@@ -281,7 +336,7 @@ public sealed class MapGameDragonStorySequence : MonoBehaviour
     IEnumerator StartDragonideEncounter()
     {
         if (dragonide == null) { Debug.LogError("[MapGame story] Assign Dragonide.", this); yield break; }
-        yield return AcquirePresentation();
+        yield return AcquirePresentation(finaleBossMusic);
         if (!ownsPresentation) yield break;
         dragonideActor = EnsureActor(dragonide, "Dragonide", DragonideId, encounterPosition,
             null, dragonideCombatSetupId, dragonideRotationEuler, dragonideActor);
@@ -299,7 +354,7 @@ public sealed class MapGameDragonStorySequence : MonoBehaviour
     {
         if (dragonide == null || dragonideDeath == null)
         { Debug.LogError("[MapGame story] Assign Dragonide death clip.", this); yield break; }
-        yield return AcquirePresentation();
+        yield return AcquirePresentation(finaleVictoryMusic);
         if (!ownsPresentation) yield break;
         dragonideActor = EnsureActor(dragonide, "Dragonide Death", DragonideId, encounterPosition,
             null, dragonideCombatSetupId, dragonideRotationEuler, dragonideActor);
@@ -357,10 +412,8 @@ public sealed class MapGameDragonStorySequence : MonoBehaviour
         pointLight.enabled = ringGlowIntensity > 0f;
     }
 
-    IEnumerator CollectRingAndOpenGate()
+    IEnumerator CollectRing()
     {
-        yield return AcquirePresentation();
-        if (!ownsPresentation) yield break;
         if (ring == null && (ringPrefab != null || sceneRingObject != null))
             SpawnRing(encounterPosition + ringPositionOffset);
         EnsureRingHighlight();
@@ -415,39 +468,7 @@ public sealed class MapGameDragonStorySequence : MonoBehaviour
             else Destroy(ring);
             ring = null;
         }
-        session.Data.SetStoryFlag(RingTaken); session.Save(false);
-        if (gate == null && gatePrefab != null)
-        {
-            EnsureOverlay(); SetBars(true); SetWipe(true); SetWipeProgress(1.1f);
-            gate = Instantiate(gatePrefab, encounterPosition + gatePositionOffset, Quaternion.Euler(gateRotationEuler));
-            gate.name = "MapGame Story Gate"; gate.transform.localScale = gateScale;
-            Focus(gate.transform.position + Vector3.up * 2f, CameraOffset(6f, 2f));
-            yield return RadialWipe(1.1f, -.1f, Mathf.Max(.2f, mapWipeSeconds * .55f));
-            yield return new WaitForSecondsRealtime(.2f);
-            yield return RadialWipe(-.1f, 1.1f, Mathf.Max(.2f, mapWipeSeconds * .45f));
-            SetWipeProgress(1.1f); SetWipe(false);
-        }
-        else if (gatePrefab == null) Debug.LogWarning("[MapGame story] Assign the portal prefab.", this);
-        Restore();
-    }
-
-    IEnumerator WalkThroughGate()
-    {
-        yield return AcquirePresentation();
-        if (!ownsPresentation) yield break;
-        Vector3 position = gate != null ? gate.transform.position : encounterPosition;
-        Vector3 forward = gate != null ? gate.transform.forward : Vector3.forward; forward.y = 0;
-        if (forward.sqrMagnitude < .001f) forward = Vector3.forward;
-        forward.Normalize();
-        Focus(position + Vector3.up * 1.5f, CameraOffset(4.8f, 1.7f));
-        yield return Dialogue(playerGateVoice, playerGateSubtitle);
-        Vector3 approach = position - forward * 1.2f; approach.y = session.MapPlayer.transform.position.y;
-        yield return WalkPlayerTo(approach, 4f);
-        Vector3 through = position + forward * 2.4f; through.y = session.MapPlayer.transform.position.y;
-        yield return WalkPlayerTo(through, 5f);
-        session.Data.SetStoryFlag(Outro); session.Save(false);
-        onOutroRequested?.Invoke();
-        Restore();
+        session.Data.SetStoryFlag(RingTaken); session.Save();
     }
 
     StoryActor EnsureActor(BattleUnit prefab, string label, string id, Vector3 position, ActionData openingAction,
@@ -469,6 +490,7 @@ public sealed class MapGameDragonStorySequence : MonoBehaviour
             model.transform.localPosition = Vector3.zero; model.transform.localRotation = Quaternion.identity;
             EnemyEncounterBehaviour.PrepareModel(model.gameObject);
             actor.animator = model.animator != null ? model.animator : model.GetComponentInChildren<Animator>(true);
+            actor.vfxOrigin = model.VfxOrigin;
         }
 
         actor.root.name = "Map Story Encounter • " + label;
@@ -510,7 +532,8 @@ public sealed class MapGameDragonStorySequence : MonoBehaviour
         actor.point.transform.position = encounterPosition;
         actor.point.GetComponent<EnemyCombatOrigin>()?.SetSpawnPoint(encounterPosition, actor.point.transform.rotation);
         session.EndPresentation(this); ownsPresentation = false;
-        session.BeginStoryEncounter(actor.point);
+        session.BeginStoryEncounter(actor.point, finaleBossMusic, finaleVictoryMusic);
+        GameAudio.Instance?.ClearSceneMusic(this);
         if (!session.InEncounter)
         {
             Debug.LogWarning("[MapGame story] Encounter could not start; it will retry shortly.", this);
@@ -519,7 +542,7 @@ public sealed class MapGameDragonStorySequence : MonoBehaviour
         while (isActiveAndEnabled && session != null && session.OnMap && session.InEncounter && !LoadingScreen.IsLoading) yield return null;
     }
 
-    IEnumerator AcquirePresentation()
+    IEnumerator AcquirePresentation(GameMusic music)
     {
         ownsPresentation = false;
         while (isActiveAndEnabled && session != null && session.OnMap)
@@ -527,7 +550,11 @@ public sealed class MapGameDragonStorySequence : MonoBehaviour
             if (session.TryBeginPresentation(this)) { ownsPresentation = true; break; }
             yield return null;
         }
-        if (ownsPresentation) { EnsureOverlay(); SetBars(true); EnsureStoryCamera(); }
+        if (!ownsPresentation) yield break;
+        EnsureOverlay();
+        SetBars(true);
+        EnsureStoryCamera();
+        if (music?.clip != null) GameAudio.Instance?.SetSceneMusic(this, music);
     }
 
     IEnumerator Dialogue(GameSound voice, string text)
@@ -541,12 +568,13 @@ public sealed class MapGameDragonStorySequence : MonoBehaviour
         subtitlePanel.gameObject.SetActive(false);
     }
 
-    IEnumerator WalkPlayerTo(Vector3 target, float timeout, float stoppingDistance = .3f, bool snapToTarget = false)
+    IEnumerator WalkPlayerTo(Vector3 target, float timeout, float stoppingDistance = .3f,
+        bool snapToTarget = false, float speedOverride = 0f, Vector3? cameraOffset = null, bool scriptedPath = false)
     {
         PlayerScript player = session != null ? session.MapPlayer : null;
         if (player == null) yield break;
         Vector3 delta = target - player.transform.position; delta.y = 0;
-        if (delta.sqrMagnitude < .16f && !snapToTarget) yield break;
+        if (delta.sqrMagnitude <= stoppingDistance * stoppingDistance && !snapToTarget) yield break;
         Face(delta); Animator animator = player.animator; float oldSpeed = animator != null ? animator.speed : 1;
         if (animator != null)
         {
@@ -555,14 +583,16 @@ public sealed class MapGameDragonStorySequence : MonoBehaviour
         }
         float elapsed = 0;
         float stopSqr = Mathf.Max(0f, stoppingDistance) * Mathf.Max(0f, stoppingDistance);
+        float speed = Mathf.Max(.1f, speedOverride > 0f ? speedOverride : playerWalkSpeed);
         while (isActiveAndEnabled && elapsed < timeout)
         {
             Vector3 remaining = target - player.transform.position; remaining.y = 0;
             if (remaining.sqrMagnitude <= stopSqr) break;
-            Vector3 step = remaining.normalized * Mathf.Max(.1f, playerWalkSpeed) * Time.unscaledDeltaTime;
+            Vector3 step = remaining.normalized * speed * Time.unscaledDeltaTime;
             if (step.sqrMagnitude > remaining.sqrMagnitude) step = remaining;
-            if (player.CC != null && player.CC.enabled) player.CC.Move(step); else player.transform.position += step;
-            Focus(player.transform.position + Vector3.up * 1.2f, CameraOffset(5f, 1.8f));
+            if (!scriptedPath && player.CC != null && player.CC.enabled) player.CC.Move(step);
+            else player.transform.position += step;
+            Focus(player.transform.position + Vector3.up * 1.2f, cameraOffset ?? CameraOffset(5f, 1.8f));
             elapsed += Time.unscaledDeltaTime; yield return null;
         }
         if (snapToTarget)
@@ -845,10 +875,7 @@ public sealed class MapGameDragonStorySequence : MonoBehaviour
         var rect = label.GetComponent<RectTransform>(); Anchors(rect, Vector2.zero, Vector2.one, new Vector2(24, 10), new Vector2(-24, -10));
         subtitle = label.GetComponent<TextMeshProUGUI>(); subtitle.alignment = TextAlignmentOptions.Center; subtitle.fontSize = 30;
         subtitle.color = new Color(.95f, .92f, .86f); subtitle.enableAutoSizing = true; subtitle.fontSizeMin = 20; subtitle.fontSizeMax = 30;
-        wipe = MakeImage("Radial Map Dissolve", root.transform, Color.black); Anchors(wipe.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-        Shader shader = Shader.Find("UI/MapGameStoryRadialWipe");
-        if (shader != null) { wipeMaterial = new Material(shader); wipe.material = wipeMaterial; }
-        subtitlePanel.gameObject.SetActive(false); wipe.gameObject.SetActive(false); SetBars(false);
+        subtitlePanel.gameObject.SetActive(false); SetBars(false);
     }
 
     static Image MakeImage(string name, Transform parent, Color color)
@@ -862,23 +889,9 @@ public sealed class MapGameDragonStorySequence : MonoBehaviour
 
     void SetBars(bool value)
     { if (canvas != null) { topBar.gameObject.SetActive(value); bottomBar.gameObject.SetActive(value); } }
-    void SetWipe(bool value) { if (wipe != null) wipe.gameObject.SetActive(value); }
-    void SetWipeProgress(float value)
-    {
-        if (wipeMaterial != null) wipeMaterial.SetFloat(ProgressId, value);
-        else if (wipe != null) { var c = wipe.color; c.a = Mathf.Clamp01(1 - value); wipe.color = c; }
-    }
-
-    IEnumerator RadialWipe(float from, float to, float duration)
-    {
-        SetWipe(true);
-        for (float elapsed = 0; elapsed < duration; elapsed += Time.unscaledDeltaTime)
-        { SetWipeProgress(Mathf.Lerp(from, to, Mathf.SmoothStep(0, 1, elapsed / duration))); yield return null; }
-        SetWipeProgress(to);
-    }
-
     void Restore()
     {
+        GameAudio.Instance?.ClearSceneMusic(this);
         hasMountainFramingBounds = false;
         mountainFramingActor = null;
         hasMountainCameraBack = false;
@@ -894,13 +907,14 @@ public sealed class MapGameDragonStorySequence : MonoBehaviour
             storyCamera.Priority = -100; storyCamera.enabled = false;
         }
         if (subtitlePanel != null) subtitlePanel.gameObject.SetActive(false);
-        SetWipe(false); SetBars(false);
+        RestoreEnding();
+        SetBars(false);
         if (ownsPresentation) session?.EndPresentation(this);
         ownsPresentation = false;
     }
 
     void OnDisable() { StopAllCoroutines(); Restore(); }
-    void OnDestroy() { EndDeath(); if (wipeMaterial != null) Destroy(wipeMaterial); }
+    void OnDestroy() { EndDeath(); RestoreEnding(); }
     void OnDrawGizmos()
     {
         Vector3 center = triggerPosition;

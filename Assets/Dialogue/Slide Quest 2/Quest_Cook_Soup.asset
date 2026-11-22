@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ddf13f5523f4a048c23937b82d2ad11, type: 3}
+  m_Name: Quest_Cook_Soup
+  m_EditorClassIdentifier: Assembly-CSharp::AdventureQuest
+  questId: m_sidequest_cook_soup
+  displayName: "N\u1ed3i canh b\u00ean \u0111\u1ed1ng l\u1eeda"
+  description: "T\u00ecm v\u00e0 nh\u1eb7t m\u1ed9t b\u00f3 Th\u1ea3o d\u01b0\u1ee3c \u0111\u1ecf (herb) \u0111\u1ec3 M\u1ed9c n\u1ea5u n\u1ed3i canh n\u00f3ng cho c\u1ea3 nh\u00f3m. Mang nguy\u00ean li\u1ec7u trong t\u00fai r\u1ed3i quay l\u1ea1i n\u00f3i chuy\u1ec7n v\u1edbi M\u1ed9c."
+  objectiveType: 0
+  requiredCount: 1
+  targetItemId: herb
+  targetEnemy: {fileID: 0}
+  objectiveWorldPointId: 
+  useFixedObjectivePosition: 0
+  objectiveMapScene: 
+  objectivePosition: {x: 0, y: 0, z: 0}
+  experienceReward: 45
+  itemRewards: []

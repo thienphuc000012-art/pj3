@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81d47f53f6394f7b8732d9ad44c43019, type: 3}
+  m_Name: Dialogue_Reclaim_Shelter_Complete
+  m_EditorClassIdentifier: Assembly-CSharp::AdventureStoryDialogue
+  dialogueId: m_sidequest_shelter_complete
+  playOnce: 0
+  requiredCompletedQuestIds: []
+  requiredCompletedDialogueIds: []
+  startNodeId: start
+  playerSpeakerName: "L\u1eef kh\u00e1ch"
+  playerTalkAnimationState: Base Layer.Talking
+  playerDialogueIdleAnimationState: Base Layer.Basic Movement
+  charactersPerSecond: 27
+  nodes:
+  - id: start
+    speakerType: 0
+    speaker: "T\u00ed L\u1eeda"
+    text: "T\u00f4i v\u1eeba ki\u1ec3m tra c\u0103n l\u00e1n: l\u1ed1i v\u00e0o \u0111\u00e3 y\u00ean, v\u00e0 cu\u1ed1i c\u00f9ng ch\u00fang t\u00f4i c\u00f3 th\u1ec3 ng\u1ee7 d\u01b0\u1edbi m\u00e1i che tr\u1edf l\u1ea1i. \u0110\u00e2y l\u00e0 ph\u1ea7n \u0111\u1ed3 d\u1ef1 tr\u1eef t\u00f4i \u0111\u00e3 h\u1ee9a. \u0110\u00eam nay c\u1ea3 nh\u00f3m s\u1ebd nh\u1edb \u01a1n b\u1ea1n."
+    nextNodeId: ""
+    choices: []

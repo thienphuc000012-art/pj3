@@ -46,6 +46,8 @@ public class CampaignSession : MonoBehaviour
     public string Message { get; private set; }
     public float MessageUntil { get; private set; }
     public bool InEncounter => encounter != null;
+    internal GameMusic StoryEncounterMusic => encounter != null && encounter.won && encounter.victoryMusic?.clip != null
+        ? encounter.victoryMusic : encounter?.battleMusic;
     public event Action<WorldInteraction> EncounterStarted;
     public bool IsGuidedTutorialEncounter => encounter != null && encounter.guidedTutorial;
     public bool EncounterHasBoss => encounter != null && encounter.enemies != null && encounter.enemies.Any(enemy => enemy != null && enemy.isBoss);
@@ -248,6 +250,8 @@ public class CampaignSession : MonoBehaviour
         public List<BattleUnit> enemies;
         public ActionData openingEnemyAction;
         public string combatSetupId;
+        public GameMusic battleMusic, victoryMusic;
+        public bool won;
         public bool playerInitiated;
         public bool guidedTutorial;
         public bool respawn;
@@ -255,6 +259,7 @@ public class CampaignSession : MonoBehaviour
         public CombatAreaScan arenaScan;
         public CombatArenaLayout arenaLayout;
         public BattleEncounterSetup arenaSetup;
+        public MDayNightController.CombatLighting lighting;
     }
 
     private sealed class EncounterAnimationProgress
@@ -291,14 +296,23 @@ public class CampaignSession : MonoBehaviour
 
     internal static bool BeginFromTitle(CampaignConfig config, CampaignSave data, bool freshArrival = false)
     {
-        if (Instance != null || !LoadingScreen.Load(data.currentMapScene)) return false;
+        if (Instance != null || config == null || data == null || LoadingScreen.IsLoading) return false;
         var session = CreateSession(config);
-        session.Data = data;
-        session.nextMapIsFreshArrival = freshArrival;
-        session.playTimeSample = Time.realtimeSinceStartupAsDouble;
-        session.Busy = true;
-        session.gameObject.AddComponent<AdventureUI>();
-        return true;
+        bool started = false;
+        try
+        {
+            session.Data = data;
+            session.nextMapIsFreshArrival = freshArrival;
+            session.playTimeSample = Time.realtimeSinceStartupAsDouble;
+            session.Busy = true;
+            session.gameObject.AddComponent<AdventureUI>();
+            started = LoadingScreen.Load(data.currentMapScene);
+            return started;
+        }
+        finally
+        {
+            if (!started) Destroy(session.gameObject);
+        }
     }
 
     public bool ReturnToTitle()
@@ -309,6 +323,9 @@ public class CampaignSession : MonoBehaviour
     }
 
     internal bool ReturnToTitleFromBattle() => !OnMap && LoadTitleAndEndSession();
+
+    internal bool ReturnToTitleFromEnding(UnityEngine.Object owner) =>
+        owner != null && presentationOwner == owner && OnMap && !Busy && LoadTitleAndEndSession();
 
     bool LoadTitleAndEndSession()
     {
@@ -1736,11 +1753,12 @@ public class CampaignSession : MonoBehaviour
 
     // The story trigger already gates availability, so its cutscene can start
     // combat without normal interaction distance or tutorial input gating.
-    public void BeginStoryEncounter(WorldInteraction point)
-        => BeginEncounterInternal(point, false, false, false, true);
+    public void BeginStoryEncounter(WorldInteraction point, GameMusic battleMusic = null, GameMusic victoryMusic = null)
+        => BeginEncounterInternal(point, false, false, false, true, battleMusic, victoryMusic);
 
     void BeginEncounterInternal(WorldInteraction point, bool playerInitiated, bool requireInteractionRange,
-        bool requireTutorialPermission, bool startEncounterVfxImmediately = false)
+        bool requireTutorialPermission, bool startEncounterVfxImmediately = false,
+        GameMusic battleMusic = null, GameMusic victoryMusic = null)
     {
         if (requireTutorialPermission && !MExplorationTutorial.Allows(ExplorationTutorialAction.Encounter, MapPlayer)) return;
         if (Busy || PresentationActive || Menu != AdventureMenu.None ||
@@ -1761,11 +1779,16 @@ public class CampaignSession : MonoBehaviour
             enemies = new List<BattleUnit>(point.enemyPrefabs),
             openingEnemyAction = point.openingEnemyAction,
             combatSetupId = point.combatSetupId,
+            battleMusic = battleMusic,
+            victoryMusic = victoryMusic,
             playerInitiated = playerInitiated,
             guidedTutorial = Config.IsGuidedTutorialEncounter(point),
             respawn = !EnemySpawnRules.IsPermanent(point, Config) && (point.enemySpawn?.respawn ?? true),
             respawnSeconds = point.enemySpawn?.respawnSeconds ?? 300f
         };
+        var dayNight = FindFirstObjectByType<MDayNightController>();
+        if (dayNight != null && dayNight.OwnsActiveScene && dayNight.sun != null)
+            encounter.lighting = new MDayNightController.CombatLighting(dayNight);
         Busy = true;
         EncounterStarted?.Invoke(point);
         StartCoroutine(PlayEncounterTransition(point, playerInitiated, startEncounterVfxImmediately));
@@ -2092,6 +2115,8 @@ public class CampaignSession : MonoBehaviour
     }
     internal bool CombatArenaPending => encounter != null && encounter.arenaScan != null && encounter.arenaLayout == null;
 
+    internal void ApplyCombatLighting(Scene battleScene) => encounter?.lighting?.Apply(battleScene);
+
     internal CombatAreaScan GetCombatArenaScan(string destination)
         => encounter != null && Config != null && destination == Config.battleScene ? encounter.arenaScan : null;
 
@@ -2371,6 +2396,8 @@ public class CampaignSession : MonoBehaviour
     {
         if (encounter == null || Busy) return;
         Busy = true;
+        encounter.won = victory;
+        if (victory && encounter.victoryMusic?.clip != null) GameAudio.Instance?.RefreshMusic();
         // Capture before quest and encounter rewards; the result animation only reads these snapshots.
         var previousXP = Data.party.Select(member => new Vector2Int(member.level, member.xp)).ToArray();
         resultExperienceChanges.Clear();

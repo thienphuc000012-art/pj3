@@ -35,10 +35,10 @@ public static class GameLocalization
         return table != null ? table.Translate(source, targetLanguage) : source;
     }
 
-    public static void SetActionDescription(TMP_Text target, ActionData action, string suffix = null)
+    public static void SetActionDescription(TMP_Text target, ActionData action, string suffix = null, bool allowScrolling = true)
     {
         if (target == null) return;
-        if (action != null && action.type != ActionData.ActionType.Item) ActionDescriptionScroll.Ensure(target);
+        if (allowScrolling && action != null && action.type != ActionData.ActionType.Item) ActionDescriptionScroll.Ensure(target);
         GameUITextColor.Apply(target);
         var binding = target.GetComponent<LocalizedGameText>();
         if (binding == null) binding = target.gameObject.AddComponent<LocalizedGameText>();

@@ -379,12 +379,23 @@ public sealed class AdventureSaveSlotsView : MonoBehaviour
             (session == null && titleLoad == null)) return;
         committing = true;
         yesButton.interactable = noButton.interactable = false;
-        string error;
+        string error = null;
         bool wasDeleting = deleting;
-        bool success = titleLoad != null ? titleLoad(selectedSlot, out error)
-            : deleting ? session.TryDeleteSaveSlot(selectedSlot, out error)
-            : saving ? session.TrySaveToSlot(selectedSlot, out error) : session.TryLoadFromSlot(selectedSlot, out error);
-        committing = false;
+        bool success = false;
+        try
+        {
+            success = titleLoad != null ? titleLoad(selectedSlot, out error)
+                : deleting ? session.TryDeleteSaveSlot(selectedSlot, out error)
+                : saving ? session.TrySaveToSlot(selectedSlot, out error) : session.TryLoadFromSlot(selectedSlot, out error);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogException(exception);
+        }
+        finally
+        {
+            committing = false;
+        }
         if (success && wasDeleting)
         {
             CancelConfirmation();

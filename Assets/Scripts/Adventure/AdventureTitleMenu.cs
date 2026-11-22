@@ -229,6 +229,10 @@ public sealed class AdventureTitleMenu : MonoBehaviour
             void CompleteIntro(PlayableDirector director)
             {
                 director.stopped -= CompleteIntro;
+                if (!Application.isPlaying) return;
+#if UNITY_EDITOR
+                if (!UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode) return;
+#endif
                 if (SceneManager.GetActiveScene() != scene) return;
                 if (!CampaignSession.TryBackupAutosave() || !CampaignSession.BeginFromTitle(config, save, true))
                     Fail("Không thể bắt đầu game mới.");
@@ -303,7 +307,7 @@ public sealed class AdventureTitleMenu : MonoBehaviour
             return false;
         }
         leaving = CampaignSession.BeginFromTitle(config, save);
-        if (!leaving) error = GameLocalization.Translate("Không thể tải bản đồ.");
+        if (!leaving) error = GameLocalization.Translate(LoadingScreen.Error ?? "Không thể tải bản đồ.");
         return leaving;
     }
 

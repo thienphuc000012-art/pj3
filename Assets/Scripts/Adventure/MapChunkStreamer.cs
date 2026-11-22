@@ -27,7 +27,7 @@ public class MapChunkStreamer : MonoBehaviour
     public bool SuppressOverlay { get; set; }
     public string Error { get; private set; }
     PlayerScript player;
-    bool stopping, working;
+    bool stopping, working, endingChunksPinned;
     GameObject overlay;
     Text label;
     readonly HashSet<string> failed = new HashSet<string>();
@@ -117,6 +117,14 @@ public class MapChunkStreamer : MonoBehaviour
                 chunk.bounds.SqrDistance(center) <= radiusSquared && seen.Add(chunk.scenePath))
                 results.Add(chunk.scenePath);
     }
+
+    public IEnumerator PinLoadedChunksForEnding()
+    {
+        endingChunksPinned = true;
+        while (working) yield return null;
+    }
+
+    public void ReleaseEndingChunks() => endingChunksPinned = false;
 
     static float DistanceSquared(Chunk chunk, Vector3 position)
     {
@@ -209,6 +217,7 @@ public class MapChunkStreamer : MonoBehaviour
         var wait = new WaitForSecondsRealtime(.2f);
         while (!stopping && player != null)
         {
+            if (endingChunksPinned) { yield return wait; continue; }
             Vector3 position = player.transform.position;
             float closestDistanceSquared = loadDistance * loadDistance;
             Chunk next = null;
