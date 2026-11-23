@@ -100,6 +100,8 @@ public class AdventureItem
     public Sprite icon;
     [TextArea] public string description;
     [Min(0)] public int mapHeal;
+    [Tooltip("Dùng vật phẩm ngoài trận để hồi máu cho cả đội còn sống.")]
+    public bool mapHealAll;
     public ActionData combatAction;
 }
 

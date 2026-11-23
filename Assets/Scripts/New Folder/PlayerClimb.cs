@@ -27,6 +27,8 @@ public class PlayerClimb : MonoBehaviour
     // Khóa lúc vừa bám gờ từ dưới đất.
     // Ngăn cùng một lần nhấn Space bị dùng tiếp cho Hop Up / Roof Climb trong cùng frame.
     bool isEnteringLedge;
+    bool isDroppingLedge;
+    float dropRequestExpires = -1f;
     public bool IsEnteringLedge => isEnteringLedge;
 
     // Khóa tuyệt đối input của toàn bộ hệ thống climb khi đang LedgeToClimb.
@@ -64,6 +66,8 @@ public class PlayerClimb : MonoBehaviour
     [Space(5)]
     public float rayYHandCorrection;
     public float rayZHandCorrection;
+    [Tooltip("Maximum correction speed while first grabbing a ledge, in metres per second.")]
+    [Min(0.1f)] public float initialGrabCorrectionSpeed = 2.5f;
     [Space(5)]
     public float yDropToHangPos = -0.1f;
     public float zDropToHangPos = -0.05f;
@@ -143,6 +147,14 @@ public class PlayerClimb : MonoBehaviour
             return;
         }
 
+        // Ladder climbing owns the controller and animator until its transition finishes.
+        if (playerScript.IsUsingLadder)
+        {
+            canGrabLedge = false;
+            hasClimbRequest = false;
+            return;
+        }
+
         if (playerScript.playerInAction)
             return;
 
@@ -178,7 +190,7 @@ public class PlayerClimb : MonoBehaviour
         }
     }
 
-    public bool CanStartLedgeAction => isClimbing && HasStableLedge && !isHopping && !isEnteringLedge &&
+    public bool CanStartLedgeAction => isClimbing && HasStableLedge && !isHopping && !isEnteringLedge && !isDroppingLedge &&
         !roofClimbInputLocked && roofLedgeDetection != null && !roofLedgeDetection.isDropingFromRoof &&
         ledgeToRoofClimb != null && !ledgeToRoofClimb.IsClimbingToRoof && animator != null && !animator.IsInTransition(0);
 
@@ -200,20 +212,16 @@ public class PlayerClimb : MonoBehaviour
             }
         }
 
-        // F = Thả khỏi gờ
-        if (Input.GetKeyDown(KeyCode.F))
+        // Remember F briefly if the grab/hop is still blending into the hang pose.
+        if (isClimbing && Input.GetKeyDown(KeyCode.F))
+            dropRequestExpires = Time.time + 1.5f;
+        if (!isClimbing || Time.time > dropRequestExpires)
+            dropRequestExpires = -1f;
+        if (dropRequestExpires >= 0f && !isDroppingLedge && !isEnteringLedge && !isHopping &&
+            !roofClimbInputLocked && !ledgeToRoofClimb.IsClimbingToRoof && !roofLedgeDetection.isDropingFromRoof)
         {
-            if (isClimbing)
-            {
-                if (verticalInp == 0 &&
-                    !ledgeToRoofClimb.foundLedgeToRoofClimb &&
-                    !isHopping &&
-                    !isEnteringLedge &&
-                    !roofLedgeDetection.isDropingFromRoof)
-                {
-                    StartCoroutine(DropLedge());
-                }
-            }
+            dropRequestExpires = -1f;
+            StartCoroutine(DropLedge());
         }
     }
 
@@ -261,16 +269,8 @@ public class PlayerClimb : MonoBehaviour
 
     private void MatchTargetToLedge()
     {
-        // 1. Lần đầu bám gờ
-        if (animator.GetCurrentAnimatorStateInfo(0).IsName("idle to hang") && !animator.IsInTransition(0))
-        {
-            Vector3 ledgeForward = HasStableLedge ? StableLedgeForward : transform.forward;
-            Vector3 targetPoint = HasStableLedge ? StableLedgeTopPoint : rayLedgeDownHit.point;
-            Quaternion targetRotation = Quaternion.LookRotation(ledgeForward);
-
-            Vector3 handPos = ledgeForward * rayZHandCorrection + Vector3.up * rayYHandCorrection;
-            animator.MatchTarget(targetPoint + handPos, targetRotation, AvatarTarget.RightHand, new MatchTargetWeightMask(Vector3.one, 0), 0.36f, 0.57f);
-        }
+        // Initial grab uses the bounded hand alignment in LateUpdate. MatchTarget
+        // compressed a large position correction into a few frames and caused a teleport.
 
         if (animator.GetCurrentAnimatorStateInfo(0).IsName("droptofreehang") && !animator.IsInTransition(0))
         {
@@ -393,16 +393,23 @@ public class PlayerClimb : MonoBehaviour
         if (state.IsName(hopGripState))
             hopGripWeight = Mathf.Max(hopGripWeight, Mathf.SmoothStep(0, 1, Mathf.Clamp01((state.normalizedTime - hopGripMatchEnd) / .15f)));
         if (hopGripFinishing) hopGripWeight = 1;
+        bool initialGrab = hopGripState == "idle to hang";
+        bool aligned = false;
         if (hopGripWeight > 0)
         {
             var hand = animator.GetBoneTransform(gripHand);
             if (hand != null)
             {
-                LastGripCorrection = (hopGripTarget - hand.position) * hopGripWeight;
+                Vector3 error = hopGripTarget - hand.position;
+                LastGripCorrection = error * hopGripWeight;
+                if (initialGrab)
+                    LastGripCorrection = Vector3.ClampMagnitude(LastGripCorrection, Mathf.Max(0.1f, initialGrabCorrectionSpeed) * Time.deltaTime);
                 transform.position += LastGripCorrection;
+                aligned = (error - LastGripCorrection).sqrMagnitude < 0.000025f;
             }
+            else aligned = true;
         }
-        if (hopGripFinishing) { hopGripActive = false; hopGripFinishing = false; }
+        if (hopGripFinishing && (!initialGrab || aligned)) { hopGripActive = false; hopGripFinishing = false; }
     }
 
     IEnumerator GrabLedge()
@@ -416,25 +423,34 @@ public class PlayerClimb : MonoBehaviour
         playerState = PlayerState.ClimbingState;
         isClimbing = true;
         animator.CrossFade("idle to hang", 0.2f);
-        BeginLedgeGrip("idle to hang", .57f, StableLedgeTopPoint + Vector3.up * rayYHandCorrection +
+        BeginLedgeGrip("idle to hang", .05f, StableLedgeTopPoint + Vector3.up * rayYHandCorrection +
             StableLedgeForward * rayZHandCorrection, HumanBodyBones.RightHand, StableLedgeWallPoint);
 
         yield return WaitForLedgePose("idle to hang");
         hopGripFinishing = true;
-        while (hopGripFinishing) yield return null;
-
+        // A moving hanging pose may never reach an exact hand position. Do not
+        // keep every climbing control locked indefinitely while correcting it.
+        float correctionDeadline = Time.time + 0.6f;
+        while (hopGripFinishing && Time.time < correctionDeadline) yield return null;
+        hopGripActive = false;
+        hopGripFinishing = false;
         isEnteringLedge = false;
     }
 
     public IEnumerator DropLedge()
     {
-        if (roofClimbInputLocked || ledgeToRoofClimb.IsClimbingToRoof)
+        if (isDroppingLedge || roofClimbInputLocked || ledgeToRoofClimb.IsClimbingToRoof)
             yield break;
 
+        isDroppingLedge = true;
+        hasClimbRequest = false;
+        hopGripActive = false;
+        hopGripFinishing = false;
         animator.CrossFade("bracehangdrop", 0.2f);
         yield return new WaitForSeconds(0.5f);
         playerState = PlayerState.NormalState;
         isClimbing = false;
+        isDroppingLedge = false;
         ClearStableLedge();
     }
 

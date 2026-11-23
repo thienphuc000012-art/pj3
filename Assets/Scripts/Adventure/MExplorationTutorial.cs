@@ -392,7 +392,7 @@ public sealed class MExplorationTutorial : MonoBehaviour
             }
         string scan = scanner != null && scanner.settings != null ? scanner.settings.scanKey.ToString() : "Q";
         string[] titles = en ? new[] { "Movement and jump", "Scan your surroundings", "Main menu", "Parkour", "Interact", "Campfire", "Enemy encounter" }
-            : new[] { "Di chuyển và nhảy", "Quét môi trường", "Menu chính", "Parkour", "Tương tác", "Lửa trại", "Chạm trán kẻ địch" };
+            : new[] { "Di chuyển và nhảy", "Quét môi trường", "Menu chính", "Leo trèo", "Tương tác", "Lửa trại", "Chạm trán kẻ địch" };
         string[] bodies = en ? new[] {
             "Use W A S D to move and Space to jump while standing on walkable ground.\n\nMove a short distance and jump once to continue. Press Shift to toggle running; move the mouse to look around.",
             "Press " + scan + " to send a scan pulse and reveal nearby points of interest.\n\nThe highlighted circle shows the scan key and its cooldown.",
@@ -459,7 +459,7 @@ public sealed class MExplorationTutorial : MonoBehaviour
             if (RectTransformUtility.ScreenPointToLocalPointInRectangle(root, screen, null, out var local)) worldFocus.anchoredPosition = local;
             if (worldFocusLabel != null)
             {
-                string label = CurrentLesson == 3 ? "Parkour" : CurrentLesson == 6 ? GameLocalization.IsEnglish ? "Enemy" : "Kẻ địch" : GameLocalization.IsEnglish ? "Campfire" : "Lửa trại";
+                string label = CurrentLesson == 3 ? (GameLocalization.IsEnglish ? "Parkour" : "Leo trèo") : CurrentLesson == 6 ? GameLocalization.IsEnglish ? "Enemy" : "Kẻ địch" : GameLocalization.IsEnglish ? "Campfire" : "Lửa trại";
                 worldFocusLabel.text = label + " • " + Mathf.RoundToInt(Vector3.Distance(player.transform.position, target.position)) + " m";
             }
         }

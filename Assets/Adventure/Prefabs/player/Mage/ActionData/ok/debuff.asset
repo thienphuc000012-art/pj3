@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 532a234c595fb3944bb8626c21ed8968, type: 3}
   m_Name: debuff
   m_EditorClassIdentifier: Assembly-CSharp::ActionData
-  actionName: Attack25
+  actionName: "\u1ea4n Suy Y\u1ebfu"
   useSound:
     clips: []
     volume: 0.8
@@ -52,7 +52,7 @@ MonoBehaviour:
   enemyCooldownTurns: 0
   buffStat: 1
   buffToCaster: 0
-  buffAmount: 7
+  buffAmount: -7
   buffDuration: 2
   debuffs:
   - type: 2
@@ -67,7 +67,7 @@ MonoBehaviour:
     turnVfxLocalOffset: {x: 0, y: 0, z: 0}
     turnVfxLifetime: 0
   cleanse: 0
-  statusOnly: 0
+  statusOnly: 1
   skillCinematic: {fileID: 0}
   isMelee: 0
   screenSlash: 0

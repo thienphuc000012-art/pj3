@@ -26,7 +26,7 @@ MonoBehaviour:
   isUltimate: 0
   ultimateEnergyGain: 10
   power: 0
-  damageMultiplier: 1
+  damageMultiplier: 1.17
   useLifeSteal: 0
   lifeStealPercent: 33.333
   damageCondition: 0
@@ -51,6 +51,7 @@ MonoBehaviour:
   stainChange: 0
   enemyCooldownTurns: 0
   buffStat: 0
+  buffToCaster: 0
   buffAmount: 0
   buffDuration: 1
   debuffs: []
@@ -73,13 +74,13 @@ MonoBehaviour:
   screenSplitRestoreStart: 0.8
   screenSlashTimeScale: 1
   vfxType: 1
-  vfxPrefab: {fileID: 1748139164946814, guid: 7c0271f8dd3c5e047bf01c5dc512b215, type: 3}
+  vfxPrefab: {fileID: 1033462822675242, guid: 43dbb3bbd1afeb24692c1d8f8b260845, type: 3}
   vfxPlaybackSpeed: 1
   ultimateAuraVfxPrefab: {fileID: 0}
   ultimateAuraVfxLocalOffset: {x: 0, y: 1, z: 0}
   ultimateAuraVfxPlaybackSpeed: 1
-  castVfxPrefab: {fileID: 0}
-  hitVfxPrefab: {fileID: 0}
+  castVfxPrefab: {fileID: 1632418803800030, guid: 8adca8fa2391f0d40aa7a90b3beceaf4, type: 3}
+  hitVfxPrefab: {fileID: 167520, guid: e4be32506ae3329469e4f1f0b8931b2b, type: 3}
   useCustomHitVfxOffset: 0
   hitVfxOffset: {x: 0, y: 0, z: 0}
   hitVfxTiming: 0

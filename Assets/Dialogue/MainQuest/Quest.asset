@@ -24,4 +24,14 @@ MonoBehaviour:
   objectiveMapScene: m
   objectivePosition: {x: 0, y: 0, z: 0}
   experienceReward: 100
-  itemRewards: []
+  itemRewards:
+  - id: potion
+    count: 2
+  - id: 'party_healing_potion '
+    count: 2
+  - id: attack_tonic
+    count: 2
+  - id: defense_tonic
+    count: 2
+  - id: party_defense_tonic
+    count: 2

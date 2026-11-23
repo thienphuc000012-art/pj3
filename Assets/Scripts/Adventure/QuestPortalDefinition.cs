@@ -29,19 +29,54 @@ public sealed class QuestPortalDefinition : ScriptableObject
     }
     public bool RecordVictory(CampaignSave data, string scene, string marker, string worldId)
     {
-        if (quest == null || scene != mapScene || marker != questMarkerId || !enemyWorldIds.Contains(worldId) ||
-            data?.quests?.Find(p => p != null && p.questId == quest.Id) == null) return false;
+        if (data == null || quest == null || scene != mapScene || marker != questMarkerId || !enemyWorldIds.Contains(worldId)) return false;
         var progress = Progress(data, true);
         if (progress.defeated.Contains(worldId)) return false;
         progress.defeated.Add(worldId); return true;
     }
+
+    public bool ReconcileAcceptedQuest(CampaignSave data)
+    {
+        var questProgress = AcceptedQuest(data);
+        if (questProgress == null) return false;
+
+        bool changed = Progress(data, false) == null;
+        var progress = Progress(data, true);
+        int defeatedCount = 0;
+        foreach (var id in enemyWorldIds)
+        {
+            // The scene's two boss encounters cannot be escaped or respawned.
+            // Older saves put their IDs in collected without tracking pre-quest victories.
+            if (!progress.defeated.Contains(id) && data.collected?.Contains(id) == true)
+            {
+                progress.defeated.Add(id);
+                changed = true;
+            }
+            if (progress.defeated.Contains(id)) defeatedCount++;
+        }
+
+        int required = Mathf.Max(1, quest.requiredCount);
+        int count = Mathf.Clamp(Mathf.Max(questProgress.objectiveCount, defeatedCount), 0, required);
+        bool complete = count >= required;
+        changed |= questProgress.objectiveCount != count || questProgress.completed != complete;
+        questProgress.objectiveCount = count;
+        questProgress.completed = complete;
+        return changed;
+    }
+
+    AdventureQuestProgress AcceptedQuest(CampaignSave data) => quest != null
+        ? data?.quests?.Find(p => p != null && p.questId == quest.Id)
+        : null;
+
     public bool Pending(CampaignSave data, string id)
     {
+        if (AcceptedQuest(data) == null) return false;
         var progress = Progress(data, false);
         return progress != null && progress.defeated.Contains(id) && !progress.presented.Contains(id);
     }
     public bool IsUnlocked(CampaignSave data)
     {
+        if (AcceptedQuest(data) == null) return false;
         var progress = Progress(data, false);
         return enemyWorldIds.Count > 0 && progress != null && enemyWorldIds.TrueForAll(id => progress.defeated.Contains(id) && progress.presented.Contains(id));
     }

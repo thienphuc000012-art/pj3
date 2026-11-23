@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 532a234c595fb3944bb8626c21ed8968, type: 3}
   m_Name: heal
   m_EditorClassIdentifier: Assembly-CSharp::ActionData
-  actionName: heal
+  actionName: "Sinh M\u1ec7nh H\u1ed3i Ph\u1ee5c"
   useSound:
     clips: []
     volume: 0.8
@@ -26,7 +26,7 @@ MonoBehaviour:
   isUltimate: 0
   ultimateEnergyGain: 10
   power: 25
-  damageMultiplier: 2
+  damageMultiplier: 0.5
   useLifeSteal: 0
   lifeStealPercent: 33.333
   damageCondition: 0

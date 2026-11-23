@@ -26,6 +26,8 @@ public sealed partial class MapGameDragonStorySequence
     [Min(0f)] public float ringShakeAmplitude = .12f;
     [Min(.1f)] public float endingWalkSpeed = 1.05f;
     [Min(1f)] public float endingGateLeadIn = 3.5f;
+    [Min(0f), Tooltip("Khoảng player đi thêm qua mặt cổng trước khi hiện outro, tính bằng mét.")]
+    public float endingGateExitDistance = .15f;
     [Tooltip("Chiều cao tối đa của ánh sáng Plane001, tính theo chiều cao nhân vật.")]
     [Min(1f)] public float endingGateEnergyHeightMultiplier = 1.25f;
     [Min(1f)] public float endingNpcRunSpeed = 3.2f;
@@ -86,7 +88,8 @@ public sealed partial class MapGameDragonStorySequence
             gateCenter += passage * Mathf.Max(0f, endingGateLeadIn - leadIn);
             Vector3 side = Vector3.Cross(Vector3.up, passage);
             Vector3 approach = new Vector3(gateCenter.x, ringFloor.y, gateCenter.z) - passage * 1.45f;
-            Vector3 through = approach + passage * 3.75f;
+            Vector3 through = new Vector3(gateCenter.x, ringFloor.y, gateCenter.z) +
+                passage * Mathf.Max(0f, endingGateExitDistance);
             Vector3 walkCamera = -passage * 4.8f + side * 2f + Vector3.up * 1.4f;
 
             yield return ShakeOnRingPickup(ringFloor + Vector3.up, walkCamera);

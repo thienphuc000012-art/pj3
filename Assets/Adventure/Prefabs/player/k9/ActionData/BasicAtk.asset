@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 532a234c595fb3944bb8626c21ed8968, type: 3}
   m_Name: BasicAtk
   m_EditorClassIdentifier: Assembly-CSharp::ActionData
-  actionName: Attack1
+  actionName: "Ki\u1ebfm V\u1ec7 C\u01a1 B\u1ea3n"
   useSound:
     clips: []
     volume: 0.8
@@ -25,7 +25,7 @@ MonoBehaviour:
   element: 3
   isUltimate: 0
   ultimateEnergyGain: 10
-  power: 15
+  power: 0
   damageMultiplier: 1
   useLifeSteal: 0
   lifeStealPercent: 33.333
@@ -48,7 +48,7 @@ MonoBehaviour:
   isFriendlyAction: 0
   isAoE: 0
   isSelfOnly: 0
-  stainChange: 0
+  stainChange: 1
   enemyCooldownTurns: 0
   buffStat: 0
   buffToCaster: 0

@@ -22,11 +22,11 @@ MonoBehaviour:
   description: 
   icon: {fileID: 0}
   type: 0
-  element: 0
+  element: 3
   isUltimate: 0
   ultimateEnergyGain: 10
   power: 0
-  damageMultiplier: 1
+  damageMultiplier: 0.87
   useLifeSteal: 0
   lifeStealPercent: 33.333
   damageCondition: 0
@@ -51,6 +51,7 @@ MonoBehaviour:
   stainChange: 0
   enemyCooldownTurns: 0
   buffStat: 0
+  buffToCaster: 0
   buffAmount: 0
   buffDuration: 1
   debuffs: []

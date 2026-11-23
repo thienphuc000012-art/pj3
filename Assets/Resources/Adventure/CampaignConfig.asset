@@ -51,36 +51,70 @@ MonoBehaviour:
   items:
   - id: herb
     displayName: "Th\u1EA3o d\u01B0\u1EE3c \u0111\u1ECF"
-    icon: {fileID: 21300000, guid: 82361fa11de5cc34386d1b5565ad8f5a, type: 3}
+    icon: {fileID: 21300000, guid: 3f967c90a44e4744a8408d57c7313ccb, type: 3}
     description: "Nguy\xEAn li\u1EC7u ch\u1EBF t\u1EA1o thu\u1ED1c h\u1ED3i m\xE1u."
     mapHeal: 0
+    mapHealAll: 0
     combatAction: {fileID: 0}
   - id: ore
     displayName: "Qu\u1EB7ng tinh th\u1EC3"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: 7f043edf16c952848bba5d58cca2d161, type: 3}
     description: "Nguy\xEAn li\u1EC7u ch\u1EBF t\u1EA1o v\u1EADt ph\u1EA9m."
     mapHeal: 0
+    mapHealAll: 0
     combatAction: {fileID: 0}
   - id: potion
     displayName: "Thu\u1ED1c h\u1ED3i m\xE1u"
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: f1bfa5b8c542dc742878562ce432c6af, type: 3}
     description: "H\u1ED3i 40 m\xE1u cho m\u1ED9t th\xE0nh vi\xEAn c\xF2n s\u1ED1ng."
     mapHeal: 40
+    mapHealAll: 0
     combatAction: {fileID: 11400000, guid: 146e9672b9924e76be740e0b535dac17, type: 2}
   - id: potionCryptex Lock
     displayName: Cryptex Lock 1
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: f540e90a7e174e446895b824e77e7393, type: 3}
     description: pass canhga
     mapHeal: 0
+    mapHealAll: 0
     combatAction: {fileID: 0}
   - id: potionCryptex Lock
     displayName: Cryptex Lock 2
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: 9ba9707d300d89f4a986b0bfa84c5882, type: 3}
     description: 'pass canhchua
 
 '
     mapHeal: 0
+    mapHealAll: 0
     combatAction: {fileID: 0}
+  - id: party_healing_potion
+    displayName: "B\xECnh h\u1ED3i ph\u1EE5c \u0111\u1ED3ng \u0111\u1ED9i"
+    icon: {fileID: 21300000, guid: 343f7c028ba234d41be47db730beb21a, type: 3}
+    description: "H\u1ED3i 35 m\xE1u cho m\u1ED7i \u0111\u1ED3ng minh c\xF2n s\u1ED1ng."
+    mapHeal: 35
+    mapHealAll: 1
+    combatAction: {fileID: 11400000, guid: 380a9fc674774956b5b6bd1e6cf2dddb, type: 2}
+  - id: attack_tonic
+    displayName: "Thu\u1ED1c c\u01B0\u1EDDng c\xF4ng"
+    icon: {fileID: 21300000, guid: 2fd1b5e4b0b4fbf42ba43bbaa573148a, type: 3}
+    description: "T\u0103ng 8 ATK cho m\u1ED9t \u0111\u1ED3ng minh trong 3 l\u01B0\u1EE3t."
+    mapHeal: 0
+    mapHealAll: 0
+    combatAction: {fileID: 11400000, guid: 1a33758603484171a84d66fbfd4f64b4, type: 2}
+  - id: defense_tonic
+    displayName: "Thu\u1ED1c h\u1ED9 gi\xE1p"
+    icon: {fileID: 21300000, guid: 74a8ac45a1e181e49bbb0daba49de85b, type: 3}
+    description: "T\u0103ng 8 DEF cho m\u1ED9t \u0111\u1ED3ng minh trong 3 l\u01B0\u1EE3t."
+    mapHeal: 0
+    mapHealAll: 0
+    combatAction: {fileID: 11400000, guid: 32ac4a7aaf524e46ad01eb84796b9a12, type: 2}
+  - id: party_defense_tonic
+    displayName: "Thu\u1ED1c h\u1ED9 gi\xE1p \u0111\u1ED3ng \u0111\u1ED9i"
+    icon: {fileID: 21300000, guid: 1f7ec109617483a4181b9869e8ec2f74, type: 3}
+    description: "T\u0103ng 5 DEF cho m\u1ED7i \u0111\u1ED3ng minh c\xF2n s\u1ED1ng
+      trong 3 l\u01B0\u1EE3t."
+    mapHeal: 0
+    mapHealAll: 0
+    combatAction: {fileID: 11400000, guid: 402be05ebfaf477a9b6bc36e3ab69f2f, type: 2}
   recipes:
   - displayName: "Thu\u1ED1c h\u1ED3i m\xE1u"
     ingredients:
@@ -90,6 +124,42 @@ MonoBehaviour:
       count: 1
     output:
       id: potion
+      count: 1
+  - displayName: "B\xECnh h\u1ED3i ph\u1EE5c \u0111\u1ED3ng \u0111\u1ED9i"
+    ingredients:
+    - id: herb
+      count: 3
+    - id: ore
+      count: 2
+    output:
+      id: party_healing_potion
+      count: 1
+  - displayName: "Thu\u1ED1c c\u01B0\u1EDDng c\xF4ng"
+    ingredients:
+    - id: herb
+      count: 1
+    - id: ore
+      count: 1
+    output:
+      id: attack_tonic
+      count: 1
+  - displayName: "Thu\u1ED1c h\u1ED9 gi\xE1p"
+    ingredients:
+    - id: herb
+      count: 1
+    - id: ore
+      count: 1
+    output:
+      id: defense_tonic
+      count: 1
+  - displayName: "Thu\u1ED1c h\u1ED9 gi\xE1p \u0111\u1ED3ng \u0111\u1ED9i"
+    ingredients:
+    - id: herb
+      count: 1
+    - id: ore
+      count: 2
+    output:
+      id: party_defense_tonic
       count: 1
   quests:
   - {fileID: 11400000, guid: 84f0d647190015646836c1ed7fbde30a, type: 2}

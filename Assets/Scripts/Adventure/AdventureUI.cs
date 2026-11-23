@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -124,7 +124,7 @@ public class AdventureUI : MonoBehaviour
             if (S.Data.party.Count > 0)
             {
                 var p = S.Data.party[0];
-                view.Text("HUD/Leader/Name", S.Template(p).unitName + " • Cấp " + p.level);
+                view.Text("HUD/Leader/Name", S.Template(p).unitName + " Cấp " + p.level);
                 view.Text("HUD/Leader/Progress", p.xp + " / " + p.RequiredXP + " KN");
                 view.Fill("HUD/Leader/XP/Fill", (float)p.xp / p.RequiredXP);
             }
@@ -1049,8 +1049,10 @@ public class AdventureUI : MonoBehaviour
         view.Text(prefix + "/Detail/Count", selectedItemId != null ? "Số lượng: " + S.Count(selectedItemId) : "");
         bool canHeal = selected != null && selected.mapHeal > 0;
         view.Active(prefix + "/Detail/Use", canHeal);
-        view.Text(prefix + "/Detail/Use/Label", canHeal && S.Data.party.Count > 0 ? "Hồi " + selected.mapHeal + " máu • " + S.Template(S.Data.party[selectedMember]).unitName : "Dùng");
-        view.Enabled(prefix + "/Detail/Use", canHeal && S.Data.party.Count > 0 && S.Data.party[selectedMember].hp > 0 && S.Data.party[selectedMember].hp < S.MaxHP(S.Data.party[selectedMember]));
+        view.Text(prefix + "/Detail/Use/Label", canHeal && S.Data.party.Count > 0 ? "Hồi " + selected.mapHeal + " máu • " + (selected.mapHealAll ? "cả đội" : S.Template(S.Data.party[selectedMember]).unitName) : "Dùng");
+        view.Enabled(prefix + "/Detail/Use", canHeal && S.Data.party.Count > 0 && (selected.mapHealAll
+            ? S.Data.party.Any(member => member.hp > 0 && member.hp < S.MaxHP(member))
+            : S.Data.party[selectedMember].hp > 0 && S.Data.party[selectedMember].hp < S.MaxHP(S.Data.party[selectedMember])));
     }
     void Picker(string prefix)
     {
@@ -1440,13 +1442,45 @@ public class AdventureUI : MonoBehaviour
             required.Length > 0 ? "\nCần mở: " + string.Join(", ", required.Select(VietnameseGameUIText.ActionName)) : null);
         view.Text("Menu/Skills/Reason", S.UnlockBlockedReason(p, skill));
     }
+    static void EnsureCraftResultIcon(GameObject row)
+    {
+        if (row.transform.Find("Result Icon") != null) return;
+        var go = new GameObject("Result Icon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.layer = row.layer;
+        go.transform.SetParent(row.transform, false);
+        var rect = (RectTransform)go.transform;
+        rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
+        rect.pivot = new Vector2(0f, 1f);
+        rect.anchoredPosition = new Vector2(24f, -28f);
+        rect.sizeDelta = new Vector2(100f, 100f);
+        var image = go.GetComponent<Image>();
+        image.color = Color.white;
+        image.preserveAspect = true;
+        image.raycastTarget = false;
+
+        // Make room for the result image without moving the crafting button.
+        foreach (string name in new[] { "Name", "Ingredients" })
+        {
+            var label = row.transform.Find(name) as RectTransform;
+            if (label == null) continue;
+            label.anchoredPosition += new Vector2(116f, 0f);
+            label.sizeDelta -= new Vector2(116f, 0f);
+        }
+    }
+
     void Craft()
     {
         var recipes = S.Config.recipes;
-        var rows = view.Rows("Menu/Craft/Recipes" + Content, recipes.Count, (row, i) => AdventureCanvasRoot.RowClick(row, "Craft", () => { if (i < S.Config.recipes.Count) S.Craft(S.Config.recipes[i]); }));
+        var rows = view.Rows("Menu/Craft/Recipes" + Content, recipes.Count, (row, i) =>
+        {
+            AdventureCanvasRoot.RowClick(row, "Craft", () => { if (i < S.Config.recipes.Count) S.Craft(S.Config.recipes[i]); });
+            EnsureCraftResultIcon(row);
+        });
         for (int i = 0; i < recipes.Count; i++)
         {
             var recipe = recipes[i];
+            var result = S.Config.FindItem(recipe.output.id);
+            AdventureCanvasRoot.RowPortrait(rows[i], "Result Icon", result?.icon != null ? result.icon : result?.combatAction?.icon);
             AdventureCanvasRoot.RowText(rows[i], "Name", recipe.displayName + " ×" + recipe.output.count);
             AdventureCanvasRoot.RowText(rows[i], "Ingredients", string.Join(" + ", recipe.ingredients.Select(x => (S.Config.FindItem(x.id)?.displayName ?? x.id) + " " + S.Count(x.id) + "/" + x.count)));
             rows[i].transform.Find("Craft").GetComponent<Button>().interactable = S.CanCraft(recipe);

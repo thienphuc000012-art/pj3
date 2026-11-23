@@ -837,7 +837,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleUnit
   unitName: Vampire
-  maxHP: 50
+  maxHP: 70
   isSummonedUnit: 0
   summonOwner: {fileID: 0}
   summonDeathOwnerMaxHpCostPercent: 0
@@ -859,15 +859,10 @@ MonoBehaviour:
   baseActionPattern:
   - {fileID: 11400000, guid: 3351a5873f4d5634480378deaedd6078, type: 2}
   - {fileID: 11400000, guid: 99de3be6ba1a61f459516fd503e34872, type: 2}
+  - {fileID: 11400000, guid: c74d23ea82cc200489f06fb32397af30, type: 2}
+  - {fileID: 11400000, guid: 60996dce4e5bb1749a52c607abe63b1f, type: 2}
   startingBattleEffects: []
-  bossPhases:
-  - phaseIcon: {fileID: 0}
-    actionsPerTurn: 2
-    phaseActionPattern:
-    - {fileID: 11400000, guid: 99de3be6ba1a61f459516fd503e34872, type: 2}
-    - {fileID: 11400000, guid: 60996dce4e5bb1749a52c607abe63b1f, type: 2}
-    - {fileID: 11400000, guid: 3351a5873f4d5634480378deaedd6078, type: 2}
-    - {fileID: 11400000, guid: c74d23ea82cc200489f06fb32397af30, type: 2}
+  bossPhases: []
   phase1Icon: {fileID: 0}
   phase2AnimationTriggerName: Phase2
   phase2IntroDuration: 2.5

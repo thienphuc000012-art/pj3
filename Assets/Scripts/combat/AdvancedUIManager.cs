@@ -11,6 +11,7 @@ public class AdvancedUIManager : MonoBehaviour
 {
     public static AdvancedUIManager Instance;
     private bool battleUIVisible;
+    private Material damageNumberMaterial;
 
     [Header("Action Menu (Fixed Position)")]
     public RectTransform actionMenuPanel;
@@ -164,6 +165,7 @@ public class AdvancedUIManager : MonoBehaviour
 
     [Header("Stains UI")]
     public Image[] stainIcons;
+    private StainSparkleGraphic[] stainSparkles;
 
     private int currentStainsForUI = 0;
     private int currentPreviewChange = 0;
@@ -501,6 +503,13 @@ public class AdvancedUIManager : MonoBehaviour
         // parryTextObject giờ chỉ dùng làm object mẫu để clone.
         if (parryTextObject != null) parryTextObject.SetActive(false);
 
+        if (stainIcons != null)
+        {
+            stainSparkles = new StainSparkleGraphic[stainIcons.Length];
+            for (int i = 0; i < stainIcons.Length; i++)
+                if (stainIcons[i] != null) stainSparkles[i] = StainSparkleGraphic.Attach(stainIcons[i], i);
+        }
+
         if (stainIcons != null && stainIcons.Length > 0 && stainIcons[0] != null)
         {
             Transform stainParent = stainIcons[0].transform.parent;
@@ -541,6 +550,9 @@ public class AdvancedUIManager : MonoBehaviour
             for (int i = 0; i < stainIcons.Length; i++)
             {
                 if (stainIcons[i] == null) continue;
+                bool beingSpent = currentPreviewChange < 0 && i >= currentStainsForUI + currentPreviewChange;
+                if (stainSparkles != null && i < stainSparkles.Length && stainSparkles[i] != null)
+                    stainSparkles[i].SetLit(i < currentStainsForUI && !beingSpent);
 
                 if (i < currentStainsForUI)
                 {
@@ -609,7 +621,7 @@ public class AdvancedUIManager : MonoBehaviour
     public void RefreshRunAwayTutorialLock()
     {
         if (runAwayButton == null) return;
-        bool locked = CombatManager.Instance != null && CombatManager.Instance.IsRunAwayLockedByTutorial;
+        bool locked = CombatManager.Instance != null && (CombatManager.Instance.IsRunAwayLockedByTutorial || CombatManager.Instance.IsRunAwayLockedByEnemy);
         if (CampaignSession.Instance != null && CampaignSession.Instance.IsGuidedTutorialEncounter) locked = true;
         runAwayButton.interactable = !locked;
     }
@@ -1040,6 +1052,7 @@ public class AdvancedUIManager : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (damageNumberMaterial != null) Destroy(damageNumberMaterial);
         if (boundEnemy != null) boundEnemy.OnStatsChanged -= UpdateEnemyHPUISafe;
         foreach (var pair in damageStates)
             if (pair.Key != null) pair.Key.OnStatsChanged -= pair.Value.listener;
@@ -1563,7 +1576,7 @@ public class AdvancedUIManager : MonoBehaviour
         float randomY = Random.Range(0f, 0.5f);
         Vector3 randomOffset = new Vector3(randomX, randomY, 0);
 
-        Vector3 worldPos = targetTransform.position + Vector3.up * 0.8f + randomOffset;
+        Vector3 worldPos = targetTransform.position + Vector3.up * 1.1f + randomOffset;
 
         if (Camera.main != null)
         {
@@ -1573,23 +1586,57 @@ public class AdvancedUIManager : MonoBehaviour
 
             if (txt != null)
             {
+                ProjectFont.ApplyHierarchy(damageObj);
+                if (damageNumberMaterial == null && txt.font != null && txt.font.material != null)
+                {
+                    damageNumberMaterial = new Material(txt.font.material);
+                    damageNumberMaterial.SetColor("_OutlineColor", Color.black);
+                    damageNumberMaterial.SetFloat("_OutlineWidth", .22f);
+                    damageNumberMaterial.EnableKeyword("OUTLINE_ON");
+                }
+                if (damageNumberMaterial != null) txt.fontSharedMaterial = damageNumberMaterial;
                 if (isHeal)
                 {
-                    txt.text = $"+{amount}";
-                    txt.color = Color.green;
+                    txt.text = "+" + amount.ToString("N0", System.Globalization.CultureInfo.InvariantCulture);
+                    txt.color = new Color(.62f, 1f, .66f);
                 }
                 else
                 {
-                    txt.text = amount.ToString();
-                    if (isCrit) txt.color = new Color(1f, 0.5f, 0f);
-                    else if (elementalMultiplier >= 1.99f) txt.color = new Color(1f, 0.24f, 0.2f);
-                    else if (elementalMultiplier <= 0.51f) txt.color = new Color(0.28f, 0.62f, 1f);
+                    txt.text = amount.ToString("N0", System.Globalization.CultureInfo.InvariantCulture);
+                    if (isCrit) txt.color = new Color(1f, .78f, .32f);
+                    else if (elementalMultiplier >= 1.99f) txt.color = new Color(1f, .72f, .66f);
+                    else if (elementalMultiplier <= 0.51f) txt.color = new Color(.65f, .82f, 1f);
                     else txt.color = Color.white;
-                    if (isCrit) txt.fontSize *= 1.3f;
                 }
+                txt.enableAutoSizing = false;
+                txt.fontSize = isCrit ? 96f : 78f;
+                txt.fontStyle = FontStyles.Bold;
+                txt.raycastTarget = false;
+                txt.rectTransform.sizeDelta = new Vector2(520f, 150f);
+                StartCoroutine(AnimateDamageNumber(txt));
             }
 
-            Destroy(damageObj, 1f);
+            Destroy(damageObj, 1.5f);
+        }
+    }
+
+    IEnumerator AnimateDamageNumber(TextMeshProUGUI text)
+    {
+        RectTransform rect = text.rectTransform;
+        Vector2 origin = rect.anchoredPosition;
+        Color initialColor = text.color;
+        float elapsed = 0f;
+        while (elapsed < 1.4f && text != null)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / 1.4f);
+            float pop = Mathf.Lerp(.85f, 1.12f, Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / .13f)));
+            float settle = Mathf.Lerp(pop, 1f, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(.13f, .28f, t)));
+            rect.localScale = Vector3.one * settle;
+            rect.anchoredPosition = origin + Vector2.up * (34f * (1f - (1f - t) * (1f - t)));
+            initialColor.a = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(.75f, 1f, t));
+            text.color = initialColor;
+            yield return null;
         }
     }
 

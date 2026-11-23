@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 532a234c595fb3944bb8626c21ed8968, type: 3}
   m_Name: ice
   m_EditorClassIdentifier: Assembly-CSharp::ActionData
-  actionName: Attack9ice
+  actionName: "B\u0103ng C\u1EA7u"
   useSound:
     clips: []
     volume: 0.8
@@ -20,13 +20,13 @@ MonoBehaviour:
     spatialBlend: 1
     maxDistance: 24
   description: 
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: c3176367f43beac49a49f2a986a260b4, type: 3}
   type: 1
   element: 2
   isUltimate: 0
   ultimateEnergyGain: 10
-  power: 0
-  damageMultiplier: 1
+  power: 4
+  damageMultiplier: 1.2
   useLifeSteal: 0
   lifeStealPercent: 33.333
   damageCondition: 0
@@ -48,7 +48,7 @@ MonoBehaviour:
   isFriendlyAction: 0
   isAoE: 0
   isSelfOnly: 0
-  stainChange: 0
+  stainChange: -1
   enemyCooldownTurns: 0
   buffStat: 0
   buffToCaster: 0
@@ -92,7 +92,7 @@ MonoBehaviour:
   ultimateAuraVfxPlaybackSpeed: 1
   castVfxPrefab: {fileID: 0}
   hitVfxPrefab: {fileID: 173866, guid: 66d27fe1e4bc2fc47ab16eaf043b0df8, type: 3}
-  useCustomHitVfxOffset: 0
+  useCustomHitVfxOffset: 1
   hitVfxOffset: {x: 0, y: 0, z: 0}
   hitVfxTiming: 0
   castVfxLifeTime: 5

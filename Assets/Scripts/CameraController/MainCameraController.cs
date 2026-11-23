@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using Unity.Cinemachine;
 
 [DefaultExecutionOrder(-100)]
@@ -193,7 +193,9 @@ public class MainCameraController : MonoBehaviour
 
     private void Start()
     {
-        occlusionFade = CameraOcclusionFade.EnsureForScene(gameObject.scene);
+        // Scene m does not use obstruction fading; other exploration scenes retain it.
+        if (!string.Equals(gameObject.scene.name, "m", System.StringComparison.OrdinalIgnoreCase))
+            occlusionFade = CameraOcclusionFade.EnsureForScene(gameObject.scene);
         occlusionFollow = vcam != null ? vcam.GetComponent<CinemachineThirdPersonFollow>() : null;
         if (occlusionFollow != null) previousObstacleAvoidance = occlusionFollow.AvoidObstacles.Enabled;
         // Đặt CameraTarget đúng vị trí ngay frame đầu.

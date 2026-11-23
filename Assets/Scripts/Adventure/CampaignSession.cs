@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -51,6 +51,7 @@ public class CampaignSession : MonoBehaviour
     public event Action<WorldInteraction> EncounterStarted;
     public bool IsGuidedTutorialEncounter => encounter != null && encounter.guidedTutorial;
     public bool EncounterHasBoss => encounter != null && encounter.enemies != null && encounter.enemies.Any(enemy => enemy != null && enemy.isBoss);
+    public bool EncounterPreventsEscape => encounter?.enemies != null && encounter.enemies.Any(enemy => enemy != null && enemy.preventEscape);
     public int ResultExperience => encounter?.xp ?? 0;
     public IReadOnlyList<BattleExperienceChange> ResultExperienceChanges => resultExperienceChanges;
     readonly List<BattleExperienceChange> resultExperienceChanges = new List<BattleExperienceChange>();
@@ -901,6 +902,8 @@ public class CampaignSession : MonoBehaviour
         };
         progress.completed = progress.objectiveCount >= Mathf.Max(1, quest.requiredCount);
         Data.quests.Add(progress);
+        var portal = QuestPortalDefinition.Current;
+        if (portal != null && portal.quest == quest) portal.ReconcileAcceptedQuest(Data);
         CacheQuestObjectivePosition(progress, quest);
         Save();
         Notify(progress.completed
@@ -1256,7 +1259,7 @@ public class CampaignSession : MonoBehaviour
     }
     public bool IsNear(WorldInteraction point)
     {
-        if (MapPlayer == null || point == null || !point.gameObject.activeInHierarchy) return false;
+        if (MapPlayer == null || point == null || !point.gameObject.activeInHierarchy || !point.PickupReady) return false;
         var patrol = point.GetComponent<EnemyEncounterBehaviour>();
         if (point.kind == WorldInteractionKind.Encounter && patrol != null && patrol.enabled)
             return patrol.CanInteract(MapPlayer.transform, point.range);
@@ -1435,6 +1438,14 @@ public class CampaignSession : MonoBehaviour
         if (!OnMap || Busy || memberIndex < 0 || memberIndex >= Data.party.Count) return;
         var item = Config.FindItem(id);
         var member = Data.party[memberIndex];
+        if (item != null && item.mapHeal > 0 && item.mapHealAll)
+        {
+            if (!Data.party.Any(p => p.hp > 0 && p.hp < MaxHP(p)) || !Consume(id, 1)) return;
+            foreach (var ally in Data.party)
+                if (ally.hp > 0) ally.hp = Mathf.Min(MaxHP(ally), ally.hp + item.mapHeal);
+            Notify("Đã dùng " + item.displayName); Save();
+            return;
+        }
         if (item == null || item.mapHeal <= 0 || member.hp <= 0 || member.hp >= MaxHP(member)) return;
         if (!Consume(id, 1)) return;
         member.hp = Mathf.Min(MaxHP(member), member.hp + item.mapHeal);
@@ -1786,6 +1797,19 @@ public class CampaignSession : MonoBehaviour
             respawn = !EnemySpawnRules.IsPermanent(point, Config) && (point.enemySpawn?.respawn ?? true),
             respawnSeconds = point.enemySpawn?.respawnSeconds ?? 300f
         };
+        // Per-enemy rewards replace the encounter XP when configured; retain the
+        // original encounter XP for any legacy enemy without its own XP (e.g. Vampire).
+        if (encounter.enemies.Any(enemy => enemy != null && enemy.battleExperience > 0))
+        {
+            encounter.xp = encounter.enemies.Where(enemy => enemy != null).Sum(enemy => Mathf.Max(0, enemy.battleExperience));
+            if (encounter.enemies.Any(enemy => enemy != null && enemy.battleExperience <= 0))
+                encounter.xp += Mathf.Max(0, point.experience);
+        }
+        foreach (var enemy in encounter.enemies)
+            if (enemy != null && enemy.battleRewards != null)
+                foreach (var reward in enemy.battleRewards)
+                    if (reward != null && reward.count > 0 && Config.FindItem(reward.id) != null)
+                        encounter.rewards.Add(new ItemStack(reward.id, reward.count));
         var dayNight = FindFirstObjectByType<MDayNightController>();
         if (dayNight != null && dayNight.OwnsActiveScene && dayNight.sun != null)
             encounter.lighting = new MDayNightController.CombatLighting(dayNight);

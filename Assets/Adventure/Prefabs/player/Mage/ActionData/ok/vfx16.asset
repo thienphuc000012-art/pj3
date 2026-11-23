@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 532a234c595fb3944bb8626c21ed8968, type: 3}
   m_Name: vfx16
   m_EditorClassIdentifier: Assembly-CSharp::ActionData
-  actionName: b
+  actionName: "Th\u1ee7y Quang Xuy\u00ean Ph\u00e1"
   useSound:
     clips: []
     volume: 0.8
@@ -26,7 +26,7 @@ MonoBehaviour:
   isUltimate: 0
   ultimateEnergyGain: 10
   power: 5
-  damageMultiplier: 1
+  damageMultiplier: 1.35
   useLifeSteal: 0
   lifeStealPercent: 33.333
   damageCondition: 0
@@ -48,7 +48,7 @@ MonoBehaviour:
   isFriendlyAction: 0
   isAoE: 0
   isSelfOnly: 0
-  stainChange: 0
+  stainChange: -2
   enemyCooldownTurns: 0
   buffStat: 3
   buffToCaster: 0

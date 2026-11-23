@@ -608,43 +608,43 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b1b644f7366dfa4479bf9ea3f8bc3278, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -5.015
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b1b644f7366dfa4479bf9ea3f8bc3278, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -3.76
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b1b644f7366dfa4479bf9ea3f8bc3278, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -0.013930321
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b1b644f7366dfa4479bf9ea3f8bc3278, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.99987817
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b1b644f7366dfa4479bf9ea3f8bc3278, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0.0069825323
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b1b644f7366dfa4479bf9ea3f8bc3278, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0.013964385
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b1b644f7366dfa4479bf9ea3f8bc3278, type: 3}
       propertyPath: m_LocalRotation.z
-      value: -1.03016415e-11
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b1b644f7366dfa4479bf9ea3f8bc3278, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
-      value: 0.8
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b1b644f7366dfa4479bf9ea3f8bc3278, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: 1.6
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b1b644f7366dfa4479bf9ea3f8bc3278, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
-      value: 0.011
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8344639875656984798, guid: b1b644f7366dfa4479bf9ea3f8bc3278, type: 3}
       propertyPath: m_Layer
@@ -1617,6 +1617,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BattleUnit
   unitName: OrpCup
   maxHP: 100
+  battleExperience: 0
+  battleRewards: []
+  preventEscape: 0
   isSummonedUnit: 0
   summonOwner: {fileID: 0}
   summonDeathOwnerMaxHpCostPercent: 0

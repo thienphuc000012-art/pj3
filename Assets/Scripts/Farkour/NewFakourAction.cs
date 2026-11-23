@@ -69,7 +69,7 @@ public class NewFakourAction : ScriptableObject
 
     public bool checkIfAvailable(
         ObstacleInfo hitData,
-        Transform player)
+        Transform player, bool isFence = false)
     {
         // ========================================================
         // 1. PHẢI CÓ HIT PHÍA TRƯỚC
@@ -121,7 +121,7 @@ public class NewFakourAction : ScriptableObject
             hitData.heightHitInfo.collider.gameObject.layer;
 
 
-        if (frontLayer != obstacleLayer)
+        if (!isFence && frontLayer != obstacleLayer)
         {
             Debug.LogWarning(
                 "PARKOUR ACTION REJECTED: Front collider " +
@@ -134,7 +134,7 @@ public class NewFakourAction : ScriptableObject
         }
 
 
-        if (topLayer != obstacleLayer)
+        if (!isFence && topLayer != obstacleLayer)
         {
             Debug.LogWarning(
                 "PARKOUR ACTION REJECTED: Top collider " +
@@ -151,7 +151,7 @@ public class NewFakourAction : ScriptableObject
         // 4. KIỂM TRA TAG NẾU CÓ
         // ========================================================
 
-        if (!string.IsNullOrEmpty(barrierTag))
+        if (!isFence && !string.IsNullOrEmpty(barrierTag))
         {
             if (!hitData.hitInfo.collider.CompareTag(barrierTag))
             {
@@ -175,8 +175,8 @@ public class NewFakourAction : ScriptableObject
         );
 
 
-        if (checkHeight < minimumHeight ||
-            checkHeight > maximumHeight)
+        if (checkHeight < (isFence ? .55f : minimumHeight) ||
+            checkHeight > (isFence ? 2.1f : maximumHeight))
         {
             return false;
         }

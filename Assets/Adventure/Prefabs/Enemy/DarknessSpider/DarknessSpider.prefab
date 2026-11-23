@@ -72,8 +72,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5b5f2d10865edc14abb6dde67d2891ce, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleUnit
-  unitName: OakTreeEnt
-  maxHP: 150
+  unitName: DarknessSpider
+  maxHP: 125
+  battleExperience: 30
+  battleRewards:
+  - id: herb
+    count: 1
+  preventEscape: 0
   isSummonedUnit: 0
   summonOwner: {fileID: 0}
   summonDeathOwnerMaxHpCostPercent: 0
@@ -81,7 +86,7 @@ MonoBehaviour:
   partyHudTurnPortrait: {fileID: 0}
   parryUltimateGain: 15
   damageUltimateGain: 50
-  baseAtk: 10
+  baseAtk: 12
   baseDef: 5
   baseCrit: 10
   baseCritDamage: 150

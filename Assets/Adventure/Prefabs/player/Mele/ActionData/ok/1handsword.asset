@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 532a234c595fb3944bb8626c21ed8968, type: 3}
   m_Name: 1handsword
   m_EditorClassIdentifier: Assembly-CSharp::ActionData
-  actionName: 1handsword
+  actionName: "Tam Ki\u1ebfm H\u1ecfa T\u00e2m"
   useSound:
     clips: []
     volume: 0.8
@@ -25,8 +25,8 @@ MonoBehaviour:
   element: 1
   isUltimate: 0
   ultimateEnergyGain: 10
-  power: 10
-  damageMultiplier: 0
+  power: 5
+  damageMultiplier: 0.65
   useLifeSteal: 0
   lifeStealPercent: 33.333
   damageCondition: 1
@@ -48,7 +48,7 @@ MonoBehaviour:
   isFriendlyAction: 0
   isAoE: 0
   isSelfOnly: 0
-  stainChange: -3
+  stainChange: -2
   enemyCooldownTurns: 0
   buffStat: 0
   buffToCaster: 0

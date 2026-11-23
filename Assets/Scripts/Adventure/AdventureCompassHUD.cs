@@ -32,6 +32,7 @@ public sealed class AdventureCompassHUD : MonoBehaviour
     {
         public RectTransform icon, distance;
         public TMP_Text label;
+        public Image[] edges;
     }
 
     void Awake()
@@ -75,7 +76,7 @@ public sealed class AdventureCompassHUD : MonoBehaviour
             new Vector2(0f, 30f), new Vector2(92f, 26f));
         objectiveIcon.gameObject.SetActive(false);
         objectiveDistance.gameObject.SetActive(false);
-        objectives.Add(new ObjectiveMark { icon = objectiveIcon, distance = objectiveDistance, label = objectiveDistance.GetComponent<TMP_Text>() });
+        objectives.Add(new ObjectiveMark { icon = objectiveIcon, distance = objectiveDistance, label = objectiveDistance.GetComponent<TMP_Text>(), edges = objectiveIcon.GetComponentsInChildren<Image>(true) });
 
         ResizeStrip();
     }
@@ -105,7 +106,7 @@ public sealed class AdventureCompassHUD : MonoBehaviour
             // Clone the original visual so changes to the marker's style apply to every target.
             var icon = Instantiate(objectiveIcon, strip, false); icon.name = "Tracked Quest Marker " + number;
             var distance = Instantiate(objectiveDistance, strip, false); distance.name = "Tracked Quest Distance " + number;
-            objectives.Add(new ObjectiveMark { icon = icon, distance = distance, label = distance.GetComponent<TMP_Text>() });
+            objectives.Add(new ObjectiveMark { icon = icon, distance = distance, label = distance.GetComponent<TMP_Text>(), edges = icon.GetComponentsInChildren<Image>(true) });
         }
         for (int i = 0; i < objectives.Count; i++)
         {
@@ -113,6 +114,9 @@ public sealed class AdventureCompassHUD : MonoBehaviour
             objectives[i].icon.gameObject.SetActive(visible); objectives[i].distance.gameObject.SetActive(visible);
         }
         if (trackedTargets.Count == 0) return;
+        string questId = session.TrackedQuest != null ? session.TrackedQuest.Id : string.Empty;
+        bool sideQuest = questId == "m_sidequest_reclaim_shelter" || questId == "m_sidequest_cook_soup";
+        Color markerColor = sideQuest ? new Color(.35f, .95f, .46f, 1f) : new Color(.98f, .8f, .48f, 1f);
         objectivePlacements.Clear();
         Vector3 from = session.MapPlayer.transform.position;
         for (int i = 0; i < trackedTargets.Count; i++)
@@ -132,6 +136,7 @@ public sealed class AdventureCompassHUD : MonoBehaviour
             }
             var location = new Vector2(markerX, -row * 60f); objectivePlacements.Add(location);
             objectives[i].icon.anchoredPosition = location;
+            foreach (var edge in objectives[i].edges) if (edge.color != markerColor) edge.color = markerColor;
             objectives[i].distance.anchoredPosition = location + Vector2.up * 30f;
             GameLocalization.SetText(objectives[i].label, Mathf.RoundToInt(direction.magnitude) + " m");
         }

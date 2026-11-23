@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 532a234c595fb3944bb8626c21ed8968, type: 3}
   m_Name: vfx22 1
   m_EditorClassIdentifier: Assembly-CSharp::ActionData
-  actionName: b
+  actionName: "Ki\u1ebfm \u00dd T\u1eadp Trung"
   description: anbfaklfbafbna
   icon: {fileID: 21300000, guid: 742198cc0ec8f0143b32a726fe61f028, type: 3}
   type: 1
@@ -42,10 +42,10 @@ MonoBehaviour:
   isFriendlyAction: 1
   isAoE: 0
   isSelfOnly: 1
-  stainChange: 0
+  stainChange: -1
   enemyCooldownTurns: 0
   buffStat: 1
-  buffAmount: 2
+  buffAmount: 5
   buffDuration: 2
   debuffs:
   - type: 0

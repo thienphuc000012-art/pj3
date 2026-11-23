@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -50,6 +50,15 @@ public class BattleUnit : MonoBehaviour
 {
     public string unitName;
     public int maxHP = 100;
+
+    [Header("Battle Victory Rewards")]
+    [Min(0), Tooltip("XP earned for this enemy. Zero keeps the encounter's existing XP setting.")]
+    public int battleExperience;
+    [Tooltip("Additional guaranteed items received when this encounter is won.")]
+    public List<ItemStack> battleRewards = new List<ItemStack>();
+    [Tooltip("Disable the Run Away button for encounters containing this enemy.")]
+    public bool preventEscape;
+
     [HideInInspector] public bool isSummonedUnit;
     [HideInInspector] public BattleUnit summonOwner;
     [NonSerialized] internal Transform combatSlot;

@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using Unity.Cinemachine;
 using System.Collections.Generic;
 
@@ -333,14 +333,31 @@ public class CameraManager : MonoBehaviour
         else if (!SwitchToEnemyActionCam(attacker)) SwitchToTargetHitCam(target);
     }
 
+    // Single-target player buffs should show the actual recipient. AoE actions
+    // retain their authored framing because they affect more than one unit.
+    public static BattleUnit PlayerBuffRecipient(BattleUnit attacker, BattleUnit target, ActionData action)
+    {
+        if (attacker == null || !attacker.isPlayer || action == null || action.isAoE ||
+            action.buffStat == ActionData.BuffStat.None || action.buffAmount <= 0 ||
+            !(action.isFriendlyAction || action.isHeal || action.isSelfOnly)) return null;
+        return action.buffToCaster || action.isSelfOnly ? attacker : target;
+    }
+
     public void BeginCombatAction(BattleUnit attacker, BattleUnit target, ActionData action)
     {
+        BattleUnit buffRecipient = PlayerBuffRecipient(attacker, target, action);
+        if (buffRecipient != null)
+        {
+            SwitchToDebuffCam(buffRecipient);
+            return;
+        }
         if (UseDirector()) { director.BeginAction(attacker, target, action, ultimateTransitionDuration); return; }
         if (attacker.isPlayer) SwitchToPlayerActionCam(CombatManager.Instance.playerParty.IndexOf(attacker), action.isUltimate);
     }
 
     public void PlaySkillCinematic(BattleUnit attacker, BattleUnit target, ActionData action)
     {
+        if (PlayerBuffRecipient(attacker, target, action) != null) return;
         if (UsesDynamicCombatCamera && director != null) director.PlaySkill(attacker, target, action);
     }
 

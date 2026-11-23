@@ -13,8 +13,11 @@ MonoBehaviour:
   m_Name: Quest_Cook_Soup
   m_EditorClassIdentifier: Assembly-CSharp::AdventureQuest
   questId: m_sidequest_cook_soup
-  displayName: "N\u1ed3i canh b\u00ean \u0111\u1ed1ng l\u1eeda"
-  description: "T\u00ecm v\u00e0 nh\u1eb7t m\u1ed9t b\u00f3 Th\u1ea3o d\u01b0\u1ee3c \u0111\u1ecf (herb) \u0111\u1ec3 M\u1ed9c n\u1ea5u n\u1ed3i canh n\u00f3ng cho c\u1ea3 nh\u00f3m. Mang nguy\u00ean li\u1ec7u trong t\u00fai r\u1ed3i quay l\u1ea1i n\u00f3i chuy\u1ec7n v\u1edbi M\u1ed9c."
+  displayName: "N\u1ED3i canh b\xEAn \u0111\u1ED1ng l\u1EEDa"
+  description: "T\xECm v\xE0 nh\u1EB7t m\u1ED9t b\xF3 Th\u1EA3o d\u01B0\u1EE3c \u0111\u1ECF
+    (herb) \u0111\u1EC3 M\u1ED9c n\u1EA5u n\u1ED3i canh n\xF3ng cho c\u1EA3 nh\xF3m.
+    Mang nguy\xEAn li\u1EC7u trong t\xFAi r\u1ED3i quay l\u1EA1i n\xF3i chuy\u1EC7n
+    v\u1EDBi M\u1ED9c."
   objectiveType: 0
   requiredCount: 1
   targetItemId: herb
@@ -24,4 +27,8 @@ MonoBehaviour:
   objectiveMapScene: 
   objectivePosition: {x: 0, y: 0, z: 0}
   experienceReward: 45
-  itemRewards: []
+  itemRewards:
+  - id: party_healing_potion
+    count: 1
+  - id: attack_tonic
+    count: 1

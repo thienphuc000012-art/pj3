@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 532a234c595fb3944bb8626c21ed8968, type: 3}
   m_Name: Attack2
   m_EditorClassIdentifier: Assembly-CSharp::ActionData
-  actionName: Attack1
+  actionName: "Song Ki\u1ebfm H\u1ed9 V\u1ec7"
   useSound:
     clips: []
     volume: 0.8
@@ -21,12 +21,12 @@ MonoBehaviour:
     maxDistance: 24
   description: 
   icon: {fileID: 21300000, guid: 8d8f748a80ac02544aed64c6df465219, type: 3}
-  type: 0
+  type: 1
   element: 3
   isUltimate: 0
   ultimateEnergyGain: 100
-  power: 15
-  damageMultiplier: 1
+  power: 4
+  damageMultiplier: 0.75
   useLifeSteal: 0
   lifeStealPercent: 33.333
   damageCondition: 0
@@ -48,7 +48,7 @@ MonoBehaviour:
   isFriendlyAction: 0
   isAoE: 0
   isSelfOnly: 0
-  stainChange: 0
+  stainChange: -1
   enemyCooldownTurns: 0
   buffStat: 0
   buffToCaster: 0

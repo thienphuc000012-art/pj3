@@ -103,8 +103,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5b5f2d10865edc14abb6dde67d2891ce, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleUnit
-  unitName: OakTreeEnt
-  maxHP: 150
+  unitName: Dragonide
+  maxHP: 500
+  battleExperience: 300
+  battleRewards:
+  - id: party_healing_potion
+    count: 1
+  - id: party_defense_tonic
+    count: 1
+  preventEscape: 1
   isSummonedUnit: 0
   summonOwner: {fileID: 0}
   summonDeathOwnerMaxHpCostPercent: 0
@@ -112,7 +119,7 @@ MonoBehaviour:
   partyHudTurnPortrait: {fileID: 0}
   parryUltimateGain: 15
   damageUltimateGain: 50
-  baseAtk: 10
+  baseAtk: 15
   baseDef: 5
   baseCrit: 10
   baseCritDamage: 150
@@ -122,13 +129,13 @@ MonoBehaviour:
   battleEntryWalkStateName: Base Layer.BattleEntryWalk
   battleEntryAnimationSpeed: 1
   isBoss: 0
-  actionsPerTurn: 2
+  actionsPerTurn: 3
   baseActionPattern:
   - {fileID: 11400000, guid: f020ca7279dc07843a21b00376043de3, type: 2}
-  - {fileID: 11400000, guid: c853d07e5314f4041a89689bbc87268b, type: 2}
-  - {fileID: 11400000, guid: ad643b5c9727bb940b41596e66198530, type: 2}
   - {fileID: 11400000, guid: 39e82124b6d3674469fafb0860057f36, type: 2}
+  - {fileID: 11400000, guid: c853d07e5314f4041a89689bbc87268b, type: 2}
   - {fileID: 11400000, guid: 26cc8b1d5b2e30046adf9e6e9ef8a357, type: 2}
+  - {fileID: 11400000, guid: ad643b5c9727bb940b41596e66198530, type: 2}
   - {fileID: 11400000, guid: 526bfd2096f639b4fab2c833c8fbcf56, type: 2}
   - {fileID: 11400000, guid: 801db318376bb9f408ae02b42d5c38f7, type: 2}
   startingBattleEffects: []

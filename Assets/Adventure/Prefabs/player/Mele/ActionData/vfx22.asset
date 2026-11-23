@@ -12,15 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 532a234c595fb3944bb8626c21ed8968, type: 3}
   m_Name: vfx22
   m_EditorClassIdentifier: Assembly-CSharp::ActionData
-  actionName: b
+  actionName: "Ki\u1ebfm \u00dd B\u00f9ng Ch\u00e1y"
   description: anbfaklfbafbna
   icon: {fileID: 21300000, guid: 742198cc0ec8f0143b32a726fe61f028, type: 3}
   type: 1
   element: 1
   isUltimate: 0
   ultimateEnergyGain: 10
-  power: 5
-  damageMultiplier: 10
+  power: 0
+  damageMultiplier: 0
   useLifeSteal: 0
   lifeStealPercent: 33.333
   damageCondition: 0
@@ -42,10 +42,10 @@ MonoBehaviour:
   isFriendlyAction: 1
   isAoE: 0
   isSelfOnly: 1
-  stainChange: 0
+  stainChange: -2
   enemyCooldownTurns: 0
   buffStat: 1
-  buffAmount: 100
+  buffAmount: 8
   buffDuration: 2
   debuffs:
   - type: 0

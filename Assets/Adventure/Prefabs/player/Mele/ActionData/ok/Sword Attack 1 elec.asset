@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 532a234c595fb3944bb8626c21ed8968, type: 3}
   m_Name: Sword Attack 1 elec
   m_EditorClassIdentifier: Assembly-CSharp::ActionData
-  actionName: Sword Attack 1 elec
+  actionName: "L\u00f4i Ki\u1ebfm Khai Phong"
   useSound:
     clips: []
     volume: 0.8
@@ -25,8 +25,8 @@ MonoBehaviour:
   element: 0
   isUltimate: 0
   ultimateEnergyGain: 16.3
-  power: 20
-  damageMultiplier: 1
+  power: 5
+  damageMultiplier: 1.35
   useLifeSteal: 0
   lifeStealPercent: 33.333
   damageCondition: 0
@@ -51,9 +51,9 @@ MonoBehaviour:
   stainChange: -2
   enemyCooldownTurns: 0
   buffStat: 1
-  buffToCaster: 0
-  buffAmount: 25
-  buffDuration: 3
+  buffToCaster: 1
+  buffAmount: 6
+  buffDuration: 2
   debuffs:
   - type: 1
     icon: {fileID: 21300000, guid: 17db432f1028f2f46a2cfae2ceffe72b, type: 3}

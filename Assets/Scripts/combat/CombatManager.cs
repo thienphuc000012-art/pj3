@@ -289,6 +289,8 @@ public class CombatManager : MonoBehaviour
     public bool IsGuidedTutorialBlockingInput => guidedTutorial != null && guidedTutorial.BlocksInput;
     public bool IsRunAwayLockedByTutorial => guidedTutorial != null ||
         (CampaignSession.Instance != null && CampaignSession.Instance.IsGuidedTutorialEncounter);
+    public bool IsRunAwayLockedByEnemy => enemyParty.Any(enemy => enemy != null && enemy.preventEscape) ||
+        (CampaignSession.Instance != null && CampaignSession.Instance.EncounterPreventsEscape);
     private bool IsGuidedTutorialPracticeLocked =>
         guidedTutorial != null && guidedTutorial.PendingPractice != GuidedCombatPractice.None;
 
@@ -923,7 +925,7 @@ public class CombatManager : MonoBehaviour
 
     public void OnRunAwayClicked()
     {
-        if (IsRunAwayLockedByTutorial) return;
+        if (IsRunAwayLockedByTutorial || IsRunAwayLockedByEnemy) return;
         if (IsGuidedTutorialBlockingInput || IsGuidedTutorialPracticeLocked) return;
         if (AdvancedUIManager.Instance != null && AdvancedUIManager.Instance.SkillTransitionBusy) return;
         if (state != CombatState.PlayerTurn || currentActiveUnit == null || currentActiveUnit.IsDead ||

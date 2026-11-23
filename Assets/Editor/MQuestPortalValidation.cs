@@ -30,11 +30,8 @@ public static class MQuestPortalValidation
             definition = ScriptableObject.CreateInstance<QuestPortalDefinition>(); definition.quest = quest;
             definition.enemyWorldIds.AddRange(new[] { "a", "b" });
             var data = new CampaignSave();
-            Check(!definition.RecordVictory(data, "m", "12", "a"), "A kill before accepting the quest must not start a cutscene.");
             data.quests.Add(new AdventureQuestProgress { questId = quest.Id });
             Check(!definition.RecordVictory(data, "mapgame", "12", "a") && !definition.RecordVictory(data, "m", "wrong", "a") && !definition.RecordVictory(data, "m", "12", "other"), "Unrelated maps, marker groups and enemies must not advance the portal.");
-            data.collected.Add("a");
-            Check(!definition.IsUnlocked(data) && !definition.Pending(data, "a"), "Consumed/escaped encounters alone must not count as victories."); data.collected.Clear();
             Check(definition.RecordVictory(data, "m", "12", "a") && definition.Pending(data, "a"), "First victory must queue its own presentation.");
             Check(!definition.RecordVictory(data, "m", "12", "a"), "Repeated victory must not queue twice.");
             var state = definition.Progress(data, false); state.presented.Add("a");
@@ -47,7 +44,27 @@ public static class MQuestPortalValidation
             Check(definition.IsUnlocked(roundTrip) && !definition.Pending(roundTrip, "a") && !definition.Pending(roundTrip, "b"), "Completed presentation flags must survive save/load without replay.");
             var legacy = new CampaignSave(); legacy.quests.Add(new AdventureQuestProgress { questId = quest.Id, objectiveCount = 1 }); legacy.collected.Add("a");
             Check(definition.RecordVictory(legacy, "m", "12", "b") && !definition.Pending(legacy, "a") && definition.Pending(legacy, "b"), "Older earned kills must remain earned, only the new victory gets a scene.");
-            report.AppendLine("PASS: quest acceptance, map/group/target filtering, escape exclusion, distinct victories, pending-save recovery, two-scene unlock, duplicate/replay prevention and legacy progress.");
+
+            var early = new CampaignSave();
+            Check(definition.RecordVictory(early, "m", "12", "a") && !definition.Pending(early, "a"), "A pre-quest victory should be saved without triggering a cutscene.");
+            early = JsonUtility.FromJson<CampaignSave>(JsonUtility.ToJson(early));
+            var earlyQuest = new AdventureQuestProgress { questId = quest.Id };
+            early.quests.Add(earlyQuest);
+            Check(definition.ReconcileAcceptedQuest(early) && earlyQuest.objectiveCount == 1 && !earlyQuest.completed && definition.Pending(early, "a"),
+                "Accepting after a pre-quest victory should credit it and queue that cutscene.");
+
+            var stuck = new CampaignSave();
+            var stuckQuest = new AdventureQuestProgress { questId = quest.Id, objectiveCount = 1 };
+            stuck.quests.Add(stuckQuest);
+            stuck.collected.AddRange(new[] { "a", "b", "unrelated" });
+            var stuckPortal = definition.Progress(stuck, true);
+            Check(definition.ReconcileAcceptedQuest(stuck) && stuckQuest.objectiveCount == 2 && stuckQuest.completed &&
+                !definition.Pending(stuck, "a") && definition.Pending(stuck, "b") && !definition.IsUnlocked(stuck),
+                "An existing save should recover the missed boss without replaying the already credited one.");
+            Check(!definition.ReconcileAcceptedQuest(stuck), "Recovering the same save again must not grant extra credit.");
+            stuckPortal.presented.Add("b");
+            Check(definition.IsUnlocked(stuck), "The recovered save should unlock the portal after the missing cutscene.");
+            report.AppendLine("PASS: pre-quest victories, old save recovery, map/group/target filtering, distinct victories, pending-save recovery and two-scene unlock.");
 
             var host = new GameObject("Isolated portal fixture"); SceneManager.MoveGameObjectToScene(host, fixture); host.SetActive(false);
             var session = host.AddComponent<CampaignSession>(); config = ScriptableObject.CreateInstance<CampaignConfig>(); config.mapScene = "isolated-preview-only";
@@ -71,6 +88,7 @@ public static class MQuestPortalValidation
             Check(authored.quest.displayName == "Main Quest" && authored.quest.objectiveWorldPointId == "12" && authored.quest.objectiveMapScene == "m" && !authored.quest.useFixedObjectivePosition, "Main Quest must follow the two dynamic m targets.");
             Check(controller.enemies.Length == 2 && controller.enemies.All(s => s.enemy != null && s.deathClip != null && s.dissolveMaterial != null && s.cameraPose != null), "Two complete enemy shots required.");
             Check(authored.enemyWorldIds.SequenceEqual(controller.enemies.Select(s => s.enemy.Id)), "Cutscene references must match the persistent target IDs.");
+            Check(controller.enemies.All(s => s.enemy.enemyPrefabs.Any(unit => unit != null && unit.isBoss)), "Legacy victory recovery depends on both encounters preventing escape.");
             Check(controller.transition.targetMapScene == "mapgame" && controller.transition.useSavedMapPosition && !controller.transition.enabled && controller.transition.GetComponent<QuestPortalTravelGate>().definition == authored, "Authored transition must be locked and configured to return to mapgame.");
             Check(controller.portalCameraPose != null && controller.lightningAnchor != null && controller.darkAnchor != null && controller.npcDestination != null && controller.npc != null && controller.cinematicCamera != null && controller.cinematicBars != null && !controller.transitionFade.raycastTarget, "Camera, fade, NPC and VFX anchors required.");
             Check(Mathf.Abs(Vector3.Dot(controller.npcDestination.up, Vector3.up) - 1) < .001f, "NPC arrival must stay upright.");

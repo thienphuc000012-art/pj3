@@ -72,8 +72,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5b5f2d10865edc14abb6dde67d2891ce, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleUnit
-  unitName: DemonLord
-  maxHP: 150
+  unitName: Wyvern
+  maxHP: 200
+  battleExperience: 65
+  battleRewards:
+  - id: ore
+    count: 2
+  preventEscape: 0
   isSummonedUnit: 0
   summonOwner: {fileID: 0}
   summonDeathOwnerMaxHpCostPercent: 0

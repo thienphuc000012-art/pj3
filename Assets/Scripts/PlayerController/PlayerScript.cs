@@ -23,6 +23,12 @@ public class PlayerScript : MonoBehaviour
     public Animator animator;
 
     private bool isClimbingLadder;
+    public bool IsUsingLadder => isClimbingLadder || isMountingLadder;
+    private Ladder activeLadder;
+    private float ladderContactLostTime;
+    private int ladderReleaseFrame = -1;
+    public bool LadderInputConsumedThisFrame => ladderReleaseFrame == Time.frameCount;
+    private readonly RaycastHit[] ladderRayHits = new RaycastHit[32];
     private bool isMountingLadder; // Biến kiểm tra đang trong quá trình xoay/bước lên/xuống thang
     private Vector3 lastGrabLadderDirection;
 
@@ -193,6 +199,8 @@ public class PlayerScript : MonoBehaviour
             return;
 
         Vector3 deltaPosition = animator.deltaPosition;
+        if (ledgeClimb != null && ledgeClimb.IsEnteringLedge)
+            deltaPosition = Vector3.ClampMagnitude(deltaPosition, Mathf.Max(0.1f, ledgeClimb.initialGrabCorrectionSpeed) * Time.deltaTime);
         Quaternion deltaRotation = animator.deltaRotation;
 
         // Trong ClimbToTop CC được tắt, nên delta của animation/MatchTarget
@@ -422,8 +430,8 @@ public class PlayerScript : MonoBehaviour
             // 1. TÌM THANG
             Vector3 searchDir = movementAmount > 0 ? requiredMoveDir : transform.forward;
 
-            bool foundForward = Physics.Raycast(rayStartPosTwoThirds, searchDir, out RaycastHit hit, ladderGrabDistance) ||
-                                Physics.Raycast(rayStartPosFeet, searchDir, out hit, ladderGrabDistance);
+            bool foundForward = TryFindLadderHit(rayStartPosTwoThirds, searchDir, ladderGrabDistance, null, out RaycastHit hit) ||
+                                TryFindLadderHit(rayStartPosFeet, searchDir, ladderGrabDistance, null, out hit);
 
             // ---------------------------------------------------------
             // RAYCAST RIÊNG CHO LEO TỪ TRÊN XUỐNG
@@ -552,7 +560,8 @@ public class PlayerScript : MonoBehaviour
 
                 // GIỚI HẠN VÙNG BÁM LEO:
                 // Giảm xuống 0.15f (tổng chiều rộng vùng bám = 0.3m) để loại bỏ hoàn toàn 2 cột viền
-                float maxClimbWidth = 0.15f;
+                float maxClimbWidth = Mathf.Max(0.15f, Mathf.Abs(ladderRight.x) * hit.collider.bounds.extents.x +
+                    Mathf.Abs(ladderRight.z) * hit.collider.bounds.extents.z - 0.08f);
                 bool isWithinCenterWidth = distancePointFromCenter < maxClimbWidth;
 
                 // CHỈ BÁM THANG KHI:
@@ -570,6 +579,7 @@ public class PlayerScript : MonoBehaviour
                         Vector3 centeredHitPoint =
                             hit.point - (Vector3.Dot(hitOffset, ladderRight) * ladderRight);
 
+                        activeLadder = ladderForward;
                         GrabLadder(-hitNormalXZ, centeredHitPoint);
                         return;
                     }
@@ -698,6 +708,8 @@ public class PlayerScript : MonoBehaviour
                 Debug.DrawRay(ladderCenter, outsideNormal * 1.0f, Color.green, 2.0f);
                 Debug.DrawRay(targetPos, grabDir * 1.0f, Color.yellow, 2.0f);
 
+                activeLadder = ladderBelow;
+                ladderContactLostTime = 0f;
                 StartCoroutine(ClimbDownFromTopRoutine(targetPos, grabDir));
                 return;
             }
@@ -705,8 +717,9 @@ public class PlayerScript : MonoBehaviour
         else
         {
             // 2. KHI ĐANG LEO: Kiểm tra va chạm ở mốc 2/3 CC và Chân
-            bool twoThirdsHit = Physics.Raycast(rayStartPosTwoThirds, lastGrabLadderDirection, out RaycastHit hitTwoThirds, ladderGrabDistance);
-            bool feetHit = Physics.Raycast(rayStartPosFeet, lastGrabLadderDirection, out RaycastHit hitFeet, ladderGrabDistance);
+            bool twoThirdsHit = TryFindLadderHit(rayStartPosTwoThirds, lastGrabLadderDirection, ladderGrabDistance, activeLadder, out RaycastHit hitTwoThirds);
+            bool feetHit = TryFindLadderHit(rayStartPosFeet, lastGrabLadderDirection, ladderGrabDistance, activeLadder, out RaycastHit hitFeet);
+            ladderContactLostTime = twoThirdsHit || feetHit ? 0f : ladderContactLostTime + Time.deltaTime;
             bool hitGround = Physics.Raycast(transform.position + Vector3.up * 0.2f, Vector3.down, 0.3f, surfaceLayer) && vertical < 0;
             bool jumpOff = Input.GetKeyDown(KeyCode.Space);
 
@@ -715,7 +728,7 @@ public class PlayerScript : MonoBehaviour
             // =========================================================
             // Kiểm tra TRƯỚC khi cập nhật ClimbSpeed để frame phát hiện đầu thang
             // không tiếp tục đẩy Blend Tree ClimbUp thêm một nhịp nữa.
-            if (vertical > 0 && !twoThirdsHit)
+            if (vertical > 0 && !twoThirdsHit && feetHit)
             {
                 velocity = Vector3.zero;
                 fallingSpeed = 0f;
@@ -729,7 +742,7 @@ public class PlayerScript : MonoBehaviour
             animator.SetFloat("ClimbSpeed", vertical, 0.1f, Time.deltaTime);
 
             // Bỏ bám thang khi tuột chân, chạm đất hoặc bấm Space
-            if ((!twoThirdsHit && !feetHit) || hitGround || jumpOff)
+            if (ladderContactLostTime > 0.2f || hitGround || jumpOff)
             {
                 DropLadder();
                 return;
@@ -878,9 +891,32 @@ public class PlayerScript : MonoBehaviour
             animator.CrossFadeInFixedTime(locomotionHash, Mathf.Max(0.01f, smallDropRecoveryBlend), 0, 0f);
     }
 
+    // Search specifically for ladders: the first hit can be the terrain behind the rungs.
+    private bool TryFindLadderHit(Vector3 origin, Vector3 direction, float distance, Ladder expected, out RaycastHit closest)
+    {
+        closest = default;
+        float bestDistance = float.PositiveInfinity;
+        bool found = false;
+        int count = Physics.RaycastNonAlloc(origin, direction, ladderRayHits, distance, ~0, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < count; i++)
+        {
+            RaycastHit candidate = ladderRayHits[i];
+            Ladder ladder = candidate.collider.GetComponentInParent<Ladder>();
+            if (ladder == null || (expected != null && ladder != expected) || candidate.distance >= bestDistance)
+                continue;
+            closest = candidate;
+            bestDistance = candidate.distance;
+            found = true;
+        }
+        return found;
+    }
+
     private void GrabLadder(Vector3 grabDirection, Vector3 hitPoint)
     {
         isClimbingLadder = true;
+        ladderContactLostTime = 0f;
+        animator.SetBool("IsClimbing", true);
+        animator.SetBool("IsFalling", false);
         grabDirection.y = 0;
         this.lastGrabLadderDirection = grabDirection.normalized;
 
@@ -903,8 +939,11 @@ public class PlayerScript : MonoBehaviour
 
     private void DropLadder()
     {
+        ladderReleaseFrame = Time.frameCount;
         isClimbingLadder = false;
         isMountingLadder = false;
+        activeLadder = null;
+        ladderContactLostTime = 0f;
         fallingSpeed = 0f;
         animator.SetFloat("ClimbSpeed", 0f);
         useClimbTopRootMotion = false;

@@ -23,7 +23,7 @@ public sealed class AdventureScanTarget : MonoBehaviour
     bool renderersCached;
 
     public bool IsAvailable => detectable && isActiveAndEnabled && gameObject.activeInHierarchy &&
-        (interaction == null || (interaction.isActiveAndEnabled && !interaction.IsConsumed));
+        (interaction == null || (interaction.isActiveAndEnabled && !interaction.IsConsumed && interaction.PickupReady));
 
     public string DisplayName => interaction != null && !string.IsNullOrWhiteSpace(interaction.displayName)
         ? interaction.displayName : gameObject.name;

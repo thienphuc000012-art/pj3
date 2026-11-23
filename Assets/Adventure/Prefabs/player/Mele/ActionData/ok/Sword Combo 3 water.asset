@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 532a234c595fb3944bb8626c21ed8968, type: 3}
   m_Name: Sword Combo 3 water
   m_EditorClassIdentifier: Assembly-CSharp::ActionData
-  actionName: Sword Combo 3 water
+  actionName: "Th\u1ee7y Ki\u1ebfm C\u01b0\u1eddng C\u00f4ng"
   useSound:
     clips: []
     volume: 0.8
@@ -25,8 +25,8 @@ MonoBehaviour:
   element: 2
   isUltimate: 0
   ultimateEnergyGain: 16.3
-  power: 20
-  damageMultiplier: 1
+  power: 6
+  damageMultiplier: 1.35
   useLifeSteal: 1
   lifeStealPercent: 33.333
   damageCondition: 0
@@ -52,8 +52,8 @@ MonoBehaviour:
   enemyCooldownTurns: 0
   buffStat: 1
   buffToCaster: 1
-  buffAmount: 25
-  buffDuration: 3
+  buffAmount: 6
+  buffDuration: 2
   debuffs: []
   cleanse: 0
   statusOnly: 0

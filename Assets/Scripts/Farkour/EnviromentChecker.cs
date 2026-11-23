@@ -195,6 +195,57 @@ public class EnviromentChecker : MonoBehaviour
         return hitData;
     }
 
+    public bool TryCheckFence(out ObstacleInfo result)
+    {
+        result = new ObstacleInfo();
+        if (gameObject.scene.name != "m") return false;
+        int surface = LayerMask.NameToLayer("Surface");
+        int obstacle = LayerMask.NameToLayer("Obstacle");
+        if (surface < 0 || obstacle < 0) return false;
+
+        Vector3 origin = transform.position + Vector3.up * .7f;
+        var hits = Physics.RaycastAll(origin, transform.forward, raylength, (1 << surface) | (1 << obstacle), QueryTriggerInteraction.Ignore);
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+        if (hits.Length == 0) return false;
+        var front = hits[0];
+        Transform fence = FenceCollisionRoot(front.collider);
+        if (fence == null) return false;
+
+        Vector3 topOrigin = front.point + transform.forward * .05f + Vector3.up * 2.5f;
+        var tops = Physics.RaycastAll(topOrigin, Vector3.down, 3f, (1 << surface) | (1 << obstacle), QueryTriggerInteraction.Ignore);
+        System.Array.Sort(tops, (a, b) => a.distance.CompareTo(b.distance));
+        foreach (var top in tops)
+        {
+            if (FenceCollisionRoot(top.collider) != fence) continue;
+            float height = top.point.y - transform.position.y;
+            if (height < .55f || height > 2.1f) return false;
+            Vector3 landingOrigin = front.point + transform.forward * 1.3f + Vector3.up * 2f;
+            if (!Physics.Raycast(landingOrigin, Vector3.down, out var landing, 4f,
+                    (1 << surface) | (1 << obstacle) | (1 << LayerMask.NameToLayer("Ground")), QueryTriggerInteraction.Ignore) ||
+                FenceCollisionRoot(landing.collider) != null || landing.normal.y < .5f ||
+                landing.point.y < transform.position.y - 1.5f || landing.point.y > transform.position.y + .6f)
+                return false;
+            result.hitFound = result.heightHitFound = true;
+            result.hitInfo = front;
+            result.heightHitInfo = top;
+            return true;
+        }
+        return false;
+    }
+
+    static Transform FenceCollisionRoot(Collider collider)
+    {
+        if (collider == null) return null;
+        for (var node = collider.transform; node != null; node = node.parent)
+        {
+            if (node.name != "Solid Fence Collision") continue;
+            var fence = node.parent;
+            return fence != null && fence.parent != null && fence.parent.name == "Fence" &&
+                   fence.parent.parent != null && fence.parent.parent.name == "Environment" ? node : null;
+        }
+        return null;
+    }
+
 
     // ============================================================
     // LEDGE CHECK

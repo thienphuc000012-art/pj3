@@ -308,7 +308,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleUnit
   unitName: DemonLord
-  maxHP: 150
+  maxHP: 360
+  battleExperience: 160
+  battleRewards:
+  - id: attack_tonic
+    count: 1
+  - id: ore
+    count: 3
+  preventEscape: 0
   isSummonedUnit: 0
   summonOwner: {fileID: 0}
   summonDeathOwnerMaxHpCostPercent: 0
@@ -316,11 +323,11 @@ MonoBehaviour:
   partyHudTurnPortrait: {fileID: 0}
   parryUltimateGain: 15
   damageUltimateGain: 50
-  baseAtk: 10
+  baseAtk: 12
   baseDef: 5
   baseCrit: 10
   baseCritDamage: 150
-  element: 1
+  element: 3
   defaultAttack: {fileID: 0}
   characterSkills: []
   battleEntryWalkStateName: Base Layer.BattleEntryWalk

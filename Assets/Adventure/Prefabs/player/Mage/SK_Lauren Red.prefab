@@ -1752,15 +1752,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 8b4e74c0b24cc3d4aae11ba18270b15e, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 2.124
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 8b4e74c0b24cc3d4aae11ba18270b15e, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.13034
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 8b4e74c0b24cc3d4aae11ba18270b15e, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -1.933
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 8b4e74c0b24cc3d4aae11ba18270b15e, type: 3}
       propertyPath: m_LocalRotation.w
@@ -2142,6 +2142,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BattleUnit
   unitName: Lauren
   maxHP: 100
+  battleExperience: 0
+  battleRewards: []
+  preventEscape: 0
   isSummonedUnit: 0
   summonOwner: {fileID: 0}
   summonDeathOwnerMaxHpCostPercent: 0

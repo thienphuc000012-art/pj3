@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -47,6 +47,9 @@ public class FarkourControllerScript : MonoBehaviour
             return;
 
 
+        if (playerScript.IsUsingLadder || playerScript.LadderInputConsumedThisFrame)
+            return;
+
         if (playerScript.playerInAction)
             return;
 
@@ -63,6 +66,18 @@ public class FarkourControllerScript : MonoBehaviour
         }
 
         bool isParkourPerformed = false;
+
+        if (enviromentChecker != null && enviromentChecker.TryCheckFence(out var fenceHit))
+        {
+            foreach (var action in newFakourActions)
+            {
+                if (action != null && action.name == "VaultJump" && action.checkIfAvailable(fenceHit, transform, true))
+                {
+                    StartCoroutine(PerformParkourAction(action));
+                    return;
+                }
+            }
+        }
 
 
         // ========================================================

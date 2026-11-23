@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Animations;
@@ -107,11 +108,17 @@ public class WorldInteraction : MonoBehaviour
     [Min(0.5f)] public float range = 2.5f;
     [Min(0)] public int experience = 25;
     public List<ItemStack> rewards = new List<ItemStack>();
+    [Tooltip("Nếu có, chọn thêm ngẫu nhiên một vật phẩm trong danh sách khi nhặt.")]
+    public List<ItemStack> randomRewards = new List<ItemStack>();
     [Header("Pickup 3D Model")]
     public GameObject pickupModelPrefab;
     public Vector3 pickupModelPosition = Vector3.zero;
     public Vector3 pickupModelRotation = Vector3.zero;
     public Vector3 pickupModelScale = Vector3.one;
+    [Tooltip("Đặt điểm nhặt lên mặt đất khi người chơi đến gần, sau khi địa hình/chunk đã tải.")]
+    public bool snapPickupToGround;
+    bool pickupGroundReady;
+    public bool PickupReady => kind != WorldInteractionKind.Pickup || !snapPickupToGround || pickupGroundReady;
 
     [Header("Chest Opening")]
     [Tooltip("Clip open trong thư mục Free Treasure Chest. Clip được phát trên Animator của model rương.")]
@@ -204,6 +211,12 @@ public class WorldInteraction : MonoBehaviour
             chestLidPoseCaptured = false;
         }
         ApplyPickupModelTransform();
+        if (kind == WorldInteractionKind.Pickup && snapPickupToGround)
+        {
+            pickupGroundReady = false;
+            if (pickupModelInstance != null) pickupModelInstance.SetActive(false);
+            StartCoroutine(SnapPickupToGround());
+        }
         if (kind == WorldInteractionKind.Chest)
         {
             if (IsConsumed)
@@ -213,6 +226,44 @@ public class WorldInteraction : MonoBehaviour
             }
             StopChestAnimation();
             SetChestOpenProgress(0f);
+        }
+    }
+
+    IEnumerator SnapPickupToGround()
+    {
+        var wait = new WaitForSecondsRealtime(.5f);
+        int mask = LayerMask.GetMask("Default", "Ground", "Surface", "Obstacle");
+        while (true)
+        {
+            var player = CampaignSession.Instance != null ? CampaignSession.Instance.MapPlayer : null;
+            if (player != null && player.gameObject.scene == gameObject.scene &&
+                (player.transform.position - transform.position).sqrMagnitude <= 45f * 45f)
+            {
+                Vector3 origin = transform.position + Vector3.up * 15f;
+                var hits = Physics.RaycastAll(origin, Vector3.down, 30f, mask, QueryTriggerInteraction.Ignore);
+                float nearest = float.PositiveInfinity;
+                Vector3 ground = transform.position;
+                foreach (var hit in hits)
+                {
+                    if (hit.collider == null || hit.normal.y < .65f ||
+                        hit.collider.GetComponentInParent<WorldInteraction>() != null ||
+                        hit.collider.GetComponentInParent<PlayerScript>() != null ||
+                        hit.collider.GetComponentInParent<BattleUnit>() != null ||
+                        hit.collider.attachedRigidbody != null) continue;
+                    float delta = Mathf.Abs(hit.point.y - transform.position.y);
+                    if (delta >= nearest) continue;
+                    nearest = delta;
+                    ground = hit.point;
+                }
+                if (nearest <= 12f)
+                {
+                    transform.position = ground;
+                    pickupGroundReady = true;
+                    if (pickupModelInstance != null) pickupModelInstance.SetActive(true);
+                    yield break;
+                }
+            }
+            yield return wait;
         }
     }
 
@@ -630,6 +681,17 @@ public class WorldInteraction : MonoBehaviour
     {
         if (session == null || session.Data == null || IsConsumed) return false;
         foreach (var reward in rewards) session.AddItem(reward.id, reward.count);
+        if (randomRewards != null && randomRewards.Count > 0)
+        {
+            var candidates = randomRewards.FindAll(reward => reward != null && reward.count > 0 &&
+                session.Config != null && session.Config.FindItem(reward.id) != null);
+            if (candidates.Count > 0)
+            {
+                var reward = candidates[UnityEngine.Random.Range(0, candidates.Count)];
+                session.AddItem(reward.id, reward.count);
+                displayName = session.Config.FindItem(reward.id).displayName;
+            }
+        }
         session.GainXP(experience);
         session.Data.collected.Add(Id);
         if (kind == WorldInteractionKind.Pickup || kind == WorldInteractionKind.Chest) session.PlayCollectionVfx(this);

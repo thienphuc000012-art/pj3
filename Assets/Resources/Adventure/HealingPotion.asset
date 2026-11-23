@@ -13,29 +13,90 @@ MonoBehaviour:
   m_Name: HealingPotion
   m_EditorClassIdentifier: Assembly-CSharp::ActionData
   actionName: Healing Potion
-  description: Hồi 40 máu cho một đồng minh. Tiêu hao một bình thuốc.
-  icon: {fileID: 21300000, guid: 742198cc0ec8f0143b32a726fe61f028, type: 3}
+  useSound:
+    clips: []
+    volume: 0.8
+    pitch: {x: 1, y: 1}
+    spatialBlend: 1
+    maxDistance: 24
+  description: "H\u1ED3i 40 m\xE1u cho m\u1ED9t \u0111\u1ED3ng minh. Ti\xEAu hao
+    m\u1ED9t b\xECnh thu\u1ED1c."
+  icon: {fileID: 21300000, guid: f1bfa5b8c542dc742878562ce432c6af, type: 3}
   type: 2
+  element: 0
+  isUltimate: 0
+  ultimateEnergyGain: 10
   power: 40
   damageMultiplier: 0
+  useLifeSteal: 0
+  lifeStealPercent: 33.333
+  damageCondition: 0
+  damageMultiplierWhenCasterBurned: 2
+  damageMultiplierWhenCasterNotBurned: 0.5
+  damageMultiplierWhenTargetPoisoned: 1.5
+  damageMultiplierWhenTargetNotPoisoned: 1
+  ignoreBurnAttackReductionWhenEmpowered: 1
+  isSummonSkill: 0
+  summonPrefab: {fileID: 0}
+  summonCount: 2
+  summonDeathOwnerMaxHpCostPercent: 10
+  summonSpawnVfxPrefab: {fileID: 0}
+  summonSpawnVfxLocalOffset: {x: 0, y: 0, z: 0}
+  summonSpawnVfxLifetime: 2
+  summonSpawnDelay: 0.65
   isHeal: 1
   animationTriggerName: heal
   isFriendlyAction: 1
   isAoE: 0
   isSelfOnly: 0
   stainChange: 0
+  enemyCooldownTurns: 0
   buffStat: 0
+  buffToCaster: 0
   buffAmount: 5
   buffDuration: 1
+  debuffs: []
+  cleanse: 0
+  statusOnly: 0
+  skillCinematic: {fileID: 0}
   isMelee: 0
+  screenSlash: 0
+  screenSlashColor: {r: 0.25, g: 0.8, b: 1, a: 1}
+  screenSlashDuration: 0.42
+  screenSlashWidth: 10
+  screenSlashAngle: -24
+  screenSlashCount: 1
+  screenSlashBurstTime: 0.45
+  screenSlashFinisherScale: 2
+  screenSpaceSplit: 0
+  screenSplitFrames: 2
+  screenSplitPixels: 18
+  screenSplitHold: 0
+  screenSplitRestoreStart: 0.8
+  screenSlashTimeScale: 1
   vfxType: 2
   vfxPrefab: {fileID: 111372, guid: b58af954af4cd9a45a687a98dd9b9249, type: 3}
+  vfxPlaybackSpeed: 1
+  ultimateAuraVfxPrefab: {fileID: 0}
+  ultimateAuraVfxLocalOffset: {x: 0, y: 1, z: 0}
+  ultimateAuraVfxPlaybackSpeed: 1
   castVfxPrefab: {fileID: 191306, guid: a00869e5e1cfc8445b1c3f7445b45514, type: 3}
   hitVfxPrefab: {fileID: 0}
+  useCustomHitVfxOffset: 0
+  hitVfxOffset: {x: 0, y: 0, z: 0}
   hitVfxTiming: 0
   castVfxLifeTime: 5
   hitVfxLifeTime: 3
+  useVfxParry: 1
+  parryOpenBeforeImpact: 0.25
+  parryWindowDuration: 0.3
+  beamParryDelay: 0.1
+  useMeleeHitboxParry: 1
   beamPlaybackSpeed: 1
+  beamParticleNames: []
+  beamParticleStream: 0
+  beamStreamParticleName: Flames
+  beamStreamTravelTime: 0.45
   projectileMoveMode: 0
   vfxSpeed: 15
   vfxLifeTime: 5
@@ -44,3 +105,21 @@ MonoBehaviour:
   curveHeight: 2
   curveSideOffset: 0
   rfxUseGravity: 0
+  cameraImpactProfile: {fileID: 0}
+  swordSlashVfxPrefab: {fileID: 0}
+  swordSlashVfxLocalOffset: {x: 0, y: 0, z: 0}
+  swordSlashVfxLocalEuler: {x: 0, y: 0, z: 0}
+  swordSlashVfxScale: {x: 1, y: 1, z: 1}
+  swordSlashVfxLifetime: 2
+  swordSlashTravelsToTarget: 1
+  swordSlashTravelSpeed: 24
+  swordSlashGroundLayers:
+    serializedVersion: 2
+    m_Bits: 4294967291
+  swordSlashGroundProbeDistance: 20
+  swordSlashGroundHeightOffset: 0.02
+  useClawAttackTrailVfx: 0
+  clawAttackTrailColor: {r: 0.88, g: 0.92, b: 0.96, a: 1}
+  clawAttackTrailLifetime: 0.14
+  clawAttackTrailWidth: 1
+  clawAttackTrailHandSpread: 0.5

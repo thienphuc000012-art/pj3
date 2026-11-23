@@ -49,13 +49,18 @@ public sealed class MQuestPortalSequence : MonoBehaviour
         if (gameObject.scene.name != "m" || definition == null) yield break;
         while (isActiveAndEnabled && (CampaignSession.Instance?.Data == null || mapSetup == null || !mapSetup.StartupReady)) yield return null;
         session = CampaignSession.Instance;
-        definition.Progress(session.Data, true);
+        if (definition.ReconcileAcceptedQuest(session.Data)) Save();
         ApplyUnlockedState();
+        var waitForVictory = new WaitForSecondsRealtime(.1f);
         while (isActiveAndEnabled && session != null && session.OnMap)
         {
             var state = definition.Progress(session.Data, false);
-            string id = state?.defeated.Find(key => !state.presented.Contains(key));
-            if (string.IsNullOrEmpty(id)) yield break;
+            string id = state?.defeated.Find(key => definition.Pending(session.Data, key));
+            if (string.IsNullOrEmpty(id))
+            {
+                yield return waitForVictory;
+                continue;
+            }
             var shot = enemies.FirstOrDefault(e => e != null && e.enemy != null && e.enemy.Id == id);
             if (shot == null) { Debug.LogError("[Main Quest] Missing enemy presentation reference: " + id, this); yield break; }
             // Acquire before Loading disappears so gameplay cannot run for a frame between loading and the cutscene.

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 532a234c595fb3944bb8626c21ed8968, type: 3}
   m_Name: effec4
   m_EditorClassIdentifier: Assembly-CSharp::ActionData
-  actionName: 
+  actionName: "\u1EA4n Ph\xE1p Xung K\xEDch"
   useSound:
     clips: []
     volume: 0.8
@@ -20,13 +20,13 @@ MonoBehaviour:
     spatialBlend: 1
     maxDistance: 24
   description: 
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 523a2e6a48ccb41449c0cfc1fd9a91cf, type: 3}
   type: 0
   element: 0
   isUltimate: 0
   ultimateEnergyGain: 10
-  power: 0
-  damageMultiplier: 1
+  power: 4
+  damageMultiplier: 1.15
   useLifeSteal: 0
   lifeStealPercent: 33.333
   damageCondition: 0
@@ -48,7 +48,7 @@ MonoBehaviour:
   isFriendlyAction: 0
   isAoE: 0
   isSelfOnly: 0
-  stainChange: 0
+  stainChange: -1
   enemyCooldownTurns: 0
   buffStat: 0
   buffToCaster: 0
